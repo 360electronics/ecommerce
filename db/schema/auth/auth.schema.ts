@@ -1,5 +1,5 @@
 import { pgTable, serial, varchar, timestamp, text } from "drizzle-orm/pg-core";
-import { users } from "./users.schema";
+import { users } from "../user/users.schema";
 
 export const otpTokens = pgTable("otp_tokens", {
   id: serial("id").primaryKey(),
