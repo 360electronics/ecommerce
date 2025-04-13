@@ -32,8 +32,12 @@ export default function LoginPage() {
       }
 
       router.push(`/verify-otp?userId=${data.userId}&type=${type}`);
-    } catch (err: any) {
-      setError(err.message);
+    } catch (err: unknown) {
+      if (err instanceof Error) {
+        setError(err.message);
+      } else {
+        setError("An unknown error occurred");
+      }
     } finally {
       setLoading(false);
     }

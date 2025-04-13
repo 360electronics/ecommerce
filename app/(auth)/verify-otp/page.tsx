@@ -77,8 +77,8 @@ export default function VerifyOTPPage() {
       }
 
       setCountdown(30);
-    } catch (err: any) {
-      setError(err.message);
+    } catch (err: unknown) {
+      setError(err instanceof Error ? err.message : "Failed to resend OTP");
     } finally {
       setResendLoading(false);
     }
