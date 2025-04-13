@@ -1,7 +1,7 @@
 "use client";
 
-import { useState, useEffect, Suspense } from "react";
-import { useRouter, useSearchParams } from "next/navigation";
+import { useState, useEffect } from "react";
+import { useParams, useRouter } from "next/navigation";
 import Cookies from 'js-cookie';
 
 export default function VerifyOTPPage() {
@@ -11,9 +11,11 @@ export default function VerifyOTPPage() {
   const [resendLoading, setResendLoading] = useState(false);
   const [countdown, setCountdown] = useState(30);
   const router = useRouter();
-  const searchParams = useSearchParams();
-  const userId = searchParams.get("userId");
-  const type = searchParams.get("type") || "email";
+  const params = useParams();
+  
+  // Extract parameters from the URL params
+  const userId = Array.isArray(params.userId) ? params.userId[0] : params.userId;
+  const type = (Array.isArray(params.type) ? params.type[0] : params.type) || "email";
 
   useEffect(() => {
     if (countdown > 0) {
@@ -45,11 +47,11 @@ export default function VerifyOTPPage() {
       // Store token in localStorage
       localStorage.setItem('authToken', data.token);
       localStorage.setItem('userRole', JSON.stringify(data.user.role));
-
+      
       // Store token in cookies (expires in 12 hours)
       Cookies.set('authToken', data.token, { expires: 0.5 });
       Cookies.set('userRole', JSON.stringify(data.user.role), { expires: 0.5 });
-
+      
       // Redirect to home page
       router.push('/');
     } catch (err) {
@@ -89,47 +91,44 @@ export default function VerifyOTPPage() {
   }
 
   return (
-    <Suspense>
-
-      <div className="max-w-md mx-auto mt-10">
-        <h1 className="text-2xl font-bold mb-4">Verify OTP</h1>
-        <p className="mb-4">
-          Enter the OTP sent to your {type === "email" ? "email" : "phone"}.
-        </p>
-        {error && <p className="text-red-500 mb-4">{error}</p>}
-        <form onSubmit={handleSubmit} className="space-y-4">
-          <div>
-            <label htmlFor="otp">OTP</label>
-            <input
-              type="text"
-              name="otp"
-              value={otp}
-              onChange={(e) => setOTP(e.target.value)}
-              className="w-full border p-2"
-              required
-            />
-          </div>
-          <button
-            type="submit"
-            disabled={loading}
-            className="w-full bg-blue-500 text-white p-2 disabled:bg-gray-400"
-          >
-            {loading ? "Verifying..." : "Verify OTP"}
-          </button>
-          <button
-            type="button"
-            onClick={handleResend}
-            disabled={resendLoading || countdown > 0}
-            className="w-full bg-gray-200 p-2 disabled:bg-gray-300"
-          >
-            {resendLoading
-              ? "Resending..."
-              : countdown > 0
-                ? `Resend OTP in ${countdown}s`
-                : "Resend OTP"}
-          </button>
-        </form>
-      </div>
-    </Suspense>
+    <div className="max-w-md mx-auto mt-10">
+      <h1 className="text-2xl font-bold mb-4">Verify OTP</h1>
+      <p className="mb-4">
+        Enter the OTP sent to your {type === "email" ? "email" : "phone"}.
+      </p>
+      {error && <p className="text-red-500 mb-4">{error}</p>}
+      <form onSubmit={handleSubmit} className="space-y-4">
+        <div>
+          <label htmlFor="otp">OTP</label>
+          <input
+            type="text"
+            name="otp"
+            value={otp}
+            onChange={(e) => setOTP(e.target.value)}
+            className="w-full border p-2"
+            required
+          />
+        </div>
+        <button
+          type="submit"
+          disabled={loading}
+          className="w-full bg-blue-500 text-white p-2 disabled:bg-gray-400"
+        >
+          {loading ? "Verifying..." : "Verify OTP"}
+        </button>
+        <button
+          type="button"
+          onClick={handleResend}
+          disabled={resendLoading || countdown > 0}
+          className="w-full bg-gray-200 p-2 disabled:bg-gray-300"
+        >
+          {resendLoading
+            ? "Resending..."
+            : countdown > 0
+            ? `Resend OTP in ${countdown}s`
+            : "Resend OTP"}
+        </button>
+      </form>
+    </div>
   );
 }
