@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { useParams, useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import Cookies from 'js-cookie';
 
 export default function VerifyOTPPage() {
@@ -11,11 +11,19 @@ export default function VerifyOTPPage() {
   const [resendLoading, setResendLoading] = useState(false);
   const [countdown, setCountdown] = useState(30);
   const router = useRouter();
-  const params = useParams();
-  
-  // Extract parameters from the URL params
-  const userId = Array.isArray(params.userId) ? params.userId[0] : params.userId;
-  const type = (Array.isArray(params.type) ? params.type[0] : params.type) || "email";
+  const [userId, setUserId] = useState<string | null>(null);
+  const [type, setType] = useState<"email" | "phone">("email");
+
+
+  // Extract params from the URL manually
+  useEffect(() => {
+    const searchParams = new URLSearchParams(window.location.search);
+    const userIdParam = searchParams.get("userId");
+    const typeParam = (searchParams.get("type") as "email" | "phone") || "email";
+
+    setUserId(userIdParam);
+    setType(typeParam);
+  }, []);
 
   useEffect(() => {
     if (countdown > 0) {
