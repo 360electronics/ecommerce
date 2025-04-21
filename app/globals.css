@@ -1,26 +1,91 @@
 @import "tailwindcss";
 
 :root {
+  /* Brand Color */
+  --primary: #2874F0;
+  --primary-hover: #1a5ed9;
+  --primary-light: #e6f0fe;
+
+  /* Complementary Colors */
+  --secondary: #f59e0b;
+  --accent: #037754;
+  --offer: #ff0606;
+
+  /* Base UI */
   --background: #ffffff;
   --foreground: #171717;
+  --neutral: #f3f4f6;
+  --border-color: #e5e7eb;
+
+  /* Text */
+  --text-primary: #171717;
+  --text-secondary: #4b5563;
 }
 
 @theme inline {
   --color-background: var(--background);
-  --color-foreground: var(--foreground);
-  --font-sans: var(--font-geist-sans);
-  --font-mono: var(--font-geist-mono);
+  --color-primary: var(--primary);
+  --color-primary-hover: var(--primary-hover);
+  --color-primary-light: var(--primary-light);
+  --color-secondary: var(--secondary);
+  --color-accent: var(--accent);
+  --color-neutral: var(--neutral);
+  --color-offer: var(--offer);
 }
 
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
-  }
-}
+/* *{
+  box-sizing:border-box ;
+  border: 1px solid red;
+} */
 
 body {
   background: var(--background);
   color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  text-rendering: optimizeLegibility;
+  line-height: 1.5;
+  scroll-behavior: smooth;
+  margin: 0;
+  padding: 0;
+
+}
+
+@font-face {
+  font-family: 'NoHemi';
+  src: url('/fonts/Nohemi-Bold.otf') format('woff'),
+       url('/fonts/Nohemi-Bold.otf') format('woff');
+}
+
+
+.nohemi-bold{
+  font-family: "NoHemi", sans-serif;
+  font-weight: 600;
+}
+
+
+
+@layer utilities {
+  /* Hide scrollbar for Chrome, Safari and Opera */
+  .no-scrollbar::-webkit-scrollbar {
+      display: none;
+  }
+ /* Hide scrollbar for IE, Edge and Firefox */
+  .no-scrollbar {
+      -ms-overflow-style: none;  /* IE and Edge */
+      scrollbar-width: none;  /* Firefox */
+}
+}
+
+@layer utilities {
+  .clip-custom-rounded {
+    clip-path: polygon(0% 0%, 100% 0%, 100% 100%, 27% 99%, 27% 69%, 0% 69%);
+  }
+}
+
+/* Responsive Image */
+img {
+  max-width: 100%;
+  height: auto;
+  display: block;
 }

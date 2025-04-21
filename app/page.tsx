@@ -1,103 +1,174 @@
+'use client'
+import { useState, useEffect, useRef } from 'react';
+import UserLayout from "@/components/Layouts/UserLayout";
 import Image from "next/image";
+import PrimaryLinkButton from '@/components/Reusable/PrimaryLinkButton';
+import { Mic, MicOff, Volume, Volume2, VolumeOff } from 'lucide-react';
+
+const Promo_Banners_Main = [
+  {
+    img: '/zotac-handheld-gaming-console-homepage-slideshow-banners_1920x580-3.png'
+  },
+  {
+    img: '/zotac_gpu_server_-_slideshow_banners_1920x580.jpg'
+  },
+  {
+    img: '/Smartphones.jpg'
+  },
+]
 
 export default function Home() {
-  return (
-    <div className="grid grid-rows-[20px_1fr_20px] items-center justify-items-center min-h-screen p-8 pb-20 gap-16 sm:p-20 font-[family-name:var(--font-geist-sans)]">
-      <main className="flex flex-col gap-[32px] row-start-2 items-center sm:items-start">
-        <Image
-          className="dark:invert"
-          src="/next.svg"
-          alt="Next.js logo"
-          width={180}
-          height={38}
-          priority
-        />
-        <ol className="list-inside list-decimal text-sm/6 text-center sm:text-left font-[family-name:var(--font-geist-mono)]">
-          <li className="mb-2 tracking-[-.01em]">
-            Get started by editing{" "}
-            <code className="bg-black/[.05] dark:bg-white/[.06] px-1 py-0.5 rounded font-[family-name:var(--font-geist-mono)] font-semibold">
-              app/page.tsx
-            </code>
-            .
-          </li>
-          <li className="tracking-[-.01em]">
-            Save and see your changes instantly.
-          </li>
-        </ol>
+  const [currentImageIndex, setCurrentImageIndex] = useState(0);
 
-        <div className="flex gap-4 items-center flex-col sm:flex-row">
-          <a
-            className="rounded-full border border-solid border-transparent transition-colors flex items-center justify-center bg-foreground text-background gap-2 hover:bg-[#383838] dark:hover:bg-[#ccc] font-medium text-sm sm:text-base h-10 sm:h-12 px-4 sm:px-5 sm:w-auto"
-            href="https://vercel.com/new?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            <Image
-              className="dark:invert"
-              src="/vercel.svg"
-              alt="Vercel logomark"
-              width={20}
-              height={20}
-            />
-            Deploy now
-          </a>
-          <a
-            className="rounded-full border border-solid border-black/[.08] dark:border-white/[.145] transition-colors flex items-center justify-center hover:bg-[#f2f2f2] dark:hover:bg-[#1a1a1a] hover:border-transparent font-medium text-sm sm:text-base h-10 sm:h-12 px-4 sm:px-5 w-full sm:w-auto md:w-[158px]"
-            href="https://nextjs.org/docs?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            Read our docs
-          </a>
+  const videoRef = useRef<HTMLVideoElement>(null);
+  const [isMuted, setIsMuted] = useState(true);
+
+  const toggleMute = () => {
+    const video = videoRef.current;
+    if (video) {
+      video.muted = !video.muted;
+      setIsMuted(video.muted);
+    }
+  };
+
+  // Auto-rotate carousel
+  useEffect(() => {
+    const interval = setInterval(() => {
+      setCurrentImageIndex((prevIndex) =>
+        prevIndex === Promo_Banners_Main.length - 1 ? 0 : prevIndex + 1
+      );
+    }, 5000); // Change image every 5 seconds
+
+    return () => clearInterval(interval);
+  }, []);
+
+  // Manual navigation
+  const goToSlide = (index: any) => {
+    setCurrentImageIndex(index);
+  };
+
+  const goToPrevSlide = () => {
+    setCurrentImageIndex((prevIndex) =>
+      prevIndex === 0 ? Promo_Banners_Main.length - 1 : prevIndex - 1
+    );
+  };
+
+  const goToNextSlide = () => {
+    setCurrentImageIndex((prevIndex) =>
+      prevIndex === Promo_Banners_Main.length - 1 ? 0 : prevIndex + 1
+    );
+  };
+
+  return (
+    <UserLayout>
+      <div className="w-full flex flex-col gap-3 items-center justify-center">
+        <div className="relative w-full h-[70dvh]">
+
+          <div className="absolute w-full h-[70dvh] rounded-xl overflow-hidden">
+            {/* Main div image with overlay */}
+            <div className="relative w-full h-full">
+              <Image
+                src={Promo_Banners_Main[currentImageIndex].img}
+                alt={`Banner ${currentImageIndex + 1}`}
+                layout="fill"
+                objectFit="cover"
+                className="bg-cover bg-center transition-opacity duration-500"
+              />
+
+              {/* Navigation arrows */}
+              <div className="absolute inset-0 flex items-center justify-between px-4">
+                <button
+                  onClick={goToPrevSlide}
+                  className="bg-black bg-opacity-30 hover:bg-opacity-50 text-white p-2 rounded-full"
+                >
+                  <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                    <path d="M15 18l-6-6 6-6" />
+                  </svg>
+                </button>
+                <button
+                  onClick={goToNextSlide}
+                  className="bg-black bg-opacity-30 hover:bg-opacity-50 text-white p-2 rounded-full"
+                >
+                  <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                    <path d="M9 18l6-6-6-6" />
+                  </svg>
+                </button>
+              </div>
+
+              {/* Dots indicators */}
+              <div className="absolute bottom-4 left-0 right-0 flex justify-center space-x-2">
+                {Promo_Banners_Main.map((_, index) => (
+                  <button
+                    key={index}
+                    onClick={() => goToSlide(index)}
+                    className={`w-3 h-3 rounded-full ${currentImageIndex === index ? 'bg-white' : 'bg-white bg-opacity-50'
+                      }`}
+                  />
+                ))}
+              </div>
+            </div>
+
+            {/* inverted curves */}
+            <div className="absolute bottom-[30%] w-5 h-5 rounded-full shadow-[-10px_10px_0_#fff] z-50"></div>
+            <div className="absolute bottom-0 left-[30%] md:left-[20%] w-5 h-5 rounded-full shadow-[-10px_10px_0_#fff] z-50"></div>
+          </div>
+
+          {/* Small video */}
+          <div className="absolute left-0 bottom-0 w-[30%] md:w-[20%] h-[30%] border-t-[10px] border-r-[10px] border-white rounded-tr-xl rounded-bl-xl overflow-hidden">
+            {/* Video */}
+            <div className="relative w-full h-full">
+              <video
+                ref={videoRef}
+                src="/lap.mp4"
+                autoPlay
+                loop
+                muted
+                playsInline
+                className="absolute top-0 left-0 w-full h-full object-cover"
+              />
+              {/* Mute/Unmute Button */}
+              <button
+                onClick={toggleMute}
+                className="absolute bottom-2 right-2 z-50 bg-slate-50 text-black p-1 rounded-full shadow-md hover:bg-gray-200 transition"
+              >
+                {isMuted ? <VolumeOff className=' size-3' /> : <Volume2 className=' size-3' />}
+              </button>
+            </div>
+
+            {/* Decorative Curves */}
+            <div className="absolute top-0 left-0 w-5 h-5 rounded-full shadow-[-10px_-10px_0_#fff] z-40" />
+            <div className="absolute top-0 right-0 w-5 h-5 rounded-full shadow-[10px_-10px_0_#fff] z-40" />
+            <div className="absolute bottom-0 right-0 w-5 h-5 rounded-full shadow-[10px_10px_0_#fff] z-40" />
+          </div>
+
         </div>
-      </main>
-      <footer className="row-start-3 flex gap-[24px] flex-wrap items-center justify-center">
-        <a
-          className="flex items-center gap-2 hover:underline hover:underline-offset-4"
-          href="https://nextjs.org/learn?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <Image
-            aria-hidden
-            src="/file.svg"
-            alt="File icon"
-            width={16}
-            height={16}
-          />
-          Learn
-        </a>
-        <a
-          className="flex items-center gap-2 hover:underline hover:underline-offset-4"
-          href="https://vercel.com/templates?framework=next.js&utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <Image
-            aria-hidden
-            src="/window.svg"
-            alt="Window icon"
-            width={16}
-            height={16}
-          />
-          Examples
-        </a>
-        <a
-          className="flex items-center gap-2 hover:underline hover:underline-offset-4"
-          href="https://nextjs.org?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <Image
-            aria-hidden
-            src="/globe.svg"
-            alt="Globe icon"
-            width={16}
-            height={16}
-          />
-          Go to nextjs.org →
-        </a>
-      </footer>
-    </div>
+
+        <div className="w-full h-[30dvh] sm:h-[25dvh] md:h-[20dvh] bg-primary rounded-xl relative overflow-hidden">
+          {/* Background Image */}
+          <div
+            className="absolute inset-0 bg-cover bg-center z-0"
+            style={{
+              backgroundImage: "url('/customise.png')",
+              filter: 'brightness(0.7)',
+            }}
+          ></div>
+
+          {/* Content Overlay */}
+          <div className="relative z-10 h-full flex flex-col md:flex-row items-start md:items-center justify-center md:justify-between px-4 sm:px-6 md:px-8 py-4 gap-3 md:gap-0">
+            <div className="text-white max-w-xl">
+              <h2 className="text-xl sm:text-2xl md:text-3xl font-bold mb-1 nohemi-bold">
+                Customize Your <span className="text-primary">Own PC</span>
+              </h2>
+              <p className="text-xs sm:text-sm md:text-base opacity-90 mb-2">
+                Build your dream gaming rig with premium components and expert assembly.
+              </p>
+            </div>
+
+            <PrimaryLinkButton href="/">Start Building</PrimaryLinkButton>
+          </div>
+        </div>
+
+      </div>
+    </UserLayout>
   );
 }
