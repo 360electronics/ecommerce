@@ -1,13 +1,14 @@
 "use client"
 
 import type React from "react"
+
 import { useState, useRef, useEffect } from "react"
 import { useRouter } from "next/navigation"
 import Image from "next/image"
-import { ChevronDown, Plus, X, GripVertical } from "lucide-react"
+import { ChevronDown, Plus, X, GripVertical, ArrowLeft } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
-import { SubProductSelector } from "@/components/Admin/SubProductSelector"
+import { SubProductSelector } from "@/components/Admin/Product/SubProductSelector"
 import { DndProvider, useDrag, useDrop } from "react-dnd"
 import { HTML5Backend } from "react-dnd-html5-backend"
 
@@ -32,6 +33,50 @@ interface SpecSection {
 
 // Product categories
 const categories = ["PC", "Accessories", "Monitors", "Audio", "Components", "Furniture", "Storage"]
+
+// Sample product data based on ID
+const getProductData = (productId: string, category: string) => {
+  // This would normally be fetched from an API
+  return {
+    id: productId,
+    name: `${category} Product ${productId}`,
+    category: category,
+    marketPrice: "95000",
+    sellingPrice: "89999",
+    status: "active",
+    subStatus: "active",
+    totalStock: "12",
+    expressDelivery: "active",
+    mainImage: "/assorted-products-display.png",
+    additionalImages: ["/gaming-mouse-setup.png", "/sleek-workspace.png", "", "", ""],
+    specifications: [
+      {
+        id: "general",
+        name: "General",
+        fields: [
+          { id: "field1", label: "Brand", value: "TechBrand" },
+          { id: "field2", label: "Model", value: "Pro X5" },
+        ],
+        isRequired: true,
+        isFixed: true,
+      },
+      {
+        id: "section1",
+        name: "Performance",
+        fields: [
+          { id: "field1", label: "Processor", value: "Intel Core i7" },
+          { id: "field2", label: "RAM", value: "16GB DDR4" },
+        ],
+      },
+      {
+        id: "warranty",
+        name: "Warranty",
+        fields: [{ id: "field1", label: "Warranty Summary", value: "1 Year Manufacturer Warranty" }],
+        isFixed: true,
+      },
+    ],
+  }
+}
 
 // Type for drag item
 interface DragItem {
@@ -227,18 +272,24 @@ const DraggableSpecSection = ({
   )
 }
 
-export default function AddProductPage() {
+export default function EditProductPage({ params }: { params: { params: string[] } }) {
   const router = useRouter()
 
+  // Extract product ID and category from params
+  const [productId, category] = params.params || []
+
+  // State for loading
+  const [isLoading, setIsLoading] = useState(true)
+
   // Main product image state
-  const [mainImage, setMainImage] = useState<string>("/assorted-products-display.png")
+  const [mainImage, setMainImage] = useState<string>("")
 
   // Additional images state
   const [additionalImages, setAdditionalImages] = useState<string[]>(Array(5).fill(""))
 
   // Form state
   const [productName, setProductName] = useState("")
-  const [category, setCategory] = useState("")
+  const [productCategory, setProductCategory] = useState("")
   const [marketPrice, setMarketPrice] = useState("")
   const [sellingPrice, setSellingPrice] = useState("")
   const [status, setStatus] = useState("active")
@@ -249,26 +300,55 @@ export default function AddProductPage() {
   // Dropdowns state
   const [openDropdown, setOpenDropdown] = useState<string | null>(null)
 
-  // Specifications state - mark General and Warranty as fixed
-  const [specSections, setSpecSections] = useState<SpecSection[]>([
-    {
-      id: "general",
-      name: "General",
-      fields: [{ id: "field1", label: "", value: "" }],
-      isRequired: true,
-      isFixed: true, // General is fixed at the top
-    },
-    {
-      id: "warranty",
-      name: "Warranty",
-      fields: [{ id: "field1", label: "", value: "" }],
-      isFixed: true, // Warranty is fixed at the bottom
-    },
-  ])
+  // Specifications state
+  const [specSections, setSpecSections] = useState<SpecSection[]>([])
 
   // File input refs
   const mainImageInputRef = useRef<HTMLInputElement>(null)
   const additionalImageInputRefs = useRef<(HTMLInputElement | null)[]>([])
+
+  // Fetch product data on mount
+  useEffect(() => {
+    // In a real app, this would be an API call
+    const fetchProductData = async () => {
+      try {
+        setIsLoading(true)
+
+        // Simulate API delay
+        await new Promise((resolve) => setTimeout(resolve, 500))
+
+        if (!productId || !category) {
+          router.push("/admin/products")
+          return
+        }
+
+        const productData = getProductData(productId, category)
+
+        // Populate form with product data
+        setProductName(productData.name)
+        setProductCategory(productData.category)
+        setMarketPrice(productData.marketPrice)
+        setSellingPrice(productData.sellingPrice)
+        setStatus(productData.status)
+        setSubStatus(productData.subStatus)
+        setTotalStock(productData.totalStock)
+        setExpressDelivery(productData.expressDelivery)
+        setMainImage(productData.mainImage)
+        setAdditionalImages([
+          ...productData.additionalImages,
+          ...Array(5 - productData.additionalImages.length).fill(""),
+        ])
+        setSpecSections(productData.specifications)
+      } catch (error) {
+        console.error("Error fetching product data:", error)
+        // Handle error - redirect or show error message
+      } finally {
+        setIsLoading(false)
+      }
+    }
+
+    fetchProductData()
+  }, [productId, category, router])
 
   // useEffect to initialize the array of refs
   useEffect(() => {
@@ -474,7 +554,7 @@ export default function AddProductPage() {
       return
     }
 
-    if (!category) {
+    if (!productCategory) {
       alert("Category is required")
       return
     }
@@ -503,8 +583,9 @@ export default function AddProductPage() {
 
     // Collect form data
     const formData = {
+      id: productId,
       name: productName,
-      category,
+      category: productCategory,
       marketPrice: Number.parseFloat(marketPrice),
       sellingPrice: Number.parseFloat(sellingPrice),
       status,
@@ -516,10 +597,25 @@ export default function AddProductPage() {
       specifications: specSections,
     }
 
-    console.log("Submitting product:", formData)
+    console.log("Updating product:", formData)
 
-    // Navigate back to products page after submission
-    router.push("/admin/products")
+    // In a real app, this would be an API call
+    // For now, just simulate success and navigate back
+    setTimeout(() => {
+      router.push("/admin/products")
+    }, 500)
+  }
+
+  // Show loading state
+  if (isLoading) {
+    return (
+      <div className="flex h-[80vh] items-center justify-center">
+        <div className="text-center">
+          <div className="h-12 w-12 animate-spin rounded-full border-4 border-blue-600 border-t-transparent mx-auto"></div>
+          <p className="mt-4 text-lg">Loading product data...</p>
+        </div>
+      </div>
+    )
   }
 
   return (
@@ -527,8 +623,19 @@ export default function AddProductPage() {
       <div className="space-y-6">
         <div className="flex items-center justify-between">
           <div>
-            <h1 className="text-2xl font-bold tracking-tight">Add Product</h1>
-            <p className="text-sm text-muted-foreground">Create a new product in your inventory</p>
+            <div className="flex items-center gap-2">
+              <button
+                onClick={() => router.back()}
+                className="inline-flex items-center text-sm text-gray-500 hover:text-gray-700"
+              >
+                <ArrowLeft className="mr-1 h-4 w-4" />
+                
+              </button>
+              <h1 className="text-2xl font-bold tracking-tight my-4">Edit Product</h1>
+            </div>
+            <p className="text-sm text-muted-foreground">
+              Editing {category} product {productId}
+            </p>
           </div>
           <div className="flex items-center space-x-2">
             <Button variant="outline" onClick={() => router.back()}>
@@ -551,7 +658,7 @@ export default function AddProductPage() {
                   {mainImage ? (
                     <div className="relative h-full w-full">
                       <Image
-                        src={mainImage}
+                        src={mainImage || "/placeholder.svg"}
                         alt="Main product image"
                         fill
                         className="object-contain p-2"
@@ -679,7 +786,7 @@ export default function AddProductPage() {
                   className="flex w-full items-center justify-between rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
                   onClick={() => toggleDropdown("category")}
                 >
-                  <span>{category || "Select the Category"}</span>
+                  <span>{productCategory || "Select the Category"}</span>
                   <ChevronDown className="h-4 w-4 opacity-50" />
                 </button>
                 {openDropdown === "category" && (
@@ -690,7 +797,7 @@ export default function AddProductPage() {
                           key={cat}
                           className="cursor-pointer px-4 py-2 text-sm hover:bg-gray-100"
                           onClick={() => {
-                            setCategory(cat)
+                            setProductCategory(cat)
                             setOpenDropdown(null)
                           }}
                         >
@@ -897,8 +1004,11 @@ export default function AddProductPage() {
 
           {/* Submit Button - Centered and rounded-full */}
           <div className="flex justify-center">
-            <button type="submit" className="bg-blue-600 mt-14 my-5 w-[40%] hover:bg-blue-700 text-white px-8 py-2 rounded-full">
-              Add Product
+            <button
+              type="submit"
+              className="bg-blue-600 mt-14 my-5 w-[40%] hover:bg-blue-700 text-white px-8 py-2 rounded-full"
+            >
+              Update Product
             </button>
           </div>
         </form>

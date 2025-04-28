@@ -136,7 +136,7 @@ export function UsersTable() {
       key: "name",
       header: "Name",
       sortable: true,
-      width: "20%",
+      width: "25%",
     },
     {
       key: "email",
@@ -263,7 +263,7 @@ export function UsersTable() {
           delete: handleBulkDelete,
           export: handleExportUsers,
           edit: handleEditUser,
-          view: handleViewUser,
+          // view: handleViewUser,
         },
         rowActions: {
           view: handleViewUser,

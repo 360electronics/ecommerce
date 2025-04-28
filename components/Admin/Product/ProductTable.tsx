@@ -177,7 +177,8 @@ export function ProductsTable() {
 
   const handleEditProduct = (products: Product[]) => {
     if (products.length === 1) {
-      router.push(`/admin/products/edit/${products[0].id}`)
+      // Use the dynamic route with category and product ID
+      router.push(`/admin/products/edit-product/${products[0].category}/${products[0].id}`)
     } else {
       router.push(`/admin/products/bulk-edit?ids=${products.map((p) => p.id).join(",")}`)
     }
@@ -242,7 +243,7 @@ export function ProductsTable() {
           delete: handleBulkDelete,
           export: handleExportProducts,
           edit: handleEditProduct,
-          view: handleViewProduct,
+          // view: handleViewProduct,
         },
         rowActions: {
           view: handleViewProduct,

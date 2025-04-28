@@ -17,6 +17,7 @@ import {
   LogOut,
   Menu,
   ChevronRight,
+  Home,
 } from "lucide-react"
 
 interface AdminLayoutProps {
@@ -51,7 +52,7 @@ export default function Layout({ children }: AdminLayoutProps) {
     { name: "Orders", path: "/admin/orders", icon: ShoppingBag },
     { name: "Tickets", path: "/admin/tickets", icon: Ticket },
     { name: "Featured Products", path: "/admin/featured-products", icon: Briefcase },
-    { name: "New Arrival", path: "/admin/new-arrival", icon: Package },
+    { name: "New Arrival", path: "/admin/new-arrivals", icon: Package },
     { name: "Gamer Zone", path: "/admin/gamer-zone", icon: Gamepad2 },
   ]
 
@@ -114,9 +115,12 @@ export default function Layout({ children }: AdminLayoutProps) {
               <span className="sr-only">Toggle sidebar</span>
             </button>
             {/* Breadcrumbs */}
-            <nav className="flex">
+            <nav className="flex items-center gap-2">
+            <Home className="w-5 h-5 text-primary "/>
+            
               {breadcrumbs.map((crumb, i) => (
                 <div key={i} className="flex items-center">
+                  
                   {i > 0 && <ChevronRight className="mx-1 h-4 w-4 text-gray-400" />}
                   <Link
                     href={crumb.path}
