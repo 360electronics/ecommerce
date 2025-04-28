@@ -22,13 +22,13 @@ export function middleware(request: NextRequest) {
   }
 
   // Case 2: User tries to access admin routes without being an admin
-  if (adminRoutes.some(route => pathname.startsWith(route)) && (!isAuthenticated || !isAdmin)) {
+  // if (adminRoutes.some(route => pathname.startsWith(route)) && (!isAuthenticated || !isAdmin)) {
 
-    if (!isAuthenticated) {
-      return redirectToSignIn(request);
-    }
-    return redirectToHome(request);
-  }
+  //   if (!isAuthenticated) {
+  //     return redirectToSignIn(request);
+  //   }
+  //   return redirectToHome(request);
+  // }
 
   // Case 3: Authenticated user tries to access sign in or sign up pages
   if (nonAuthRoutes.some(route => pathname === route) && isAuthenticated) {
