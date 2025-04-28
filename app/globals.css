@@ -89,3 +89,27 @@ img {
   height: auto;
   display: block;
 }
+
+
+.minimal-scrollbar::-webkit-scrollbar-track {
+  background-color: #F5F5F5;
+  height: 1px;
+}
+
+.minimal-scrollbar::-webkit-scrollbar {
+
+  height: 1px;
+  background-color: #F5F5F5;
+}
+
+/* Scrollbar thumb with gradient */
+.minimal-scrollbar::-webkit-scrollbar-thumb {
+  background-color: #000;
+}
+
+/* Hide scrollbar buttons/arrows */
+.minimal-scrollbar::-webkit-scrollbar-button {
+  display: none;
+  width: 0;
+  height: 0;
+}
