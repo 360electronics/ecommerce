@@ -1,10 +1,10 @@
 'use client';
-import React, { memo } from 'react';
+import React, { memo, useState } from 'react';
 import Link from 'next/link';
 import Image from 'next/image';
-import { Instagram, Facebook, Youtube } from 'lucide-react';
+import { FaInstagram as Instagram, FaFacebook as Facebook, FaYoutube as Youtube, FaWhatsapp as Whatsapp } from "react-icons/fa";
+import { FaLocationDot } from "react-icons/fa6";
 
-// Types for improved type safety
 type FeatureCardProps = {
   icon: React.ReactNode;
   title: string;
@@ -23,7 +23,11 @@ type SocialLinkProps = {
   label: string;
 };
 
-// Memoized FeatureCard to prevent unnecessary re-renders
+type Location = {
+  name: string;
+  address: string[];
+};
+
 const FeatureCard = memo(({ icon, title, description }: FeatureCardProps) => (
   <div className="flex flex-col">
     <div className="mb-3">{icon}</div>
@@ -48,7 +52,7 @@ const FooterLink = ({ href, label, external = false }: FooterLinkProps) => (
 
 // Reusable SocialLink component
 const SocialLink = ({ href, icon, label }: SocialLinkProps) => (
-  <a
+  <Link
     href={href}
     className="text-white hover:text-blue-500 transition-colors duration-200"
     aria-label={`Follow us on ${label}`}
@@ -56,27 +60,35 @@ const SocialLink = ({ href, icon, label }: SocialLinkProps) => (
     rel="noopener noreferrer"
   >
     {icon}
-  </a>
+  </Link>
 );
 
-// WhatsApp icon component
-const WhatsAppIcon = () => (
-  <svg
-    xmlns="http://www.w3.org/2000/svg"
-    width="24"
-    height="24"
-    viewBox="0 0 24 24"
-    fill="none"
-    stroke="currentColor"
-    strokeWidth="2"
-    strokeLinecap="round"
-    strokeLinejoin="round"
-  >
-    <path d="M21 11.5a8.38 8.38 0 0 1-.9 3.8 8.5 8.5 0 0 1-7.6 4.7 8.38 8.38 0 0 1-3.8-.9L3 21l1.9-5.7a8.38 8.38 0 0 1-.9-3.8 8.5 8.5 0 0 1 4.7-7.6 8.38 8.38 0 0 1 3.8-.9h.5a8.48 8.48 0 0 1 8 8v.5z" />
-  </svg>
-);
+const Footer = () => {
+  // Define locations data
+  const locations: Location[] = [
+    {
+      name: "Coimbatore",
+      address: [
+        "Aruksan Arcade, 173-178,",
+        "Chinnasamy Naidu Rd, Siddhapudur,",
+        "New Siddhapudur, Coimbatore, Tamil Nadu 641044"
+      ]
+    },
+    {
+      name: "Chennai",
+      address: [
+        "Ascendas IT Park, 3rd Floor,",
+        "Taramani Road, Taramani,",
+        "Chennai, Tamil Nadu 600113"
+      ]
+    }
+  ];
 
-const Footer: React.FC = () => {
+  // State for selected location
+  const [selectedLocation, setSelectedLocation] = useState(0); // Default is Coimbatore (index 0)
+  const [email, setEmail] = useState("");
+  const [isPrivacyChecked, setIsPrivacyChecked] = useState(false);
+
   // Feature data
   const features = [
     {
@@ -119,21 +131,24 @@ const Footer: React.FC = () => {
 
   const socialLinks = [
     { href: 'https://instagram.com', icon: <Instagram size={24} />, label: 'Instagram' },
-    { href: 'https://whatsapp.com', icon: <WhatsAppIcon />, label: 'WhatsApp' },
+    { href: 'https://whatsapp.com', icon: <Whatsapp size={24} />, label: 'WhatsApp' },
     { href: 'https://youtube.com', icon: <Youtube size={24} />, label: 'YouTube' },
     { href: 'https://facebook.com', icon: <Facebook size={24} />, label: 'Facebook' },
   ];
 
-  const handleNewsletterSubmit = (e: React.FormEvent) => {
-    e.preventDefault();
-    // Add newsletter subscription logic here
-    console.log('Newsletter form submitted');
+  const handleNewsletterSubmit = () => {
+    if (email && isPrivacyChecked) {
+      console.log('Newsletter form submitted with email:', email);
+      // Add newsletter subscription logic here
+      setEmail("");
+      setIsPrivacyChecked(false);
+    }
   };
 
   return (
     <footer className="bg-gray-100 w-full">
       {/* Features section */}
-      <div className=" mx-auto px-4 md:px-10 py-8">
+      <div className="mx-auto px-4 md:px-10 py-8">
         <div className="grid grid-cols-2 md:grid-cols-4 gap-6 md:gap-12">
           {features.map((feature, index) => (
             <FeatureCard
@@ -148,7 +163,7 @@ const Footer: React.FC = () => {
 
       {/* Main footer content */}
       <div className="bg-black text-white py-12 w-full">
-        <div className=" mx-auto px-4 md:px-10">
+        <div className="mx-auto px-4 md:px-10">
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-8">
             {/* Categories */}
             <nav aria-labelledby="categories-heading">
@@ -173,11 +188,7 @@ const Footer: React.FC = () => {
             {/* Newsletter */}
             <div>
               <h3 id="newsletter-heading" className="text-lg font-medium mb-4">Newsletter</h3>
-              <form
-                className="mt-4 space-y-4"
-                onSubmit={handleNewsletterSubmit}
-                aria-labelledby="newsletter-heading"
-              >
+              <div className="mt-4 space-y-4">
                 <div>
                   <label htmlFor="email" className="sr-only">
                     Email Address
@@ -189,6 +200,8 @@ const Footer: React.FC = () => {
                     className="w-full px-4 py-3 bg-transparent border border-gray-600 rounded focus:outline-none focus:border-blue-500 text-white"
                     required
                     aria-describedby="email-error"
+                    value={email}
+                    onChange={(e) => setEmail(e.target.value)}
                   />
                 </div>
                 <div className="flex items-start">
@@ -198,6 +211,8 @@ const Footer: React.FC = () => {
                     className="mt-1"
                     required
                     aria-describedby="privacy-label"
+                    checked={isPrivacyChecked}
+                    onChange={(e) => setIsPrivacyChecked(e.target.checked)}
                   />
                   <label htmlFor="privacy" className="ml-2 text-xs text-gray-400" id="privacy-label">
                     I agree to the{' '}
@@ -212,29 +227,47 @@ const Footer: React.FC = () => {
                   </label>
                 </div>
                 <button
-                  type="submit"
+                  onClick={handleNewsletterSubmit}
                   className="w-full py-3 bg-blue-500 hover:bg-blue-600 text-white font-medium rounded transition duration-200"
                   aria-label="Subscribe to newsletter"
                 >
                   Subscribe
                 </button>
-              </form>
+              </div>
             </div>
 
             {/* Location */}
             <div>
               <h3 className="text-lg font-medium mb-4">Our Locations</h3>
-              <div className="flex flex-col space-y-2 text-sm">
-                <span className="text-blue-500">Coimbatore</span>
-                <span className="text-gray-400">Chennai</span>
+              <div className="flex space-x-4 mb-4">
+                {locations.map((location, index) => (
+                  <button
+                    key={index}
+                    className={`px-4 py-2  text-sm transition duration-200 ${
+                      selectedLocation === index
+                        ? "border-b-primary border-b text-white"
+                        : "text-gray-400 hover:text-white"
+                    }`}
+                    onClick={() => setSelectedLocation(index)}
+                    aria-pressed={selectedLocation === index}
+                    aria-label={`Select ${location.name} location`}
+                  >
+                    {location.name}
+                  </button>
+                ))}
               </div>
-              <address className="mt-4 text-sm not-italic text-gray-300">
-                Aruksan Arcade, 173-178,
-                <br />
-                Chinnasamy Naidu Rd, Siddhapudur,
-                <br />
-                New Siddhapudur, Coimbatore, Tamil Nadu 641044
-              </address>
+              
+              <div className="flex items-start">
+                <FaLocationDot className="text-blue-500 mt-1 mr-2 flex-shrink-0" />
+                <address className="not-italic text-sm text-gray-300">
+                  {locations[selectedLocation].address.map((line, i) => (
+                    <React.Fragment key={i}>
+                      {line}
+                      <br />
+                    </React.Fragment>
+                  ))}
+                </address>
+              </div>
             </div>
           </div>
 
@@ -272,7 +305,7 @@ const Footer: React.FC = () => {
           <div className="mt-8 w-full flex flex-col md:flex-row md:items-center md:justify-between pt-4 border-t border-gray-800 text-xs text-gray-400">
             <p>Computers Garage Pvt. Ltd © 2012 - 2025. All Rights Reserved.</p>
             <p className="mt-2 md:mt-0">
-              Developed by{' '}
+              Designed & Developed by{' '}
               <Link
                 href="https://redefyne.in"
                 className="underline hover:text-white transition-colors duration-200"

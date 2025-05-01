@@ -1,119 +1,60 @@
 "use client"
 
-import { useState } from "react"
+import { useEffect, useState } from "react"
 import { useRouter } from "next/navigation"
+import Image from "next/image"
 import { EnhancedTable, type ColumnDefinition } from "@/components/Layouts/TableLayout"
+import { deleteProducts, fetchProducts } from "@/utils/products"
+import { Product } from "@/types/product"
 
-// Define Product type
-interface Product {
-  id: string
-  thumbnail: string
-  name: string
-  marketPrice: number
-  sellingPrice: number
-  category: string
-  stock: number
-  status: string
-}
 
-// Sample product data
-const productData: Product[] = [
-  {
-    id: "1",
-    thumbnail: "https://img.freepik.com/free-psd/hard-drive-isolated-transparent-background_191095-23920.jpg?t=st=1745827039~exp=1745830639~hmac=582c40c7a1b07c2aa2e83adb2b4de045040b904c86be933082a07effa2e3ebcd&w=900",
-    name: "Gaming Laptop",
-    marketPrice: 95000,
-    sellingPrice: 89999,
-    category: "PC",
-    stock: 12,
-    status: "active",
-  },
-  {
-    id: "2",
-    thumbnail: "https://img.freepik.com/free-psd/hard-drive-isolated-transparent-background_191095-23920.jpg?t=st=1745827039~exp=1745830639~hmac=582c40c7a1b07c2aa2e83adb2b4de045040b904c86be933082a07effa2e3ebcd&w=900",
-    name: "Mechanical Keyboard",
-    marketPrice: 8500,
-    sellingPrice: 7999,
-    category: "Accessories",
-    stock: 45,
-    status: "active",
-  },
-  {
-    id: "3",
-    thumbnail: "https://img.freepik.com/free-psd/hard-drive-isolated-transparent-background_191095-23920.jpg?t=st=1745827039~exp=1745830639~hmac=582c40c7a1b07c2aa2e83adb2b4de045040b904c86be933082a07effa2e3ebcd&w=900",
-    name: "Gaming Mouse",
-    marketPrice: 4500,
-    sellingPrice: 3999,
-    category: "Accessories",
-    stock: 78,
-    status: "active",
-  },
-  {
-    id: "4",
-    thumbnail: "https://img.freepik.com/free-psd/hard-drive-isolated-transparent-background_191095-23920.jpg?t=st=1745827039~exp=1745830639~hmac=582c40c7a1b07c2aa2e83adb2b4de045040b904c86be933082a07effa2e3ebcd&w=900",
-    name: "27-inch Monitor",
-    marketPrice: 28000,
-    sellingPrice: 25999,
-    category: "Monitors",
-    stock: 15,
-    status: "active",
-  },
-  {
-    id: "5",
-    thumbnail: "https://img.freepik.com/free-psd/hard-drive-isolated-transparent-background_191095-23920.jpg?t=st=1745827039~exp=1745830639~hmac=582c40c7a1b07c2aa2e83adb2b4de045040b904c86be933082a07effa2e3ebcd&w=900",
-    name: "Gaming Headset",
-    marketPrice: 12000,
-    sellingPrice: 10999,
-    category: "Audio",
-    stock: 32,
-    status: "active",
-  },
-  {
-    id: "6",
-    thumbnail: "https://img.freepik.com/free-psd/hard-drive-isolated-transparent-background_191095-23920.jpg?t=st=1745827039~exp=1745830639~hmac=582c40c7a1b07c2aa2e83adb2b4de045040b904c86be933082a07effa2e3ebcd&w=900",
-    name: "Graphics Card",
-    marketPrice: 65000,
-    sellingPrice: 59999,
-    category: "Components",
-    stock: 8,
-    status: "inactive",
-  },
-  {
-    id: "7",
-    thumbnail: "https://img.freepik.com/free-psd/hard-drive-isolated-transparent-background_191095-23920.jpg?t=st=1745827039~exp=1745830639~hmac=582c40c7a1b07c2aa2e83adb2b4de045040b904c86be933082a07effa2e3ebcd&w=900",
-    name: "Gaming Chair The examples on this page walk through basic username and password auth for educational purposes. While you can implement a custom auth solution, for increased security and simplicity, we recommend using an authentication library.",
-    marketPrice: 18000,
-    sellingPrice: 15999,
-    category: "Furniture",
-    stock: 20,
-    status: "active",
-  },
-  {
-    id: "8",
-    thumbnail: "https://img.freepik.com/free-psd/hard-drive-isolated-transparent-background_191095-23920.jpg?t=st=1745827039~exp=1745830639~hmac=582c40c7a1b07c2aa2e83adb2b4de045040b904c86be933082a07effa2e3ebcd&w=900",
-    name: "SSD 1TB",
-    marketPrice: 12000,
-    sellingPrice: 9999,
-    category: "Storage",
-    stock: 50,
-    status: "active",
-  },
-]
 
 // Available product categories
-const productCategories = ["PC", "Accessories", "Monitors", "Audio", "Components", "Furniture", "Storage", "All"]
+const productCategories = ["Laptops", "Desktops", "Accessories", "Peripherals", "Components"]
 
 export function ProductsTable() {
   const router = useRouter()
   const [selectedProducts, setSelectedProducts] = useState<Product[]>([])
+  const [products, setProducts] = useState<any[]>([])
+  const [loading, setLoading] = useState(true)
+
 
   // Column definitions for Product Table
   const productColumns: ColumnDefinition<Product>[] = [
     {
-      key: "thumbnail",
+      key: "productImages",
       header: "Thumbnail",
       width: "100px",
       align: "center",
+      renderCell: (value, product) => {
+        // Check if productImages exists and has at least one image URL
+        if (product.productImages && product.productImages.length > 0) {
+          const imageUrl = product.productImages[0];
+          
+          return (
+            <div className="flex justify-center items-center h-16">
+              <Image 
+                src={imageUrl} 
+                alt={`${product.name} thumbnail`}
+                width={60}
+                height={60}
+                className="object-contain h-full w-auto rounded-md"
+                onError={(e) => {
+                  // Fallback if image fails to load
+                  (e.target as HTMLImageElement).src = "/placeholder-product.png";
+                }}
+              />
+            </div>
+          );
+        }
+        
+        // Fallback for products without images
+        return (
+          <div className="bg-gray-200 w-12 h-12 rounded-md flex items-center justify-center mx-auto">
+            <span className="text-gray-400 text-xs">No Image</span>
+          </div>
+        );
+      },
     },
     {
       key: "name",
@@ -122,18 +63,20 @@ export function ProductsTable() {
       width: "25%",
     },
     {
-      key: "marketPrice",
-      header: "Market Price",
+      key: "mrp",
+      header: "MRP",
       sortable: true,
       width: "15%",
       align: "right",
+      renderCell: (value) => `₹${value.toLocaleString()}`, // Assuming you're using Indian Rupees
     },
     {
-      key: "sellingPrice",
-      header: "Selling Price",
+      key: "ourPrice",
+      header: "Our Price",
       sortable: true,
       width: "15%",
       align: "right",
+      renderCell: (value) => `₹${value.toLocaleString()}`,
     },
     {
       key: "category",
@@ -143,8 +86,8 @@ export function ProductsTable() {
       filterOptions: productCategories,
     },
     {
-      key: "stock",
-      header: "Stock Available",
+      key: "totalStocks",
+      header: "Total Stocks",
       sortable: true,
       width: "15%",
       align: "center",
@@ -167,6 +110,30 @@ export function ProductsTable() {
       sortable: true,
       width: "10%",
       align: "center",
+      renderCell: (value) => {
+        let statusClass = "";
+        let statusDisplay = value;
+        
+        switch(value?.toLowerCase()) {
+          case "active":
+            statusClass = "bg-green-100 text-green-800";
+            break;
+          case "inactive":
+            statusClass = "bg-gray-100 text-gray-800";
+            break;
+          case "out of stock":
+            statusClass = "bg-red-100 text-red-800";
+            break;
+          default:
+            statusClass = "bg-blue-100 text-blue-800";
+        }
+        
+        return (
+          <span className={`px-2 py-1 rounded-full text-xs font-medium ${statusClass}`}>
+            {statusDisplay}
+          </span>
+        );
+      },
     },
   ]
 
@@ -188,30 +155,70 @@ export function ProductsTable() {
     router.push(`/admin/products/${product.id}`)
   }
 
-  const handleDeleteProduct = (product: Product) => {
-    // Show confirmation dialog and delete product
+  const handleDeleteProduct = async (product: Product) => {
     if (window.confirm(`Are you sure you want to delete ${product.name}?`)) {
-      console.log("Delete product:", product)
-      // Implement delete logic here
+      const res = await deleteProducts([product.id]);
+      if (res) {
+        console.log('Deleted product:', product);
+        // Optionally update UI or state
+      }
     }
-  }
-
-  const handleBulkDelete = (products: Product[]) => {
+  };
+  
+  const handleBulkDelete = async (products: Product[]) => {
+    if (products.length === 0) return;
+  
     if (window.confirm(`Are you sure you want to delete ${products.length} products?`)) {
-      console.log("Delete products:", products)
-      // Implement bulk delete logic here
+      const ids = products.map(p => p.id);
+      const res = await deleteProducts(ids);
+      if (res) {
+        console.log('Deleted products:', ids);
+        // Optionally update UI or state
+      }
     }
-  }
+  };
+  
 
   const handleExportProducts = (products: Product[]) => {
     console.log("Export products:", products)
     // Implement export logic here
   }
 
+
+
+  useEffect(() => {
+    async function loadProducts() {
+      try {
+        const data = await fetchProducts()
+        if (data) {
+          // Ensure productImages is always an array
+          const normalizedData = data.map((product: { productImages: any }) => ({
+            ...product,
+            productImages: Array.isArray(product.productImages) 
+              ? product.productImages 
+              : product.productImages 
+                ? [product.productImages] 
+                : []
+          }))
+          setProducts(normalizedData)
+        }
+        console.log("Fetched products:", data)
+      } catch (error) {
+        console.error("Error loading products:", error)
+      } finally {
+        setLoading(false)
+      }
+    }
+
+    loadProducts()
+  }, [])
+
+  if (loading) return <p>Loading products...</p>
+
   return (
     <EnhancedTable
       id="products-table"
-      data={productData}
+      data={products}
       columns={productColumns}
       selection={{
         enabled: true,
@@ -243,7 +250,6 @@ export function ProductsTable() {
           delete: handleBulkDelete,
           export: handleExportProducts,
           edit: handleEditProduct,
-          // view: handleViewProduct,
         },
         rowActions: {
           view: handleViewProduct,

@@ -1,62 +1,100 @@
 import {
-    pgTable,
-    serial,
-    varchar,
-    text,
-    numeric,
-    boolean,
-    integer,
-    jsonb,
-    timestamp,
-    index,
-    unique,
-  } from 'drizzle-orm/pg-core';
-  import { categories } from '../category/categories.schema';
-  import { stock } from '../stock/stocks.schema';
-  import { relations } from 'drizzle-orm';
-import { reviews } from '../review/reviews.schema';
-  
+  pgTable,
+  serial,
+  varchar,
+  text,
+  numeric,
+  jsonb,
+  timestamp,
+  index,
+  unique,
+  integer,
+} from 'drizzle-orm/pg-core';
+import { users } from '../user/users.schema';
 
-  export const products = pgTable(
-    'products',
-    {
-      id: serial('id').primaryKey(),
-      name: varchar('name', { length: 255 }).notNull(),
-      slug: varchar('slug', { length: 255 }).notNull(), 
-      description: text('description').notNull(),
-      categoryId: integer('category_id')
-        .notNull()
-        .references(() => categories.id, {
-          onDelete: 'restrict', // Prevent category deletion if products exist
-          onUpdate: 'cascade',
-        }),
-      brandName: varchar('brand_name', { length: 100 }),
-      price: numeric('price', { precision: 10, scale: 2 }).notNull(),
-      discountedPrice: numeric('discounted_price', { precision: 10, scale: 2 }),
-      deliveryMode: varchar('delivery_mode', {
-        enum: ['standard', 'express'],
-      })
-        .notNull()
-        .default('standard'),
-      productImages: jsonb('product_images').$type<string[]>().notNull().default([]), 
-      sku: varchar('sku', { length: 100 }).notNull(), // Made notNull for inventory tracking
-      createdAt: timestamp('created_at', { withTimezone: true }).defaultNow().notNull(),
-      updatedAt: timestamp('updated_at', { withTimezone: true }).defaultNow().notNull(),
-    },
-    (table) => ({
-      skuIdx: index('idx_product_sku').on(table.sku),
-      categoryIdx: index('idx_product_category').on(table.categoryId),
-      slugIdx: index('idx_product_slug').on(table.slug),
-      uniqueSku: unique('uniq_product_sku').on(table.sku),
-    })
-  );
-  
-  // Define relations for type-safe joins
-  export const productsRelations = relations(products, ({ one, many }) => ({
-    category: one(categories, {
-      fields: [products.categoryId],
-      references: [categories.id],
-    }),
-    stock: one(stock),
-    reviews: many(reviews),
-  }));
+
+export const products = pgTable(
+  'products',
+  {
+    id: serial('id').primaryKey(),
+    name: varchar('name', { length: 255 }).notNull(),
+    slug: varchar('slug', { length: 255 }).notNull(),
+    description: text('description'),
+    category: varchar('category', { length: 255 }).notNull(),
+    mrp: numeric('mrp', { precision: 10, scale: 2 }).notNull(),
+    ourPrice: numeric('our_price', { precision: 10, scale: 2 }),
+    status: varchar('status', {
+      enum: ['active', 'inactive'],
+    }).notNull().default('active'),
+    subProductStatus: varchar('sub_product_status', {
+      enum: ['active', 'inactive'],
+    }).notNull().default('active'),
+    totalStocks: numeric('total_stocks', { precision: 10, scale: 0 }).notNull().default('0'),
+    deliveryMode: varchar('delivery_mode', {
+      enum: ['standard', 'express'],
+    }).notNull().default('standard'),
+    productImages: jsonb('product_images').$type<string[]>().notNull().default([]),
+    sku: varchar('sku', { length: 100 }).notNull(),
+    averageRating: numeric('average_rating', { precision: 2, scale: 1 }).default('0.0').notNull(),
+    ratingCount: numeric('rating_count', { precision: 10, scale: 0 }).default('0').notNull(),
+    createdAt: timestamp('created_at', { withTimezone: true }).defaultNow().notNull(),
+    updatedAt: timestamp('updated_at', { withTimezone: true }).defaultNow().notNull(),
+  },
+  (table) => ({
+    skuIdx: index('idx_product_sku').on(table.sku),
+    slugIdx: index('idx_product_slug').on(table.slug),
+    uniqueSku: unique('uniq_product_sku').on(table.sku),
+  })
+);
+
+export const productSpecGroups = pgTable('product_spec_groups', {
+  id: serial('id').primaryKey(),
+  productId: serial('product_id').references(() => products.id,{ onDelete: 'cascade' }).notNull(),
+  groupName: varchar('group_name', { length: 255 }).notNull(), // e.g., 'General'
+});
+
+export const productSpecFields = pgTable('product_spec_fields', {
+  id: serial('id').primaryKey(),
+  groupId: serial('group_id').references(() => productSpecGroups.id, { onDelete: 'cascade' }).notNull(),
+  fieldName: varchar('field_name', { length: 255 }).notNull(), // e.g., 'Brand'
+  fieldValue: text('field_value').notNull(), // e.g., 'Samsung'
+});
+
+export const featuredProducts = pgTable('featured_products', {
+  id: serial('id').primaryKey(),
+  productId: serial('product_id').references(() => products.id,{ onDelete: 'cascade' }).notNull(),
+  createdAt: timestamp('created_at', { withTimezone: true }).defaultNow().notNull(),
+  updatedAt: timestamp('updated_at', { withTimezone: true }).defaultNow().notNull(),
+},
+  (table) => ({
+    productIdIdx: index('idx_featured_product_id').on(table.productId),
+  })
+);
+
+export const newArrivals = pgTable('new_arrivals', {
+  id: serial('id').primaryKey(),
+  productId: serial('product_id').references(() => products.id, { onDelete: 'cascade' }).notNull(),
+  createdAt: timestamp('created_at', { withTimezone: true }).defaultNow().notNull(),
+  updatedAt: timestamp('updated_at', { withTimezone: true }).defaultNow().notNull(),
+},
+  (table) => ({
+    productIdIdx: index('idx_new_arrivals_products_id').on(table.productId),
+  })
+);
+
+export const productReviews = pgTable('product_reviews', {
+  id: serial('id').primaryKey(),
+  productId: integer('product_id').references(() => products.id, { onDelete: 'cascade' }).notNull(),
+  userId: serial('user_id').references(() => users.id).notNull(),
+  rating: numeric('rating', { precision: 2, scale: 1 }).notNull(), 
+  reviewText: text('review_text'),
+  createdAt: timestamp('created_at', { withTimezone: true }).defaultNow().notNull(),
+},
+(table) => ({
+  productIdx: index('idx_review_product_id').on(table.productId),
+}))
+
+
+
+
+

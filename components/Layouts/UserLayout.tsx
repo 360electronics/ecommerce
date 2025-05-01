@@ -10,7 +10,7 @@ const UserLayout: React.FC<UserLayoutProps> = ({ children }) => {
   return (
     <>
       <Header />
-      <div className=' mt-36 md:mt-20 px-4 md:px-12'>
+      <div className=' mt-36 md:mt-32 px-4 md:px-12'>
         {children}
       </div>
       <Footer />

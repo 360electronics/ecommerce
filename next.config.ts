@@ -21,6 +21,13 @@ const nextConfig: NextConfig = {
         protocol: "https", 
         hostname: "img.freepik.com",
       },
+      {
+        protocol: "https", 
+        hostname: "pub-24a64e6c279d47a78e0cfeb74ea9ab44.r2.dev",
+      },
+    ],
+    domains: [
+      '360electronics.com',
     ],
   },
 };

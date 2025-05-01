@@ -1,143 +1,73 @@
 "use client"
 
 import { useState, useRef, useEffect, useMemo } from "react"
-import { Search, Save, Check, Calendar } from "lucide-react"
+import { Search, Save, Check, X } from "lucide-react"
 import { Input } from "@/components/ui/input"
 import { Button } from "@/components/ui/button"
 import ProductCardwithoutCart from "@/components/ProductCards/ProductCardwithoutCart"
-
-// Interface for product
-interface Product {
-  id: string
-  title: string
-  image: string
-  price: number
-  mrp: number
-  discount: number
-  rating: number
-  addedDate?: string
-  isSelected?: boolean
-}
-
-// Sample product data
-const allProducts: Product[] = [
-  {
-    id: "1",
-    title: "Logitech G502 X Gaming Mouse (White)",
-    image:
-      "https://img.freepik.com/free-psd/hard-drive-isolated-transparent-background_191095-23920.jpg?t=st=1745827039~exp=1745830639~hmac=582c40c7a1b07c2aa2e83adb2b4de045040b904c86be933082a07effa2e3ebcd&w=900",
-    price: 4700,
-    mrp: 5000,
-    discount: 30,
-    rating: 4.0,
-  },
-  {
-    id: "2",
-    title: "Samsung Galaxy Book5 360",
-    image:
-      "https://img.freepik.com/free-psd/hard-drive-isolated-transparent-background_191095-23920.jpg?t=st=1745827039~exp=1745830639~hmac=582c40c7a1b07c2aa2e83adb2b4de045040b904c86be933082a07effa2e3ebcd&w=900",
-    price: 89999,
-    mrp: 129999,
-    discount: 30,
-    rating: 4.0,
-  },
-  {
-    id: "3",
-    title: "ASUS TUF Gaming Laptop",
-    image:
-      "https://img.freepik.com/free-psd/hard-drive-isolated-transparent-background_191095-23920.jpg?t=st=1745827039~exp=1745830639~hmac=582c40c7a1b07c2aa2e83adb2b4de045040b904c86be933082a07effa2e3ebcd&w=900",
-    price: 79999,
-    mrp: 99999,
-    discount: 20,
-    rating: 4.5,
-  },
-  {
-    id: "4",
-    title: "Apple MacBook Pro M3",
-    image:
-      "https://img.freepik.com/free-psd/hard-drive-isolated-transparent-background_191095-23920.jpg?t=st=1745827039~exp=1745830639~hmac=582c40c7a1b07c2aa2e83adb2b4de045040b904c86be933082a07effa2e3ebcd&w=900",
-    price: 149999,
-    mrp: 169999,
-    discount: 12,
-    rating: 4.8,
-  },
-  {
-    id: "5",
-    title: "Sony WH-1000XM5 Headphones",
-    image:
-      "https://img.freepik.com/free-psd/hard-drive-isolated-transparent-background_191095-23920.jpg?t=st=1745827039~exp=1745830639~hmac=582c40c7a1b07c2aa2e83adb2b4de045040b904c86be933082a07effa2e3ebcd&w=900",
-    price: 24999,
-    mrp: 34999,
-    discount: 28,
-    rating: 4.7,
-  },
-  {
-    id: "6",
-    title: "Dell XPS 15 Laptop",
-    image:
-      "https://img.freepik.com/free-psd/hard-drive-isolated-transparent-background_191095-23920.jpg?t=st=1745827039~exp=1745830639~hmac=582c40c7a1b07c2aa2e83adb2b4de045040b904c86be933082a07effa2e3ebcd&w=900",
-    price: 129999,
-    mrp: 149999,
-    discount: 13,
-    rating: 4.6,
-  },
-  {
-    id: "7",
-    title: "Razer Basilisk V3 Gaming Mouse",
-    image:
-      "https://img.freepik.com/free-psd/hard-drive-isolated-transparent-background_191095-23920.jpg?t=st=1745827039~exp=1745830639~hmac=582c40c7a1b07c2aa2e83adb2b4de045040b904c86be933082a07effa2e3ebcd&w=900",
-    price: 5999,
-    mrp: 7999,
-    discount: 25,
-    rating: 4.4,
-  },
-  {
-    id: "8",
-    title: "LG 27-inch UltraGear Gaming Monitor",
-    image:
-      "https://img.freepik.com/free-psd/hard-drive-isolated-transparent-background_191095-23920.jpg?t=st=1745827039~exp=1745830639~hmac=582c40c7a1b07c2aa2e83adb2b4de045040b904c86be933082a07effa2e3ebcd&w=900",
-    price: 29999,
-    mrp: 39999,
-    discount: 25,
-    rating: 4.3,
-  },
-]
+import { fetchProducts as fetchAllProducts, fetchNewArrivalsProducts } from "@/utils/products"
+import { Product } from "@/types/product"
 
 export default function NewArrivalsPage() {
   const [searchTerm, setSearchTerm] = useState("")
   const [searchResults, setSearchResults] = useState<Product[]>([])
-  const [newArrivals, setNewArrivals] = useState<Product[]>([])
+  const [newArrivalsProducts, setNewArrivalsProducts] = useState<Product[]>([])
   const [showResults, setShowResults] = useState(false)
   const [isSaved, setIsSaved] = useState(false)
+  const [isLoading, setIsLoading] = useState(false)
   const searchResultsRef = useRef<HTMLDivElement>(null)
+  const searchInputRef = useRef<HTMLInputElement>(null)
+  const [allProducts, setAllProducts] = useState<Product[]>([])
+  const [loading, setLoading] = useState(true)
 
-  // Initialize with some new arrivals
   useEffect(() => {
-    // Simulate fetching new arrivals from API
-    const initialArrivals = allProducts.slice(3, 6).map((product) => ({
-      ...product,
-      addedDate: new Date().toISOString().split("T")[0],
-    }))
-    setNewArrivals(initialArrivals)
+    const fetchData = async () => {
+      setLoading(true)
+      try {
+        const products = await fetchAllProducts()
+        const newArrivals = await fetchNewArrivalsProducts()
+
+        if (products) setAllProducts(products)
+        if (newArrivals) setNewArrivalsProducts(newArrivals)
+      } catch (error) {
+        console.error("Error fetching products:", error)
+      } finally {
+        setLoading(false)
+      }
+    }
+
+    fetchData()
   }, [])
 
-  // Get available products (products not already in new arrivals)
-  const availableProducts = useMemo(() => {
-    const newArrivalIds = newArrivals.map((p) => p.id)
-    return allProducts
-      .filter((product) => !newArrivalIds.includes(product.id))
-      .filter((product) => product.title.toLowerCase().includes(searchTerm.toLowerCase()))
-  }, [newArrivals, searchTerm])
+  // Filter available products based on search term
+  const filteredProducts = useMemo(() => {
+    if (!searchTerm.trim()) return []
 
-  // Update search results when available products change
+    const newArrivalsProductIds = newArrivalsProducts.map(p => p.id)
+
+    // Filter products that are not already newarrivals
+    return allProducts
+      .filter(product => !newArrivalsProductIds.includes(product.id))
+      .filter(product =>
+        product?.name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        String(product?.id).includes(searchTerm)
+      )
+  }, [allProducts, newArrivalsProducts, searchTerm])
+
+  // Update search results when filtered products change
   useEffect(() => {
-    setSearchResults(availableProducts.map((product) => ({ ...product, isSelected: false })))
-  }, [availableProducts])
+    setSearchResults(filteredProducts)
+  }, [filteredProducts])
 
   // Close search results when clicking outside
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
-      if (searchResultsRef.current && !searchResultsRef.current.contains(event.target as Node)) {
+      if (
+        searchResultsRef.current &&
+        !searchResultsRef.current.contains(event.target as Node) &&
+        searchInputRef.current &&
+        !searchInputRef.current.contains(event.target as Node)
+      ) {
         setShowResults(false)
       }
     }
@@ -148,107 +78,188 @@ export default function NewArrivalsPage() {
     }
   }, [])
 
-  // Handle product selection
-  const handleSelectProduct = (product: Product) => {
-    const today = new Date().toISOString().split("T")[0]
-    setNewArrivals((prev) => [...prev, { ...product, addedDate: today }])
-    setSearchResults((prev) => prev.filter((p) => p.id !== product.id))
-    setIsSaved(false)
+  // Handle search with debounce
+  const handleSearch = (value: string) => {
+    setSearchTerm(value)
+    setIsLoading(true)
+    setShowResults(true)
+
+    // Simple debounce
+    setTimeout(() => {
+      setIsLoading(false)
+    }, 300)
   }
 
-  // Toggle product selection in search results
-  const toggleProductSelection = (productId: string) => {
-    setSearchResults((prev) =>
-      prev.map((product) => (product.id === productId ? { ...product, isSelected: !product.isSelected } : product)),
-    )
+  // Handle product selection
+  const handleSelectProduct = (product: Product) => {
+    setNewArrivalsProducts(prev => [...prev, product])
+    setSearchResults(prev => prev.filter(p => p.id !== product.id))
+    setIsSaved(false)
+    setSearchTerm("")
+    setShowResults(false)
   }
 
   // Handle product removal
-  const handleRemoveProduct = (productId: string) => {
-    setNewArrivals((prev) => prev.filter((product) => product.id !== productId))
-    setIsSaved(false)
-  }
+  const handleRemoveProduct = async (productId: number) => {
+    try {
+      const res = await fetch('/api/products/new-arrivals', {
+        method: 'DELETE',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ productId }),
+      });
+
+      if (!res.ok) throw new Error('Failed to remove product');
+
+      setNewArrivalsProducts(prev => prev.filter(product => product.id !== productId));
+      setIsSaved(false);
+    } catch (error) {
+      console.error('Remove product error:', error);
+    }
+  };
 
   // Handle save
-  const handleSave = () => {
-    // Here you would typically save to your backend
-    console.log("Saving new arrivals:", newArrivals)
-    setIsSaved(true)
+  const handleSave = async () => {
+    setIsLoading(true);
+    try {
+      // Extract product IDs from newarrivals products
+      const productIds = newArrivalsProducts.map(product => product.id);
 
-    // Show success message briefly
-    setTimeout(() => {
-      setIsSaved(false)
-    }, 3000)
+      // Call the API to save newarrivals products
+      const response = await fetch('/api/products/new-arrivals', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ productIds }),
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.message || 'Failed to save newarrivals products');
+      }
+
+      // Show success message
+      setIsSaved(true);
+
+      // Hide success message after 3 seconds
+      setTimeout(() => {
+        setIsSaved(false);
+      }, 3000);
+    } catch (error) {
+      console.error("Error saving newarrivals products:", error);
+      // Add better error handling here if needed
+      alert(error instanceof Error ? error.message : "Failed to save newarrivals products");
+    } finally {
+      setIsLoading(false);
+    }
+  }
+
+  // Clear search
+  const clearSearch = () => {
+    setSearchTerm("")
+    setShowResults(false)
+  }
+
+  if (loading) {
+    return <div className="p-8 text-center">Loading...</div>
   }
 
   return (
     <div className="container mx-auto py-8">
-
-
       {isSaved && (
-        <div className="mb-4 rounded-md bg-green-50 p-4 text-green-800">New arrivals have been saved successfully!</div>
+        <div className="mb-4 rounded-md bg-green-50 p-4 text-green-800 flex items-center justify-between">
+          <div className="flex items-center">
+            <Check className="h-5 w-5 mr-2" />
+            New Arrivals products have been saved successfully!
+          </div>
+          <Button variant="ghost" size="sm" onClick={() => setIsSaved(false)}>
+            <X className="h-4 w-4" />
+          </Button>
+        </div>
       )}
 
       {/* Search and add products */}
       <div className="mb-8">
-        {/* <h2 className="mb-4 text-lg font-medium">Add New Arrivals</h2> */}
-        <div className="relative max-w-full flex flex-row items-center justify-between">
-          <div className="relative">
+        <div className="relative flex flex-row items-center justify-between">
+          <div className="relative w-full mr-4">
             <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
             <Input
-              placeholder="Search Product Name"
+              ref={searchInputRef}
+              placeholder="Search products by name or ID"
               value={searchTerm}
-              onChange={(e) => {
-                setSearchTerm(e.target.value)
-                if (e.target.value.trim() !== "") {
-                  setShowResults(true)
-                } else {
-                  setShowResults(false)
-                }
-              }}
+              onChange={(e) => handleSearch(e.target.value)}
               onFocus={() => {
-                if (searchTerm.trim() !== "") {
-                  setShowResults(true)
-                }
+                if (searchTerm.trim()) setShowResults(true)
               }}
-              className="pl-10 py-4"
+              className="pl-10 py-4 w-full pr-10"
             />
+            {searchTerm && (
+              <button
+                onClick={clearSearch}
+                className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600"
+              >
+                <X className="h-4 w-4" />
+              </button>
+            )}
           </div>
 
-          <Button onClick={handleSave} className="flex items-center gap-2 bg-blue-600 hover:bg-blue-700 text-white">
-          <Save className="h-4 w-4" />
-         
-        </Button>
+          <Button
+            onClick={handleSave}
+            className="flex items-center gap-2 bg-blue-600 hover:bg-blue-700 text-white"
+            disabled={newArrivalsProducts.length === 0}
+          >
+            <Save className="h-4 w-4" />
+            Save
+          </Button>
         </div>
       </div>
 
       {/* Search results as product cards */}
-      {showResults && searchTerm.trim() !== "" && (
+      {showResults && (
         <div ref={searchResultsRef} className="mb-8">
-          <h3 className="text-lg font-medium mb-4">Search Results</h3>
+          <div className="flex justify-between items-center mb-4">
+            <h3 className="text-lg font-medium">
+              Search Results {searchResults.length > 0 ? `(${searchResults.length})` : ""}
+            </h3>
+            {searchResults.length > 0 && (
+              <Button variant="ghost" size="sm" onClick={() => setShowResults(false)}>
+                Close
+              </Button>
+            )}
+          </div>
 
-          {searchResults.length > 0 ? (
+          {isLoading ? (
+            <div className="rounded-md border border-dashed border-gray-300 bg-gray-50 p-8 text-center">
+              <p className="text-gray-500">Searching products...</p>
+            </div>
+          ) : searchResults.length > 0 ? (
             <div className="grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-3">
               {searchResults.map((product) => (
-                <div key={product.id} className="relative cursor-pointer" onClick={() => handleSelectProduct(product)}>
-                  {/* Selectable checkbox */}
-                  <div className="absolute left-3 top-3 z-20">
-                    <div
-                      className={`flex h-6 w-6 items-center justify-center rounded-md ${
-                        product.isSelected ? "bg-blue-500" : "bg-white border border-gray-300"
-                      } text-white`}
+                <div
+                  key={product.id}
+                  className="relative cursor-pointer transition-transform hover:scale-105"
+                  onClick={() => handleSelectProduct(product)}
+                >
+                  <div className="absolute right-3 top-3 z-20">
+                    <Button
+                      size="sm"
+                      variant="secondary"
+                      className="bg-blue-500 hover:bg-blue-600 text-white"
+                      onClick={(e) => {
+                        e.stopPropagation()
+                        handleSelectProduct(product)
+                      }}
                     >
-                      {product.isSelected && <Check className="h-4 w-4" />}
-                    </div>
+                      Add
+                    </Button>
                   </div>
 
                   <ProductCardwithoutCart
-                    image={product.image}
-                    title={product.title}
-                    rating={product.rating}
-                    price={product.price}
-                    mrp={product.mrp}
-                    discount={product.discount}
+                    image={product.productImages?.[0]}
+                    name={product.name || "Untitled Product"}
+                    rating={product.averageRating}
+                    ourPrice={product.ourPrice !== null ? Number(product.ourPrice) : 0}
+                    mrp={product.mrp ? Number(product.mrp) : undefined}
                     showViewDetails={false}
                     isHeartNeed={false}
                   />
@@ -257,27 +268,43 @@ export default function NewArrivalsPage() {
             </div>
           ) : (
             <div className="rounded-md border border-dashed border-gray-300 bg-gray-50 p-8 text-center">
-              <p className="text-gray-500">No products found or all matching products are already added.</p>
+              <p className="text-gray-500">
+                {searchTerm.trim() !== ""
+                  ? "No products found or all matching products are already newarrivals."
+                  : "Type to search for products to add to newarrivals list."}
+              </p>
             </div>
           )}
         </div>
       )}
 
-      {/* Selected new arrivals */}
+      {/* Selected newarrivals products */}
       <div>
-        <h2 className="mb-4 text-lg font-medium">Current New Arrivals ({newArrivals.length})</h2>
-        {newArrivals.length > 0 ? (
+        <h2 className="mb-4 text-lg font-medium">Current NewArrivals Products ({newArrivalsProducts.length})</h2>
+        {newArrivalsProducts.length > 0 ? (
           <div className="grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-3">
-            {newArrivals.map((product) => (
-              <div key={product.id} className="relative">
-                
+            {newArrivalsProducts.map((product) => (
+              <div key={product.id} className="relative group">
+                <div className="absolute right-3 top-3 z-20 opacity-0 group-hover:opacity-100 transition-opacity">
+                  <Button
+                    size="sm"
+                    variant="destructive"
+                    className="bg-red-500 hover:bg-red-600 text-white"
+                    onClick={(e) => {
+                      e.stopPropagation()
+                      handleRemoveProduct(product.id)
+                    }}
+                  >
+                    Remove
+                  </Button>
+                </div>
+
                 <ProductCardwithoutCart
-                  image={product.image}
-                  title={product.title}
-                  rating={product.rating}
-                  price={product.price}
-                  mrp={product.mrp}
-                  discount={product.discount}
+                  image={product.productImages?.[0]}
+                  name={product.name}
+                  rating={product.averageRating}
+                  ourPrice={product.ourPrice !== null ? Number(product.ourPrice) : 0}
+                  mrp={product.mrp ? Number(product.mrp) : undefined}
                   showViewDetails={false}
                   onRemove={() => handleRemoveProduct(product.id)}
                   isHeartNeed={false}
@@ -287,7 +314,7 @@ export default function NewArrivalsPage() {
           </div>
         ) : (
           <div className="rounded-md border border-dashed border-gray-300 bg-gray-50 p-8 text-center">
-            <p className="text-gray-500">No new arrivals selected. Use the search above to add products.</p>
+            <p className="text-gray-500">No newarrivals products selected. Use the search above to add products.</p>
           </div>
         )}
       </div>

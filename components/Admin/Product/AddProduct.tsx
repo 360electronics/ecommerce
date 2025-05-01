@@ -12,7 +12,7 @@ import { DndProvider, useDrag, useDrop } from "react-dnd"
 import { HTML5Backend } from "react-dnd-html5-backend"
 
 // Status options - simplified to just active/inactive
-const statusOptions = ["active", "inactive"]
+const statusOptions = ["Active", "Inactive"]
 
 // Interface for specification field
 interface SpecField {
@@ -31,7 +31,7 @@ interface SpecSection {
 }
 
 // Product categories
-const categories = ["PC", "Accessories", "Monitors", "Audio", "Components", "Furniture", "Storage"]
+const categories = ["Laptops", "Desktops", "Accessories", "Peripherals", "Components"]
 
 // Type for drag item
 interface DragItem {
@@ -81,7 +81,7 @@ const DraggableSpecSection = ({
       if (section.isFixed) return false
 
       // Don't allow dropping General or Warranty sections
-      if (item.id === "general" || item.id === "warranty") return false
+      if (item.id === "general") return false
 
       return true
     },
@@ -231,20 +231,21 @@ export default function AddProductPage() {
   const router = useRouter()
 
   // Main product image state
-  const [mainImage, setMainImage] = useState<string>("/assorted-products-display.png")
+  const [mainImage, setMainImage] = useState<string>("")
 
   // Additional images state
   const [additionalImages, setAdditionalImages] = useState<string[]>(Array(5).fill(""))
 
   // Form state
   const [productName, setProductName] = useState("")
+  const [sku, setSku] = useState("")
   const [category, setCategory] = useState("")
-  const [marketPrice, setMarketPrice] = useState("")
-  const [sellingPrice, setSellingPrice] = useState("")
-  const [status, setStatus] = useState("active")
-  const [subStatus, setSubStatus] = useState("active")
+  const [mrp, setMrp] = useState("")
+  const [ourPrice, setOurPrice] = useState("")
+  const [status, setStatus] = useState("Active")
+  const [subStatus, setSubStatus] = useState("Active")
   const [totalStock, setTotalStock] = useState("")
-  const [expressDelivery, setExpressDelivery] = useState("active")
+  const [deliveryMode, setDeliveryMode] = useState("Standard")
 
   // Dropdowns state
   const [openDropdown, setOpenDropdown] = useState<string | null>(null)
@@ -256,13 +257,7 @@ export default function AddProductPage() {
       name: "General",
       fields: [{ id: "field1", label: "", value: "" }],
       isRequired: true,
-      isFixed: true, // General is fixed at the top
-    },
-    {
-      id: "warranty",
-      name: "Warranty",
-      fields: [{ id: "field1", label: "", value: "" }],
-      isFixed: true, // Warranty is fixed at the bottom
+      isFixed: true,
     },
   ])
 
@@ -368,9 +363,9 @@ export default function AddProductPage() {
       prev.map((section) =>
         section.id === sectionId
           ? {
-              ...section,
-              fields: section.fields.map((field) => (field.id === fieldId ? { ...field, [type]: value } : field)),
-            }
+            ...section,
+            fields: section.fields.map((field) => (field.id === fieldId ? { ...field, [type]: value } : field)),
+          }
           : section,
       ),
     )
@@ -382,9 +377,9 @@ export default function AddProductPage() {
       prev.map((section) =>
         section.id === sectionId
           ? {
-              ...section,
-              fields: [...section.fields, { id: `field${section.fields.length + 1}`, label: "", value: "" }],
-            }
+            ...section,
+            fields: [...section.fields, { id: `field${section.fields.length + 1}`, label: "", value: "" }],
+          }
           : section,
       ),
     )
@@ -464,63 +459,189 @@ export default function AddProductPage() {
     })
   }
 
-  // Handle form submission
-  const handleSubmit = (e: React.FormEvent) => {
-    e.preventDefault()
+  // Enhanced form submission with debugging
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    console.log("Form submission started");
 
-    // Validate required fields
-    if (!productName) {
-      alert("Product name is required")
-      return
-    }
-
-    if (!category) {
-      alert("Category is required")
-      return
-    }
-
-    if (!marketPrice) {
-      alert("Market price is required")
-      return
-    }
-
-    if (!sellingPrice) {
-      alert("Selling price is required")
-      return
-    }
-
-    if (!totalStock) {
-      alert("Total stock is required")
-      return
-    }
-
-    // Validate General section has at least one field with values
-    const generalSection = specSections.find((section) => section.id === "general")
-    if (!generalSection || !generalSection.fields.some((field) => field.label && field.value)) {
-      alert("At least one field in the General section is required")
-      return
-    }
-
-    // Collect form data
-    const formData = {
-      name: productName,
+    // Log all form values for debugging
+    console.log({
+      productName,
       category,
-      marketPrice: Number.parseFloat(marketPrice),
-      sellingPrice: Number.parseFloat(sellingPrice),
+      mrp,
+      ourPrice,
+      totalStock,
+      sku,
       status,
       subStatus,
-      totalStock: Number.parseInt(totalStock),
-      expressDelivery,
-      mainImage,
-      additionalImages: additionalImages.filter((img) => img !== ""),
-      specifications: specSections,
+      deliveryMode,
+      // description,
+      mainImage: mainImage ? `${typeof mainImage} (${mainImage instanceof File ? mainImage.name : 'not a file'})` : 'none',
+      additionalImages: additionalImages.map(img =>
+        typeof img === 'string' ? 'string URL' : (img instanceof File ? `File: ${img.name}` : 'unknown type')
+      )
+    });
+
+    // Basic validations
+    if (!productName) return alert("Product name is required");
+    if (!category) return alert("Category is required");
+    if (!mrp) return alert("MRP is required");
+    if (!ourPrice) return alert("Our price is required");
+    if (!totalStock) return alert("Total stock is required");
+
+    // General section must have at least one filled field
+    const generalSection = specSections.find((section) => section.id === "general");
+    if (
+      !generalSection ||
+      !generalSection.fields.some((field) => field.label.trim() && field.value.trim())
+    ) {
+      return alert("At least one field in the General section is required");
     }
 
-    console.log("Submitting product:", formData)
+    // Create FormData object for file uploads
+    const formData = new FormData();
 
-    // Navigate back to products page after submission
-    router.push("/admin/products")
-  }
+    // Add text fields
+    formData.append("name", productName);
+    formData.append("slug", productName.toLowerCase().replace(/\s+/g, "-"));
+    // formData.append("description", description || "");
+    formData.append("category", category);
+    formData.append("mrp", mrp);
+    formData.append("ourPrice", ourPrice);
+    formData.append("deliveryMode", deliveryMode);
+    formData.append("sku", sku || "");
+    formData.append("status", status);
+    formData.append("subProductStatus", subStatus);
+    formData.append("totalStocks", totalStock);
+
+    // Add specifications as JSON string
+    const specificationsPayload = specSections.map((section) => ({
+      groupName: section.name,
+      fields: section.fields
+        .filter((f) => f.label.trim() !== "")
+        .map((f) => ({
+          fieldName: f.label,
+          fieldValue: f.value,
+        })),
+    }));
+    formData.append("specifications", JSON.stringify(specificationsPayload));
+
+    // Debug the file objects
+    console.log("Main image:", mainImage);
+    if (mainImage instanceof File) {
+      console.log("Main image details:", {
+        name: mainImage.name,
+        type: mainImage.type,
+        size: mainImage.size,
+        lastModified: mainImage.lastModified
+      });
+    }
+
+    // Handle main image
+    let mainImageAdded = false;
+    if (mainImage instanceof File && mainImage.size > 0) {
+      console.log("Appending main image as File:", mainImage.name);
+      formData.append("productImages", mainImage);
+      mainImageAdded = true;
+    } else if (typeof mainImage === "string") {
+      if (mainImage.startsWith("data:")) {
+        // It's a base64 image
+        try {
+          console.log("Converting base64 main image to blob");
+          const response = await fetch(mainImage);
+          const blob = await response.blob();
+          console.log("Blob created:", blob.size, blob.type);
+          formData.append("productImages", blob, `main-image-${Date.now()}.${blob.type.split('/')[1] || 'jpg'}`);
+          mainImageAdded = true;
+        } catch (error) {
+          console.error("Error converting base64 to blob:", error);
+        }
+      } else if (mainImage.startsWith("http")) {
+        // It's a URL - might need special handling depending on your setup
+        console.log("Main image is a URL, not handling:", mainImage);
+        // You might need to fetch this image and convert it to a blob
+      }
+    }
+
+    if (!mainImageAdded) {
+      console.warn("No main image was added to formData");
+      return alert("Main product image is required and could not be processed");
+    }
+
+    // Add additional images
+    let additionalImagesAdded = 0;
+    for (let i = 0; i < additionalImages.length; i++) {
+      const image = additionalImages[i];
+      if (image instanceof File && image.size > 0) {
+        console.log(`Appending additional image ${i} as File:`, image.name);
+        formData.append("productImages", image);
+        additionalImagesAdded++;
+      } else if (typeof image === "string" && image.startsWith("data:")) {
+        try {
+          console.log(`Converting base64 additional image ${i} to blob`);
+          const response = await fetch(image);
+          const blob = await response.blob();
+          formData.append("productImages", blob, `additional-image-${Date.now()}-${i}.${blob.type.split('/')[1] || 'jpg'}`);
+          additionalImagesAdded++;
+        } catch (error) {
+          console.error(`Error converting additional image ${i} to blob:`, error);
+        }
+      }
+    }
+
+    console.log(`Added ${additionalImagesAdded} additional images`);
+
+    // Log all FormData entries for debugging
+    console.log("FormData entries:");
+    for (const pair of formData.entries()) {
+      if (pair[0] === "productImages") {
+        console.log(`${pair[0]}: [File object]`);
+      } else if (pair[0] === "specifications") {
+        console.log(`${pair[0]}: [JSON string length: ${(pair[1] as string).length}]`);
+      } else {
+        console.log(`${pair[0]}: ${pair[1]}`);
+      }
+    }
+
+    try {
+      console.log("Sending fetch request to /api/products");
+      const res = await fetch("/api/products", {
+        method: "POST",
+        body: formData,
+      });
+
+      console.log("Response status:", res.status);
+      console.log("Response status text:", res.statusText);
+
+      // Try to get the response body as text first to ensure we can see it even if it's not valid JSON
+      const responseText = await res.text();
+      console.log("Raw response:", responseText);
+
+      let result;
+      try {
+        // Try to parse as JSON if possible
+        result = JSON.parse(responseText);
+        console.log("Parsed response:", result);
+      } catch (parseError) {
+        console.error("Failed to parse response as JSON:", parseError);
+        // Continue with the text response
+        result = { message: responseText };
+      }
+
+      if (!res.ok) {
+        throw new Error(result.message || responseText || "Failed to create product");
+      }
+
+      // Success!
+      console.log("Product created successfully:", result);
+      alert("Product added successfully!");
+      router.push("/admin/products");
+    } catch (error) {
+      console.error("Error submitting product:", error);
+      alert(`Error: ${error instanceof Error ? error.message : "Unknown error occurred"}`);
+    }
+  };
+
 
   return (
     <DndProvider backend={HTML5Backend}>
@@ -668,6 +789,21 @@ export default function AddProductPage() {
               />
             </div>
 
+            {/* Stock Keeping Unit (SKU) */}
+            <div>
+              <label htmlFor="sku" className="block text-sm font-medium text-gray-700">
+                Stock Keeping Unit (SKU)
+              </label>
+              <Input
+                id="sku"
+                value={sku}
+                onChange={(e) => setSku(e.target.value)}
+                placeholder="eg. IP15-256-BLUE"
+                className="mt-1"
+                required
+              />
+            </div>
+
             {/* Category */}
             <div>
               <label htmlFor="category" className="block text-sm font-medium text-gray-700">
@@ -705,14 +841,14 @@ export default function AddProductPage() {
 
             {/* Market Price */}
             <div>
-              <label htmlFor="market-price" className="block text-sm font-medium text-gray-700">
-                Market Price
+              <label htmlFor="mrp" className="block text-sm font-medium text-gray-700">
+                MRP
               </label>
               <Input
-                id="market-price"
-                value={marketPrice}
-                onChange={(e) => setMarketPrice(e.target.value)}
-                placeholder="Market Price"
+                id="mrp"
+                value={mrp}
+                onChange={(e) => setMrp(e.target.value)}
+                placeholder="MRP eg. ₹2000"
                 className="mt-1"
                 type="number"
                 required
@@ -721,15 +857,15 @@ export default function AddProductPage() {
 
             {/* Selling Price */}
             <div>
-              <label htmlFor="selling-price" className="block text-sm font-medium text-gray-700">
-                Selling Price
+              <label htmlFor="our-price" className="block text-sm font-medium text-gray-700">
+                Our Price
               </label>
               <div className="relative mt-1">
                 <span className="absolute inset-y-0 left-0 flex items-center pl-3 text-gray-500">₹</span>
                 <Input
-                  id="selling-price"
-                  value={sellingPrice}
-                  onChange={(e) => setSellingPrice(e.target.value)}
+                  id="our-price"
+                  value={ourPrice}
+                  onChange={(e) => setOurPrice(e.target.value)}
                   placeholder="20000"
                   className="pl-8"
                   type="number"
@@ -824,29 +960,29 @@ export default function AddProductPage() {
               </div>
             </div>
 
-            {/* Express Delivery */}
+            {/*  Delivery Mode */}
             <div>
-              <label htmlFor="express-delivery" className="block text-sm font-medium text-gray-700">
-                Express Delivery
+              <label htmlFor="delivery-mode" className="block text-sm font-medium text-gray-700">
+                Delivery Mode
               </label>
               <div className="relative mt-1 dropdown-container">
                 <button
                   type="button"
                   className="flex w-full items-center justify-between rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
-                  onClick={() => toggleDropdown("expressDelivery")}
+                  onClick={() => toggleDropdown("deliveryMode")}
                 >
-                  <span>{expressDelivery}</span>
+                  <span>{deliveryMode}</span>
                   <ChevronDown className="h-4 w-4 opacity-50" />
                 </button>
-                {openDropdown === "expressDelivery" && (
+                {openDropdown === "deliveryMode" && (
                   <div className="absolute z-10 mt-1 w-full rounded-md border border-gray-200 bg-white shadow-lg">
                     <div className="max-h-60 overflow-auto py-1">
-                      {statusOptions.map((option) => (
+                      {['Standard', 'Express'].map((option) => (
                         <div
                           key={option}
                           className="cursor-pointer px-4 py-2 text-sm hover:bg-gray-100"
                           onClick={() => {
-                            setExpressDelivery(option)
+                            setDeliveryMode(option)
                             setOpenDropdown(null)
                           }}
                         >
@@ -888,7 +1024,7 @@ export default function AddProductPage() {
           </div>
 
           {/* Sub Products - Only show if subStatus is active */}
-          {subStatus === "active" && (
+          {subStatus === "Active" && (
             <div>
               <h2 className="mb-4 text-lg font-medium">Sub Products</h2>
               <SubProductSelector />

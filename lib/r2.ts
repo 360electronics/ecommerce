@@ -1,6 +1,7 @@
 import { S3Client, PutObjectCommand, GetObjectCommand, DeleteObjectCommand, HeadObjectCommand } from "@aws-sdk/client-s3";
 import { Readable } from "stream";
 
+
 // Initialize S3 client for Cloudflare R2
 const r2Client = new S3Client({
   region: process.env.R2_REGION || "auto", 
@@ -11,28 +12,55 @@ const r2Client = new S3Client({
   },
 });
 
-export const uploadToR2 = async (key: string, file: Buffer | Uint8Array | Blob | string, mimeType: string) => {
+export const uploadProductImageToR2 = async (
+  productName: string,
+  file: Buffer | Uint8Array | Blob | string,
+  mimeType: string,
+  fileName: string
+) => {
   try {
+    const sanitizedProductName = productName.trim().toLowerCase().replace(/\s+/g, '-');
+    const key = `products/${sanitizedProductName}/${fileName}`;
+    
     const command = new PutObjectCommand({
       Bucket: process.env.R2_BUCKET_NAME!,
       Key: key,
       Body: file,
       ContentType: mimeType,
     });
-
+    
     await r2Client.send(command);
-    return `https://${process.env.R2_ACCOUNT_ID}.r2.cloudflarestorage.com/${process.env.R2_BUCKET_NAME}/${key}`;
+    
+    // Return the URL from your R2 public bucket or custom domain
+    // If using public bucket access via Cloudflare R2
+    return `${process.env.R2_PUBLIC_URL}/${key}`;
+    
+    // If using Cloudflare Workers or custom domain for R2
+    // return `${process.env.CLOUDFLARE_WORKER_URL}/${key}`;
   } catch (error) {
     console.error("Error uploading to R2:", error);
     throw new Error("Failed to upload file to R2.");
   }
-};
+}
 
-// Function to fetch a file and convert stream to a Buffer
+
+
 export const getFromR2 = async (key: string): Promise<Buffer> => {
   try {
+    // Get bucket name directly from environment each time the function is called
+    const bucketName = process.env.R2_BUCKET_NAME;
+    console.log("ENV R2_BUCKET_NAME:", bucketName);
+
+    // Check if bucket name is available
+    if (!bucketName) {
+      console.error('R2_BUCKET_NAME environment variable is not defined');
+      throw new Error('R2 bucket name is not configured');
+    }
+    
+    console.log(`Fetching from R2 with bucket: ${bucketName}, key: ${key}`);
+    
     const command = new GetObjectCommand({
-      Bucket: process.env.R2_BUCKET_NAME!,
+      Bucket: bucketName,
       Key: key,
     });
 
@@ -42,34 +70,59 @@ export const getFromR2 = async (key: string): Promise<Buffer> => {
     // Convert stream to Buffer
     const chunks: Buffer[] = [];
     for await (const chunk of stream) {
-      chunks.push(chunk);
+      chunks.push(chunk instanceof Buffer ? chunk : Buffer.from(chunk));
     }
 
     // Return the full buffer
-    return Buffer.concat(chunks.map(chunk => new Uint8Array(chunk)));
+    return Buffer.concat(chunks);
   } catch (error) {
     console.error('Error fetching from R2:', error);
     throw error;
   }
 };
+// Helper function to extract the key from a full R2 URL
+export const extractKeyFromR2Url = (url: string): string | null => {
+  try {
+    // Parse the URL to extract the path
+    const urlObj = new URL(url);
+    const pathParts = urlObj.pathname.split('/');
+    
+    // First part is empty, second is bucket name, rest is the key
+    if (pathParts.length < 3) {
+      throw new Error("Invalid R2 URL format");
+    }
+    
+    // Skip the first empty string and bucket name
+    console.log(pathParts.slice(2).join('/'))
+    return pathParts.slice(2).join('/');
+
+
+  } catch (error) {
+    console.error("Error parsing R2 URL:", error);
+    return null;
+  }
+};
+
 
 // Function to delete a file from Cloudflare R2 (optional, if you need to delete files)
 export const deleteFromR2 = async (key: string): Promise<void> => {
   try {
-    // Create the command to delete a file
     const command = new DeleteObjectCommand({
       Bucket: process.env.R2_BUCKET_NAME!,
       Key: key,
     });
 
-    // Send the command to delete the file
-    await r2Client.send(command);
-    console.log(`File with key ${key} deleted successfully.`);
+    const result = await r2Client.send(command);
+    console.log(`Attempted to delete key: ${key}`);
+    console.log("Delete result:", result);
   } catch (error) {
     console.error('Error deleting from R2:', error);
     throw new Error("Failed to delete file from R2.");
   }
 };
+
+
+
 
 export const getR2ObjectMetadata = async (objectUrl:string)=> {
   try {

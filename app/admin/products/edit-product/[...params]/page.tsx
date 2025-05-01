@@ -32,7 +32,7 @@ interface SpecSection {
 }
 
 // Product categories
-const categories = ["PC", "Accessories", "Monitors", "Audio", "Components", "Furniture", "Storage"]
+const categories = ["Laptops", "Desktops", "Accessories", "Peripherals", "Components"]
 
 // Sample product data based on ID
 const getProductData = (productId: string, category: string) => {

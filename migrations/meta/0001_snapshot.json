@@ -1,6 +1,6 @@
 {
-  "id": "ccc9a1a9-d2ae-439a-9040-44eccc20e987",
-  "prevId": "00000000-0000-0000-0000-000000000000",
+  "id": "faf16e04-d0b0-443b-b30e-3d188d507f55",
+  "prevId": "ccc9a1a9-d2ae-439a-9040-44eccc20e987",
   "version": "7",
   "dialect": "postgresql",
   "tables": {
@@ -220,6 +220,75 @@
       "checkConstraints": {},
       "isRLSEnabled": false
     },
+    "public.featured_products": {
+      "name": "featured_products",
+      "schema": "",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "serial",
+          "primaryKey": true,
+          "notNull": true
+        },
+        "product_id": {
+          "name": "product_id",
+          "type": "serial",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "created_at": {
+          "name": "created_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        },
+        "updated_at": {
+          "name": "updated_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        }
+      },
+      "indexes": {
+        "idx_featured_product_id": {
+          "name": "idx_featured_product_id",
+          "columns": [
+            {
+              "expression": "product_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        }
+      },
+      "foreignKeys": {
+        "featured_products_product_id_products_id_fk": {
+          "name": "featured_products_product_id_products_id_fk",
+          "tableFrom": "featured_products",
+          "tableTo": "products",
+          "columnsFrom": [
+            "product_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "no action",
+          "onUpdate": "no action"
+        }
+      },
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {},
+      "policies": {},
+      "checkConstraints": {},
+      "isRLSEnabled": false
+    },
     "public.product_spec_fields": {
       "name": "product_spec_fields",
       "schema": "",
@@ -342,7 +411,7 @@
           "name": "description",
           "type": "text",
           "primaryKey": false,
-          "notNull": true
+          "notNull": false
         },
         "category": {
           "name": "category",

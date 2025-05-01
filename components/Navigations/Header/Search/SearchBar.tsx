@@ -22,14 +22,7 @@ const SearchBar: React.FC<SearchProps> = ({ onSearch, isMobile = false, inputRef
 
   const actualInputRef = inputRef || internalInputRef;
 
-  const categories = [
-    'All Categories',
-    'Laptops',
-    'Desktops',
-    'Components',
-    'Accessories',
-    'Peripherals'
-  ];
+  const categories = ['All Categories','Laptops', 'Desktops', 'Components', 'Peripherals', 'Accessories'];
 
   useEffect(() => {
     const savedSearches = localStorage.getItem('recentSearches');
@@ -125,10 +118,7 @@ const SearchBar: React.FC<SearchProps> = ({ onSearch, isMobile = false, inputRef
   const handleCategorySelect = (cat: string) => {
     setCategory(cat);
     setShowCategories(false);
-    
-  
-      navigateToSearch(searchQuery, cat);
-    
+    // Removed the navigation here - only update the state
   };
 
   return (
@@ -137,7 +127,7 @@ const SearchBar: React.FC<SearchProps> = ({ onSearch, isMobile = false, inputRef
         <div ref={categoryDropdownRef} className="relative hidden sm:block">
           <button
             type="button"
-            className="flex items-center cursor-pointer justify-between bg-black text-white rounded-l-3xl px-2 sm:px-3 md:px-4 py-2 text-sm whitespace-nowrap"
+            className="flex items-center cursor-pointer justify-between bg-black text-white rounded-l-3xl px-2 sm:px-3 md:px-4 py-[12.5px] text-sm whitespace-nowrap"
             onClick={() => setShowCategories(!showCategories)}
           >
             <span className="hidden md:inline">{category}</span>
@@ -153,7 +143,7 @@ const SearchBar: React.FC<SearchProps> = ({ onSearch, isMobile = false, inputRef
                 <button
                   key={cat}
                   type="button"
-                  className="block w-full cursor-pointer text-left px-4 py-2 text-sm hover:bg-gray-100"
+                  className="block w-full cursor-pointer text-left px-4 py-3 text-sm hover:bg-gray-100"
                   onClick={() => handleCategorySelect(cat)}
                 >
                   {cat}
@@ -168,7 +158,7 @@ const SearchBar: React.FC<SearchProps> = ({ onSearch, isMobile = false, inputRef
             ref={actualInputRef}
             type="text"
             placeholder={isMobile ? "Search..." : "Search for Products, Brands & More"}
-            className="w-full border rounded-full md:rounded-none  sm:border-y border-gray-300 px-3 py-2 text-[10px] md:text-sm focus:outline-none"
+            className="w-full border rounded-full md:rounded-none  sm:border-y border-gray-300 px-3 py-3 text-[10px] md:text-sm focus:outline-none"
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
             onFocus={() => setShowSearchModal(true)}
