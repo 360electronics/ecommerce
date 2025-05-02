@@ -5,36 +5,15 @@
     {
       "idx": 0,
       "version": "7",
-      "when": 1745944503062,
-      "tag": "0000_ambiguous_snowbird",
+      "when": 1746086870066,
+      "tag": "0000_little_steel_serpent",
       "breakpoints": true
     },
     {
       "idx": 1,
       "version": "7",
-      "when": 1746026599513,
-      "tag": "0001_keen_weapon_omega",
-      "breakpoints": true
-    },
-    {
-      "idx": 2,
-      "version": "7",
-      "when": 1746077241419,
-      "tag": "0002_lowly_joshua_kane",
-      "breakpoints": true
-    },
-    {
-      "idx": 3,
-      "version": "7",
-      "when": 1746079446229,
-      "tag": "0003_gigantic_sabretooth",
-      "breakpoints": true
-    },
-    {
-      "idx": 4,
-      "version": "7",
-      "when": 1746082381395,
-      "tag": "0004_wooden_human_torch",
+      "when": 1746094074046,
+      "tag": "0001_happy_franklin_richards",
       "breakpoints": true
     }
   ]

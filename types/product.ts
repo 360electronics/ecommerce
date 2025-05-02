@@ -1,5 +1,5 @@
 export interface Product {
-    id: number;
+    id: string;
     name: string;
     slug: string;
     description: string | null;
@@ -20,7 +20,7 @@ export interface Product {
   
 
 export interface FeaturedProduct {
-    id: number;
+    id: string;
     productId: number;
     createdAt: string;
     updatedAt: string;

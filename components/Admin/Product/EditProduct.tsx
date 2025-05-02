@@ -11,6 +11,7 @@ import { Input } from "@/components/ui/input"
 import { SubProductSelector } from "@/components/Admin/Product/SubProductSelector"
 import { DndProvider, useDrag, useDrop } from "react-dnd"
 import { HTML5Backend } from "react-dnd-html5-backend"
+import { Product } from "@/types/product"
 
 // Status options - simplified to just active/inactive
 const statusOptions = ["active", "inactive"]
@@ -34,49 +35,25 @@ interface SpecSection {
 // Product categories
 const categories = ["Laptops", "Desktops", "Accessories", "Peripherals", "Components"]
 
-// Sample product data based on ID
-const getProductData = (productId: string, category: string) => {
-  // This would normally be fetched from an API
-  return {
-    id: productId,
-    name: `${category} Product ${productId}`,
-    category: category,
-    marketPrice: "95000",
-    sellingPrice: "89999",
-    status: "active",
-    subStatus: "active",
-    totalStock: "12",
-    expressDelivery: "active",
-    mainImage: "/assorted-products-display.png",
-    additionalImages: ["/gaming-mouse-setup.png", "/sleek-workspace.png", "", "", ""],
-    specifications: [
-      {
-        id: "general",
-        name: "General",
-        fields: [
-          { id: "field1", label: "Brand", value: "TechBrand" },
-          { id: "field2", label: "Model", value: "Pro X5" },
-        ],
-        isRequired: true,
-        isFixed: true,
-      },
-      {
-        id: "section1",
-        name: "Performance",
-        fields: [
-          { id: "field1", label: "Processor", value: "Intel Core i7" },
-          { id: "field2", label: "RAM", value: "16GB DDR4" },
-        ],
-      },
-      {
-        id: "warranty",
-        name: "Warranty",
-        fields: [{ id: "field1", label: "Warranty Summary", value: "1 Year Manufacturer Warranty" }],
-        isFixed: true,
-      },
-    ],
+
+
+export const getProductData = async (slug: string): Promise<Product | null> => {
+  try {
+    const res = await fetch(`/api/products/${slug}`, { cache: 'no-store' })
+
+    if (!res.ok) {
+      console.error('Failed to fetch product data:', res.status)
+      return null
+    }
+
+    const data: Product = await res.json()
+    return data
+  } catch (error) {
+    console.error('Error fetching product data:', error)
+    return null
   }
 }
+
 
 // Type for drag item
 interface DragItem {
@@ -272,11 +249,8 @@ const DraggableSpecSection = ({
   )
 }
 
-export default function EditProductPage({ params }: { params: { params: string[] } }) {
+export default function EditProductPage({ slug }: { slug: string }) {
   const router = useRouter()
-
-  // Extract product ID and category from params
-  const [productId, category] = params.params || []
 
   // State for loading
   const [isLoading, setIsLoading] = useState(true)
@@ -307,48 +281,30 @@ export default function EditProductPage({ params }: { params: { params: string[]
   const mainImageInputRef = useRef<HTMLInputElement>(null)
   const additionalImageInputRefs = useRef<(HTMLInputElement | null)[]>([])
 
-  // Fetch product data on mount
+  const [product, setProduct] = useState<Product | null>(null)
+
   useEffect(() => {
-    // In a real app, this would be an API call
-    const fetchProductData = async () => {
-      try {
-        setIsLoading(true)
-
-        // Simulate API delay
-        await new Promise((resolve) => setTimeout(resolve, 500))
-
-        if (!productId || !category) {
-          router.push("/admin/products")
-          return
-        }
-
-        const productData = getProductData(productId, category)
-
-        // Populate form with product data
-        setProductName(productData.name)
-        setProductCategory(productData.category)
-        setMarketPrice(productData.marketPrice)
-        setSellingPrice(productData.sellingPrice)
-        setStatus(productData.status)
-        setSubStatus(productData.subStatus)
-        setTotalStock(productData.totalStock)
-        setExpressDelivery(productData.expressDelivery)
-        setMainImage(productData.mainImage)
-        setAdditionalImages([
-          ...productData.additionalImages,
-          ...Array(5 - productData.additionalImages.length).fill(""),
-        ])
-        setSpecSections(productData.specifications)
-      } catch (error) {
-        console.error("Error fetching product data:", error)
-        // Handle error - redirect or show error message
-      } finally {
-        setIsLoading(false)
+    const fetchData = async () => {
+      const data = await getProductData(slug)
+      if (data) {
+        setProduct(data)
+        setProductName(data.name)
+        setProductCategory(data.category)
+        setMarketPrice(data.mrp?.toString() || "")
+        setSellingPrice(data.ourPrice.toString())
+        setStatus(data.status)
+        setSubStatus(data.subProductStatus)
+        setTotalStock(data.totalStocks.toString())
+        setExpressDelivery(data.deliveryMode === "express" ? "active" : "inactive")
+        setMainImage(data.productImages[0] || "")
+        setAdditionalImages([...data.productImages.slice(1), ...Array(5 - data.productImages.length + 1).fill("")].slice(0, 5))
       }
+      setIsLoading(false)
     }
-
-    fetchProductData()
-  }, [productId, category, router])
+  
+    fetchData()
+  }, [slug])
+  
 
   // useEffect to initialize the array of refs
   useEffect(() => {
@@ -583,7 +539,7 @@ export default function EditProductPage({ params }: { params: { params: string[]
 
     // Collect form data
     const formData = {
-      id: productId,
+      id: product?.id,
       name: productName,
       category: productCategory,
       marketPrice: Number.parseFloat(marketPrice),
@@ -629,12 +585,12 @@ export default function EditProductPage({ params }: { params: { params: string[]
                 className="inline-flex items-center text-sm text-gray-500 hover:text-gray-700"
               >
                 <ArrowLeft className="mr-1 h-4 w-4" />
-                Back
+                
               </button>
-              <h1 className="text-2xl font-bold tracking-tight">Edit Product</h1>
+              <h1 className="text-2xl font-bold tracking-tight my-4">Edit Product</h1>
             </div>
             <p className="text-sm text-muted-foreground">
-              Editing {category} product {productId}
+              Editing {product?.category} product {product?.id}
             </p>
           </div>
           <div className="flex items-center space-x-2">

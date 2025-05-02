@@ -88,13 +88,13 @@ export const extractKeyFromR2Url = (url: string): string | null => {
     const pathParts = urlObj.pathname.split('/');
     
     // First part is empty, second is bucket name, rest is the key
-    if (pathParts.length < 3) {
+    if (pathParts.length < 2) {
       throw new Error("Invalid R2 URL format");
     }
     
     // Skip the first empty string and bucket name
-    console.log(pathParts.slice(2).join('/'))
-    return pathParts.slice(2).join('/');
+    console.log(pathParts.slice(1).join('/'))
+    return pathParts.slice(1).join('/');
 
 
   } catch (error) {
