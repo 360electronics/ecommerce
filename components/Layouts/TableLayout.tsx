@@ -706,6 +706,7 @@ export function EnhancedTable<T extends Record<string, any>>({
                       className={cn(
                         column.sortable && sorting.enabled ? "cursor-pointer hover:bg-primary/10" : "",
                         column.align === "right" && "text-right",
+                        column.align === "left" && "text-left",
                         column.align === "center" && "text-center",
                         column.width ? `w-[${column.width}]` : "",
                         "whitespace-nowrap",
@@ -758,6 +759,7 @@ export function EnhancedTable<T extends Record<string, any>>({
                           <TableCell
                             key={String(column.key)}
                             className={cn(
+                              column.align === "left" && "text-left",
                               column.align === "right" && "text-right",
                               column.align === "center" && "text-center",
                               getCellClassName(column.key, item),
@@ -771,12 +773,7 @@ export function EnhancedTable<T extends Record<string, any>>({
                 })
               ) : (
                 <TableRow>
-                  <TableCell
-                    colSpan={columns.filter((col) => !col.hidden).length + (selection.enabled ? 1 : 0)}
-                    className="h-24 text-center"
-                  >
-                    No results found.
-                  </TableCell>
+                  
                 </TableRow>
               )}
             </TableBody>

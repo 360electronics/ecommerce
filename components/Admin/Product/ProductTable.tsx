@@ -25,14 +25,14 @@ export function ProductsTable() {
       key: "productImages",
       header: "Thumbnail",
       width: "100px",
-      align: "center",
+      align: "left",
       renderCell: (value, product) => {
         // Check if productImages exists and has at least one image URL
         if (product.productImages && product.productImages.length > 0) {
           const imageUrl = product.productImages[0];
           
           return (
-            <div className="flex justify-center items-center h-16">
+            <div className="flex justify-start items-center h-16">
               <Image 
                 src={imageUrl} 
                 alt={`${product.name} thumbnail`}
@@ -61,13 +61,14 @@ export function ProductsTable() {
       header: "Product Name",
       sortable: true,
       width: "25%",
+      align:'left'
     },
     {
       key: "mrp",
       header: "MRP",
       sortable: true,
       width: "15%",
-      align: "right",
+      align: "left",
       renderCell: (value) => `₹${value.toLocaleString()}`, // Assuming you're using Indian Rupees
     },
     {
@@ -75,7 +76,7 @@ export function ProductsTable() {
       header: "Our Price",
       sortable: true,
       width: "15%",
-      align: "right",
+      align: "left",
       renderCell: (value) => `₹${value.toLocaleString()}`,
     },
     {
@@ -90,7 +91,7 @@ export function ProductsTable() {
       header: "Total Stocks",
       sortable: true,
       width: "15%",
-      align: "center",
+      align: "left",
       renderCell: (value, item) => {
         const stockLevel = Number(value)
         let stockClass = "text-green-600"
@@ -109,7 +110,7 @@ export function ProductsTable() {
       header: "Status",
       sortable: true,
       width: "10%",
-      align: "center",
+      align: "left",
       renderCell: (value) => {
         let statusClass = "";
         let statusDisplay = value;
@@ -145,7 +146,7 @@ export function ProductsTable() {
   const handleEditProduct = (products: Product[]) => {
     if (products.length === 1) {
       // Use the dynamic route with category and product ID
-      router.push(`/admin/products/edit-product/${products[0].category}/${products[0].id}`)
+      router.push(`/admin/products/edit-product/${products[0].slug}`)
     } else {
       router.push(`/admin/products/bulk-edit?ids=${products.map((p) => p.id).join(",")}`)
     }
@@ -157,10 +158,15 @@ export function ProductsTable() {
 
   const handleDeleteProduct = async (product: Product) => {
     if (window.confirm(`Are you sure you want to delete ${product.name}?`)) {
-      const res = await deleteProducts([product.id]);
-      if (res) {
-        console.log('Deleted product:', product);
-        // Optionally update UI or state
+      try {
+        const res = await deleteProducts([product.id]);
+        if (res) {
+          setProducts((prev) => prev.filter((p) => p.id !== product.id));
+          alert(`${product.name} deleted successfully.`);
+        }
+      } catch (error) {
+        console.error("Failed to delete product:", error);
+        alert("Error deleting product. Please try again.");
       }
     }
   };
@@ -169,14 +175,20 @@ export function ProductsTable() {
     if (products.length === 0) return;
   
     if (window.confirm(`Are you sure you want to delete ${products.length} products?`)) {
-      const ids = products.map(p => p.id);
-      const res = await deleteProducts(ids);
-      if (res) {
-        console.log('Deleted products:', ids);
-        // Optionally update UI or state
+      const ids = products.map((p) => p.id);
+      try {
+        const res = await deleteProducts(ids);
+        if (res) {
+          setProducts((prev) => prev.filter((p) => !ids.includes(p.id)));
+          alert(`${products.length} products deleted successfully.`);
+        }
+      } catch (error) {
+        console.error("Failed to bulk delete products:", error);
+        alert("Error deleting products. Please try again.");
       }
     }
   };
+  
   
 
   const handleExportProducts = (products: Product[]) => {

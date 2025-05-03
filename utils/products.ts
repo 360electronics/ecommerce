@@ -64,7 +64,7 @@ export async function fetchNewArrivalsProducts() {
     }
   }
   
-export const deleteProducts = async (ids: number[]) => {
+export const deleteProducts = async (ids: string[]) => {
     try {
       const res = await fetch('/api/products', {
         method: 'DELETE',

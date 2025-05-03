@@ -1,6 +1,6 @@
 import {
   pgTable,
-  serial,
+  uuid,
   varchar,
   text,
   numeric,
@@ -8,15 +8,14 @@ import {
   timestamp,
   index,
   unique,
-  integer,
 } from 'drizzle-orm/pg-core';
 import { users } from '../user/users.schema';
-
+import { sql } from 'drizzle-orm';
 
 export const products = pgTable(
   'products',
   {
-    id: serial('id').primaryKey(),
+    id: uuid('id').primaryKey().default(sql`gen_random_uuid()`),
     name: varchar('name', { length: 255 }).notNull(),
     slug: varchar('slug', { length: 255 }).notNull(),
     description: text('description'),
@@ -40,61 +39,57 @@ export const products = pgTable(
     createdAt: timestamp('created_at', { withTimezone: true }).defaultNow().notNull(),
     updatedAt: timestamp('updated_at', { withTimezone: true }).defaultNow().notNull(),
   },
-  (table) => ({
-    skuIdx: index('idx_product_sku').on(table.sku),
-    slugIdx: index('idx_product_slug').on(table.slug),
-    uniqueSku: unique('uniq_product_sku').on(table.sku),
-  })
+  (table) => [
+    index('idx_product_sku').on(table.sku),
+    index('idx_product_slug').on(table.slug),
+    unique('uniq_product_sku').on(table.sku),
+  ]
 );
 
 export const productSpecGroups = pgTable('product_spec_groups', {
-  id: serial('id').primaryKey(),
-  productId: serial('product_id').references(() => products.id,{ onDelete: 'cascade' }).notNull(),
+  id: uuid('id').primaryKey().default(sql`gen_random_uuid()`),
+  productId: uuid('product_id').references(() => products.id, { onDelete: 'cascade' }).notNull(),
   groupName: varchar('group_name', { length: 255 }).notNull(), // e.g., 'General'
 });
 
 export const productSpecFields = pgTable('product_spec_fields', {
-  id: serial('id').primaryKey(),
-  groupId: serial('group_id').references(() => productSpecGroups.id, { onDelete: 'cascade' }).notNull(),
+  id: uuid('id').primaryKey().default(sql`gen_random_uuid()`),
+  groupId: uuid('group_id').references(() => productSpecGroups.id, { onDelete: 'cascade' }).notNull(),
   fieldName: varchar('field_name', { length: 255 }).notNull(), // e.g., 'Brand'
   fieldValue: text('field_value').notNull(), // e.g., 'Samsung'
 });
 
 export const featuredProducts = pgTable('featured_products', {
-  id: serial('id').primaryKey(),
-  productId: serial('product_id').references(() => products.id,{ onDelete: 'cascade' }).notNull(),
+  id: uuid('id').primaryKey().default(sql`gen_random_uuid()`),
+  productId: uuid('product_id').references(() => products.id, { onDelete: 'cascade' }).notNull(),
   createdAt: timestamp('created_at', { withTimezone: true }).defaultNow().notNull(),
   updatedAt: timestamp('updated_at', { withTimezone: true }).defaultNow().notNull(),
 },
-  (table) => ({
-    productIdIdx: index('idx_featured_product_id').on(table.productId),
-  })
+  (table) => [
+    index('idx_featured_product_id').on(table.productId),
+  ]
 );
 
 export const newArrivals = pgTable('new_arrivals', {
-  id: serial('id').primaryKey(),
-  productId: serial('product_id').references(() => products.id, { onDelete: 'cascade' }).notNull(),
+  id: uuid('id').primaryKey().default(sql`gen_random_uuid()`),
+  productId: uuid('product_id').references(() => products.id, { onDelete: 'cascade' }).notNull(),
   createdAt: timestamp('created_at', { withTimezone: true }).defaultNow().notNull(),
   updatedAt: timestamp('updated_at', { withTimezone: true }).defaultNow().notNull(),
 },
-  (table) => ({
-    productIdIdx: index('idx_new_arrivals_products_id').on(table.productId),
-  })
+  (table) => [
+    index('idx_new_arrivals_products_id').on(table.productId),
+  ]
 );
 
 export const productReviews = pgTable('product_reviews', {
-  id: serial('id').primaryKey(),
-  productId: integer('product_id').references(() => products.id, { onDelete: 'cascade' }).notNull(),
-  userId: serial('user_id').references(() => users.id).notNull(),
-  rating: numeric('rating', { precision: 2, scale: 1 }).notNull(), 
+  id: uuid('id').primaryKey().default(sql`gen_random_uuid()`),
+  productId: uuid('product_id').references(() => products.id, { onDelete: 'cascade' }).notNull(),
+  userId: uuid('user_id').references(() => users.id).notNull(),
+  rating: numeric('rating', { precision: 2, scale: 1 }).notNull(),
   reviewText: text('review_text'),
   createdAt: timestamp('created_at', { withTimezone: true }).defaultNow().notNull(),
 },
-(table) => ({
-  productIdx: index('idx_review_product_id').on(table.productId),
-}))
-
-
-
-
-
+  (table) => [
+    index('idx_review_product_id').on(table.productId),
+  ]
+);
