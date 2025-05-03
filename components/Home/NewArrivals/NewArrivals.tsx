@@ -1,4 +1,4 @@
-import ProductCardwithoutCart from "@/components/ProductCards/ProductCardwithoutCart";
+import ProductCardwithoutCart from "@/components/Product/ProductCards/ProductCardwithoutCart";
 import { NewArrivalsData } from "./Data";
 import PrimaryLinkButton from "@/components/Reusable/PrimaryLinkButton";
 

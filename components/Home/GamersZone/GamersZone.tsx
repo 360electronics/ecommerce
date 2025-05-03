@@ -1,6 +1,6 @@
 'use client'
 import React, { useState } from "react";
-import ProductCardwithoutCart from "@/components/ProductCards/ProductCardwithoutCart";
+import ProductCardwithoutCart from "@/components/Product/ProductCards/ProductCardwithoutCart";
 import { GamersZoneData } from "./Data";
 
 const categories = ["All", "Consoles", "Accessories", "Monitor", "Steerings & Chairs"];

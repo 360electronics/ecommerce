@@ -1,4 +1,4 @@
-import ProductCardwithoutCart from "@/components/ProductCards/ProductCardwithoutCart";
+import ProductCardwithoutCart from "@/components/Product/ProductCards/ProductCardwithoutCart";
 import { FeaturedProductsData } from "./Data";
 
 const FeaturedProducts: React.FC = () => {
@@ -16,11 +16,12 @@ const FeaturedProducts: React.FC = () => {
                                 <div key={product.id} className="snap-start flex-shrink-0 w-72">
                                     <ProductCardwithoutCart
                                         image={product.image}
-                                        title={product.title}
+                                        name={product.title}
                                         rating={product.rating}
-                                        price={product.price}
+                                        ourPrice={product.price}
                                         mrp={product.mrp}
                                         discount={product.discount}
+                                        slug={product.slug}
                                     />
                                 </div>
                             ))}

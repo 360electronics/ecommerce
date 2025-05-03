@@ -4,7 +4,7 @@ import type React from "react"
 import { useState, useRef, useEffect } from "react"
 import { Search } from "lucide-react"
 import { Input } from "@/components/ui/input"
-import ProductCardwithoutCart from "@/components/ProductCards/ProductCardwithoutCart"
+import ProductCardwithoutCart from "@/components/Product/ProductCards/ProductCardwithoutCart"
 
 // Interface for sub-product
 interface SubProduct {

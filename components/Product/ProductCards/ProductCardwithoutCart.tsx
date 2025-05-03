@@ -6,6 +6,7 @@ import Image from "next/image"
 import Link from "next/link"
 import { ProductCardProps } from "@/types/product"
 
+
 const ProductCardwithoutCart: React.FC<ProductCardProps> = ({
   image,
   name,
@@ -15,6 +16,7 @@ const ProductCardwithoutCart: React.FC<ProductCardProps> = ({
   discount: providedDiscount,
   showViewDetails = true,
   className = "",
+  slug,
   onRemove,
   isHeartNeed = true,
 }) => {
@@ -26,13 +28,23 @@ const ProductCardwithoutCart: React.FC<ProductCardProps> = ({
     return null
   }
 
+  const productDetails = {
+    image,
+    name,
+    rating,
+    ourPrice,
+    mrp,
+  }
+
+  console.log("productDetails :", productDetails);
+
   // Use provided discount or calculate it
   const discount = providedDiscount || calculateDiscount()
 
   // Only render stars if rating exists and is a number
   const renderRating = () => {
     if (rating === undefined || rating === null || typeof rating !== 'number' || isNaN(rating)) return null
-    
+
     const stars = Array(5)
       .fill(0)
       .map((_, index) => (
@@ -50,7 +62,7 @@ const ProductCardwithoutCart: React.FC<ProductCardProps> = ({
   }
 
   return (
-    <div className={`w-full rounded-lg ${className}`}>
+    <Link href={`/product/${slug}`} className={`w-full rounded-lg cursor-pointer  ${className}`}>
       <div className="relative">
         {/* Wishlist button */}
         {isHeartNeed && (
@@ -70,14 +82,14 @@ const ProductCardwithoutCart: React.FC<ProductCardProps> = ({
         )}
 
         {/* Product image with square aspect ratio */}
-        <div className="mb-4 relative w-full aspect-square border border-gray-100 rounded-md bg-[#F4F4F4] overflow-hidden">
+        <div className="mb-4 relative w-full aspect-square border group border-gray-100 rounded-md bg-[#F4F4F4] overflow-hidden">
           <div className="absolute inset-0 flex items-center justify-center p-6">
             <Image
               src={image || "/placeholder.svg"}
               alt={name}
               width={250}
               height={250}
-              className="max-h-full max-w-full object-contain"
+              className="max-h-full max-w-full object-contain group-hover:scale-105 duration-200"
             />
           </div>
         </div>
@@ -112,7 +124,7 @@ const ProductCardwithoutCart: React.FC<ProductCardProps> = ({
           )}
         </div>
       </div>
-    </div>
+    </Link>
   )
 }
 

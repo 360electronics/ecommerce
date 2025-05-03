@@ -1,7 +1,7 @@
 'use client';
 import React, { useState, useCallback, memo } from 'react';
 import Image from 'next/image';
-import ProductCardwithoutCart from '@/components/ProductCards/ProductCardwithoutCart';
+import ProductCardwithoutCart from '@/components/Product/ProductCards/ProductCardwithoutCart';
 import { TopTierBrandData } from './Data';
 
 // Types for better type safety

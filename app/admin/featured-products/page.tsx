@@ -4,7 +4,7 @@ import { useState, useRef, useEffect, useMemo } from "react"
 import { Search, Save, Check, X } from "lucide-react"
 import { Input } from "@/components/ui/input"
 import { Button } from "@/components/ui/button"
-import ProductCardwithoutCart from "@/components/ProductCards/ProductCardwithoutCart"
+import ProductCardwithoutCart from "@/components/Product/ProductCards/ProductCardwithoutCart"
 import { fetchProducts as fetchAllProducts, fetchFeaturedProducts } from "@/utils/products"
 import { Product } from "@/types/product"
 

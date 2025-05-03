@@ -1,10 +1,9 @@
-"use client"
+'use client'
 
-import type React from "react"
 import { useState } from "react"
-import Link from "next/link"
-import Image from "next/image"
 import { usePathname } from "next/navigation"
+import Image from "next/image"
+import Link from "next/link"
 import {
   LayoutGrid,
   User,
@@ -16,9 +15,9 @@ import {
   Gamepad2,
   LogOut,
   Menu,
-  ChevronRight,
   Home,
 } from "lucide-react"
+import Breadcrumbs from "@/components/Reusable/BreadScrumb"
 
 interface AdminLayoutProps {
   children: React.ReactNode
@@ -28,7 +27,7 @@ export default function Layout({ children }: AdminLayoutProps) {
   const [sidebarOpen, setSidebarOpen] = useState(true)
   const pathname = usePathname()
 
-  // Generate breadcrumbs based on current path
+  // Generate breadcrumbs dynamically
   const generateBreadcrumbs = () => {
     if (!pathname) return []
 
@@ -38,13 +37,14 @@ export default function Layout({ children }: AdminLayoutProps) {
       return {
         name: segment.charAt(0).toUpperCase() + segment.slice(1).replace(/-/g, " "),
         path,
+        icon: Home, // Default icon
       }
     })
   }
 
   const breadcrumbs = generateBreadcrumbs()
 
-  // Navigation items
+  // Custom Navigation items
   const navItems = [
     { name: "Dashboard", path: "/admin/dashboard", icon: LayoutGrid },
     { name: "Products", path: "/admin/products", icon: User },
@@ -64,13 +64,18 @@ export default function Layout({ children }: AdminLayoutProps) {
           sidebarOpen ? "translate-x-0" : "-translate-x-full"
         } lg:static lg:translate-x-0`}
       >
-        {/* Navigation */}
         <div className="flex-1 overflow-y-auto px-4 py-2 border-[0.5px] border-gray-300 rounded-tr-2xl mt-5 scrollbar-hide">
           {/* Logo */}
           <div className="flex justify-center py-1">
             <div className="flex flex-col items-center">
               <div className="text-center">
-                <Image src="/logo/360.svg" alt="Computer Garage" width={50} height={50} className="h-auto w-[200px]" />
+                <Image
+                  src="/logo/360.svg"
+                  alt="Computer Garage"
+                  width={50}
+                  height={50}
+                  className="h-auto w-[200px]"
+                />
               </div>
             </div>
           </div>
@@ -83,7 +88,9 @@ export default function Layout({ children }: AdminLayoutProps) {
                   key={item.name}
                   href={item.path}
                   className={`flex items-center px-3 ${
-                    isActive ? "rounded-md py-2 bg-blue-100 text-blue-500" : "text-gray-500 hover:text-gray-900"
+                    isActive
+                      ? "rounded-md py-2 bg-blue-100 text-blue-500"
+                      : "text-gray-500 hover:text-gray-900"
                   }`}
                 >
                   <item.icon className={`mr-3 h-4 w-4 ${isActive ? "text-blue-500" : "text-gray-500"}`} />
@@ -104,7 +111,7 @@ export default function Layout({ children }: AdminLayoutProps) {
 
       {/* Main Content */}
       <div className="flex flex-1 flex-col overflow-hidden">
-        {/* Header - Only Breadcrumbs */}
+        {/* Header - Breadcrumbs */}
         <header className="flex h-16 items-center px-4 lg:px-6 bg-white">
           <div className="flex items-center">
             <button
@@ -114,25 +121,8 @@ export default function Layout({ children }: AdminLayoutProps) {
               <Menu className="h-6 w-6" />
               <span className="sr-only">Toggle sidebar</span>
             </button>
-            {/* Breadcrumbs */}
-            <nav className="flex items-center gap-2">
-            <Home className="w-5 h-5 text-primary "/>
-            
-              {breadcrumbs.map((crumb, i) => (
-                <div key={i} className="flex items-center">
-                  
-                  {i > 0 && <ChevronRight className="mx-1 h-4 w-4 text-gray-400" />}
-                  <Link
-                    href={crumb.path}
-                    className={`text-sm ${
-                      i === breadcrumbs.length - 1 ? "font-medium text-gray-900" : "text-gray-500 hover:text-gray-700"
-                    }`}
-                  >
-                    {crumb.name}
-                  </Link>
-                </div>
-              ))}
-            </nav>
+            {/* Breadcrumbs Component */}
+            <Breadcrumbs breadcrumbs={breadcrumbs} />
           </div>
         </header>
         {/* Main Content */}

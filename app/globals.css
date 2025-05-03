@@ -123,3 +123,35 @@ img {
 .scrollbar-hide {
   scrollbar-width: none;
 }
+
+/* Product image zoom styles */
+
+
+/* .zoom-container {
+  position: relative;
+  overflow: hidden;
+}
+
+.zoom-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  z-index: 1000;
+  pointer-events: none;
+}
+
+.zoom-image {
+  position: absolute;
+  top: 0;
+  right: 0;
+  width: 50%;
+  height: 400px;
+  border: 1px solid #e5e7eb;
+  border-radius: 0.5rem;
+  overflow: hidden;
+  background-color: white;
+  background-repeat: no-repeat;
+}
+ */

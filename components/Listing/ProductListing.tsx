@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect } from 'react';
 import DynamicFilter from '@/components/Filter/DynamicFilter';
-import ProductCard from '@/components/ProductCards/ProductCardwithCart';
+import ProductCard from '@/components/Product/ProductCards/ProductCardwithCart';
 import { useSearchParams } from 'next/navigation';
 import { Product, ProductsData } from '@/data/products';
 
