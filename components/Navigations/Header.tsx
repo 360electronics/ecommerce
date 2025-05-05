@@ -10,7 +10,11 @@ import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { Menu, X, ShoppingBag, Heart, User, MapPin, Search } from 'lucide-react';
 
-const Header = () => {
+interface HeaderProps {
+    isCategory?: boolean
+}
+
+const Header = ({ isCategory = true }: HeaderProps) => {
     const [isMenuOpen, setIsMenuOpen] = useState(false);
     const [isScrolled, setIsScrolled] = useState(false);
     const [isSearchOpen, setIsSearchOpen] = useState(false);
@@ -202,30 +206,34 @@ const Header = () => {
                         </div>
                     </div>
                 )}
+
                 {/* Desktop Categories Row - NEW ADDITION */}
-                <div className="hidden md:block z-40  pb-2">
-                    <div className=" ">
-                        <div className=" w-full flex items-center justify-center">
-                            <ul className="flex justify-between w-full space-x-8 py-2">
-                                <li>
-                                    <Link href="/category/all" className="text-sm font-medium text-gray-800 hover:text-blue-600 transition-colors">
-                                        All Categories
-                                    </Link>
-                                </li>
-                                {categories.map((category) => (
-                                    <li key={category}>
-                                        <Link
-                                            href={`/category/${category.toLowerCase()}`}
-                                            className="text-sm font-medium text-gray-800 hover:text-blue-600 transition-colors"
-                                        >
-                                            {category}
+                {
+                    isCategory && <div className="hidden md:block z-40  pb-2">
+                        <div className=" ">
+                            <div className=" w-full flex items-center justify-center">
+                                <ul className="flex justify-between w-full space-x-8 py-2">
+                                    <li>
+                                        <Link href="/category/all" className="text-sm font-medium text-gray-800 hover:text-blue-600 transition-colors">
+                                            All Categories
                                         </Link>
                                     </li>
-                                ))}
-                            </ul>
+                                    {categories.map((category) => (
+                                        <li key={category}>
+                                            <Link
+                                                href={`/category/${category.toLowerCase()}`}
+                                                className="text-sm font-medium text-gray-800 hover:text-blue-600 transition-colors"
+                                            >
+                                                {category}
+                                            </Link>
+                                        </li>
+                                    ))}
+                                </ul>
+                            </div>
                         </div>
                     </div>
-                </div>
+                }
+
             </header>
 
 

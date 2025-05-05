@@ -4,12 +4,13 @@ import Footer from '../Navigations/Footer';
 
 interface UserLayoutProps {
   children: ReactNode;
+  isCategory?:boolean
 }
 
-const UserLayout: React.FC<UserLayoutProps> = ({ children }) => {
+const UserLayout: React.FC<UserLayoutProps> = ({ children,isCategory }) => {
   return (
     <>
-      <Header />
+      <Header isCategory={isCategory} />
       <div className=' mt-36 md:mt-32 px-4 md:px-12'>
         {children}
       </div>

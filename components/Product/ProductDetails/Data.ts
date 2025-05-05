@@ -182,7 +182,7 @@ export const products: ProductData[] = [
                 comment: "Good battery",
                 images: [
                     {
-                        src: "/macbook-review-concept.png",
+                        src: "https://img.freepik.com/free-photo/open-laptop-with-blank-white-screen-against-pink-background_23-2147916361.jpg?t=st=1746278867~exp=1746282467~hmac=cecdbda88b1677cefd94d29736ecf121f6d11ca024000ee42b09b0b61ce3cf12&w=1380",
                         alt: "Review image",
                     },
                 ],
@@ -198,7 +198,7 @@ export const products: ProductData[] = [
                 comment: "Best Quality",
                 images: [
                     {
-                        src: "/silver-macbook.png",
+                        src: "https://img.freepik.com/free-photo/blank-screen-workspace-with-computer-laptop-table-night-copy-space_169016-56936.jpg?t=st=1746278888~exp=1746282488~hmac=1c1059766f2d7164e9fc07f6db210a72a8e4b96e263cb8031c5dfc715e0e46f6&w=1380",
                         alt: "Review image",
                     },
                 ],
@@ -214,7 +214,7 @@ export const products: ProductData[] = [
                 comment: "One of the great product",
                 images: [
                     {
-                        src: "/macbook-space-gray.png",
+                        src: "https://img.freepik.com/free-photo/office-desktop-with-laptop_23-2148179163.jpg?t=st=1746278827~exp=1746282427~hmac=85c62ee01e92a9723b8cbd7f75c40324d5f407b9beb842bc4933bc033b715abf&w=1380",
                         alt: "Review image",
                     },
                 ],
