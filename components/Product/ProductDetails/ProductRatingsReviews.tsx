@@ -7,7 +7,8 @@ import { Button } from "@/components/ui/button"
 import { cn } from "@/lib/utils"
 import { useProductContext } from "@/context/product-context"
 import ReviewImageModal from "./ReviewImageModal"
-import type { Review, ReviewImage } from "./Data"
+import WriteReviewModal, { type ReviewFormData } from "./WriteReviewModel"
+import type { Review, ReviewImage } from "@/components/Product/ProductDetails/Data"
 
 interface ProductRatingsReviewsProps {
   className?: string
@@ -15,7 +16,8 @@ interface ProductRatingsReviewsProps {
 
 export default function ProductRatingsReviews({ className }: ProductRatingsReviewsProps) {
   const { product } = useProductContext()
-  const [isModalOpen, setIsModalOpen] = useState(false)
+  const [isImageModalOpen, setIsImageModalOpen] = useState(false)
+  const [isWriteReviewModalOpen, setIsWriteReviewModalOpen] = useState(false)
   const [selectedReview, setSelectedReview] = useState<Review | null>(null)
   const [selectedImageIndex, setSelectedImageIndex] = useState(0)
 
@@ -29,13 +31,13 @@ export default function ProductRatingsReviews({ className }: ProductRatingsRevie
     .slice(0, 6)
 
   const handleWriteReview = () => {
-    console.log("Write review clicked")
+    setIsWriteReviewModalOpen(true)
   }
 
   const handleImageClick = (review: Review, imageIndex: number) => {
     setSelectedReview(review)
     setSelectedImageIndex(imageIndex)
-    setIsModalOpen(true)
+    setIsImageModalOpen(true)
   }
 
   const handleCustomerImageClick = (image: ReviewImage) => {
@@ -51,6 +53,38 @@ export default function ProductRatingsReviews({ className }: ProductRatingsRevie
     }
   }
 
+  const handleReviewSubmit = (reviewData: ReviewFormData) => {
+    // Here you would typically send the review data to your backend
+    console.log("Review submitted:", reviewData)
+
+    // For demo purposes, we'll create a new review and add it to the list
+    // In a real app, you would update this after the backend confirms the submission
+    const newReview: Review = {
+      id: `temp-${Date.now()}`,
+      author: {
+        name: reviewData.name,
+        avatar: "/diverse-group.png", // Default avatar
+        date: new Date().toLocaleDateString(),
+      },
+      rating: reviewData.rating,
+      comment: reviewData.review,
+      images:
+        reviewData.images.length > 0
+          ? reviewData.images.map((file, index) => ({
+              src: URL.createObjectURL(file),
+              alt: `User uploaded image ${index + 1}`,
+            }))
+          : undefined,
+    }
+
+    // In a real app, you would update your state or trigger a refetch
+    // For now, we'll just log the new review
+    console.log("New review created:", newReview)
+
+    // Close the modal
+    setIsWriteReviewModalOpen(false)
+  }
+
   return (
     <div className={cn("mb-12", className)}>
       {/* Reviews Section */}
@@ -64,13 +98,7 @@ export default function ProductRatingsReviews({ className }: ProductRatingsRevie
             onClick={handleWriteReview}
           >
             Write a Review
-            <svg
-             
-              viewBox="0 0 20 20"
-              fill="none"
-              xmlns="http://www.w3.org/2000/svg"
-              className="ml-2 w-5 h-5"
-            >
+            <svg viewBox="0 0 20 20" fill="none" xmlns="http://www.w3.org/2000/svg" className="ml-2 w-5 h-5">
               <path
                 d="M3.75 10H16.25"
                 stroke="currentColor"
@@ -151,6 +179,13 @@ export default function ProductRatingsReviews({ className }: ProductRatingsRevie
               ))}
             </div>
           )}
+        </div>
+
+        {/* Mobile Write Review Button */}
+        <div className="md:hidden flex justify-center mb-6">
+          <Button className="bg-blue-500 text-white w-full py-2" onClick={handleWriteReview}>
+            Write a Review
+          </Button>
         </div>
 
         {/* Customer Images */}
@@ -252,10 +287,17 @@ export default function ProductRatingsReviews({ className }: ProductRatingsRevie
 
       {/* Review Image Modal */}
       <ReviewImageModal
-        isOpen={isModalOpen}
-        onClose={() => setIsModalOpen(false)}
+        isOpen={isImageModalOpen}
+        onClose={() => setIsImageModalOpen(false)}
         review={selectedReview}
         initialImageIndex={selectedImageIndex}
+      />
+
+      {/* Write Review Modal */}
+      <WriteReviewModal
+        isOpen={isWriteReviewModalOpen}
+        onClose={() => setIsWriteReviewModalOpen(false)}
+        onSubmit={handleReviewSubmit}
       />
     </div>
   )

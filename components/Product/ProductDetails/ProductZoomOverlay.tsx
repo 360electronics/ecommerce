@@ -23,10 +23,9 @@ export default function ProductZoomOverlay({ zoomFactor = 2.5 }: ProductZoomOver
 
   return (
     <div
-      className="absolute inset-0 z-50 border rounded-lg overflow-hidden bg-white"
+      className="absolute inset-0 z-50 h-[85%] mt-10 ml-6 border rounded-lg overflow-hidden bg-white"
       style={{
         width: "100%",
-        height: "100%",
         position: "absolute",
         top: 0,
         left: 0,
