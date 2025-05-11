@@ -5,8 +5,7 @@ import { useState, useMemo, useCallback, useEffect, useRef } from "react"
 import Image from "next/image"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
 import { Button } from "@/components/ui/button"
-import { Input } from "@/components/ui/input"
-import { Search, PlusCircle, ArrowUpDown, Download, Printer, Trash2, Eye, Edit } from "lucide-react"
+import { ArrowUpDown, Download, Printer, Trash2, Eye, Edit } from "lucide-react"
 import { Badge } from "@/components/ui/badge"
 import { cn } from "@/lib/utils"
 
@@ -228,25 +227,25 @@ export function EnhancedTable<T extends Record<string, any>>({
       )
     }
 
-    // Apply category filter if not "All"
+    // Apply category filter if not "All" and if filters are enabled
     if (filters.enabled && activeFilter !== "All") {
-      filtered = filtered.filter((item) => {
-        // Find the column that has filterOptions
-        const filterColumn = columns.find((col) => col.filterOptions)
-        if (!filterColumn) return true
+      const filterColumn = columns.find((col) => col.filterOptions)
+      if (filterColumn) {
+        filtered = filtered.filter((item) => {
+          // Use custom filter function if provided
+          if (filterColumn.filterFn) {
+            return filterColumn.filterFn(item, activeFilter)
+          }
 
-        // Use custom filter function if provided
-        if (filterColumn.filterFn) {
-          return filterColumn.filterFn(item, activeFilter)
-        }
-
-        // Default filtering behavior
-        return String(item[filterColumn.key]) === activeFilter
-      })
+          // Default filtering behavior
+          return String(item[filterColumn.key]) === activeFilter
+        })
+      }
     }
 
     return filtered
   }, [data, searchTerm, activeFilter, searchKeys, columns, search.enabled, filters.enabled])
+
 
   // Sorting logic
   const sortedData = useMemo(() => {
@@ -387,6 +386,38 @@ export function EnhancedTable<T extends Record<string, any>>({
     [search],
   )
 
+  // Add this as a utility function before the component return
+  const exportSelectedData = useCallback((items: T[]) => {
+    if (items.length === 0) return;
+
+    const headers = columns
+      .filter(col => !col.hidden)
+      .map(col => col.header);
+
+    const dataRows = items.map(item =>
+      columns
+        .filter(col => !col.hidden)
+        .map(col => {
+          const value = item[col.key];
+          return value !== undefined && value !== null ? String(value) : "";
+        })
+    );
+
+    const csvContent = [
+      headers.join(','),
+      ...dataRows.map(row => row.join(','))
+    ].join('\n');
+
+    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.href = url;
+    link.setAttribute('download', `export-${new Date().toISOString().slice(0, 10)}.csv`);
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+  }, [columns]);
+
   // Page number generation
   const getPageNumbers = useCallback(() => {
     const pageNumbers = []
@@ -485,12 +516,12 @@ export function EnhancedTable<T extends Record<string, any>>({
       }
 
       // Default rendering
-      return value !== undefined && value !== null ? 
-      <div className="truncate max-w-32 text-left">
-        {String(value)}
-      </div> 
-      : 
-      ""
+      return value !== undefined && value !== null ?
+        <div className="truncate max-w-32 text-left">
+          {String(value)}
+        </div>
+        :
+        ""
     },
     [customization.cellRenderers, customization.statusColorMap],
   )
@@ -526,13 +557,13 @@ export function EnhancedTable<T extends Record<string, any>>({
       }
 
       return (
-        <div className="flex items-center space-x-1">
-          <span>{column.header}</span>
-          {/* {column.sortable && sorting.enabled && (
+        <div className="flex items-center space-x-1 uppercase">
+          <span className="uppercase">{column.header}</span>
+          {column.sortable && sorting.enabled && (
             <ArrowUpDown
-              className={cn("ml-1 h-4 w-4", sortConfig.key === column.key ? "text-primary" : "text-primary/70")}
+              className={cn("ml-1 size-4", sortConfig.key === column.key ? "text-slate-400" : "text-slate-300")}
             />
-          )} */}
+          )}
         </div>
       )
     },
@@ -572,26 +603,54 @@ export function EnhancedTable<T extends Record<string, any>>({
       <div className="mb-6 flex flex-col space-y-4 md:flex-row md:items-center md:justify-between md:space-y-0">
         <div className="flex flex-1 flex-col space-y-4 md:flex-row md:items-center md:space-x-4 md:space-y-0">
           {/* Search and Add Button */}
-          <div className="flex items-center space-x-2 w-full md:w-auto">
+          <div className="flex items-center space-x-3 w-full md:w-auto ">
             {/* Search */}
             {search.enabled && (
-              <div className="relative flex-1 md:w-64">
-                <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
-                <Input
-                  placeholder={search.placeholder || "Search..."}
-                  className="pl-10"
+              <div className="relative flex-1 md:w-72">
+                <svg
+                  className="absolute left-3 top-1/2 h-5 w-5 -translate-y-1/2 text-gray-400"
+                  fill="none"
+                  stroke="currentColor"
+                  viewBox="0 0 24 24"
+                >
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth={2}
+                    d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"
+                  />
+                </svg>
+                <input
+                  type="text"
+                  placeholder={search.placeholder || "Search entries..."}
+                  className="w-full pl-10 pr-4 py-2 text-sm rounded-lg border border-gray-200 focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent transition-all bg-gray-50 text-gray-700 placeholder-gray-400"
                   value={searchTerm}
                   onChange={(e) => handleSearch(e.target.value)}
                 />
               </div>
             )}
 
-            {/* Add Button - Moved next to search bar */}
+            {/* Add Button */}
             {actions?.onAdd && (
-              <Button className="flex items-center space-x-2 whitespace-nowrap text-white" onClick={actions.onAdd}>
-                <PlusCircle className="h-4 w-4" />
+              <button
+                className="flex items-center space-x-2 px-4 py-2 bg-primary text-white rounded-lg hover:bg-indigo-700 transition-all text-sm font-medium shadow-sm"
+                onClick={actions.onAdd}
+              >
+                <svg
+                  className="h-5 w-5"
+                  fill="none"
+                  stroke="currentColor"
+                  viewBox="0 0 24 24"
+                >
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth={2}
+                    d="M12 4v16m8-8H4"
+                  />
+                </svg>
                 <span>{actions.addButtonText || "Add New"}</span>
-              </Button>
+              </button>
             )}
           </div>
 
@@ -601,73 +660,109 @@ export function EnhancedTable<T extends Record<string, any>>({
         {/* Bulk Actions - Only show when items are selected */}
         <div className="flex items-center space-x-2">
           {selection.enabled && selectedItems.length > 0 && actions?.bulkActions && (
-            <div className="flex space-x-2">
-              {actions.bulkActions.view && selectedItems.length === 1 && (
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={() => actions.bulkActions?.view?.(selectedItems[0])}
-                  className="flex items-center space-x-1"
-                  title="View"
-                >
-                  <Eye className="h-4 w-4" />
-                  {/* <span>View</span> */}
-                </Button>
-              )}
-              {actions.bulkActions.edit && (
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={() => actions.bulkActions?.edit?.(selectedItems)}
-                  className="flex items-center space-x-1 text-primary hover:bg-primary hover:text-white cursor-pointer"
-                  title="Edit"
-                >
-                  <Edit className="h-4 w-4" />
-                  {/* <span>Edit</span> */}
-                </Button>
-              )}
-              {actions.bulkActions.delete && (
-                <Button
-                  variant="outline"
-                  size="sm"
-                  className="flex items-center space-x-1 text-destructive hover:bg-destructive/10 text-red-500 hover:bg-red-500 hover:text-white cursor-pointer"
-                  onClick={() => actions.bulkActions?.delete?.(selectedItems)}
-                  title="Delete"
-                >
-                  <Trash2 className="h-4 w-4" />
-                  {/* <span>Delete</span> */}
-                </Button>
-              )}
-              {actions.bulkActions.export && (
-                <Button
-                  variant="outline"
-                  size="sm"
-                  className="flex items-center space-x-1 text-primary hover:bg-primary hover:text-white cursor-pointer"
-                  onClick={() => actions.bulkActions?.export?.(selectedItems)}
-                  title="Export"
-                >
-                  <Download className="h-4 w-4" />
-                  {/* <span>Export</span> */}
-                </Button>
-              )}
-              {actions.bulkActions.print && (
-                <Button
-                  variant="outline"
-                  size="sm"
-                  className="flex items-center space-x-1"
-                  onClick={() => actions.bulkActions?.print?.(selectedItems)}
-                  title="Print"
-                >
-                  <Printer className="h-4 w-4" />
-                  {/* <span>Print</span> */}
-                </Button>
-              )}
+            <div className="w-full  transition-all duration-300">
+              <div className="flex flex-wrap gap-3 items-center justify-start">
+
+                {actions.bulkActions.view && selectedItems.length === 1 && (
+                  <button
+                    onClick={() => actions.bulkActions?.view?.(selectedItems[0])}
+                    className="group flex items-center gap-2 px-4 py-2 rounded-lg bg-gray-100 hover:bg-primary hover:text-white shadow-sm transition-all duration-200"
+                    title="View"
+                  >
+                    <Eye className="h-5 w-5 text-gray-600 group-hover:text-white transform group-hover:scale-110 transition" />
+                    <span className="text-sm font-medium group-hover:text-white">View</span>
+                  </button>
+                )}
+
+                {actions.bulkActions.edit && (
+                  <button
+                    onClick={() => actions.bulkActions?.edit?.(selectedItems)}
+                    className="group flex items-center gap-2 px-4 py-2 rounded-lg bg-indigo-50 text-indigo-600 hover:bg-indigo-600 hover:text-white shadow-sm transition-all duration-200"
+                    title="Edit"
+                  >
+                    <Edit className="h-5 w-5 group-hover:text-white transform group-hover:rotate-6 transition" />
+                    <span className="text-sm font-medium group-hover:text-white">Edit</span>
+                  </button>
+                )}
+
+                {actions.bulkActions.delete && (
+                  <button
+                    onClick={() => actions.bulkActions?.delete?.(selectedItems)}
+                    className="group flex items-center gap-2 px-4 py-2 rounded-lg bg-red-50 text-red-600 hover:bg-red-600 hover:text-white shadow-sm transition-all duration-200"
+                    title="Delete"
+                  >
+                    <Trash2 className="h-5 w-5 group-hover:text-white transform group-hover:scale-110 transition" />
+                    <span className="text-sm font-medium group-hover:text-white">Delete</span>
+                  </button>
+                )}
+
+                {actions.bulkActions.export && (
+                  <button
+                    onClick={()=> exportSelectedData}
+                    className="group flex items-center gap-2 px-4 py-2 rounded-lg bg-blue-50 text-blue-600 hover:bg-blue-600 hover:text-white shadow-sm transition-all duration-200"
+                    title="Export"
+                  >
+                    <Download className="h-5 w-5 group-hover:text-white transform group-hover:translate-y-[-1px] transition" />
+                    <span className="text-sm font-medium group-hover:text-white">Export</span>
+                  </button>
+                )}
+
+                {actions.bulkActions.print && (
+                  <button
+                    onClick={() => actions.bulkActions?.print?.(selectedItems)}
+                    className="group flex items-center gap-2 px-4 py-2 rounded-lg bg-teal-50 text-teal-600 hover:bg-teal-600 hover:text-white shadow-sm transition-all duration-200"
+                    title="Print"
+                  >
+                    <Printer className="h-5 w-5 group-hover:text-white transform group-hover:scale-105 transition" />
+                    <span className="text-sm font-medium group-hover:text-white">Print</span>
+                  </button>
+                )}
+
+              </div>
             </div>
+
           )}
         </div>
       </div>
 
-      {/* Filter tabs removed as requested */}
+      {filters.enabled && (
+        <div className="flex items-center space-x-2">
+          <span className="text-sm font-medium text-gray-600">Filter:</span>
+          <div className="flex gap-1 rounded-lg border bg-white p-1 shadow-sm">
+            <button
+              key="all"
+              onClick={() => handleFilterChange("All")}
+              className={cn(
+                "px-3 py-1 text-sm rounded-full transition-colors",
+                activeFilter === "All"
+                  ? "bg-primary text-white"
+                  : "text-gray-600 hover:bg-gray-100"
+              )}
+            >
+              All
+            </button>
+            {columns.find(col => col.filterOptions)?.filterOptions?.map((option) => {
+              const value = typeof option === 'string' ? option : option.value;
+              const label = typeof option === 'string' ? option : option.label;
+
+              return (
+                <button
+                  key={value}
+                  onClick={() => handleFilterChange(value)}
+                  className={cn(
+                    "px-3 py-1 text-sm rounded-full transition-colors",
+                    activeFilter === value
+                      ? "bg-primary text-white"
+                      : "text-gray-600 hover:bg-gray-100"
+                  )}
+                >
+                  {label}
+                </button>
+              );
+            })}
+          </div>
+        </div>
+      )}
 
       {/* Table Section - Made horizontally scrollable outside */}
       <div className="rounded-md border border-gray-200 overflow-hidden">
@@ -675,7 +770,7 @@ export function EnhancedTable<T extends Record<string, any>>({
           <Table>
             <TableHeader
               className={cn(
-                "bg-blue-200 text-primary",
+                "bg-blue-50 ",
                 customization.headerClassName,
                 customization.stickyHeader && "sticky top-0 z-10",
               )}
@@ -689,7 +784,7 @@ export function EnhancedTable<T extends Record<string, any>>({
                         type="checkbox"
                         checked={paginatedData.length > 0 && selectedItems.length === paginatedData.length}
                         onChange={toggleAllSelection}
-                        className="h-4 w-4 rounded border-gray-300 text-primary focus:ring-primary"
+                        className="h-[14px] w-[14px] rounded border-gray-300 text-primary focus:ring-primary"
                         aria-label="Select all"
                       />
                     </div>
@@ -746,7 +841,7 @@ export function EnhancedTable<T extends Record<string, any>>({
                               onChange={() => toggleItemSelection(item)}
                               onClick={(e) => e.stopPropagation()}
                               disabled={isDisabled}
-                              className="h-4 w-4 rounded border-gray-300 text-primary focus:ring-primary"
+                              className="h-[14px] w-[14px] rounded border-gray-300 text-primary focus:ring-primary"
                             />
                           </div>
                         </TableCell>
@@ -773,7 +868,13 @@ export function EnhancedTable<T extends Record<string, any>>({
                 })
               ) : (
                 <TableRow>
-                  
+                  <TableCell colSpan={columns.filter(col => !col.hidden).length + (selection.enabled ? 1 : 0)} className="h-24 text-center">
+                    {customization.emptyState || (
+                      <div className="flex flex-col items-center justify-center py-6 text-center">
+                        <p className="text-sm text-muted-foreground">No results found</p>
+                      </div>
+                    )}
+                  </TableCell>
                 </TableRow>
               )}
             </TableBody>
@@ -797,75 +898,50 @@ export function EnhancedTable<T extends Record<string, any>>({
 
       {/* Pagination Section */}
       {pagination.enabled && totalPages > 0 && (
-        <div ref={paginationRef} className="mt-6 flex flex-col items-center justify-between gap-4 md:flex-row">
-          <div className="flex items-center space-x-2 text-sm text-muted-foreground">
+        <div ref={paginationRef} className="mt-4 flex flex-col items-center justify-between gap-4 p-3 bg-gradient-to-r from-gray-50 to-gray-100 rounded-lg shadow-sm md:flex-row md:p-4">
+          {/* Showing items info */}
+          <div className="flex items-center space-x-3 text-sm font-medium text-gray-600">
             <span>Showing</span>
-            <strong>
-              {Math.min((currentPage - 1) * pageSize + 1, filteredData.length)}
-              {" - "}
+            <span className="px-2 py-1 bg-white rounded-full shadow-sm">
+              {Math.min((currentPage - 1) * pageSize + 1, filteredData.length)} -{" "}
               {Math.min(currentPage * pageSize, filteredData.length)}
-            </strong>
-            <span>of</span>
-            <strong>{filteredData.length}</strong>
-            <span>items</span>
+            </span>
+            <span>of {filteredData.length} items</span>
           </div>
 
-          <div className="flex items-center space-x-2">
-            <Button variant="outline" size="sm" disabled={currentPage === 1} onClick={() => handlePageChange(1)}>
-              First
-            </Button>
-            <Button
-              variant="outline"
-              size="sm"
-              disabled={currentPage === 1}
-              onClick={() => handlePageChange(currentPage - 1)}
-            >
-              Previous
-            </Button>
-
-            <div className="flex items-center">
-              {getPageNumbers().map((page) => (
-                <Button
-                  key={page}
-                  variant={currentPage === page ? "default" : "outline"}
-                  size="sm"
-                  className="mx-0.5 h-8 w-8 p-0"
-                  onClick={() => handlePageChange(page)}
-                >
-                  {page}
-                </Button>
-              ))}
-            </div>
-
-            <Button
-              variant="outline"
-              size="sm"
-              disabled={currentPage === totalPages}
-              onClick={() => handlePageChange(currentPage + 1)}
-            >
-              Next
-            </Button>
-            <Button
-              variant="outline"
-              size="sm"
-              disabled={currentPage === totalPages}
-              onClick={() => handlePageChange(totalPages)}
-            >
-              Last
-            </Button>
+          {/* Pagination controls */}
+          <div className="flex items-center gap-1">
+            {getPageNumbers().map((page) => (
+              <Button
+                key={page}
+                variant={currentPage === page ? "default" : "ghost"}
+                size="sm"
+                className={cn(
+                  "w-10 h-10 rounded-full transition-all",
+                  currentPage === page
+                    ? "bg-primary text-white shadow-md"
+                    : "hover:bg-gray-200 text-gray-600"
+                )}
+                onClick={() => handlePageChange(page)}
+              >
+                {page}
+              </Button>
+            ))}
           </div>
 
-          {/* Items per page - Simplified */}
-          <div className="flex items-center space-x-2">
-            <span className="text-sm text-muted-foreground">Items per page:</span>
-            <div className="flex space-x-1">
+          {/* Items per page */}
+          <div className="flex items-center gap-3">
+            <span className="text-sm font-medium text-gray-600">Items per page</span>
+            <div className="flex gap-1 bg-white p-1 rounded-full shadow-sm">
               {(pagination.pageSizeOptions || [10, 25, 50, 100]).map((size) => (
                 <button
                   key={size}
                   onClick={() => handlePageSizeChange(size)}
                   className={cn(
-                    "px-2 py-1 text-xs rounded",
-                    pageSize === size ? "bg-primary text-white" : "bg-gray-100 hover:bg-gray-200",
+                    "px-3 py-1 text-sm rounded-full transition-colors",
+                    pageSize === size
+                      ? "bg-primary text-white"
+                      : "text-gray-600 hover:bg-gray-100"
                   )}
                 >
                   {size}

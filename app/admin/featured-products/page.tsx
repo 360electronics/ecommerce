@@ -4,9 +4,9 @@ import { useState, useRef, useEffect, useMemo } from "react"
 import { Search, Save, Check, X } from "lucide-react"
 import { Input } from "@/components/ui/input"
 import { Button } from "@/components/ui/button"
-import ProductCardwithoutCart from "@/components/Product/ProductCards/ProductCardwithoutCart"
-import { fetchProducts as fetchAllProducts, fetchFeaturedProducts } from "@/utils/products"
+import { fetchProducts as fetchAllProducts, fetchFeaturedProducts } from "@/utils/products.util"
 import { Product } from "@/types/product"
+import Image from "next/image"
 
 export default function FeaturedProductsPage() {
   const [searchTerm, setSearchTerm] = useState("")
@@ -101,7 +101,7 @@ export default function FeaturedProductsPage() {
   }
 
   // Handle product removal
-  const handleRemoveProduct = async (productId: number) => {
+  const handleRemoveProduct = async (productId: string) => {
     try {
       const res = await fetch('/api/products/featured', {
         method: 'DELETE',
@@ -161,6 +161,8 @@ export default function FeaturedProductsPage() {
     setSearchTerm("")
     setShowResults(false)
   }
+
+
 
   if (loading) {
     return <div className="p-8 text-center">Loading...</div>
@@ -256,15 +258,46 @@ export default function FeaturedProductsPage() {
                     </Button>
                   </div>
 
-                  <ProductCardwithoutCart
-                    image={product.productImages?.[0]}
-                    name={product.name || "Untitled Product"}
-                    rating={product.averageRating}
-                    ourPrice={product.ourPrice !== null ? Number(product.ourPrice) : 0}
-                    mrp={product.mrp ? Number(product.mrp) : undefined}
-                    showViewDetails={false}
-                    isHeartNeed={false}
-                  />
+                  <div>
+
+                    <div className="mb-4 relative w-full aspect-square border group border-gray-100 rounded-md bg-[#F4F4F4] overflow-hidden">
+                      <div className="absolute inset-0 flex items-center justify-center p-6">
+                        <Image
+                          src={product.productImages?.[0] ?? '/placeholder.png' }
+                          alt={product.name}
+                          width={250}
+                          height={250}
+                          className="max-h-full max-w-full object-contain group-hover:scale-105 duration-200"
+                        />
+                      </div>
+                    </div>
+
+                    <div className="space-y-2">
+                      <h3 className="text-base font-medium text-gray-900 line-clamp-2">{product.name}</h3>
+
+
+
+                      {/* Price */}
+                      <div className="flex items-center flex-wrap gap-2">
+                        {product.ourPrice !== null && product.ourPrice !== undefined && (
+                          <span className="text-lg font-bold">₹{product.ourPrice.toLocaleString()}</span>
+                        )}
+                        {product.mrp &&
+                          Number(product.mrp) > 0 &&
+                          product.ourPrice &&
+                          Number(product.mrp) > Number(product.ourPrice) && (
+                            <span className="text-sm text-gray-500 line-through">
+                              MRP {Number(product.mrp).toLocaleString()}
+                            </span>
+                          )}
+
+
+                      </div>
+
+
+                    </div>
+                  </div>
+
                 </div>
               ))}
             </div>
@@ -294,23 +327,52 @@ export default function FeaturedProductsPage() {
                     className="bg-red-500 hover:bg-red-600 text-white"
                     onClick={(e) => {
                       e.stopPropagation()
-                      handleRemoveProduct(product.id)
+                      handleRemoveProduct(product.id!)
                     }}
                   >
                     Remove
                   </Button>
                 </div>
 
-                <ProductCardwithoutCart
-                  image={product.productImages?.[0]}
-                  name={product.name}
-                  rating={product.averageRating}
-                  ourPrice={product.ourPrice !== null ? Number(product.ourPrice) : 0}
-                  mrp={product.mrp ? Number(product.mrp) : undefined}
-                  showViewDetails={false}
-                  onRemove={() => handleRemoveProduct(product.id)}
-                  isHeartNeed={false}
-                />
+                <div>
+
+                  <div className="mb-4 relative w-full aspect-square border group border-gray-100 rounded-md bg-[#F4F4F4] overflow-hidden">
+                    <div className="absolute inset-0 flex items-center justify-center p-6">
+                      <Image
+                        src={product.productImages?.[0] ?? '/placeholder.png'}
+                        alt={product.name}
+                        width={250}
+                        height={250}
+                        className="max-h-full max-w-full object-contain group-hover:scale-105 duration-200"
+                      />
+                    </div>
+                  </div>
+
+                  <div className="space-y-2">
+                    <h3 className="text-base font-medium text-gray-900 line-clamp-2">{product.name}</h3>
+
+
+
+                    {/* Price */}
+                    <div className="flex items-center flex-wrap gap-2">
+                      {product.ourPrice !== null && product.ourPrice !== undefined && (
+                        <span className="text-lg font-bold">₹{product.ourPrice.toLocaleString()}</span>
+                      )}
+                      {product.mrp &&
+                        Number(product.mrp) > 0 &&
+                        product.ourPrice &&
+                        Number(product.mrp) > Number(product.ourPrice) && (
+                          <span className="text-sm text-gray-500 line-through">
+                            MRP {Number(product.mrp).toLocaleString()}
+                          </span>
+                        )}
+
+
+                    </div>
+
+
+                  </div>
+                </div>
               </div>
             ))}
           </div>

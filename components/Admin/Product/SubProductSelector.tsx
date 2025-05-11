@@ -6,19 +6,10 @@ import { Search } from "lucide-react"
 import { Input } from "@/components/ui/input"
 import ProductCardwithoutCart from "@/components/Product/ProductCards/ProductCardwithoutCart"
 
-// Interface for sub-product
-interface SubProduct {
-  id: string
-  title: string
-  image: string
-  price: number
-  mrp: number
-  discount: number
-  rating: number
-}
+
 
 // Sample product data for search
-const availableProducts: SubProduct[] = [
+const availableProducts: any[] = [
   {
     id: "1",
     title: "Logitech G502 X Gaming Mouse (White)",
@@ -103,8 +94,8 @@ const availableProducts: SubProduct[] = [
 
 export function SubProductSelector() {
   const [searchTerm, setSearchTerm] = useState("")
-  const [searchResults, setSearchResults] = useState<SubProduct[]>([])
-  const [selectedProducts, setSelectedProducts] = useState<SubProduct[]>([])
+  const [searchResults, setSearchResults] = useState<any[]>([])
+  const [selectedProducts, setSelectedProducts] = useState<any[]>([])
   const [showResults, setShowResults] = useState(false)
   const searchResultsRef = useRef<HTMLDivElement>(null)
   const scrollContainerRef = useRef<HTMLDivElement>(null)
@@ -146,7 +137,7 @@ export function SubProductSelector() {
   }
 
   // Handle product selection
-  const handleSelectProduct = (product: SubProduct) => {
+  const handleSelectProduct = (product: any) => {
     setSelectedProducts((prev) => [...prev, product])
     setSearchTerm("")
     setShowResults(false)
@@ -235,9 +226,9 @@ export function SubProductSelector() {
             <div key={product.id} className="flex-shrink-0 w-[300px]">
               <ProductCardwithoutCart
                 image={product.image}
-                title={product.title}
+                name={product.name}
                 rating={product.rating}
-                price={product.price}
+                ourPrice={product.ourPrice}
                 mrp={product.mrp}
                 discount={product.discount}
                 showViewDetails={false}

@@ -28,16 +28,6 @@ const ProductCardwithoutCart: React.FC<ProductCardProps> = ({
     return null
   }
 
-  const productDetails = {
-    image,
-    name,
-    rating,
-    ourPrice,
-    mrp,
-  }
-
-  console.log("productDetails :", productDetails);
-
   // Use provided discount or calculate it
   const discount = providedDiscount || calculateDiscount()
 
@@ -62,7 +52,7 @@ const ProductCardwithoutCart: React.FC<ProductCardProps> = ({
   }
 
   return (
-    <Link href={`/product/${slug}`} className={`w-full rounded-lg cursor-pointer  ${className}`}>
+    <Link href={`/product/${slug}`} className={`w-full rounded-lg cursor-pointer ${className}`}>
       <div className="relative">
         {/* Wishlist button */}
         {isHeartNeed && (
@@ -74,22 +64,27 @@ const ProductCardwithoutCart: React.FC<ProductCardProps> = ({
         {/* Remove button (only shown when onRemove is provided) */}
         {onRemove && (
           <button
-            onClick={onRemove}
+            onClick={(e) => {
+              e.preventDefault();
+              e.stopPropagation();
+              onRemove();
+            }}
             className="absolute right-5 top-5 z-10 rounded-full bg-white p-1 text-red-500 shadow-md hover:bg-red-500 hover:text-white cursor-pointer"
           >
             <X size={16} />
           </button>
         )}
 
-        {/* Product image with square aspect ratio */}
+        {/* Product image with transparent background support */}
         <div className="mb-4 relative w-full aspect-square border group border-gray-100 rounded-md bg-[#F4F4F4] overflow-hidden">
-          <div className="absolute inset-0 flex items-center justify-center p-6">
+          <div className="absolute inset-0 flex items-center justify-center p-6 mix-blend-multiply">
             <Image
               src={image || "/placeholder.svg"}
-              alt={name}
+              alt={name || "Product"}
               width={250}
               height={250}
               className="max-h-full max-w-full object-contain group-hover:scale-105 duration-200"
+              style={{ objectFit: "contain", mixBlendMode: "multiply" }}
             />
           </div>
         </div>
@@ -104,10 +99,10 @@ const ProductCardwithoutCart: React.FC<ProductCardProps> = ({
           {/* Price */}
           <div className="flex items-center flex-wrap gap-2">
             {ourPrice !== null && ourPrice !== undefined && (
-              <span className="text-lg font-bold">₹{ourPrice.toLocaleString()}</span>
+              <span className="text-lg font-bold">₹{typeof ourPrice === 'number' ? ourPrice.toLocaleString() : ourPrice}</span>
             )}
-            {mrp && mrp > 0 && ourPrice && mrp > ourPrice && (
-              <span className="text-sm text-gray-500 line-through">MRP {mrp.toLocaleString()}</span>
+            {mrp && mrp > 0 && ourPrice && (
+              <span className="text-sm text-gray-500 line-through">MRP {typeof mrp === 'number' ? mrp.toLocaleString() : mrp}</span>
             )}
             {discount && discount > 0 && (
               <span className="rounded-full bg-offer px-2 py-1 text-xs font-medium text-white">{discount}% Off</span>
@@ -117,9 +112,9 @@ const ProductCardwithoutCart: React.FC<ProductCardProps> = ({
           {/* View details link */}
           {showViewDetails && (
             <div className="pt-2">
-              <Link href={"#"} className="text-sm text-gray-500 hover:text-gray-700">
+              <div className="text-sm text-gray-500 hover:text-gray-700">
                 View full details
-              </Link>
+              </div>
             </div>
           )}
         </div>

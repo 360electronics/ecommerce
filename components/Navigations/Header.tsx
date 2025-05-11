@@ -8,7 +8,8 @@ import UserButton from './Header/UserButton';
 import CartButton from './Header/CartButton';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
-import { Menu, X, ShoppingBag, Heart, User, MapPin, Search } from 'lucide-react';
+import { Menu, X, ShoppingBag, Heart, User } from 'lucide-react';
+import { slugify } from '@/utils/slugify';
 
 interface HeaderProps {
     isCategory?: boolean
@@ -18,11 +19,11 @@ const Header = ({ isCategory = true }: HeaderProps) => {
     const [isMenuOpen, setIsMenuOpen] = useState(false);
     const [isScrolled, setIsScrolled] = useState(false);
     const [isSearchOpen, setIsSearchOpen] = useState(false);
-    const searchInputRef = useRef<HTMLInputElement>(null);
+    // const searchInputRef = useRef<HTMLInputElement>(null);
     const router = useRouter();
     const menuRef = useRef<HTMLDivElement>(null);
 
-    const categories = ['Laptops', 'Desktops', 'Components', 'Peripherals', 'Accessories'];
+    const categories = ['Laptops', 'Monitors', 'Processor', 'Graphics Card', 'Accessories', 'Storage',  'Cabinets'];
 
     useEffect(() => {
         const handleScroll = () => {
@@ -71,14 +72,14 @@ const Header = ({ isCategory = true }: HeaderProps) => {
         document.body.style.overflow = 'auto';
     };
 
-    const openSearch = () => {
-        setIsSearchOpen(true);
-        setTimeout(() => {
-            if (searchInputRef.current) {
-                searchInputRef.current.focus();
-            }
-        }, 100);
-    };
+    // const openSearch = () => {
+    //     setIsSearchOpen(true);
+    //     setTimeout(() => {
+    //         if (searchInputRef.current) {
+    //             searchInputRef.current.focus();
+    //         }
+    //     }, 100);
+    // };
 
     return (
         <>
@@ -221,7 +222,7 @@ const Header = ({ isCategory = true }: HeaderProps) => {
                                     {categories.map((category) => (
                                         <li key={category}>
                                             <Link
-                                                href={`/category/${category.toLowerCase()}`}
+                                                href={`/category/${slugify(category)}`}
                                                 className="text-sm font-medium text-gray-800 hover:text-blue-600 transition-colors"
                                             >
                                                 {category}

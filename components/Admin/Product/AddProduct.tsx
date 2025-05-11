@@ -1,45 +1,53 @@
-"use client"
+// pages/admin/products/add.tsx
+"use client";
 
-import type React from "react"
-import { useState, useRef, useEffect } from "react"
-import { useRouter } from "next/navigation"
-import Image from "next/image"
-import { ChevronDown, Plus, X, GripVertical } from "lucide-react"
-import { Button } from "@/components/ui/button"
-import { Input } from "@/components/ui/input"
-import { SubProductSelector } from "@/components/Admin/Product/SubProductSelector"
-import { DndProvider, useDrag, useDrop } from "react-dnd"
-import { HTML5Backend } from "react-dnd-html5-backend"
+import type React from "react";
+import { useState, useRef, useEffect } from "react";
+import { useRouter } from "next/navigation";
+import Image from "next/image";
+import { ChevronDown, Plus, X, GripVertical } from "lucide-react";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { SubProductSelector } from "@/components/Admin/Product/SubProductSelector";
+import { DndProvider, useDrag, useDrop } from "react-dnd";
+import { HTML5Backend } from "react-dnd-html5-backend";
 
-// Status options - simplified to just active/inactive
-const statusOptions = ["Active", "Inactive"]
+
+
+// Status options
+const statusOptions = [
+  { value: "active", label: "Active" },
+  { value: "inactive", label: "Inactive" },
+];
+
+
+// Product categories
+const categories = ['Laptops', 'Monitors', 'Processor', 'Graphics Card', 'Accessories', 'Storage',  'Cabinets'];
 
 // Interface for specification field
 interface SpecField {
-  id: string
-  label: string
-  value: string
+  id: string;
+  label: string;
+  value: string;
 }
 
 // Interface for specification section
 interface SpecSection {
-  id: string
-  name: string
-  fields: SpecField[]
-  isRequired?: boolean
-  isFixed?: boolean
+  id: string;
+  name: string;
+  fields: SpecField[];
+  isRequired?: boolean;
+  isFixed?: boolean;
 }
-
-// Product categories
-const categories = ["Laptops", "Desktops", "Accessories", "Peripherals", "Components"]
 
 // Type for drag item
 interface DragItem {
-  index: number
-  id: string
-  type: string
+  index: number;
+  id: string;
+  type: string;
 }
 
+// DraggableSpecSection component (unchanged from original)
 const DraggableSpecSection = ({
   section,
   index,
@@ -50,20 +58,18 @@ const DraggableSpecSection = ({
   removeSection,
   removeFieldFromSection,
 }: {
-  section: SpecSection
-  index: number
-  moveSection: (dragIndex: number, hoverIndex: number) => void
-  handleSpecFieldChange: (sectionId: string, fieldId: string, type: "label" | "value", value: string) => void
-  addFieldToSection: (sectionId: string) => void
-  updateSectionName: (sectionId: string, name: string) => void
-  removeSection: (sectionId: string) => void
-  removeFieldFromSection: (sectionId: string, fieldId: string) => void
+  section: SpecSection;
+  index: number;
+  moveSection: (dragIndex: number, hoverIndex: number) => void;
+  handleSpecFieldChange: (sectionId: string, fieldId: string, type: "label" | "value", value: string) => void;
+  addFieldToSection: (sectionId: string) => void;
+  updateSectionName: (sectionId: string, name: string) => void;
+  removeSection: (sectionId: string) => void;
+  removeFieldFromSection: (sectionId: string, fieldId: string) => void;
 }) => {
-  const ref = useRef<HTMLDivElement>(null)
+  const ref = useRef<HTMLDivElement>(null);
 
-  // Determine if this section can be dragged
-  // General and Warranty sections are fixed
-  const canDrag = !section.isFixed
+  const canDrag = !section.isFixed;
 
   const [{ isDragging }, drag] = useDrag({
     type: "SPEC_SECTION",
@@ -72,85 +78,45 @@ const DraggableSpecSection = ({
     collect: (monitor) => ({
       isDragging: monitor.isDragging(),
     }),
-  })
+  });
 
-  const [{ isOver, canDrop }, drop] = useDrop({
+  const [{ isOver, canDrop }] = useDrop({
     accept: "SPEC_SECTION",
     canDrop: (item: DragItem) => {
-      // Don't allow dropping on fixed sections
-      if (section.isFixed) return false
-
-      // Don't allow dropping General or Warranty sections
-      if (item.id === "general") return false
-
-      return true
+      if (section.isFixed) return false;
+      if (item.id === "general") return false;
+      return true;
     },
     hover: (item: DragItem, monitor) => {
-      if (!ref.current) return
-
-      const dragIndex = item.index
-      const hoverIndex = index
-
-      // Don't replace items with themselves
-      if (dragIndex === hoverIndex) return
-
-      // Don't allow moving items to the position of fixed sections
-      if (section.isFixed) return
-
-      // Get rectangle on screen
-      const hoverBoundingRect = ref.current.getBoundingClientRect()
-
-      // Get vertical middle
-      const hoverMiddleY = (hoverBoundingRect.bottom - hoverBoundingRect.top) / 2
-
-      // Get mouse position
-      const clientOffset = monitor.getClientOffset()
-      if (!clientOffset) return
-
-      // Get pixels to the top
-      const hoverClientY = clientOffset.y - hoverBoundingRect.top
-
-      // Only perform the move when the mouse has crossed half of the item's height
-      // When dragging downwards, only move when the cursor is below 50%
-      // When dragging upwards, only move when the cursor is above 50%
-
-      // Dragging downwards
-      if (dragIndex < hoverIndex && hoverClientY < hoverMiddleY) return
-
-      // Dragging upwards
-      if (dragIndex > hoverIndex && hoverClientY > hoverMiddleY) return
-
-      // Time to actually perform the action
-      moveSection(dragIndex, hoverIndex)
-
-      // Note: we're mutating the monitor item here!
-      // Generally it's better to avoid mutations,
-      // but it's good here for the sake of performance
-      // to avoid expensive index searches.
-      item.index = hoverIndex
+      if (!ref.current) return;
+      const dragIndex = item.index;
+      const hoverIndex = index;
+      if (dragIndex === hoverIndex || section.isFixed) return;
+      const hoverBoundingRect = ref.current.getBoundingClientRect();
+      const hoverMiddleY = (hoverBoundingRect.bottom - hoverBoundingRect.top) / 2;
+      const clientOffset = monitor.getClientOffset();
+      if (!clientOffset) return;
+      const hoverClientY = clientOffset.y - hoverBoundingRect.top;
+      if (dragIndex < hoverIndex && hoverClientY < hoverMiddleY) return;
+      if (dragIndex > hoverIndex && hoverClientY > hoverMiddleY) return;
+      moveSection(dragIndex, hoverIndex);
+      item.index = hoverIndex;
     },
     collect: (monitor) => ({
       isOver: monitor.isOver(),
       canDrop: monitor.canDrop(),
     }),
-  })
+  });
 
-  // Apply drag and drop refs
-  // Use the callback pattern to properly combine refs
   const attachRef = (el: HTMLDivElement | null) => {
-    ref.current = el
-
-    // Apply the drop ref to all sections
-    const dropRef = drop(el)
-
-    // Only apply drag ref to draggable sections
+    ref.current = el;
+    // const dropRef = drop(el);
     if (canDrag) {
-      drag(el)
+      drag(el);
     }
-  }
+  };
 
-  // Determine border style based on drag state
-  const borderStyle = isOver && canDrop ? "border-blue-400" : isOver && !canDrop ? "border-red-400" : "border-gray-200"
+  const borderStyle = isOver && canDrop ? "border-blue-400" : isOver && !canDrop ? "border-red-400" : "border-gray-200";
 
   return (
     <div
@@ -192,14 +158,14 @@ const DraggableSpecSection = ({
           <div key={field.id} className="grid grid-cols-1 gap-4 md:grid-cols-2">
             <div className="relative">
               <Input
-                placeholder={`label name ( eg: ${section.name === "General" ? "Model name, Brand" : section.name === "Warranty" ? "Warranty Summary" : "Processor And Features"} )`}
+                placeholder={`label name (e.g. ${section.name === "General" ? "Model name, Brand" : section.name === "Warranty" ? "Warranty Summary" : "Processor"} )`}
                 value={field.label}
                 onChange={(e) => handleSpecFieldChange(section.id, field.id, "label", e.target.value)}
               />
             </div>
             <div className="relative flex items-center">
               <Input
-                placeholder={`value name ( eg: ${section.name === "General" ? "HP DELL" : section.name === "Warranty" ? "DOMESTIC" : "ON SITE WARRANTY"} )`}
+                placeholder={`value name (e.g. ${section.name === "General" ? "HP ProBook, HP" : section.name === "Warranty" ? "1 Year" : "Intel i7"} )`}
                 value={field.value}
                 onChange={(e) => handleSpecFieldChange(section.id, field.id, "value", e.target.value)}
                 className="flex-1"
@@ -224,424 +190,423 @@ const DraggableSpecSection = ({
         </Button>
       </div>
     </div>
-  )
-}
+  );
+};
 
 export default function AddProductPage() {
-  const router = useRouter()
+  const router = useRouter();
 
-  // Main product image state
-  const [mainImage, setMainImage] = useState<string>("")
+  // Unified product state
+  const [product, setProduct] = useState({
+    name: "",
+    slug: "",
+    description: "",
+    category: "",
+    brand: "",
+    color: "",
+    material: "",
+    dimensions: "",
+    weight: "",
+    storage: "",
+    tags: "",
+    mrp: "",
+    ourPrice: "",
+    deliveryMode: "standard",
+    sku: "",
+    status: "active",
+    subProductStatus: "active",
+    totalStocks: "",
+    productImages: Array(6).fill(null),
+    averageRating: 0,
+    ratingCount: 0,
+  });
 
-  // Additional images state
-  const [additionalImages, setAdditionalImages] = useState<string[]>(Array(5).fill(""))
-
-  // Form state
-  const [productName, setProductName] = useState("")
-  const [sku, setSku] = useState("")
-  const [category, setCategory] = useState("")
-  const [mrp, setMrp] = useState("")
-  const [ourPrice, setOurPrice] = useState("")
-  const [status, setStatus] = useState("Active")
-  const [subStatus, setSubStatus] = useState("Active")
-  const [totalStock, setTotalStock] = useState("")
-  const [deliveryMode, setDeliveryMode] = useState("Standard")
-
-  // Dropdowns state
-  const [openDropdown, setOpenDropdown] = useState<string | null>(null)
-
-  // Specifications state - mark General and Warranty as fixed
+  // Specification sections state
   const [specSections, setSpecSections] = useState<SpecSection[]>([
     {
       id: "general",
       name: "General",
-      fields: [{ id: "field1", label: "", value: "" }],
+      fields: [
+        { id: "field1", label: "Brand", value: "" },
+        { id: "field2", label: "Material", value: "" },
+        { id: "field3", label: "Color", value: "" },
+        { id: "field4", label: "Storage", value: "" },
+      ],
       isRequired: true,
       isFixed: true,
     },
-  ])
+    {
+      id: "physical",
+      name: "Dimensions",
+      fields: [
+        { id: "field1", label: "Dimensions", value: "" },
+        { id: "field2", label: "Weight", value: "" },
+      ],
+      isFixed: false,
+    },
+  ]);
 
-  // File input refs
-  const mainImageInputRef = useRef<HTMLInputElement>(null)
-  const additionalImageInputRefs = useRef<(HTMLInputElement | null)[]>([])
+  // Dropdown state
+  const [openDropdown, setOpenDropdown] = useState<string | null>(null);
 
-  // useEffect to initialize the array of refs
+  // Refs for image inputs
+  const mainImageInputRef = useRef<HTMLInputElement>(null);
+  const additionalImageInputRefs = useRef<(HTMLInputElement | null)[]>([]);
+
+  // Initialize refs
   useEffect(() => {
-    // Create an array of refs for additional images
-    additionalImageInputRefs.current = Array(5).fill(null)
-  }, [])
+    additionalImageInputRefs.current = Array(5).fill(null);
+  }, []);
 
-  // Close dropdown when clicking outside
+  // Sync product fields with specSections
+  useEffect(() => {
+    setSpecSections((prev) =>
+      prev.map((section) => {
+        if (section.id === "general") {
+          let updatedFields = section.fields.map((field) => {
+            if (field.label.toLowerCase() === "brand") return { ...field, value: product.brand };
+            if (field.label.toLowerCase() === "material") return { ...field, value: product.material || "" };
+            if (field.label.toLowerCase() === "color") return { ...field, value: product.color };
+            if (field.label.toLowerCase() === "storage") return { ...field, value: product.storage || "" };
+            return field;
+          });
+
+          // Handle color field
+          const hasColorField = updatedFields.some((field) => field.label.toLowerCase() === "color");
+          if (product.color && !hasColorField) {
+            updatedFields = [
+              ...updatedFields,
+              { id: `color-field-${Date.now()}`, label: "Color", value: product.color },
+            ];
+          } else if (!product.color && hasColorField) {
+            updatedFields = updatedFields.filter((field) => field.label.toLowerCase() !== "color");
+          }
+
+          // Handle storage field
+          const hasStorageField = updatedFields.some((field) => field.label.toLowerCase() === "storage");
+          if (product.storage && !hasStorageField && ["Laptops", "Desktops"].includes(product.category)) {
+            updatedFields = [
+              ...updatedFields,
+              { id: `storage-field-${Date.now()}`, label: "Storage", value: product.storage },
+            ];
+          } else if ((!product.storage || !["Laptops", "Desktops"].includes(product.category)) && hasStorageField) {
+            updatedFields = updatedFields.filter((field) => field.label.toLowerCase() !== "storage");
+          }
+
+          return { ...section, fields: updatedFields };
+        }
+        if (section.id === "physical") {
+          return {
+            ...section,
+            fields: section.fields.map((field) => {
+              if (field.label.toLowerCase() === "dimensions") return { ...field, value: product.dimensions || "" };
+              if (field.label.toLowerCase() === "weight") return { ...field, value: product.weight || "" };
+              return field;
+            }),
+          };
+        }
+        return section;
+      }),
+    );
+  }, [product.brand, product.color, product.material, product.dimensions, product.weight, product.storage, product.category]);
+
+  // Close dropdown on click outside
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
       if (openDropdown && !(event.target as Element).closest(".dropdown-container")) {
-        setOpenDropdown(null)
+        setOpenDropdown(null);
       }
-    }
-
-    document.addEventListener("mousedown", handleClickOutside)
-    return () => {
-      document.removeEventListener("mousedown", handleClickOutside)
-    }
-  }, [openDropdown])
+    };
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => document.removeEventListener("mousedown", handleClickOutside);
+  }, [openDropdown]);
 
   // Handle dropdown toggle
   const toggleDropdown = (dropdownName: string) => {
-    setOpenDropdown(openDropdown === dropdownName ? null : dropdownName)
-  }
+    setOpenDropdown(openDropdown === dropdownName ? null : dropdownName);
+  };
 
-  // Handle main image upload
-  const handleMainImageUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0]
+  // Convert File to base64 string
+  const fileToBase64 = (file: File): Promise<string> => {
+    return new Promise((resolve, reject) => {
+      const reader = new FileReader();
+      reader.onload = () => resolve(reader.result as string);
+      reader.onerror = reject;
+      reader.readAsDataURL(file);
+    });
+  };
+
+  // Handle image upload (main and additional)
+  const handleImageUpload = async (index: number, e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
     if (file) {
-      const reader = new FileReader()
-      reader.onload = (event) => {
-        if (event.target?.result) {
-          setMainImage(event.target.result as string)
-        }
-      }
-      reader.readAsDataURL(file)
+      const base64 = await fileToBase64(file);
+      setProduct((prev) => ({
+        ...prev,
+        productImages: prev.productImages.map((img, i) => (i === index ? base64 : img)),
+      }));
     }
-  }
+  };
 
-  // Handle additional image upload
-  const handleAdditionalImageUpload = (index: number, e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0]
-    if (file) {
-      const reader = new FileReader()
-      reader.onload = (event) => {
-        if (event.target?.result) {
-          const newImages = [...additionalImages]
-          newImages[index] = event.target.result as string
-          setAdditionalImages(newImages)
-        }
-      }
-      reader.readAsDataURL(file)
-    }
-  }
-
-  // Handle drag and drop for main image
-  const handleMainImageDrop = (e: React.DragEvent) => {
-    e.preventDefault()
-    const file = e.dataTransfer.files?.[0]
+  // Handle drag and drop for images
+  const handleImageDrop = async (index: number, e: React.DragEvent) => {
+    e.preventDefault();
+    const file = e.dataTransfer.files?.[0];
     if (file && file.type.startsWith("image/")) {
-      const reader = new FileReader()
-      reader.onload = (event) => {
-        if (event.target?.result) {
-          setMainImage(event.target.result as string)
-        }
-      }
-      reader.readAsDataURL(file)
+      const base64 = await fileToBase64(file);
+      setProduct((prev) => ({
+        ...prev,
+        productImages: prev.productImages.map((img, i) => (i === index ? base64 : img)),
+      }));
     }
-  }
+  };
 
-  // Handle drag and drop for additional images
-  const handleAdditionalImageDrop = (index: number, e: React.DragEvent) => {
-    e.preventDefault()
-    const file = e.dataTransfer.files?.[0]
-    if (file && file.type.startsWith("image/")) {
-      const reader = new FileReader()
-      reader.onload = (event) => {
-        if (event.target?.result) {
-          const newImages = [...additionalImages]
-          newImages[index] = event.target.result as string
-          setAdditionalImages(newImages)
-        }
-      }
-      reader.readAsDataURL(file)
-    }
-  }
-
-  // Prevent default behavior for drag over
   const handleDragOver = (e: React.DragEvent) => {
-    e.preventDefault()
-  }
+    e.preventDefault();
+  };
 
-  // Handle specification field change
+  // Handle specification field changes
   const handleSpecFieldChange = (sectionId: string, fieldId: string, type: "label" | "value", value: string) => {
     setSpecSections((prev) =>
       prev.map((section) =>
         section.id === sectionId
           ? {
             ...section,
-            fields: section.fields.map((field) => (field.id === fieldId ? { ...field, [type]: value } : field)),
+            fields: section.fields.map((field) =>
+              field.id === fieldId ? { ...field, [type]: value } : field,
+            ),
           }
           : section,
       ),
-    )
-  }
+    );
+  };
 
-  // Add new field to a section
   const addFieldToSection = (sectionId: string) => {
     setSpecSections((prev) =>
       prev.map((section) =>
         section.id === sectionId
           ? {
             ...section,
-            fields: [...section.fields, { id: `field${section.fields.length + 1}`, label: "", value: "" }],
+            fields: [
+              ...section.fields,
+              { id: `field${section.fields.length + 1}-${Date.now()}`, label: "", value: "" },
+            ],
           }
           : section,
       ),
-    )
-  }
+    );
+  };
 
-  // Remove a field from a section
   const removeFieldFromSection = (sectionId: string, fieldId: string) => {
     setSpecSections((prev) =>
       prev.map((section) => {
-        if (section.id === sectionId) {
-          // Don't remove the last field
-          if (section.fields.length <= 1) {
-            return section
-          }
+        if (section.id === sectionId && section.fields.length > 1) {
           return {
             ...section,
             fields: section.fields.filter((field) => field.id !== fieldId),
-          }
+          };
         }
-        return section
+        return section;
       }),
-    )
-  }
+    );
+  };
 
-  // Update section name
   const updateSectionName = (sectionId: string, name: string) => {
-    setSpecSections((prev) => prev.map((section) => (section.id === sectionId ? { ...section, name } : section)))
-  }
+    setSpecSections((prev) =>
+      prev.map((section) => (section.id === sectionId ? { ...section, name } : section)),
+    );
+  };
 
-  // Remove a section
   const removeSection = (sectionId: string) => {
-    // Don't allow removing fixed sections
-    if (sectionId === "general" || sectionId === "warranty") return
+    if (sectionId === "general" || sectionId === "warranty") return;
+    setSpecSections((prev) => prev.filter((section) => section.id !== sectionId));
+  };
 
-    setSpecSections((prev) => prev.filter((section) => section.id !== sectionId))
-  }
-
-  // Add new section
   const addNewSection = () => {
-    const newSectionId = `section${Date.now()}`
-
-    // Insert new section before warranty (which should always be last)
-    const warrantyIndex = specSections.findIndex((section) => section.id === "warranty")
-    const newSections = [...specSections]
-
-    newSections.splice(warrantyIndex, 0, {
+    const newSectionId = `section${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
+    const warrantyIndex = specSections.findIndex((section) => section.id === "warranty");
+    const newSections = [...specSections];
+    const insertIndex = warrantyIndex !== -1 ? warrantyIndex : specSections.length;
+    newSections.splice(insertIndex, 0, {
       id: newSectionId,
       name: "New Row",
       fields: [{ id: "field1", label: "", value: "" }],
-      isFixed: false, // New sections can be moved
-    })
-
-    setSpecSections(newSections)
-  }
-
-  // Move section (for drag and drop)
-  const moveSection = (dragIndex: number, hoverIndex: number) => {
-    // Get the section being dragged
-    const dragSection = specSections[dragIndex]
-
-    // Don't allow moving fixed sections
-    if (dragSection.id === "general" || dragSection.id === "warranty") return
-
-    // Don't allow moving to the position of fixed sections
-    // General is always at index 0
-    if (hoverIndex === 0) return
-
-    // Warranty is always at the last index
-    if (hoverIndex === specSections.length - 1) return
-
-    // Perform the move
-    setSpecSections((prevSections) => {
-      const newSections = [...prevSections]
-      newSections.splice(dragIndex, 1)
-      newSections.splice(hoverIndex, 0, dragSection)
-      return newSections
-    })
-  }
-
-  // Enhanced form submission with debugging
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    console.log("Form submission started");
-
-    // Log all form values for debugging
-    console.log({
-      productName,
-      category,
-      mrp,
-      ourPrice,
-      totalStock,
-      sku,
-      status,
-      subStatus,
-      deliveryMode,
-      // description,
-      mainImage: mainImage ? `${typeof mainImage} (${mainImage instanceof File ? mainImage.name : 'not a file'})` : 'none',
-      additionalImages: additionalImages.map(img =>
-        typeof img === 'string' ? 'string URL' : (img instanceof File ? `File: ${img.name}` : 'unknown type')
-      )
+      isFixed: false,
     });
+    setSpecSections(newSections);
+  };
 
-    // Basic validations
-    if (!productName) return alert("Product name is required");
-    if (!category) return alert("Category is required");
-    if (!mrp) return alert("MRP is required");
-    if (!ourPrice) return alert("Our price is required");
-    if (!totalStock) return alert("Total stock is required");
+  const moveSection = (dragIndex: number, hoverIndex: number) => {
+    const dragSection = specSections[dragIndex];
+    if (dragSection.id === "general" || dragSection.id === "warranty" || hoverIndex === 0) return;
+    if (hoverIndex === specSections.length - 1 && specSections[specSections.length - 1].id === "warranty") return;
+    setSpecSections((prevSections) => {
+      const newSections = [...prevSections];
+      newSections.splice(dragIndex, 1);
+      newSections.splice(hoverIndex, 0, dragSection);
+      return newSections;
+    });
+  };
 
-    // General section must have at least one filled field
-    const generalSection = specSections.find((section) => section.id === "general");
-    if (
-      !generalSection ||
-      !generalSection.fields.some((field) => field.label.trim() && field.value.trim())
-    ) {
-      return alert("At least one field in the General section is required");
+
+
+  const parseColors = (colorString: string): string[] => {
+    if (!colorString) return [];
+    return colorString.split(",").map((c) => c.trim()).filter(Boolean);
+  };
+
+  const isValidColor = (color: string): boolean => {
+    const s = new Option().style;
+    s.backgroundColor = color;
+    return s.backgroundColor !== "";
+  };
+
+  const parseTagsToArray = (tagString: string): string[] => {
+    if (!tagString) return [];
+    return tagString.split(",").map((tag) => tag.trim()).filter(Boolean);
+  };
+
+  const addTagsToFormData = (formData: FormData, tagString: string) => {
+    const tags = parseTagsToArray(tagString);
+    if (tags.length > 0) {
+      formData.append("tags", tagString); // Keep as comma-separated string to match schema
     }
+  };
 
-    // Create FormData object for file uploads
-    const formData = new FormData();
+  const handleSubmit = async (e: React.FormEvent) => {
+  e.preventDefault();
 
-    // Add text fields
-    formData.append("name", productName);
-    formData.append("slug", productName.toLowerCase().replace(/\s+/g, "-"));
-    // formData.append("description", description || "");
-    formData.append("category", category);
-    formData.append("mrp", mrp);
-    formData.append("ourPrice", ourPrice);
-    formData.append("deliveryMode", deliveryMode);
-    formData.append("sku", sku || "");
-    formData.append("status", status);
-    formData.append("subProductStatus", subStatus);
-    formData.append("totalStocks", totalStock);
+  // Validation
+  if (!product.name) return alert("Product name is required");
+  if (!product.category) return alert("Category is required");
+  if (!product.brand) return alert("Brand is required");
+  if (!product.color) return alert("At least one color is required");
+  const colors = parseColors(product.color);
+  if (colors.length === 0 || !colors.some((c) => isValidColor(c))) {
+    return alert("Please enter at least one valid color (e.g., Red, #FF0000)");
+  }
+  if (!product.mrp) return alert("MRP is required");
+  if (!product.ourPrice) return alert("Our price is required");
+  if (!product.totalStocks) return alert("Total stock is required");
+  if (["Laptops", "Desktops"].includes(product.category) && !product.storage) {
+    return alert("Storage is required for Laptops and Desktops");
+  }
+  if (!product.productImages[0]) return alert("Main product image is required");
 
-    // Add specifications as JSON string
-    const specificationsPayload = specSections.map((section) => ({
+  const generalSection = specSections.find((section) => section.id === "general");
+  if (
+    !generalSection ||
+    !generalSection.fields.some((field) => field.label.trim() && field.value.trim())
+  ) {
+    return alert("At least one field in the General section is required");
+  }
+
+  // Generate slug
+  const slug = product.name
+    .toLowerCase()
+    .trim()
+    .replace(/[^a-z0-9\s-]/g, "")
+    .replace(/\s+/g, "-")
+    .replace(/-+/g, "-");
+
+  // Prepare FormData
+  const formData = new FormData();
+  formData.append("name", product.name);
+  formData.append("slug", slug);
+  formData.append("description", product.description || "");
+  formData.append("category", product.category);
+  formData.append("brand", product.brand);
+  formData.append("color", product.color);
+  formData.append("mrp", (product.mrp.toLocaleString()));
+  formData.append("ourPrice", product.ourPrice.toLocaleString());
+  formData.append("deliveryMode", product.deliveryMode);
+  formData.append("sku", product.sku || "");
+  formData.append("status", product.status);
+  formData.append("subProductStatus", product.subProductStatus);
+  formData.append("totalStocks", product.totalStocks.toLocaleString());
+  if (product.material) formData.append("material", product.material);
+  if (product.dimensions) formData.append("dimensions", product.dimensions);
+  if (product.weight) formData.append("weight", product.weight);
+  if (product.storage) formData.append("storage", product.storage);
+  addTagsToFormData(formData, product.tags || "");
+
+  // Prepare specifications payload
+  const specificationsPayload = specSections
+    .filter((section) => section.fields.some((f) => f.label.trim() && f.value.trim()))
+    .map((section) => ({
       groupName: section.name,
       fields: section.fields
-        .filter((f) => f.label.trim() !== "")
+        .filter((f) => f.label.trim() && f.value.trim())
         .map((f) => ({
           fieldName: f.label,
           fieldValue: f.value,
         })),
     }));
-    formData.append("specifications", JSON.stringify(specificationsPayload));
+  formData.append("specifications", JSON.stringify(specificationsPayload));
 
-    // Debug the file objects
-    console.log("Main image:", mainImage);
-    if (mainImage instanceof File) {
-      console.log("Main image details:", {
-        name: mainImage.name,
-        type: mainImage.type,
-        size: mainImage.size,
-        lastModified: mainImage.lastModified
-      });
-    }
-
-    // Handle main image
-    let mainImageAdded = false;
-    if (mainImage instanceof File && mainImage.size > 0) {
-      console.log("Appending main image as File:", mainImage.name);
-      formData.append("productImages", mainImage);
-      mainImageAdded = true;
-    } else if (typeof mainImage === "string") {
-      if (mainImage.startsWith("data:")) {
-        // It's a base64 image
-        try {
-          console.log("Converting base64 main image to blob");
-          const response = await fetch(mainImage);
-          const blob = await response.blob();
-          console.log("Blob created:", blob.size, blob.type);
-          formData.append("productImages", blob, `main-image-${Date.now()}.${blob.type.split('/')[1] || 'jpg'}`);
-          mainImageAdded = true;
-        } catch (error) {
-          console.error("Error converting base64 to blob:", error);
-        }
-      } else if (mainImage.startsWith("http")) {
-        // It's a URL - might need special handling depending on your setup
-        console.log("Main image is a URL, not handling:", mainImage);
-        // You might need to fetch this image and convert it to a blob
-      }
-    }
-
-    if (!mainImageAdded) {
-      console.warn("No main image was added to formData");
-      return alert("Main product image is required and could not be processed");
-    }
-
-    // Add additional images
-    let additionalImagesAdded = 0;
-    for (let i = 0; i < additionalImages.length; i++) {
-      const image = additionalImages[i];
-      if (image instanceof File && image.size > 0) {
-        console.log(`Appending additional image ${i} as File:`, image.name);
-        formData.append("productImages", image);
-        additionalImagesAdded++;
-      } else if (typeof image === "string" && image.startsWith("data:")) {
-        try {
-          console.log(`Converting base64 additional image ${i} to blob`);
-          const response = await fetch(image);
-          const blob = await response.blob();
-          formData.append("productImages", blob, `additional-image-${Date.now()}-${i}.${blob.type.split('/')[1] || 'jpg'}`);
-          additionalImagesAdded++;
-        } catch (error) {
-          console.error(`Error converting additional image ${i} to blob:`, error);
-        }
-      }
-    }
-
-    console.log(`Added ${additionalImagesAdded} additional images`);
-
-    // Log all FormData entries for debugging
-    console.log("FormData entries:");
-    for (const pair of formData.entries()) {
-      if (pair[0] === "productImages") {
-        console.log(`${pair[0]}: [File object]`);
-      } else if (pair[0] === "specifications") {
-        console.log(`${pair[0]}: [JSON string length: ${(pair[1] as string).length}]`);
-      } else {
-        console.log(`${pair[0]}: ${pair[1]}`);
-      }
-    }
-
+  // Add images to FormData
+  let mainImageAdded = false;
+  if (typeof product.productImages[0] === "string" && product.productImages[0].startsWith("data:")) {
     try {
-      console.log("Sending fetch request to /api/products");
-      const res = await fetch("/api/products", {
-        method: "POST",
-        body: formData,
-      });
-
-      console.log("Response status:", res.status);
-      console.log("Response status text:", res.statusText);
-
-      // Try to get the response body as text first to ensure we can see it even if it's not valid JSON
-      const responseText = await res.text();
-      console.log("Raw response:", responseText);
-
-      let result;
-      try {
-        // Try to parse as JSON if possible
-        result = JSON.parse(responseText);
-        console.log("Parsed response:", result);
-      } catch (parseError) {
-        console.error("Failed to parse response as JSON:", parseError);
-        // Continue with the text response
-        result = { message: responseText };
-      }
-
-      if (!res.ok) {
-        throw new Error(result.message || responseText || "Failed to create product");
-      }
-
-      // Success!
-      console.log("Product created successfully:", result);
-      alert("Product added successfully!");
-      router.push("/admin/products");
+      const response = await fetch(product.productImages[0]);
+      const blob = await response.blob();
+      formData.append(
+        "productImages",
+        blob,
+        `main-image-${Date.now()}.${blob.type.split("/")[1] || "jpg"}`
+      );
+      mainImageAdded = true;
     } catch (error) {
-      console.error("Error submitting product:", error);
-      alert(`Error: ${error instanceof Error ? error.message : "Unknown error occurred"}`);
+      console.error("Error converting main image base64 to blob:", error);
     }
-  };
+  }
 
+  if (!mainImageAdded) {
+    return alert("Main product image could not be processed");
+  }
+
+  for (let i = 1; i < product.productImages.length; i++) {
+    const image = product.productImages[i];
+    if (typeof image === "string" && image.startsWith("data:")) {
+      try {
+        const response = await fetch(image);
+        const blob = await response.blob();
+        formData.append(
+          "productImages",
+          blob,
+          `additional-image-${Date.now()}-${i}.${blob.type.split("/")[1] || "jpg"}`
+        );
+      } catch (error) {
+        console.error(`Error converting additional image ${i} to blob:`, error);
+      }
+    }
+  }
+
+  try {
+    const res = await fetch("/api/products", {
+      method: "POST",
+      body: formData,
+    });
+
+    const responseText = await res.text();
+    let result;
+    try {
+      result = JSON.parse(responseText);
+    } catch {
+      result = { message: responseText };
+    }
+
+    if (!res.ok) {
+      throw new Error(result.message || "Failed to create product");
+    }
+
+    alert("Product added successfully!");
+    router.push("/admin/products");
+  } catch (error) {
+    console.error("Error submitting product:", error);
+    alert(`Error: ${error instanceof Error ? error.message : "Unknown error occurred"}`);
+  }
+};
 
   return (
     <DndProvider backend={HTML5Backend}>
@@ -659,27 +624,30 @@ export default function AddProductPage() {
         </div>
 
         <form onSubmit={handleSubmit} className="space-y-8">
-          {/* Product Images Section */}
           <div className="grid grid-cols-1 gap-6 md:grid-cols-6">
-            {/* Main Product Image */}
             <div className="md:col-span-2">
               <div className="flex flex-col items-center">
                 <div
                   className="relative h-[300px] w-full overflow-hidden rounded-md border-2 border-dashed border-gray-300 bg-gray-50"
-                  onDrop={handleMainImageDrop}
+                  onDrop={(e) => handleImageDrop(0, e)}
                   onDragOver={handleDragOver}
                 >
-                  {mainImage ? (
+                  {product.productImages[0] ? (
                     <div className="relative h-full w-full">
                       <Image
-                        src={mainImage}
+                        src={product.productImages[0]}
                         alt="Main product image"
                         fill
                         className="object-contain p-2"
                       />
                       <button
                         type="button"
-                        onClick={() => setMainImage("")}
+                        onClick={() =>
+                          setProduct((prev) => ({
+                            ...prev,
+                            productImages: prev.productImages.map((img, i) => (i === 0 ? null : img)),
+                          }))
+                        }
                         className="absolute right-2 top-2 rounded-full bg-white p-1 shadow-md"
                       >
                         <X className="h-4 w-4" />
@@ -702,37 +670,39 @@ export default function AddProductPage() {
                     type="file"
                     accept="image/*"
                     className="hidden"
-                    onChange={handleMainImageUpload}
+                    onChange={(e) => handleImageUpload(0, e)}
                   />
                 </div>
               </div>
             </div>
 
-            {/* Additional Images */}
             <div className="md:col-span-4">
               <div className="grid grid-cols-2 gap-4 md:grid-cols-3">
-                {additionalImages.map((image, index) => (
+                {product.productImages.slice(1).map((image, index) => (
                   <div
                     key={index}
                     className="relative h-[140px] w-full overflow-hidden rounded-md border-2 border-dashed border-gray-300 bg-gray-50"
-                    onDrop={(e) => handleAdditionalImageDrop(index, e)}
+                    onDrop={(e) => handleImageDrop(index + 1, e)}
                     onDragOver={handleDragOver}
                   >
                     {image ? (
                       <div className="relative h-full w-full">
                         <Image
-                          src={image || "/placeholder.svg"}
+                          src={image}
                           alt={`Additional image ${index + 1}`}
                           fill
                           className="object-contain p-2"
                         />
                         <button
                           type="button"
-                          onClick={() => {
-                            const newImages = [...additionalImages]
-                            newImages[index] = ""
-                            setAdditionalImages(newImages)
-                          }}
+                          onClick={() =>
+                            setProduct((prev) => ({
+                              ...prev,
+                              productImages: prev.productImages.map((img, i) =>
+                                i === index + 1 ? null : img,
+                              ),
+                            }))
+                          }
                           className="absolute right-2 top-2 rounded-full bg-white p-1 shadow-md"
                         >
                           <X className="h-4 w-4" />
@@ -741,12 +711,7 @@ export default function AddProductPage() {
                     ) : (
                       <div
                         className="flex h-full w-full cursor-pointer flex-col items-center justify-center"
-                        onClick={() => {
-                          const inputRef = additionalImageInputRefs.current[index]
-                          if (inputRef) {
-                            inputRef.click()
-                          }
-                        }}
+                        onClick={() => additionalImageInputRefs.current[index]?.click()}
                       >
                         <div className="flex h-8 w-8 items-center justify-center rounded-full bg-blue-100 text-blue-600">
                           <Plus className="h-4 w-4" />
@@ -757,14 +722,12 @@ export default function AddProductPage() {
                     )}
                     <input
                       ref={(el) => {
-                        if (additionalImageInputRefs.current) {
-                          additionalImageInputRefs.current[index] = el
-                        }
+                        additionalImageInputRefs.current[index] = el;
                       }}
                       type="file"
                       accept="image/*"
                       className="hidden"
-                      onChange={(e) => handleAdditionalImageUpload(index, e)}
+                      onChange={(e) => handleImageUpload(index + 1, e)}
                     />
                   </div>
                 ))}
@@ -772,39 +735,35 @@ export default function AddProductPage() {
             </div>
           </div>
 
-          {/* Basic Information */}
           <div className="grid grid-cols-1 gap-6 md:grid-cols-2">
-            {/* Product Name */}
             <div>
               <label htmlFor="product-name" className="block text-sm font-medium text-gray-700">
                 Product Name
               </label>
               <Input
                 id="product-name"
-                value={productName}
-                onChange={(e) => setProductName(e.target.value)}
+                value={product.name}
+                onChange={(e) => setProduct((prev) => ({ ...prev, name: e.target.value }))}
                 placeholder="Product Name"
                 className="mt-1"
                 required
               />
             </div>
 
-            {/* Stock Keeping Unit (SKU) */}
             <div>
               <label htmlFor="sku" className="block text-sm font-medium text-gray-700">
                 Stock Keeping Unit (SKU)
               </label>
               <Input
                 id="sku"
-                value={sku}
-                onChange={(e) => setSku(e.target.value)}
-                placeholder="eg. IP15-256-BLUE"
+                value={product.sku}
+                onChange={(e) => setProduct((prev) => ({ ...prev, sku: e.target.value }))}
+                placeholder="e.g. IP15-256-BLUE"
                 className="mt-1"
                 required
               />
             </div>
 
-            {/* Category */}
             <div>
               <label htmlFor="category" className="block text-sm font-medium text-gray-700">
                 Category
@@ -815,7 +774,7 @@ export default function AddProductPage() {
                   className="flex w-full items-center justify-between rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
                   onClick={() => toggleDropdown("category")}
                 >
-                  <span>{category || "Select the Category"}</span>
+                  <span>{product.category || "Select the Category"}</span>
                   <ChevronDown className="h-4 w-4 opacity-50" />
                 </button>
                 {openDropdown === "category" && (
@@ -826,8 +785,8 @@ export default function AddProductPage() {
                           key={cat}
                           className="cursor-pointer px-4 py-2 text-sm hover:bg-gray-100"
                           onClick={() => {
-                            setCategory(cat)
-                            setOpenDropdown(null)
+                            setProduct((prev) => ({ ...prev, category: cat }));
+                            setOpenDropdown(null);
                           }}
                         >
                           {cat}
@@ -839,23 +798,119 @@ export default function AddProductPage() {
               </div>
             </div>
 
-            {/* Market Price */}
+            <div>
+              <label htmlFor="brand" className="block text-sm font-medium text-gray-700">
+                Brand
+              </label>
+              <Input
+                id="brand"
+                value={product.brand}
+                onChange={(e) => setProduct((prev) => ({ ...prev, brand: e.target.value }))}
+                placeholder="e.g. HP, Dell"
+                className="mt-1"
+                required
+              />
+            </div>
+
+            <div>
+              <label htmlFor="colors" className="block text-sm font-medium text-gray-700">
+                Colors
+              </label>
+              <div className="relative mt-1 flex items-center">
+                <Input
+                  id="colors"
+                  value={product.color}
+                  onChange={(e) => setProduct((prev) => ({ ...prev, color: e.target.value }))}
+                  placeholder="e.g. Red, Blue, #000000"
+                  className="pr-16"
+                  required
+                />
+                <div className="absolute right-2 flex items-center space-x-1">
+                  {parseColors(product.color).map((c, index) => (
+                    isValidColor(c) && (
+                      <div
+                        key={index}
+                        className="h-4 w-4 rounded-full border border-gray-300"
+                        style={{ backgroundColor: c }}
+                        title={c}
+                      />
+                    )
+                  ))}
+                </div>
+              </div>
+            </div>
+
+            <div>
+              <label htmlFor="material" className="block text-sm font-medium text-gray-700">
+                Material
+              </label>
+              <Input
+                id="material"
+                value={product.material || ""}
+                onChange={(e) => setProduct((prev) => ({ ...prev, material: e.target.value }))}
+                placeholder="e.g. Aluminum, Plastic"
+                className="mt-1"
+              />
+            </div>
+
+            <div>
+              <label htmlFor="dimensions" className="block text-sm font-medium text-gray-700">
+                Dimensions
+              </label>
+              <Input
+                id="dimensions"
+                value={product.dimensions || ""}
+                onChange={(e) => setProduct((prev) => ({ ...prev, dimensions: e.target.value }))}
+                placeholder="e.g. 15 x 10 x 1 inches"
+                className="mt-1"
+              />
+            </div>
+
+            <div>
+              <label htmlFor="weight" className="block text-sm font-medium text-gray-700">
+                Weight
+              </label>
+              <Input
+                id="weight"
+                value={product.weight || ""}
+                onChange={(e) => setProduct((prev) => ({ ...prev, weight: e.target.value }))}
+                placeholder="e.g. 2.5 lbs"
+                className="mt-1"
+              />
+            </div>
+
+            {["Laptops", "Desktops"].includes(product.category) && (
+              <div>
+                <label htmlFor="storage" className="block text-sm font-medium text-gray-700">
+                  Storage
+                </label>
+                <Input
+                  id="storage"
+                  value={product.storage || ""}
+                  onChange={(e) => setProduct((prev) => ({ ...prev, storage: e.target.value }))}
+                  placeholder="e.g. 256GB,512GB,1TB"
+                  className="mt-1"
+                  required
+                />
+              </div>
+            )}
+
             <div>
               <label htmlFor="mrp" className="block text-sm font-medium text-gray-700">
                 MRP
               </label>
               <Input
                 id="mrp"
-                value={mrp}
-                onChange={(e) => setMrp(e.target.value)}
-                placeholder="MRP eg. ₹2000"
+                value={product.mrp}
+                onChange={(e) => setProduct((prev) => ({ ...prev, mrp: e.target.value }))}
+                placeholder="MRP e.g. ₹2000"
                 className="mt-1"
                 type="number"
+                step="0.01"
                 required
               />
             </div>
 
-            {/* Selling Price */}
             <div>
               <label htmlFor="our-price" className="block text-sm font-medium text-gray-700">
                 Our Price
@@ -864,17 +919,17 @@ export default function AddProductPage() {
                 <span className="absolute inset-y-0 left-0 flex items-center pl-3 text-gray-500">₹</span>
                 <Input
                   id="our-price"
-                  value={ourPrice}
-                  onChange={(e) => setOurPrice(e.target.value)}
+                  value={product.ourPrice}
+                  onChange={(e) => setProduct((prev) => ({ ...prev, ourPrice: e.target.value }))}
                   placeholder="20000"
                   className="pl-8"
                   type="number"
+                  step="0.01"
                   required
                 />
               </div>
             </div>
 
-            {/* Status */}
             <div>
               <label htmlFor="status" className="block text-sm font-medium text-gray-700">
                 Status
@@ -885,7 +940,7 @@ export default function AddProductPage() {
                   className="flex w-full items-center justify-between rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
                   onClick={() => toggleDropdown("status")}
                 >
-                  <span>{status}</span>
+                  <span>{statusOptions.find((opt) => opt.value === product.status)?.label || "Select Status"}</span>
                   <ChevronDown className="h-4 w-4 opacity-50" />
                 </button>
                 {openDropdown === "status" && (
@@ -893,14 +948,15 @@ export default function AddProductPage() {
                     <div className="max-h-60 overflow-auto py-1">
                       {statusOptions.map((option) => (
                         <div
-                          key={option}
-                          className="cursor-pointer px-4 py-2 text-sm hover:bg-gray-100"
+                          key={option.value}
+                          className="cursor-pointer capitalize px-4 py-2 text-sm hover:bg-gray-100"
                           onClick={() => {
-                            setStatus(option)
-                            setOpenDropdown(null)
+                            setProduct((prev) => ({ ...prev, status: option.value }));
+
+                            setOpenDropdown(null);
                           }}
                         >
-                          {option}
+                          {option.label}
                         </div>
                       ))}
                     </div>
@@ -909,15 +965,14 @@ export default function AddProductPage() {
               </div>
             </div>
 
-            {/* Total Stocks */}
             <div>
               <label htmlFor="total-stocks" className="block text-sm font-medium text-gray-700">
                 Total Stocks
               </label>
               <Input
                 id="total-stocks"
-                value={totalStock}
-                onChange={(e) => setTotalStock(e.target.value)}
+                value={product.totalStocks}
+                onChange={(e) => setProduct((prev) => ({ ...prev, totalStocks: e.target.value }))}
                 placeholder="Enter your stocks"
                 className="mt-1"
                 type="number"
@@ -925,7 +980,6 @@ export default function AddProductPage() {
               />
             </div>
 
-            {/* Sub Product Status */}
             <div>
               <label htmlFor="sub-status" className="block text-sm font-medium text-gray-700">
                 Sub Product Status
@@ -936,7 +990,7 @@ export default function AddProductPage() {
                   className="flex w-full items-center justify-between rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
                   onClick={() => toggleDropdown("subStatus")}
                 >
-                  <span>{subStatus}</span>
+                  <span>{product.subProductStatus === "active" ? "Active" : "Inactive"}</span>
                   <ChevronDown className="h-4 w-4 opacity-50" />
                 </button>
                 {openDropdown === "subStatus" && (
@@ -944,23 +998,23 @@ export default function AddProductPage() {
                     <div className="max-h-60 overflow-auto py-1">
                       {statusOptions.map((option) => (
                         <div
-                          key={option}
-                          className="cursor-pointer px-4 py-2 text-sm hover:bg-gray-100"
+                          key={option.value}
+                          className="cursor-pointer capitalize px-4 py-2 text-sm hover:bg-gray-100"
                           onClick={() => {
-                            setSubStatus(option)
-                            setOpenDropdown(null)
+                            setProduct((prev) => ({ ...prev, subProductStatus: option.value }));
+                            setOpenDropdown(null);
                           }}
                         >
-                          {option}
+                          {option.label}
                         </div>
                       ))}
+
                     </div>
                   </div>
                 )}
               </div>
             </div>
 
-            {/*  Delivery Mode */}
             <div>
               <label htmlFor="delivery-mode" className="block text-sm font-medium text-gray-700">
                 Delivery Mode
@@ -971,22 +1025,22 @@ export default function AddProductPage() {
                   className="flex w-full items-center justify-between rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
                   onClick={() => toggleDropdown("deliveryMode")}
                 >
-                  <span>{deliveryMode}</span>
+                  <span>{product.deliveryMode === "standard" ? "Standard" : "Express"}</span>
                   <ChevronDown className="h-4 w-4 opacity-50" />
                 </button>
                 {openDropdown === "deliveryMode" && (
                   <div className="absolute z-10 mt-1 w-full rounded-md border border-gray-200 bg-white shadow-lg">
                     <div className="max-h-60 overflow-auto py-1">
-                      {['Standard', 'Express'].map((option) => (
+                      {["standard", "express"].map((option) => (
                         <div
                           key={option}
                           className="cursor-pointer px-4 py-2 text-sm hover:bg-gray-100"
                           onClick={() => {
-                            setDeliveryMode(option)
-                            setOpenDropdown(null)
+                            setProduct((prev) => ({ ...prev, deliveryMode: option }));
+                            setOpenDropdown(null);
                           }}
                         >
-                          {option}
+                          {option === "standard" ? "Standard" : "Express"}
                         </div>
                       ))}
                     </div>
@@ -994,9 +1048,35 @@ export default function AddProductPage() {
                 )}
               </div>
             </div>
+
+            <div>
+              <label htmlFor="tags" className="block text-sm font-medium text-gray-700">
+                Tags
+              </label>
+              <Input
+                id="tags"
+                value={product.tags || ""}
+                onChange={(e) => setProduct((prev) => ({ ...prev, tags: e.target.value }))}
+                placeholder="e.g. gaming, portable, lightweight"
+                className="mt-1"
+              />
+            </div>
           </div>
 
-          {/* Product Specifications */}
+          <div>
+            <label htmlFor="short-description" className="block text-sm font-medium text-gray-700">
+              Short Description
+            </label>
+            <textarea
+              id="short-description"
+              value={product.description || ""}
+              onChange={(e) => setProduct((prev) => ({ ...prev, description: e.target.value }))}
+              placeholder="Brief description of the product"
+              className="mt-1 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
+              rows={4}
+            />
+          </div>
+
           <div>
             <div className="mb-4 flex items-center justify-between">
               <h2 className="text-lg font-medium">Product Specifications</h2>
@@ -1023,22 +1103,23 @@ export default function AddProductPage() {
             </div>
           </div>
 
-          {/* Sub Products - Only show if subStatus is active */}
-          {subStatus === "Active" && (
+          {product.subProductStatus === "active" && (
             <div>
               <h2 className="mb-4 text-lg font-medium">Sub Products</h2>
               <SubProductSelector />
             </div>
           )}
 
-          {/* Submit Button - Centered and rounded-full */}
           <div className="flex justify-center">
-            <button type="submit" className="bg-blue-600 mt-14 my-5 w-[40%] hover:bg-blue-700 text-white px-8 py-2 rounded-full">
+            <button
+              type="submit"
+              className="mt-14 my-5 w-[40%] cursor-pointer rounded-full bg-blue-600 px-8 py-2 text-white hover:bg-blue-700"
+            >
               Add Product
             </button>
           </div>
         </form>
       </div>
     </DndProvider>
-  )
+  );
 }

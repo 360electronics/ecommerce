@@ -2,10 +2,10 @@
 
 import type React from "react"
 import { createContext, useContext, useState } from "react"
-import type { ProductData } from "@/components/Product/ProductDetails/Data"
+import type { Product } from "@/types/product"
 
 interface ProductContextType {
-  product: ProductData
+  product: Product
   selectedColor: string
   setSelectedColor: (color: string) => void
   selectedStorage: string
@@ -26,10 +26,11 @@ const ProductContext = createContext<ProductContextType | undefined>(undefined)
 
 export const ProductProvider: React.FC<{
   children: React.ReactNode
-  product: ProductData
+  product: Product
 }> = ({ children, product }) => {
-  const [selectedColor, setSelectedColor] = useState(product.colors[0]?.value || "")
-  const [selectedStorage, setSelectedStorage] = useState(product.ramOptions[0]?.value || "")
+  // Initialize with default values or first item from arrays if they exist
+  const [selectedColor, setSelectedColor] = useState(product.color || "")
+  const [selectedStorage, setSelectedStorage] = useState(product.storage || "")
   const [quantity, setQuantity] = useState(1)
   const [isZooming, setIsZooming] = useState(false)
   const [zoomPosition, setZoomPosition] = useState({ x: 0.5, y: 0.5 })

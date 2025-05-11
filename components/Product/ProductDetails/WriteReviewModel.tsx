@@ -7,7 +7,7 @@ import { X, Camera, Upload, Star } from "lucide-react"
 import Image from "next/image"
 import { cn } from "@/lib/utils"
 import { Button } from "@/components/ui/button"
-import { useProductContext } from "@/context/product-context"
+// import { useProductContext } from "@/context/product-context"
 
 interface WriteReviewModalProps {
   isOpen: boolean
@@ -23,7 +23,7 @@ export interface ReviewFormData {
 }
 
 export default function WriteReviewModal({ isOpen, onClose, onSubmit }: WriteReviewModalProps) {
-  const { product } = useProductContext()
+  // const { product } = useProductContext()
   const [name, setName] = useState("")
   const [review, setReview] = useState("")
   const [rating, setRating] = useState(0)

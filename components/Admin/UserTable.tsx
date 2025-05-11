@@ -1,181 +1,108 @@
 "use client"
 
-import { useState } from "react"
+import { useEffect, useState } from "react"
 import { useRouter } from "next/navigation"
 import { EnhancedTable, type ColumnDefinition } from "@/components/Layouts/TableLayout"
+import { fetchUsers } from "@/utils/users"
 
 // Define User type
 interface User {
-  id: string
-  avatar: string
-  name: string
-  email: string
-  role: string
-  status: string
-  orders: number
-  lastLogin: string
-  dateJoined: string
+  id: string;
+  image: string;
+  fullName:string;
+  firstName: string;
+  lastName: string;
+  email: string;
+  phoneNumber: string;
+  role: string;
+  status:string;
+  emailVerified: boolean;
+  phoneVerified: boolean;
+  orders: number;
+  lastLogin: string;
+  createdAt: string;
 }
 
-// Sample user data
-const userData: User[] = [
-  {
-    id: "1",
-    avatar:
-      "https://img.freepik.com/free-psd/3d-illustration-person-with-sunglasses_23-2149436188.jpg?w=740&t=st=1713881048~exp=1713881648~hmac=a76ebd4c93db6b8c7d8d5080f3e5856f0e0a9b8b9b01be2e95d0b0ac1d9da869",
-    name: "John Doe",
-    email: "john.doe@example.com",
-    role: "Customer",
-    status: "active",
-    orders: 12,
-    lastLogin: "2023-04-15",
-    dateJoined: "2022-11-03",
-  },
-  {
-    id: "2",
-    avatar:
-      "https://img.freepik.com/free-psd/3d-illustration-person-with-glasses_23-2149436191.jpg?w=740&t=st=1713881077~exp=1713881677~hmac=a0e0c97ea2e65fd7b022c4944c77c6087b5c9f9c9e3a5570d1c32665d2213c34",
-    name: "Jane Smith",
-    email: "jane.smith@example.com",
-    role: "Admin",
-    status: "active",
-    orders: 5,
-    lastLogin: "2023-04-18",
-    dateJoined: "2022-10-15",
-  },
-  {
-    id: "3",
-    avatar:
-      "https://img.freepik.com/free-psd/3d-illustration-person-with-glasses_23-2149436178.jpg?w=740&t=st=1713881094~exp=1713881694~hmac=c641d8b8e65d4b0e6f3c38b8e8c97a2c0ab9cc3c0b3377535bc01d8355c0e874",
-    name: "Robert Johnson",
-    email: "robert.johnson@example.com",
-    role: "Customer",
-    status: "inactive",
-    orders: 3,
-    lastLogin: "2023-03-22",
-    dateJoined: "2023-01-07",
-  },
-  {
-    id: "4",
-    avatar:
-      "https://img.freepik.com/free-psd/3d-illustration-person-with-sunglasses_23-2149436200.jpg?w=740&t=st=1713881108~exp=1713881708~hmac=d9f40a7f3c54b624d1a64a6b50fd2ef5d8eaa9e9a0c5c2b1b1df6e4b5f6b8f0e",
-    name: "Emily Davis",
-    email: "emily.davis@example.com",
-    role: "Customer",
-    status: "active",
-    orders: 8,
-    lastLogin: "2023-04-17",
-    dateJoined: "2022-12-12",
-  },
-  {
-    id: "5",
-    avatar:
-      "https://img.freepik.com/free-psd/3d-illustration-person-with-rainbow-sunglasses_23-2149436196.jpg?w=740&t=st=1713881122~exp=1713881722~hmac=d0ae586e4b9a2683e8ab58878e8a597f0f1ad7d3b7c0b0e7d6b5e3e5f5e5f5e5",
-    name: "Michael Wilson",
-    email: "michael.wilson@example.com",
-    role: "Customer",
-    status: "active",
-    orders: 15,
-    lastLogin: "2023-04-16",
-    dateJoined: "2022-09-28",
-  },
-  {
-    id: "6",
-    avatar:
-      "https://img.freepik.com/free-psd/3d-illustration-person-with-glasses-bow_23-2149436193.jpg?w=740&t=st=1713881137~exp=1713881737~hmac=d9f40a7f3c54b624d1a64a6b50fd2ef5d8eaa9e9a0c5c2b1b1df6e4b5f6b8f0e",
-    name: "Sarah Brown",
-    email: "sarah.brown@example.com",
-    role: "Manager",
-    status: "active",
-    orders: 7,
-    lastLogin: "2023-04-14",
-    dateJoined: "2022-11-20",
-  },
-  {
-    id: "7",
-    avatar:
-      "https://img.freepik.com/free-psd/3d-illustration-person-with-sunglasses_23-2149436180.jpg?w=740&t=st=1713881151~exp=1713881751~hmac=d9f40a7f3c54b624d1a64a6b50fd2ef5d8eaa9e9a0c5c2b1b1df6e4b5f6b8f0e",
-    name: "David Miller",
-    email: "david.miller@example.com",
-    role: "Customer",
-    status: "blocked",
-    orders: 2,
-    lastLogin: "2023-02-05",
-    dateJoined: "2023-01-15",
-  },
-  {
-    id: "8",
-    avatar:
-      "https://img.freepik.com/free-psd/3d-illustration-person-with-pink-hair_23-2149436186.jpg?w=740&t=st=1713881166~exp=1713881766~hmac=d9f40a7f3c54b624d1a64a6b50fd2ef5d8eaa9e9a0c5c2b1b1df6e4b5f6b8f0e",
-    name: "Jennifer Taylor",
-    email: "jennifer.taylor@example.com",
-    role: "Customer",
-    status: "active",
-    orders: 9,
-    lastLogin: "2023-04-12",
-    dateJoined: "2022-10-05",
-  },
-]
-
 // Available user roles
-const userRoles = ["Customer", "Admin", "Manager", "All"]
+const userRoles = ["User", "Admin", "Guest"]
 
 export function UsersTable() {
   const router = useRouter()
+  const [users, setUsers] = useState<User[]>([])
   const [selectedUsers, setSelectedUsers] = useState<User[]>([])
+  const [loading, setLoading] = useState(true)
 
   // Column definitions for User Table
   const userColumns: ColumnDefinition<User>[] = [
     {
-      key: "avatar",
-      header: "",
+      key: "image",
+      header: "Profile Image",
       width: "60px",
       align: "center",
     },
     {
-      key: "name",
-      header: "Name",
+      key: "fullName",
+      header: "Full Name",
       sortable: true,
-      width: "25%",
+      width: "20%",
+      renderCell: (value, item) => `${item.firstName} ${item.lastName}`,
     },
     {
       key: "email",
       header: "Email",
       sortable: true,
-      width: "25%",
+      width: "20%",
     },
     {
       key: "role",
       header: "Role",
       sortable: true,
       width: "15%",
+      align: 'left',
       filterOptions: userRoles,
+      renderCell: (value) => {
+        const roleStyles: Record<string, string> = {
+          User: "bg-blue-100 text-blue-800 border-blue-200",
+          Admin: "bg-green-100 text-green-800 border-green-200",
+          Guest: "bg-gray-100 text-gray-800 border-gray-200",
+        }
+        return (
+          <span
+            className={`inline-block capitalize rounded-full px-2 py-1 text-xs font-medium border ${roleStyles[value] || "bg-gray-100 text-gray-800 border-gray-200"}`}
+          >
+            {value}
+          </span>
+        )
+      },
     },
     {
       key: "status",
       header: "Status",
-      sortable: true,
-      width: "10%",
-      align: "center",
-    },
-    {
-      key: "orders",
-      header: "Orders",
-      sortable: true,
-      width: "10%",
-      align: "center",
-      renderCell: (value, item) => {
-        const orderCount = Number(value)
-        let orderClass = "text-gray-600"
-
-        if (orderCount > 10) {
-          orderClass = "text-green-600 font-medium"
-        } else if (orderCount === 0) {
-          orderClass = "text-red-600"
-        }
-
-        return <span className={orderClass}>{value}</span>
-      },
+      sortable: false,
+      width: "20%",
+      align: "left",
+      renderCell: (value, item) => (
+        <div className="flex flex-col items-start justify-center gap-2">
+          <span
+            className={`inline-block rounded-full px-2 py-1 text-xs font-medium border ${
+              item.emailVerified
+                ? "bg-green-100 text-green-800 border-green-200"
+                : "bg-red-100 text-red-800 border-red-200"
+            }`}
+          >
+            Email: {item.emailVerified ? "Verified" : "Unverified"}
+          </span>
+          <span
+            className={`inline-block rounded-full px-2 py-1 text-xs font-medium border ${
+              item.phoneVerified
+                ? "bg-green-100 text-green-800 border-green-200"
+                : "bg-red-100 text-red-800 border-red-200"
+            }`}
+          >
+            Phone: {item.phoneVerified ? "Verified" : "Unverified"}
+          </span>
+        </div>
+      ),
     },
     {
       key: "lastLogin",
@@ -184,17 +111,19 @@ export function UsersTable() {
       width: "15%",
     },
     {
-      key: "dateJoined",
-      header: "Date Joined",
+      key: "createdAt",
+      header: "Joined At",
       sortable: true,
       width: "15%",
     },
   ]
 
   // Handle user actions
-  const handleAddUser = () => {
-    router.push("/admin/users/add")
-  }
+  // const handleAddUser = () => {
+  //   router.push("/admin/users/add")
+  // }
+
+  console.log(selectedUsers)
 
   const handleEditUser = (users: User[]) => {
     if (users.length === 1) {
@@ -209,8 +138,7 @@ export function UsersTable() {
   }
 
   const handleDeleteUser = (user: User) => {
-    // Show confirmation dialog and delete user
-    if (window.confirm(`Are you sure you want to delete ${user.name}?`)) {
+    if (window.confirm(`Are you sure you want to delete ${user.firstName}?`)) {
       console.log("Delete user:", user)
       // Implement delete logic here
     }
@@ -228,10 +156,41 @@ export function UsersTable() {
     // Implement export logic here
   }
 
+  useEffect(() => {
+    async function loadUsers() {
+      try {
+        const data = await fetchUsers()
+        if (data) {
+          // Normalize user data
+          const normalizedData = data.map((user: any) => ({
+            ...user,
+            emailVerified: Boolean(user.emailVerified),
+            phoneVerified: Boolean(user.phoneVerified),
+            productImages: Array.isArray(user.productImages)
+              ? user.productImages
+              : user.productImages
+                ? [user.productImages]
+                : [],
+          }))
+          setUsers(normalizedData)
+        }
+        console.log("Fetched users:", data)
+      } catch (error) {
+        console.error("Error loading users:", error)
+      } finally {
+        setLoading(false)
+      }
+    }
+
+    loadUsers()
+  }, [])
+
+  if (loading) return <p>Loading users...</p>
+
   return (
     <EnhancedTable
       id="users-table"
-      data={userData}
+      data={users}
       columns={userColumns}
       selection={{
         enabled: true,
@@ -240,7 +199,7 @@ export function UsersTable() {
       }}
       search={{
         enabled: true,
-        keys: ["name", "email", "role"],
+        keys: ["fullName", "email", "role"],
         placeholder: "Search users...",
       }}
       filters={{
@@ -253,17 +212,14 @@ export function UsersTable() {
       }}
       sorting={{
         enabled: true,
-        defaultSortColumn: "name",
+        defaultSortColumn: "fullName",
         defaultSortDirection: "asc",
       }}
       actions={{
-        // onAdd: handleAddUser,
-        // addButtonText: "Add User",
         bulkActions: {
           delete: handleBulkDelete,
           export: handleExportUsers,
           edit: handleEditUser,
-          // view: handleViewUser,
         },
         rowActions: {
           view: handleViewUser,

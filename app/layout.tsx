@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
-import { Geist, Geist_Mono } from "next/font/google";
 import "./globals.css";
 import { gotham } from "./fonts";
+import { AuthProvider } from "@/context/auth-context";
 
 
 export const metadata: Metadata = {
@@ -19,7 +19,10 @@ export default function RootLayout({
       <body
         className={`antialiased`}
       >
-        {children}
+        <AuthProvider>
+
+          {children}
+        </AuthProvider>
       </body>
     </html>
   );

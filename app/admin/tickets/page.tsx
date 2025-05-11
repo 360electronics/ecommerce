@@ -5,7 +5,6 @@ import { Search } from "lucide-react"
 import { Input } from "@/components/ui/input"
 import { TicketCard } from "@/components/Admin/Tickets/TicketCard"
 import { TicketModal } from "@/components/Admin/Tickets/ActionModel"
-import { Button } from "@/components/ui/button"
 import type { Ticket } from "@/types/ticket"
 
 // Sample ticket data
@@ -151,8 +150,22 @@ export default function TicketsPage() {
           />
         </div>
 
-        
+
       </div>
+
+      <div className="flex gap-2 mb-4">
+        {["all", "open", "pending", "closed"].map((status) => (
+          <button
+            key={status}
+            onClick={() => setFilter(status)}
+            className={`px-3 py-1 rounded ${filter === status ? "bg-blue-500 text-white" : "bg-gray-200 text-gray-700"
+              }`}
+          >
+            {status.charAt(0).toUpperCase() + status.slice(1)}
+          </button>
+        ))}
+      </div>
+
 
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
         {filteredTickets.map((ticket) => (

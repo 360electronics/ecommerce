@@ -1,16 +1,14 @@
 import EditProductPage from '@/components/Admin/Product/EditProduct'
-import { FC } from 'react'
 
-interface PageProps {
-  params: {
-    slug: string
-  }
-}
+type Params = Promise<{slug: string}>;
 
-const Page: FC<PageProps> = ({ params }) => {
+const Page = async({ params }: {params: Params}) => {
+
+  const { slug } = await params;
+
   return (
     <div>
-      <EditProductPage slug={params.slug} />
+      <EditProductPage slug={slug} />
     </div>
   )
 }

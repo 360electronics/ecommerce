@@ -4,7 +4,7 @@ import { useEffect, useState } from "react"
 import { useRouter } from "next/navigation"
 import Image from "next/image"
 import { EnhancedTable, type ColumnDefinition } from "@/components/Layouts/TableLayout"
-import { deleteProducts, fetchProducts } from "@/utils/products"
+import { deleteProducts, fetchProducts } from "@/utils/products.util"
 import { Product } from "@/types/product"
 
 
@@ -18,6 +18,8 @@ export function ProductsTable() {
   const [products, setProducts] = useState<any[]>([])
   const [loading, setLoading] = useState(true)
 
+
+  console.log(selectedProducts)
 
   // Column definitions for Product Table
   const productColumns: ColumnDefinition<Product>[] = [
@@ -34,7 +36,7 @@ export function ProductsTable() {
           return (
             <div className="flex justify-start items-center h-16">
               <Image 
-                src={imageUrl} 
+                src={imageUrl ?? '/placeholder.png'} 
                 alt={`${product.name} thumbnail`}
                 width={60}
                 height={60}
@@ -92,7 +94,7 @@ export function ProductsTable() {
       sortable: true,
       width: "15%",
       align: "left",
-      renderCell: (value, item) => {
+      renderCell: (value) => {
         const stockLevel = Number(value)
         let stockClass = "text-green-600"
 
@@ -113,24 +115,24 @@ export function ProductsTable() {
       align: "left",
       renderCell: (value) => {
         let statusClass = "";
-        let statusDisplay = value;
+        const statusDisplay = value;
         
         switch(value?.toLowerCase()) {
           case "active":
-            statusClass = "bg-green-100 text-green-800";
+            statusClass = "bg-green-100 text-green-800 ";
             break;
           case "inactive":
-            statusClass = "bg-gray-100 text-gray-800";
+            statusClass = "bg-gray-100 text-gray-800 ";
             break;
           case "out of stock":
-            statusClass = "bg-red-100 text-red-800";
+            statusClass = "bg-red-100 text-red-800 ";
             break;
           default:
-            statusClass = "bg-blue-100 text-blue-800";
+            statusClass = "bg-blue-100 text-blue-800 ";
         }
         
         return (
-          <span className={`px-2 py-1 rounded-full text-xs font-medium ${statusClass}`}>
+          <span className={`px-2 py-1 rounded-full text-xs font-medium capitalize ${statusClass}`}>
             {statusDisplay}
           </span>
         );
@@ -159,7 +161,7 @@ export function ProductsTable() {
   const handleDeleteProduct = async (product: Product) => {
     if (window.confirm(`Are you sure you want to delete ${product.name}?`)) {
       try {
-        const res = await deleteProducts([product.id]);
+        const res = await deleteProducts([product.id!]);
         if (res) {
           setProducts((prev) => prev.filter((p) => p.id !== product.id));
           alert(`${product.name} deleted successfully.`);
@@ -175,7 +177,7 @@ export function ProductsTable() {
     if (products.length === 0) return;
   
     if (window.confirm(`Are you sure you want to delete ${products.length} products?`)) {
-      const ids = products.map((p) => p.id);
+      const ids = products.map((p) => p.id!);
       try {
         const res = await deleteProducts(ids);
         if (res) {
@@ -274,7 +276,7 @@ export function ProductsTable() {
         zebraStriping: false,
         stickyHeader: true,
       }}
-      onRowClick={(product) => router.push(`/admin/products/${product.id}`)}
+      onRowClick={(product) => router.push(`/product/${product.slug}`)}
     />
   )
 }

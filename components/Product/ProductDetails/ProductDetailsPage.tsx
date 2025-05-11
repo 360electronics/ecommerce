@@ -1,32 +1,26 @@
-"use client"
-
-
-import { useState, useEffect, useRef } from "react"
 import ProductImageGallery from "./ProductImageGallery"
 import ProductDetailsContent from "./ProductDetailsContent"
 import ProductSpecifications from "./ProductSpecifications"
-import ProductRatingsReviews from "./ProductRatingsReviews"
+// import ProductRatingsReviews from "./ProductRatingsReviews"
 import ProductZoomOverlay from "./ProductZoomOverlay"
 import Breadcrumbs from "@/components/Reusable/BreadScrumb"
-import type { ProductData } from "./Data"
 import { ProductProvider } from "@/context/product-context"
-
+import type { Product } from "@/types/product"
 
 interface ProductDetailPageProps {
-  product: ProductData
+  product: Product
 }
 
 export default function ProductDetailPage({ product }: ProductDetailPageProps) {
-
   // Prepare breadcrumb items
   const breadcrumbItems = [
     { name: "Home", path: "/" },
-    { name: product.category, path: `/${product.category.toLowerCase().replace(/\s+/g, "-")}` },
-    { name: product.name, path: `/product/${product.slug}` },
+    { name: product.category, path: `/category/${product.category.toLowerCase().replace(/\s+/g, "-")}` },
+    { name: product.name, path: `` },
   ]
 
   return (
-    <ProductProvider product={product} >
+    <ProductProvider product={product}>
       <div className="container mx-auto px-4 pb-8 ">
         <Breadcrumbs breadcrumbs={breadcrumbItems} className="my-6 hidden"/>
 
@@ -43,7 +37,7 @@ export default function ProductDetailPage({ product }: ProductDetailPageProps) {
 
         <ProductSpecifications className="mb-12" />
 
-        <ProductRatingsReviews />
+        {/* <ProductRatingsReviews /> */}
       </div>
     </ProductProvider>
   )

@@ -1,210 +1,254 @@
 'use client';
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo, memo } from 'react';
 import DynamicFilter from '@/components/Filter/DynamicFilter';
 import ProductCard from '@/components/Product/ProductCards/ProductCardwithCart';
 import { useSearchParams } from 'next/navigation';
-import { Product, ProductsData } from '@/data/products';
+import { Product } from '@/types/product';
+import { fetchProducts } from '@/utils/products.util';
+import DOMPurify from 'isomorphic-dompurify';
+import debounce from 'lodash/debounce';
+
+// Memoize ProductCard to prevent unnecessary re-renders
+const MemoizedProductCard = memo(ProductCard);
 
 const ProductListing = ({ category, searchQuery }: { category?: string, searchQuery?: string }) => {
     const [products, setProducts] = useState<Product[]>([]);
     const [filteredProducts, setFilteredProducts] = useState<Product[]>([]);
     const [loading, setLoading] = useState(true);
+    const [error, setError] = useState<string | null>(null);
     const [sortOption, setSortOption] = useState('featured');
     const searchParams = useSearchParams();
-    
+
     // Pagination state
     const [currentPage, setCurrentPage] = useState(1);
     const [productsPerPage] = useState(9);
     const [displayedProducts, setDisplayedProducts] = useState<Product[]>([]);
 
-    // Mock products data (in a real app, you'd fetch this from an API)
-    useEffect(() => {
-        // Simulating API call to fetch products
-        const fetchProducts = async () => {
-            setLoading(true);
+    // Debounced search filter
+    const debouncedApplyFilters = useMemo(
+        () => debounce((productsList: Product[], filters: Record<string, any>, sortOpt: string, query: string) => {
+            let filtered = [...productsList];
 
-            const productData = ProductsData;
-
-            // First apply search query filter if provided
-            let filteredData = productData;
-            
-            if (searchQuery && searchQuery.trim() !== '') {
-                const query = searchQuery.toLowerCase().trim();
-                filteredData = productData.filter(product => 
-                    product.title.toLowerCase().includes(query) ||
-                    product.category.toLowerCase().includes(query) ||
-                    (product.brand && product.brand.toLowerCase().includes(query)) ||
-                    (product.description && product.description.toLowerCase().includes(query))
+            // Apply search query filter
+            if (query) {
+                const sanitizedQuery = DOMPurify.sanitize(query.trim()).toLowerCase();
+                filtered = filtered.filter((product: Product) =>
+                    product.name.toLowerCase().includes(sanitizedQuery) ||
+                    product.category.toLowerCase().includes(sanitizedQuery) ||
+                    (product.brand?.toLowerCase().includes(sanitizedQuery)) ||
+                    (product.description?.toLowerCase().includes(sanitizedQuery))
                 );
             }
-            
-            // Then apply category filter if provided (show all products if category is 'all')
-            const categoryFiltered = category && category.toLowerCase() !== 'all'
-                ? filteredData.filter(product => product.category.toLowerCase() === category.toLowerCase())
-                : filteredData;
 
-            setProducts(categoryFiltered);
-            applyFiltersAndSort(categoryFiltered, {}, sortOption);
-            setLoading(false);
+            // Apply category filter
+            if (category && category.toLowerCase() !== 'all') {
+                filtered = filtered.filter(product => product.category.toLowerCase() === category.toLowerCase());
+            }
+
+            // Apply price filter with fixed minimum price of 100
+            if (filters.ourPrice) {
+                const minPrice = 100; // Fixed minimum price
+                const maxPrice = Number(filters.ourPrice.max) || Infinity;
+                filtered = filtered.filter(product => {
+                    const price = Number(product.ourPrice) || 0;
+                    return price >= minPrice && price <= maxPrice;
+                });
+            }
+
+            // Apply color filter
+            if (filters.color?.length > 0) {
+                filtered = filtered.filter(product =>
+                    product.color && filters.color.includes(product.color)
+                );
+            }
+
+            // Apply brand filter
+            if (filters.brand?.length > 0) {
+                filtered = filtered.filter(product =>
+                    product.brand && filters.brand.includes(product.brand)
+                );
+            }
+
+            // Apply rating filter
+            if (filters.rating?.length > 0) {
+                filtered = filtered.filter(product => {
+                    const minRating = Math.min(...filters.rating.map((r: string) => parseInt(r)));
+                    return (Number(product.averageRating) || 0) >= minRating;
+                });
+            }
+
+            // Apply stock filter
+            if (filters.inStock) {
+                filtered = filtered.filter(product => Number(product.totalStocks) > 0);
+            }
+
+            // Sort the filtered products
+            const sorted = [...filtered];
+            switch (sortOpt.toLowerCase()) {
+                case 'ourprice-low-high':
+                    sorted.sort((a, b) => (Number(a.ourPrice) || 0) - (Number(b.ourPrice) || 0));
+                    break;
+                case 'ourprice-high-low':
+                    sorted.sort((a, b) => (Number(b.ourPrice) || 0) - (Number(a.ourPrice) || 0));
+                    break;
+                case 'rating':
+                    sorted.sort((a, b) => (Number(b.averageRating) || 0) - (Number(a.averageRating) || 0));
+                    break;
+                case 'newest':
+                    sorted.sort((a, b) => {
+                        const dateA = a.createdAt ? new Date(a.createdAt).getTime() : 0;
+                        const dateB = b.createdAt ? new Date(b.createdAt).getTime() : 0;
+                        return dateB - dateA;
+                    });
+                    break;
+                case 'featured':
+                default:
+                    break;
+            }
+
+            setFilteredProducts(sorted);
+            setCurrentPage(1);
+        }, 300),
+        [category]
+    );
+
+    useEffect(() => {
+        const fetchAllProducts = async () => {
+            setLoading(true);
+            setError(null);
+
+            try {
+                const startTime = performance.now();
+                const productData = await fetchProducts();
+
+                if (!productData) {
+                    throw new Error('No product data received');
+                }
+
+                setProducts(productData);
+
+                // Get filter values from URL params
+                const filters: Record<string, any> = {};
+
+                // Only get maxPrice from URL, minPrice is fixed at 100
+                const maxPrice = searchParams.get('maxPrice');
+
+                if (maxPrice) {
+                    filters.ourPrice = {
+                        min: 100, // Fixed minimum price
+                        max: Number(maxPrice)
+                    };
+                }
+
+                const possibleFilters = ['color', 'brand', 'category', 'rating'];
+                possibleFilters.forEach(filter => {
+                    const values = searchParams.getAll(filter);
+                    if (values.length > 0) {
+                        filters[filter] = values;
+                    }
+                });
+
+                if (searchParams.get('inStock') === 'true') {
+                    filters.inStock = true;
+                }
+
+                // Apply filters from URL
+                debouncedApplyFilters(productData, filters, sortOption, searchQuery || '');
+
+                const endTime = performance.now();
+                console.log(`Product fetch and initial filter took ${endTime - startTime}ms`);
+            } catch (err) {
+                setError('Failed to load products. Please try again later.');
+                console.error('Error fetching products:', err);
+            } finally {
+                setLoading(false);
+            }
         };
 
-        fetchProducts();
-        setCurrentPage(1); // Reset to first page when category or search query changes
-    }, [category, searchQuery]);
+        fetchAllProducts();
+    }, [category, searchQuery, debouncedApplyFilters, searchParams]);
 
-    // Update displayed products when page changes or filtered products change
     useEffect(() => {
         updateDisplayedProducts();
     }, [currentPage, filteredProducts]);
 
-    // Apply filters when filters change
-    const handleFilterChange = (filters: any) => {
-        applyFiltersAndSort(products, filters, sortOption);
+    const handleFilterChange = (filters: Record<string, any>) => {
+        debouncedApplyFilters(products, filters, sortOption, searchQuery || '');
     };
 
-    // Apply both filters and sort in one function to ensure consistent behavior
-    const applyFiltersAndSort = (productsList: Product[], filters: any, sortOpt: string) => {
-        let filtered = [...productsList];
-
-        // Apply price filter
-        if (filters.price) {
-            filtered = filtered.filter(product =>
-                product.price >= filters.price.min && product.price <= filters.price.max
-            );
-        }
-
-        // Apply color filter
-        if (filters.color && filters.color.length > 0) {
-            filtered = filtered.filter(product =>
-                product.color && filters.color.includes(product.color)
-            );
-        }
-
-        // Apply brand filter
-        if (filters.brand && filters.brand.length > 0) {
-            filtered = filtered.filter(product =>
-                filters.brand.includes(product.brand)
-            );
-        }
-
-        // Apply rating filter
-        if (filters.rating && filters.rating.length > 0) {
-            filtered = filtered.filter(product => {
-                const minRating = Math.min(...filters.rating.map((r: string) => parseInt(r)));
-                return product.rating >= minRating;
-            });
-        }
-
-        // Apply stock filter
-        if (filters.inStock) {
-            filtered = filtered.filter(product => product.availability);
-        }
-
-        // Sort the filtered products
-        let sorted = [...filtered];
-        switch (sortOpt) {
-            case 'price-low-high':
-                sorted.sort((a, b) => a.price - b.price);
-                break;
-            case 'price-high-low':
-                sorted.sort((a, b) => b.price - a.price);
-                break;
-            case 'rating':
-                sorted.sort((a, b) => b.rating - a.rating); // Higher rating first
-                break;
-            case 'newest':
-                // Using ID as a proxy for "newest"
-                sorted.sort((a, b) => b.id - a.id);
-                break;
-            case 'featured':
-            default:
-                // For featured, we could implement custom logic or leave as is
-                break;
-        }
-
-        setFilteredProducts(sorted);
-        setCurrentPage(1); // Reset to first page when filters or sort changes
-    };
-
-    // Handle sort change
     const handleSortChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
         const option = e.target.value;
         setSortOption(option);
-        applyFiltersAndSort(products, {}, option);
+        debouncedApplyFilters(products, {}, option, searchQuery || '');
     };
 
-    // Update displayed products based on current page
     const updateDisplayedProducts = () => {
         const indexOfLastProduct = currentPage * productsPerPage;
         const indexOfFirstProduct = indexOfLastProduct - productsPerPage;
         setDisplayedProducts(filteredProducts.slice(indexOfFirstProduct, indexOfLastProduct));
     };
 
-    // Calculate total pages
     const totalPages = Math.ceil(filteredProducts.length / productsPerPage);
 
-    // Handle page change
     const handlePageChange = (pageNumber: number) => {
         setCurrentPage(pageNumber);
+        window.scrollTo({ top: 0, behavior: 'smooth' });
     };
 
-    // Generate pagination buttons
     const renderPaginationButtons = () => {
         const buttons = [];
-        const maxButtons = 5; // Maximum number of page buttons to show
+        const maxButtons = 5;
 
-        // Always show first page button
         buttons.push(
             <button
                 key="first"
                 onClick={() => handlePageChange(1)}
-                className={`px-3 py-1 mx-1 rounded ${currentPage === 1 ? 'bg-blue-500 text-white' : 'bg-gray-200'}`}
+                className={`px-3 py-1 mx-1 rounded ${currentPage === 1 ? 'bg-blue-500 text-white' : 'bg-gray-200 hover:bg-gray-300'}`}
                 disabled={currentPage === 1}
+                aria-label="First page"
             >
                 1
             </button>
         );
 
-        // Calculate range of pages to show
         let startPage = Math.max(2, currentPage - Math.floor(maxButtons / 2));
-        let endPage = Math.min(totalPages - 1, startPage + maxButtons - 3);
-        
+        const endPage = Math.min(totalPages - 1, startPage + maxButtons - 3);
+
         if (endPage - startPage < maxButtons - 3) {
             startPage = Math.max(2, endPage - (maxButtons - 3) + 1);
         }
 
-        // Add ellipsis after first page if needed
         if (startPage > 2) {
-            buttons.push(<span key="ellipsis1" className="px-2">...</span>);
+            buttons.push(<span key="ellipsis1" className="px-2" aria-hidden="true">...</span>);
         }
 
-        // Add page buttons
         for (let i = startPage; i <= endPage; i++) {
             buttons.push(
                 <button
                     key={i}
                     onClick={() => handlePageChange(i)}
-                    className={`px-3 py-1 mx-1 rounded ${currentPage === i ? 'bg-blue-500 text-white' : 'bg-gray-200'}`}
+                    className={`px-3 py-1 mx-1 rounded ${currentPage === i ? 'bg-blue-500 text-white' : 'bg-gray-200 hover:bg-gray-300'}`}
+                    aria-label={`Page ${i}`}
+                    aria-current={currentPage === i ? 'page' : undefined}
                 >
                     {i}
                 </button>
             );
         }
 
-        // Add ellipsis before last page if needed
         if (endPage < totalPages - 1) {
-            buttons.push(<span key="ellipsis2" className="px-2">...</span>);
+            buttons.push(<span key="ellipsis2" className="px-2" aria-hidden="true">...</span>);
         }
 
-        // Always show last page button if there's more than one page
         if (totalPages > 1) {
             buttons.push(
                 <button
                     key="last"
                     onClick={() => handlePageChange(totalPages)}
-                    className={`px-3 py-1 mx-1 rounded ${currentPage === totalPages ? 'bg-blue-500 text-white' : 'bg-gray-200'}`}
+                    className={`px-3 py-1 mx-1 rounded ${currentPage === totalPages ? 'bg-blue-500 text-white' : 'bg-gray-200 hover:bg-gray-300'}`}
                     disabled={currentPage === totalPages}
+                    aria-label="Last page"
                 >
                     {totalPages}
                 </button>
@@ -214,105 +258,141 @@ const ProductListing = ({ category, searchQuery }: { category?: string, searchQu
         return buttons;
     };
 
+    // Memoize displayed products to prevent unnecessary re-renders
+    const memoizedDisplayedProducts = useMemo(() => displayedProducts, [displayedProducts]);
+
     return (
-        <div className=" mx-auto py-8">
+        <div className="container mx-auto py-8" role="main">
             <div className="flex flex-col md:flex-row gap-6">
-                {/* Filters - Left Sidebar for desktop */}
-                <div className="w-full md:w-1/4">
+                <aside className="w-full md:w-1/4">
                     <DynamicFilter
-                        products={products}
+                        products={
+                            // Filter products by category and search query first
+                            products.filter((product) => {
+                                // Apply category filter if provided
+                                const categoryMatch = !category || category.toLowerCase() === 'all' ||
+                                    product.category.toLowerCase() === category.toLowerCase();
+
+                                // Apply search query filter if provided
+                                let queryMatch = true;
+                                if (searchQuery) {
+                                    const sanitizedQuery = DOMPurify.sanitize(searchQuery.trim()).toLowerCase();
+                                    queryMatch = product.name.toLowerCase().includes(sanitizedQuery) ||
+                                    product.category.toLowerCase().includes(sanitizedQuery) ||
+                                    product.brand?.toLowerCase().includes(sanitizedQuery) === true ||
+                                    product.description?.toLowerCase().includes(sanitizedQuery) === true;
+                                
+                                }
+
+                                return categoryMatch && queryMatch;
+                            })
+                        }
                         category={category}
                         onFilterChange={handleFilterChange}
                     />
-                </div>
+                </aside>
 
-                {/* Products - Right side */}
-                <div className="w-full md:w-3/4">
-                    {/* Top bar with sort and count */}
+                <main className="w-full md:w-3/4">
                     <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-6 pb-4 border-b border-gray-200">
                         <div className="text-lg font-medium text-gray-800 mb-4 sm:mb-0">
-                            {filteredProducts.length} {filteredProducts.length === 1 ? 'Product' : 'Products'} 
-                            {category ? ` in ${category}` : ''}
-                            {searchQuery ? ` for "${searchQuery}"` : ''}
+                            {filteredProducts.length} {filteredProducts.length === 1 ? 'Product' : 'Products'}
+                            {category ? ` in ${DOMPurify.sanitize(category)}` : ''}
+                            {searchQuery ? ` for "${DOMPurify.sanitize(searchQuery)}"` : ''}
                         </div>
 
                         <div className="flex items-center">
-                            <label htmlFor="sort" className="text-sm text-gray-600 mr-2">Sort by:</label>
+                            <label htmlFor="sort" className="text-sm text-gray-600 mr-2 sr-only">Sort by</label>
                             <select
                                 id="sort"
                                 className="text-sm border border-gray-300 rounded p-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
                                 value={sortOption}
                                 onChange={handleSortChange}
+                                aria-label="Sort products"
                             >
                                 <option value="featured">Featured</option>
-                                <option value="price-low-high">Price: Low to High</option>
-                                <option value="price-high-low">Price: High to Low</option>
+                                <option value="ourprice-low-high">Price: Low to High</option>
+                                <option value="ourprice-high-low">Price: High to Low</option>
                                 <option value="rating">Best Rating</option>
                                 <option value="newest">Newest</option>
                             </select>
                         </div>
                     </div>
 
-                    {/* Loading state */}
-                    {loading ? (
-                        <div className="flex justify-center items-center min-h-[400px]">
-                            <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-blue-500"></div>
+                    {error ? (
+                        <div className="flex flex-col items-center justify-center min-h-[400px] text-center" role="alert">
+                            <h3 className="text-xl font-medium text-red-600 mb-2">{error}</h3>
+                            <button
+                                onClick={() => fetchProducts()}
+                                className="px-4 py-2 bg-blue-500 text-white rounded hover:bg-blue-600"
+                            >
+                                Try Again
+                            </button>
+                        </div>
+                    ) : loading ? (
+                        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6" aria-live="polite">
+                            {Array.from({ length: productsPerPage }).map((_, index) => (
+                                <div key={index} className="animate-pulse">
+                                    <div className="bg-gray-200 h-48 w-full rounded mb-4"></div>
+                                    <div className="bg-gray-200 h-4 w-3/4 rounded mb-2"></div>
+                                    <div className="bg-gray-200 h-4 w-1/2 rounded"></div>
+                                </div>
+                            ))}
                         </div>
                     ) : (
                         <>
-                            {/* Empty state */}
                             {filteredProducts.length === 0 ? (
-                                <div className="flex flex-col items-center justify-center min-h-[400px] text-center">
+                                <div className="flex flex-col items-center justify-center min-h-[400px] text-center" aria-live="polite">
                                     <div className="text-4xl mb-4">🔍</div>
                                     <h3 className="text-xl font-medium text-gray-800 mb-2">No products found</h3>
-                                    <p className="text-gray-600">Try adjusting your filters to find what you're looking for.</p>
+                                    <p className="text-gray-600">Try adjusting your filters to find what you&apos;re looking for.</p>
                                 </div>
                             ) : (
                                 <>
-                                    {/* Product grid */}
                                     <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
-                                        {displayedProducts.map((product) => (
-                                            <ProductCard
-                                                key={product.id}
-                                                title={product.title}
-                                                image={product.image}
-                                                price={product.price}
-                                                mrp={product.mrp}
-                                                rating={product.rating}
-                                                discount={product.discount}
+                                        {memoizedDisplayedProducts.map((product) => (
+                                            <MemoizedProductCard
+                                                key={product.id || product.sku}
+                                                slug={product.slug}
+                                                name={product.name}
+                                                image={product.productImages?.[0] ?? '/placeholder.svg'}
+                                                ourPrice={Number(product.ourPrice) || 0}
+                                                mrp={Number(product.mrp) || 0}
+                                                rating={Number(product.averageRating) || 0}
+                                                discount={product.discount ?? 0}
                                                 showViewDetails={true}
                                                 isHeartNeed={true}
                                             />
                                         ))}
                                     </div>
-                                    
-                                    {/* Pagination */}
+
                                     {totalPages > 1 && (
-                                        <div className="flex justify-center items-center mt-8">
+                                        <nav className="flex justify-center items-center mt-8" aria-label="Pagination">
                                             <button
                                                 onClick={() => handlePageChange(currentPage - 1)}
                                                 disabled={currentPage === 1}
-                                                className="px-3 py-1 mx-1 rounded bg-gray-200 disabled:opacity-50"
+                                                className="px-3 py-1 mx-1 rounded bg-gray-200 disabled:opacity-50 hover:bg-gray-300"
+                                                aria-label="Previous page"
                                             >
                                                 &lt;
                                             </button>
-                                            
+
                                             {renderPaginationButtons()}
-                                            
+
                                             <button
                                                 onClick={() => handlePageChange(currentPage + 1)}
                                                 disabled={currentPage === totalPages}
-                                                className="px-3 py-1 mx-1 rounded bg-gray-200 disabled:opacity-50"
+                                                className="px-3 py-1 mx-1 rounded bg-gray-200 disabled:opacity-50 hover:bg-gray-300"
+                                                aria-label="Next page"
                                             >
                                                 &gt;
                                             </button>
-                                        </div>
+                                        </nav>
                                     )}
                                 </>
                             )}
                         </>
                     )}
-                </div>
+                </main>
             </div>
         </div>
     );

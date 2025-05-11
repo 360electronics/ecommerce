@@ -14,7 +14,7 @@ interface ProductImageGalleryProps {
 }
 
 export default function ProductImageGallery({ className }: ProductImageGalleryProps) {
-  const { product, selectedImageIndex, setSelectedImageIndex, isZooming, setIsZooming, zoomPosition, setZoomPosition } =
+  const { product, selectedImageIndex, setSelectedImageIndex, isZooming, setIsZooming, setZoomPosition } =
     useProductContext()
 
   const imageContainerRef = useRef<HTMLDivElement>(null)
@@ -181,7 +181,7 @@ export default function ProductImageGallery({ className }: ProductImageGalleryPr
               src={images[selectedImageIndex] || "/placeholder.svg"}
               alt={product.name}
               fill
-              className="object-cover"
+              className="object-contain"
               priority={selectedImageIndex === 0}
             />
           </div>

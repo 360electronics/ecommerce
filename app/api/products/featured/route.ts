@@ -91,7 +91,7 @@ export async function DELETE(req: Request) {
         // Remove the product from featured products
         const result = await db
             .delete(featuredProducts)
-            .where(eq(featuredProducts.productId, parseInt(productId)))
+            .where(eq(featuredProducts.productId,productId))
         
         return NextResponse.json({
             message: 'Product removed from featured products',

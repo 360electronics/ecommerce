@@ -4,7 +4,7 @@ import { Heart } from 'lucide-react';
 import Link from 'next/link';
 
 const WishlistButton = () => {
-  const wishlistCount = 3; // This would come from your wishlist state management
+  // const wishlistCount = 3;
 
   return (
     <div className="relative">

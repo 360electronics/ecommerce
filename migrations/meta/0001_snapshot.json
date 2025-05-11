@@ -1,6 +1,6 @@
 {
-  "id": "7611aaa1-ba06-4427-b668-524a494125b4",
-  "prevId": "693477dd-1b4a-4295-bc00-11d3a3602d0e",
+  "id": "1121ec53-f5b0-417d-a48d-66b5ac1108d2",
+  "prevId": "4cd3f16d-0f7e-4f71-a28c-f0bfb995c780",
   "version": "7",
   "dialect": "postgresql",
   "tables": {
@@ -14,6 +14,12 @@
           "primaryKey": true,
           "notNull": true,
           "default": "gen_random_uuid()"
+        },
+        "image": {
+          "name": "image",
+          "type": "varchar(255)",
+          "primaryKey": false,
+          "notNull": false
         },
         "first_name": {
           "name": "first_name",
@@ -55,11 +61,16 @@
         },
         "role": {
           "name": "role",
-          "type": "user_role",
-          "typeSchema": "public",
+          "type": "varchar",
           "primaryKey": false,
           "notNull": false,
           "default": "'user'"
+        },
+        "last_login": {
+          "name": "last_login",
+          "type": "timestamp",
+          "primaryKey": false,
+          "notNull": false
         },
         "created_at": {
           "name": "created_at",
@@ -293,6 +304,97 @@
       "checkConstraints": {},
       "isRLSEnabled": false
     },
+    "public.gamers_zone": {
+      "name": "gamers_zone",
+      "schema": "",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "uuid",
+          "primaryKey": true,
+          "notNull": true,
+          "default": "gen_random_uuid()"
+        },
+        "product_id": {
+          "name": "product_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "category": {
+          "name": "category",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "created_at": {
+          "name": "created_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        },
+        "updated_at": {
+          "name": "updated_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        }
+      },
+      "indexes": {
+        "idx_gamers_zone_product_id": {
+          "name": "idx_gamers_zone_product_id",
+          "columns": [
+            {
+              "expression": "product_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        },
+        "idx_gamers_zone_category": {
+          "name": "idx_gamers_zone_category",
+          "columns": [
+            {
+              "expression": "category",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        }
+      },
+      "foreignKeys": {
+        "gamers_zone_product_id_products_id_fk": {
+          "name": "gamers_zone_product_id_products_id_fk",
+          "tableFrom": "gamers_zone",
+          "tableTo": "products",
+          "columnsFrom": [
+            "product_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "cascade",
+          "onUpdate": "no action"
+        }
+      },
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {},
+      "policies": {},
+      "checkConstraints": {},
+      "isRLSEnabled": false
+    },
     "public.new_arrivals": {
       "name": "new_arrivals",
       "schema": "",
@@ -359,6 +461,98 @@
       },
       "compositePrimaryKeys": {},
       "uniqueConstraints": {},
+      "policies": {},
+      "checkConstraints": {},
+      "isRLSEnabled": false
+    },
+    "public.product_group_mappings": {
+      "name": "product_group_mappings",
+      "schema": "",
+      "columns": {
+        "product_id": {
+          "name": "product_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "group_id": {
+          "name": "group_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": true
+        }
+      },
+      "indexes": {
+        "idx_product_group_product_id": {
+          "name": "idx_product_group_product_id",
+          "columns": [
+            {
+              "expression": "product_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        },
+        "idx_product_group_group_id": {
+          "name": "idx_product_group_group_id",
+          "columns": [
+            {
+              "expression": "group_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        }
+      },
+      "foreignKeys": {
+        "product_group_mappings_product_id_products_id_fk": {
+          "name": "product_group_mappings_product_id_products_id_fk",
+          "tableFrom": "product_group_mappings",
+          "tableTo": "products",
+          "columnsFrom": [
+            "product_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "cascade",
+          "onUpdate": "no action"
+        },
+        "product_group_mappings_group_id_product_spec_groups_id_fk": {
+          "name": "product_group_mappings_group_id_product_spec_groups_id_fk",
+          "tableFrom": "product_group_mappings",
+          "tableTo": "product_spec_groups",
+          "columnsFrom": [
+            "group_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "cascade",
+          "onUpdate": "no action"
+        }
+      },
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {
+        "uniq_product_group": {
+          "name": "uniq_product_group",
+          "nullsNotDistinct": false,
+          "columns": [
+            "product_id",
+            "group_id"
+          ]
+        }
+      },
       "policies": {},
       "checkConstraints": {},
       "isRLSEnabled": false
@@ -474,6 +668,12 @@
           "primaryKey": false,
           "notNull": true
         },
+        "product_id": {
+          "name": "product_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": true
+        },
         "field_name": {
           "name": "field_name",
           "type": "varchar(255)",
@@ -501,6 +701,19 @@
           ],
           "onDelete": "cascade",
           "onUpdate": "no action"
+        },
+        "product_spec_fields_product_id_products_id_fk": {
+          "name": "product_spec_fields_product_id_products_id_fk",
+          "tableFrom": "product_spec_fields",
+          "tableTo": "products",
+          "columnsFrom": [
+            "product_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "cascade",
+          "onUpdate": "no action"
         }
       },
       "compositePrimaryKeys": {},
@@ -520,12 +733,6 @@
           "notNull": true,
           "default": "gen_random_uuid()"
         },
-        "product_id": {
-          "name": "product_id",
-          "type": "uuid",
-          "primaryKey": false,
-          "notNull": true
-        },
         "group_name": {
           "name": "group_name",
           "type": "varchar(255)",
@@ -534,23 +741,17 @@
         }
       },
       "indexes": {},
-      "foreignKeys": {
-        "product_spec_groups_product_id_products_id_fk": {
-          "name": "product_spec_groups_product_id_products_id_fk",
-          "tableFrom": "product_spec_groups",
-          "tableTo": "products",
-          "columnsFrom": [
-            "product_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
-          "onDelete": "cascade",
-          "onUpdate": "no action"
+      "foreignKeys": {},
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {
+        "uniq_group_name": {
+          "name": "uniq_group_name",
+          "nullsNotDistinct": false,
+          "columns": [
+            "group_name"
+          ]
         }
       },
-      "compositePrimaryKeys": {},
-      "uniqueConstraints": {},
       "policies": {},
       "checkConstraints": {},
       "isRLSEnabled": false
@@ -590,6 +791,18 @@
           "primaryKey": false,
           "notNull": true
         },
+        "brand": {
+          "name": "brand",
+          "type": "varchar(255)",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "color": {
+          "name": "color",
+          "type": "varchar(255)",
+          "primaryKey": false,
+          "notNull": false
+        },
         "mrp": {
           "name": "mrp",
           "type": "numeric(10, 2)",
@@ -599,6 +812,12 @@
         "our_price": {
           "name": "our_price",
           "type": "numeric(10, 2)",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "storage": {
+          "name": "storage",
+          "type": "varchar",
           "primaryKey": false,
           "notNull": false
         },
@@ -640,6 +859,30 @@
         "sku": {
           "name": "sku",
           "type": "varchar(100)",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "weight": {
+          "name": "weight",
+          "type": "varchar(100)",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "dimensions": {
+          "name": "dimensions",
+          "type": "varchar(100)",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "material": {
+          "name": "material",
+          "type": "varchar(100)",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "tags": {
+          "name": "tags",
+          "type": "varchar(255)",
           "primaryKey": false,
           "notNull": true
         },

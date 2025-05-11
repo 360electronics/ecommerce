@@ -19,8 +19,45 @@ export const uploadProductImageToR2 = async (
   fileName: string
 ) => {
   try {
-    const sanitizedProductName = productName.trim().toLowerCase().replace(/\s+/g, '-');
+
+    const sanitizedProductName = productName
+    .toLowerCase()
+    .trim()
+    .replace(/[^a-z0-9\s-]/g, "")
+    .replace(/\s+/g, "-")
+    .replace(/-+/g, "-");
     const key = `products/${sanitizedProductName}/${fileName}`;
+    
+    const command = new PutObjectCommand({
+      Bucket: process.env.R2_BUCKET_NAME!,
+      Key: key,
+      Body: file,
+      ContentType: mimeType,
+    });
+    
+    await r2Client.send(command);
+    
+    // Return the URL from your R2 public bucket or custom domain
+    // If using public bucket access via Cloudflare R2
+    return `${process.env.R2_PUBLIC_URL}/${key}`;
+    
+    // If using Cloudflare Workers or custom domain for R2
+    // return `${process.env.CLOUDFLARE_WORKER_URL}/${key}`;
+  } catch (error) {
+    console.error("Error uploading to R2:", error);
+    throw new Error("Failed to upload file to R2.");
+  }
+}
+
+export const uploadBannerImageToR2 = async (
+  type: string,
+  file: Buffer | Uint8Array | Blob | string,
+  mimeType: string,
+  fileName: string
+) => {
+  try {
+
+    const key = `promotional-banners/${type}/${fileName}`;
     
     const command = new PutObjectCommand({
       Bucket: process.env.R2_BUCKET_NAME!,

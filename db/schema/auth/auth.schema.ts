@@ -4,17 +4,17 @@ import { sql } from "drizzle-orm";
 
 export const otpTokens = pgTable("otp_tokens", {
   id: uuid("id").primaryKey().default(sql`gen_random_uuid()`),
-  userId: uuid("user_id").references(() => users.id),
-  token: varchar("token", { length: 6 }),
-  type: varchar("type", { length: 10 }), // 'email' or 'phone'
-  expiresAt: timestamp("expires_at"),
-  createdAt: timestamp("created_at").defaultNow(),
+  userId: uuid("user_id").notNull().references(() => users.id, { onDelete: "cascade" }),
+  token: varchar("token", { length: 6 }).notNull(),
+  type: varchar("type", { enum: ["email", "phone"] }).notNull(),
+  expiresAt: timestamp("expires_at").notNull(),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
 });
 
 export const authTokens = pgTable("auth_tokens", {
   id: uuid("id").primaryKey().default(sql`gen_random_uuid()`),
-  userId: uuid("user_id").references(() => users.id),
-  token: text("token"),
-  expiresAt: timestamp("expires_at"),
-  createdAt: timestamp("created_at").defaultNow(),
+  userId: uuid("user_id").notNull().references(() => users.id, { onDelete: "cascade" }),
+  token: text("token").notNull(),
+  expiresAt: timestamp("expires_at").notNull(),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
 });

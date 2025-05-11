@@ -1,37 +1,69 @@
-import { NextResponse } from 'next/server';
-import type { NextRequest } from 'next/server';
+import { NextResponse } from "next/server";
+import type { NextRequest } from "next/server";
 
-const authProtectedRoutes = ['/profile', '/cart', '/checkout', '/wishlist'];
+const authProtectedRoutes = ["/profile", "/cart", "/checkout", "/wishlist"];
+const adminRoutes = ["/admin"];
+const nonAuthRoutes = ["/signin", "/signup"];
 
-const adminRoutes = ['/admin'];
-
-const nonAuthRoutes = ['/signin', '/signup'];
-
-export function middleware(request: NextRequest) {
+export async function middleware(request: NextRequest) {
   const { pathname } = request.nextUrl;
-  
-  const token = request.cookies.get('authToken')?.value;
-  const userRole = request.cookies.get('userRole')?.value || 'user';
-  
-  const isAuthenticated = !!token;
-  const isAdmin = userRole === 'admin';
+
+  // Get authToken from cookies
+  const token = request.cookies.get("authToken")?.value;
+
+  let isAuthenticated = false;
+  let isAdmin = false;
+
+  if (token) {
+    try {
+      // Call /api/auth/status with the authToken cookie
+      const response = await fetch(
+        `${request.nextUrl.origin}/api/auth/status`,
+        {
+          method: "GET",
+          headers: {
+            Cookie: `authToken=${token}`,
+          },
+        }
+      );
+
+      if (response.ok) {
+        const data = await response.json();
+        isAuthenticated = data.isAuthenticated;
+        if (data.user && data.user.role === "admin") {
+          isAdmin = true;
+        }
+      } else {
+        console.warn("Auth status check failed:", response.status, await response.text());
+      }
+    } catch (error) {
+      console.error("Error checking auth status in middleware:", error);
+    }
+  }
 
   // Case 1: User tries to access auth-protected routes without being logged in
-  if (authProtectedRoutes.some(route => pathname.startsWith(route)) && !isAuthenticated) {
+  if (
+    authProtectedRoutes.some((route) => pathname.startsWith(route)) &&
+    !isAuthenticated
+  ) {
     return redirectToSignIn(request);
   }
 
   // Case 2: User tries to access admin routes without being an admin
-  // if (adminRoutes.some(route => pathname.startsWith(route)) && (!isAuthenticated || !isAdmin)) {
-
-  //   if (!isAuthenticated) {
-  //     return redirectToSignIn(request);
-  //   }
-  //   return redirectToHome(request);
-  // }
+  if (adminRoutes.some((route) => pathname.startsWith(route))) {
+    if (!isAuthenticated) {
+      return redirectToSignIn(request);
+    }
+    if (!isAdmin) {
+      return redirectToHome(request);
+    }
+  }
 
   // Case 3: Authenticated user tries to access sign in or sign up pages
-  if (nonAuthRoutes.some(route => pathname === route) && isAuthenticated) {
+  if (
+    nonAuthRoutes.some((route) => pathname === route) &&
+    isAuthenticated
+  ) {
     return redirectToHome(request);
   }
 
@@ -41,19 +73,18 @@ export function middleware(request: NextRequest) {
 // Helper function to redirect to sign in page
 function redirectToSignIn(request: NextRequest) {
   const url = request.nextUrl.clone();
-  url.searchParams.set('callbackUrl', request.nextUrl.pathname);
-  url.pathname = '/signin';
+  url.searchParams.set("callbackUrl", request.nextUrl.pathname);
+  url.pathname = "/signin";
   return NextResponse.redirect(url);
 }
 
 // Helper function to redirect to home page
 function redirectToHome(request: NextRequest) {
   const url = request.nextUrl.clone();
-  url.pathname = '/';
+  url.pathname = "/";
   return NextResponse.redirect(url);
 }
 
-// Configure which paths should be processed by this middleware
 export const config = {
   matcher: [
     /*
@@ -64,6 +95,6 @@ export const config = {
      * - favicon.ico (favicon file)
      * - public folder
      */
-    '/((?!api|_next/static|_next/image|favicon.ico|public).*)',
+    "/((?!api|_next/static|_next/image|favicon.ico|public).*)",
   ],
 };

@@ -22,20 +22,45 @@ export default function ProductDetailsContent({ className }: ProductDetailsConte
     handleBuyNow,
   } = useProductContext()
 
+  // Utility to parse comma-separated strings into an array
+  const parseOptions = (optionString: string): string[] => {
+    if (!optionString) return [];
+    return optionString.split(",").map((item) => item.trim()).filter(Boolean);
+  };
+
+  // Utility to validate color values
+  const isValidColor = (color: string): boolean => {
+    const s = new Option().style;
+    s.backgroundColor = color;
+    return s.backgroundColor !== "";
+  };
+
+  // Parse color and storage options
+  const colorOptions = parseOptions(product.color).map((color) => ({
+    value: color,
+    name: color, // You can customize this (e.g., capitalize or map to friendly names)
+    isValid: isValidColor(color),
+  }));
+
+  const storageOptions = parseOptions(product.storage).map((storage) => ({
+    value: storage,
+    label: storage, // You can customize this (e.g., format "8GB RAM / 256GB SSD" differently)
+  }));
+
   const increaseQuantity = () => {
-    setQuantity(quantity + 1)
-  }
+    setQuantity(quantity + 1);
+  };
 
   const decreaseQuantity = () => {
     if (quantity > 1) {
-      setQuantity(quantity - 1)
+      setQuantity(quantity - 1);
     }
-  }
+  };
 
   return (
     <div className={cn(`md:ml-14 ${isZooming ? "invisible" : "visible"}`, className)}>
-      <div className="hidden md:flex flex-row items-center gap-2 justify-end mb-5 my-2 cursor-pointer text-xs md:text-base ">
-        <Share2 className="md:w-5 md:h-5 w-4 h-4 " />
+      <div className="hidden md:flex flex-row items-center gap-2 justify-end mb-5 my-2 cursor-pointer text-xs md:text-base">
+        <Share2 className="md:w-5 md:h-5 w-4 h-4" />
         <p>Share</p>
       </div>
 
@@ -55,7 +80,7 @@ export default function ProductDetailsContent({ className }: ProductDetailsConte
             </div>
           )}
 
-          <span className=" text-lg font-bold">₹{product.ourPrice.toString()}</span>
+          <span className="text-lg font-bold">₹{product.ourPrice.toString()}</span>
 
           {product.discount && product.discount > 0 && (
             <span className="bg-red-600 text-white text-xs font-lighter px-2 py-1 rounded-full">
@@ -95,10 +120,6 @@ export default function ProductDetailsContent({ className }: ProductDetailsConte
                 </button>
               )}
             </div>
-            {/* 
-            <div className="border border-gray-400 rounded-full p-2 ml-4">
-              <Heart className="w-5 h-5" />
-            </div> */}
 
             {/* Delivery */}
             <div className="flex items-center gap-2 mt-3 text-xs text-gray-700">
@@ -111,12 +132,12 @@ export default function ProductDetailsContent({ className }: ProductDetailsConte
 
       {/* Product Options */}
       <div className="space-y-6 mt-5 md:mt-0">
-        {/* RAM / Storage Options */}
-        {product.ramOptions && product.ramOptions.length > 0 && (
+        {/* Storage Options */}
+        {storageOptions.length > 0 && (
           <div className="flex md:flex-row flex-col md:items-center justify-between">
             <h3 className="md:text-base text-sm font-medium mb-3">RAM / Internal Storage</h3>
             <div className="flex gap-3">
-              {product.ramOptions.map((option) => (
+              {storageOptions.map((option) => (
                 <button
                   key={option.value}
                   onClick={() => setSelectedStorage(option.value)}
@@ -135,25 +156,29 @@ export default function ProductDetailsContent({ className }: ProductDetailsConte
         )}
 
         {/* Color Options */}
-        {product.colors && product.colors.length > 0 && (
+        {colorOptions.length > 0 && (
           <div className="mt-6 hidden md:flex flex-row items-center justify-between">
             <div className="mb-2">
               <h3 className="text-base font-medium mb-3">Color</h3>
               <span className="text-gray-700">
-                {product.colors.find((c) => c.value === selectedColor)?.name || "Default"}
+                {colorOptions.find((c) => c.value === selectedColor)?.name || "Default"}
               </span>
             </div>
             <div className="flex gap-3">
-              {product.colors.map((color) => (
+              {colorOptions.map((color) => (
                 <button
                   key={color.value}
-                  onClick={() => setSelectedColor(color.value)}
+                  onClick={() => color.isValid && setSelectedColor(color.value)}
                   className={cn(
                     "w-10 h-10 rounded-full border",
-                    selectedColor === color.value ? "p-1  outline-2 border border-white" : "border-gray-300",
+                    selectedColor === color.value
+                      ? "p-1 outline-2 border border-white"
+                      : "border-gray-300",
+                    !color.isValid && "opacity-50 cursor-not-allowed",
                   )}
-                  style={{ backgroundColor: color.value }}
+                  style={{ backgroundColor: color.isValid ? color.value : "#ccc" }}
                   aria-label={`Select ${color.name} color`}
+                  disabled={!color.isValid}
                 />
               ))}
             </div>
@@ -161,8 +186,6 @@ export default function ProductDetailsContent({ className }: ProductDetailsConte
         )}
         <hr className="bg-gray-400 md:block hidden" />
       </div>
-
-      
 
       {/* Desktop - Product Pricing */}
       <div className="hidden md:flex flex-col gap-2">
@@ -228,8 +251,6 @@ export default function ProductDetailsContent({ className }: ProductDetailsConte
           </div>
         </div>
       </div>
-
-    
 
       {/* Desktop - Product Actions */}
       <div className="hidden md:block mt-2">

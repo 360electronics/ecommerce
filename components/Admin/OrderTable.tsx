@@ -159,7 +159,7 @@ export function OrdersTable() {
       sortable: true,
       width: "15%",
       align: "right",
-      renderCell: (value, item) => {
+      renderCell: (value) => {
         return new Intl.NumberFormat("en-IN", {
           style: "currency",
           currency: "INR",
@@ -182,10 +182,12 @@ export function OrdersTable() {
     },
   ]
 
+  console.log(selectedOrders)
+
   // Handle order actions
-  const handleAddOrder = () => {
-    router.push("/admin/orders/add")
-  }
+  // const handleAddOrder = () => {
+  //   router.push("/admin/orders/add")
+  // }
 
   const handleEditOrder = (orders: Order[]) => {
     if (orders.length === 1) {

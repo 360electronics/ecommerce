@@ -13,7 +13,7 @@ export async function storeOTP({
   otp,
   type,
 }: {
-  userId: number;
+  userId: string;
   otp: string;
   type: "email" | "phone";
 }) {
