@@ -50,55 +50,57 @@ export async function POST(request: Request): Promise<NextResponse> {
 
     const now = new Date();
 
-    // Start a transaction for user update, OTP deletion, and auth token insertion
-    const result = await db.transaction(async (tx) => {
-      // Update user verification status and lastLogin timestamp
-      const updateData =
-        type === "email"
-          ? { emailVerified: true, lastLogin: now }
-          : { phoneVerified: true, lastLogin: now };
+    // Replace transaction with individual operations
+    // 1. Update user verification status and lastLogin timestamp
+    const updateData =
+      type === "email"
+        ? { emailVerified: true, lastLogin: now }
+        : { phoneVerified: true, lastLogin: now };
 
-      const [updatedUser] = await tx
-        .update(users)
-        .set(updateData)
-        .where(eq(users.id, userId))
-        .returning({
-          id: users.id,
-          email: users.email,
-          phoneNumber: users.phoneNumber,
-          role: users.role,
-          emailVerified: users.emailVerified,
-          phoneVerified: users.phoneVerified,
-          lastLogin: users.lastLogin,
-        });
-
-      if (!updatedUser) {
-        throw new Error("User not found");
-      }
-
-      if (!updatedUser.role) {
-        throw new Error("User role is missing");
-      }
-
-      // Delete used OTP
-      await tx
-        .delete(otpTokens)
-        .where(eq(otpTokens.id, otpRecord.id));
-
-      // Generate JWT
-      const token = generateToken(userId, updatedUser.role);
-
-      // Store auth token
-      await tx.insert(authTokens).values({
-        userId,
-        token,
-        expiresAt: new Date(Date.now() + 12 * 60 * 60 * 1000), // 12 hours
+    const [updatedUser] = await db
+      .update(users)
+      .set(updateData)
+      .where(eq(users.id, userId))
+      .returning({
+        id: users.id,
+        email: users.email,
+        phoneNumber: users.phoneNumber,
+        role: users.role,
+        emailVerified: users.emailVerified,
+        phoneVerified: users.phoneVerified,
+        lastLogin: users.lastLogin,
       });
 
-      return { updatedUser, token };
+    if (!updatedUser) {
+      return NextResponse.json(
+        { error: "User not found" },
+        { status: 404 }
+      );
+    }
+
+    if (!updatedUser.role) {
+      return NextResponse.json(
+        { error: "User role is missing" },
+        { status: 400 }
+      );
+    }
+
+    // 2. Delete used OTP
+    await db
+      .delete(otpTokens)
+      .where(eq(otpTokens.id, otpRecord.id));
+
+    // 3. Generate JWT
+    const token = generateToken(userId, updatedUser.role);
+
+    // 4. Store auth token
+    await db.insert(authTokens).values({
+      userId,
+      token,
+      expiresAt: new Date(Date.now() + 12 * 60 * 60 * 1000), // 12 hours
     });
 
-    // Handle referral and coupon logic (outside transaction to avoid locking)
+    // Handle referral and coupon logic
     const [referralRecord] = await db
       .select({
         id: referrals.id,
@@ -144,19 +146,19 @@ export async function POST(request: Request): Promise<NextResponse> {
     const response = NextResponse.json({
       message: "OTP verified",
       user: {
-        id: result.updatedUser.id,
-        email: result.updatedUser.email,
-        phoneNumber: result.updatedUser.phoneNumber,
-        role: result.updatedUser.role,
-        emailVerified: result.updatedUser.emailVerified,
-        phoneVerified: result.updatedUser.phoneVerified,
-        lastLogin: result.updatedUser.lastLogin,
+        id: updatedUser.id,
+        email: updatedUser.email,
+        phoneNumber: updatedUser.phoneNumber,
+        role: updatedUser.role,
+        emailVerified: updatedUser.emailVerified,
+        phoneVerified: updatedUser.phoneVerified,
+        lastLogin: updatedUser.lastLogin,
       },
-      token: result.token,
+      token: token,
     });
 
     // Set authToken cookie (HTTP-only, secure)
-    response.cookies.set("authToken", result.token, {
+    response.cookies.set("authToken", token, {
       httpOnly: true,
       secure: process.env.NODE_ENV === "production",
       sameSite: "strict",
