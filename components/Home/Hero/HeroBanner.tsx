@@ -31,18 +31,7 @@ const HeroBanner: React.FC = () => {
     setMainBanners(filteredBanners);
   }, [banners]);
 
-  useEffect(() => {
-    if (typeof window !== 'undefined') {
-      const storedIndex = localStorage.getItem('heroBannerIndex');
-      setCurrentImageIndex(Number(storedIndex) || 0);
-    }
-  }, []);
-
-  useEffect(() => {
-    if (typeof window !== 'undefined') {
-      localStorage.setItem('heroBannerIndex', currentImageIndex.toString());
-    }
-  }, [currentImageIndex]);
+ 
 
   const toggleMute = () => {
     const video = videoRef.current;
@@ -155,8 +144,8 @@ const HeroBanner: React.FC = () => {
                 <p className="text-gray-500 text-lg">No hero-main banners available</p>
               </div>
             )}
-            <div className="absolute bottom-[30%] w-6 h-6 rounded-full shadow-[-12px_12px_0_#fff] z-50" />
-            <div className="absolute bottom-0 left-[30%] md:left-[20%] w-6 h-6 rounded-full shadow-[-12px_12px_0_#fff] z-50" />
+            <div className="absolute bottom-[30%] w-6 h-6 rounded-full shadow-[-12px_12px_0_#fff] z-0" />
+            <div className="absolute bottom-0 left-[30%] md:left-[20%] w-6 h-6 rounded-full shadow-[-12px_12px_0_#fff] z-0" />
           </div>
         )}
         <div className="absolute left-0 bottom-0 w-[30%] md:w-[20%] h-[30%] border-t-[12px] border-r-[12px] border-white rounded-tr-2xl rounded-bl-2xl overflow-hidden">

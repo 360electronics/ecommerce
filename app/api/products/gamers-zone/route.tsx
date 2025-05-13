@@ -1,126 +1,191 @@
-import { gamersZone, products } from "@/db/schema/products/products.schema"
-import { db } from "@/db/drizzle"
-import { NextResponse } from "next/server"
-import { eq } from "drizzle-orm"
+// app/api/gamers-zone/route.ts
+import { NextResponse } from 'next/server';
+import { db } from '@/db/drizzle';
+import { gamersZone, products, variants } from '@/db/schema/products/products.schema';
+import { eq, sql } from 'drizzle-orm';
 
 
 export async function GET() {
   try {
-    // Get all gamers zone entries
-    const gamerZoneEntries = await db.select().from(gamersZone);
-    
-    // Group the entries by category
-    const categorizedEntries = gamerZoneEntries.reduce((acc, entry) => {
-      const category = entry.category;
+    // Fetch gamers zone entries with product and variant details
+    const gamersZoneEntries = await db
+      .select({
+        productId: gamersZone.productId,
+        variantId: gamersZone.variantId,
+        category: gamersZone.category,
+        createdAt: gamersZone.createdAt,
+        product: {
+          id: products.id,
+          shortName: products.shortName,
+          brand: products.brand,
+          category: products.category,
+          description: products.description,
+          status: products.status,
+          subProductStatus: products.subProductStatus,
+          deliveryMode: products.deliveryMode,
+          tags: products.tags,
+          totalStocks: products.totalStocks,
+          averageRating: products.averageRating,
+          ratingCount: products.ratingCount,
+          createdAt: products.createdAt,
+          updatedAt: products.updatedAt,
+          specifications: products.specifications,
+        },
+        variant: {
+          id: variants.id,
+          productId: variants.productId,
+          name: variants.name,
+          sku: variants.sku,
+          slug: variants.slug,
+          color: variants.color,
+          material: variants.material,
+          dimensions: variants.dimensions,
+          weight: variants.weight,
+          storage: variants.storage,
+          stock: variants.stock,
+          mrp: variants.mrp,
+          ourPrice: variants.ourPrice,
+          productImages: variants.productImages,
+        },
+      })
+      .from(gamersZone)
+      .innerJoin(variants, eq(gamersZone.variantId, variants.id))
+      .innerJoin(products, eq(gamersZone.productId, products.id))
+      .limit(50); // Limit to prevent large responses
+
+    // Fetch all variants for each product
+    const productIds = [...new Set(gamersZoneEntries.map((item) => item.productId))];
+    const allVariants = await db
+      .select({
+        id: variants.id,
+        productId: variants.productId,
+        name: variants.name,
+        sku: variants.sku,
+        slug: variants.slug,
+        color: variants.color,
+        material: variants.material,
+        dimensions: variants.dimensions,
+        weight: variants.weight,
+        storage: variants.storage,
+        stock: variants.stock,
+        mrp: variants.mrp,
+        ourPrice: variants.ourPrice,
+        productImages: variants.productImages,
+      })
+      .from(variants)
+      .where(sql`${variants.productId} IN ${productIds}`);
+
+    // Group entries by category
+    const result = gamersZoneEntries.reduce((acc, { productId, variantId, category, product, variant }) => {
       if (!acc[category]) {
         acc[category] = [];
       }
-      acc[category].push(entry);
+      acc[category].push({
+        productId,
+        variantId,
+        category,
+        product: {
+          ...product,
+          variants: allVariants
+            .filter((v) => v.productId === productId)
+            .map((v) => ({
+              ...v,
+              productImages: v.productImages || [],
+            })),
+        },
+        variant: {
+          ...variant,
+          productImages: variant.productImages || [],
+        },
+      });
       return acc;
-    }, {} as Record<string, typeof gamerZoneEntries>);
-    
-    // Fetch full product data for each category
-    const result: Record<string, any[]> = {};
-    
-    // Process each category
-    for (const [category, entries] of Object.entries(categorizedEntries)) {
-      const categoryProducts = await Promise.all(
-        entries.map(async (item) => {
-          const [product] = await db
-            .select()
-            .from(products)
-            .where(eq(products.id, item.productId));
-          
-          // Add the category to the product
-          return product ? { ...product, category } : null;
-        })
-      );
-      
-      // Filter out null results
-      result[category] = categoryProducts.filter(Boolean);
-    }
-    
-    return new Response(JSON.stringify(result), { 
-      status: 200,
-      headers: {
-        'Content-Type': 'application/json'
-      }
-    });
+    }, {} as Record<string,any[]>);
+
+    return NextResponse.json(result, { status: 200 });
   } catch (error) {
-    console.error('Error fetching gamers zone products:', error);
-    return new Response(JSON.stringify({ error: 'Failed to fetch gamers zone products' }), { 
-      status: 500,
-      headers: {
-        'Content-Type': 'application/json'
-      }
-    });
+    console.error('[GET_GAMERS_ZONE_ERROR]', error);
+    return NextResponse.json(
+      { message: 'Failed to fetch gamers zone products' },
+      { status: 500 }
+    );
   }
 }
-
 
 export async function POST(req: Request) {
   try {
     // Parse the request body
     const body = await req.json();
-    
-    // Extract categorized product IDs from request
-    // Expecting something like { categories: { laptops: [id1, id2], consoles: [id3, id4], ... } }
+
+    // Expecting { categories: { laptops: [{ productId, variantId }], consoles: [{ productId, variantId }], ... } }
     const { categories } = body;
-    
+
     // Validate input
     if (!categories || typeof categories !== 'object') {
       return NextResponse.json(
-        { message: 'Invalid request. Expected categories object with product IDs' },
+        { message: 'Invalid request. Expected categories object with variant selections' },
         { status: 400 }
       );
     }
-    
-    // Delete existing entries
-    await db.delete(gamersZone);
-    
-    // Prepare bulk insert values
-    const insertValues:any[] = [];
-    
+
+    const validCategories = ['laptops', 'consoles', 'accessories', 'steering-chairs'];
+    const insertValues: any[] = [];
+
     // Process each category
-    for (const [category, productIds] of Object.entries(categories)) {
-      // Validate that productIds is an array
-      if (!Array.isArray(productIds)) {
-        continue; // Skip invalid entries
-      }
-      
-      // Only allow valid categories
-      if (!['laptops', 'consoles', 'accessories', 'steering-chairs'].includes(category)) {
+    for (const [category, selections] of Object.entries(categories)) {
+      // Validate category
+      if (!validCategories.includes(category)) {
         continue; // Skip invalid categories
       }
-      
-      // Add each product ID with its category
-      productIds.forEach(productId => {
+
+      // Validate selections
+      if (!Array.isArray(selections)) {
+        continue; // Skip invalid selections
+      }
+
+      for (const { productId, variantId } of selections) {
+        if (!productId || !variantId) {
+          continue; // Skip invalid entries
+        }
+
+        // Verify variant belongs to product
+        const variant = await db
+          .select({ id: variants.id })
+          .from(variants)
+          .where(sql`${variants.id} = ${variantId} AND ${variants.productId} = ${productId}`);
+
+        if (!variant.length) {
+          continue; // Skip invalid variant-product pairs
+        }
+
         insertValues.push({
           productId,
+          variantId,
           category,
           createdAt: new Date(),
-          updatedAt: new Date()
+          updatedAt: new Date(),
         });
-      });
+      }
     }
-    
+
+    // Delete existing entries
+    await db.delete(gamersZone);
+
     // Perform bulk insert if there are valid entries
     if (insertValues.length > 0) {
       const result = await db.insert(gamersZone).values(insertValues);
-      
       return NextResponse.json({
         message: 'Gamers Zone updated successfully',
         count: insertValues.length,
-        result
+        result,
       }, { status: 200 });
     } else {
-      return NextResponse.json({
-        message: 'No valid entries to insert',
-      }, { status: 200 });
+      return NextResponse.json(
+        { message: 'No valid entries to insert' },
+        { status: 200 }
+      );
     }
-    
   } catch (error) {
-    console.error('Error updating gamers zone:', error);
+    console.error('[POST_GAMERS_ZONE_ERROR]', error);
     return NextResponse.json(
       { message: 'Failed to update gamers zone' },
       { status: 500 }
@@ -128,35 +193,52 @@ export async function POST(req: Request) {
   }
 }
 
-// DELETE endpoint to remove a specific product from featured
 export async function DELETE(req: Request) {
-    try {
-      const body = await req.json();
-      const { productId } = body;
-  
-      if (!productId) {
-        return NextResponse.json(
-          { message: 'Product ID is required' },
-          { status: 400 }
-        );
-      }
-  
-      const result = await db
-        .delete(gamersZone)
-        .where(eq(gamersZone.productId, productId)); // Correct usage
-  
+  try {
+    const body = await req.json();
+    const { variantId, category } = body;
+
+    if (!variantId || !category) {
       return NextResponse.json(
-        {
-          message: 'Product removed from new arrivals products',
-          result,
-        },
-        { status: 200 }
-      );
-    } catch (error) {
-      console.error('Error removing product from new arrivals:', error);
-      return NextResponse.json(
-        { message: 'Failed to remove product from new arrivals' },
-        { status: 500 }
+        { message: 'Variant ID and category are required' },
+        { status: 400 }
       );
     }
+
+    // Validate category
+    const validCategories = ['laptops', 'consoles', 'accessories', 'steering-chairs'];
+    if (!validCategories.includes(category)) {
+      return NextResponse.json(
+        { message: 'Invalid category' },
+        { status: 400 }
+      );
+    }
+
+    const result = await db
+      .delete(gamersZone)
+      .where(
+        sql`${gamersZone.variantId} = ${variantId} AND ${gamersZone.category} = ${category}`
+      );
+
+    if (result.rowCount === 0) {
+      return NextResponse.json(
+        { message: 'No gamers zone entry found for the given variant and category' },
+        { status: 404 }
+      );
+    }
+
+    return NextResponse.json(
+      {
+        message: 'Variant removed from gamers zone',
+        result,
+      },
+      { status: 200 }
+    );
+  } catch (error) {
+    console.error('[DELETE_GAMERS_ZONE_ERROR]', error);
+    return NextResponse.json(
+      { message: 'Failed to remove variant from gamers zone' },
+      { status: 500 }
+    );
   }
+}

@@ -4,114 +4,251 @@ import React, { useState, useEffect, useMemo, memo } from 'react';
 import DynamicFilter from '@/components/Filter/DynamicFilter';
 import ProductCard from '@/components/Product/ProductCards/ProductCardwithCart';
 import { useSearchParams } from 'next/navigation';
-import { Product } from '@/types/product';
-import { fetchProducts } from '@/utils/products.util';
 import DOMPurify from 'isomorphic-dompurify';
 import debounce from 'lodash/debounce';
+import { fetchProducts } from '@/utils/products.util';
 
-// Memoize ProductCard to prevent unnecessary re-renders
+// Define interfaces
+interface ProductVariant {
+    id: string;
+    productId: string;
+    name: string;
+    mrp: string;
+    ourPrice: string;
+    color?: string;
+    storage?: string;
+    stock: string;
+    slug: string;
+    productImages?: string[];
+    sku: string;
+    dimensions?: string;
+    material?: string;
+    weight?: string;
+    createdAt: string;
+    updatedAt: string;
+}
+
+interface ProductType {
+    id: string;
+    averageRating: string;
+    brand?: string;
+    category: string;
+    description?: string | null;
+    shortName?: string;
+    status: string;
+    subProductStatus?: string;
+    tags?: string | string[];
+    totalStocks: string;
+    ratingCount?: string;
+    specifications?: any[];
+    createdAt: string;
+    updatedAt: string;
+    variants?: ProductVariant[];
+}
+
+interface FlattenedProduct extends ProductVariant {
+    category: string;
+    brand?: string;
+    averageRating: string;
+    totalStocks: string;
+    tags: string[]; // Normalized to string[]
+    description?: string | null;
+    productParent?: ProductType;
+}
+
+
 const MemoizedProductCard = memo(ProductCard);
 
+const flattenProductVariants = (products: ProductType[]): FlattenedProduct[] => {
+    const flattened: FlattenedProduct[] = [];
+
+    products.forEach(product => {
+        if (Array.isArray(product.variants) && product.variants.length > 0) {
+            product.variants.forEach(variant => {
+                flattened.push({
+                    ...variant,
+                    id: variant.id,
+                    productId: product.id,
+                    category: product.category,
+                    brand: product.brand,
+                    averageRating: product.averageRating,
+                    tags: Array.isArray(product.tags)
+                        ? product.tags
+                        : typeof product.tags === 'string'
+                            ? product.tags.split(',')
+                            : [],
+                    totalStocks: variant.stock,
+                    createdAt: variant.createdAt || product.createdAt,
+                    color: variant.color,
+                    storage: variant.storage,
+                    description: product.description,
+                    productParent: product
+                });
+            });
+        } else {
+            flattened.push({
+                ...product,
+                tags: Array.isArray(product.tags)
+                    ? product.tags
+                    : typeof product.tags === 'string'
+                        ? product.tags.split(',')
+                        : [],
+            } as unknown as FlattenedProduct);
+        }
+    });
+
+    return flattened;
+};
+
 const ProductListing = ({ category, searchQuery }: { category?: string, searchQuery?: string }) => {
-    const [products, setProducts] = useState<Product[]>([]);
-    const [filteredProducts, setFilteredProducts] = useState<Product[]>([]);
+    const [originalProducts, setOriginalProducts] = useState<FlattenedProduct[]>([]);
+    const [products, setProducts] = useState<FlattenedProduct[]>([]);
+    const [filteredProducts, setFilteredProducts] = useState<FlattenedProduct[]>([]);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState<string | null>(null);
     const [sortOption, setSortOption] = useState('featured');
-    const searchParams = useSearchParams();
-
-    // Pagination state
     const [currentPage, setCurrentPage] = useState(1);
     const [productsPerPage] = useState(9);
-    const [displayedProducts, setDisplayedProducts] = useState<Product[]>([]);
+    const searchParams = useSearchParams();
 
-    // Debounced search filter
     const debouncedApplyFilters = useMemo(
-        () => debounce((productsList: Product[], filters: Record<string, any>, sortOpt: string, query: string) => {
-            let filtered = [...productsList];
+        () =>
+            debounce(
+                (productsList: FlattenedProduct[], filters: Record<string, any>, sortOpt: string, query: string) => {
+                    let filtered = [...productsList];
 
-            // Apply search query filter
-            if (query) {
-                const sanitizedQuery = DOMPurify.sanitize(query.trim()).toLowerCase();
-                filtered = filtered.filter((product: Product) =>
-                    product.name.toLowerCase().includes(sanitizedQuery) ||
-                    product.category.toLowerCase().includes(sanitizedQuery) ||
-                    (product.brand?.toLowerCase().includes(sanitizedQuery)) ||
-                    (product.description?.toLowerCase().includes(sanitizedQuery))
-                );
-            }
+                    if (category && category.toLowerCase() !== 'all') {
+                        filtered = filtered.filter((product) =>
+                            product.category.toLowerCase().includes(category.toLowerCase())
+                        );
+                    }
 
-            // Apply category filter
-            if (category && category.toLowerCase() !== 'all') {
-                filtered = filtered.filter(product => product.category.toLowerCase() === category.toLowerCase());
-            }
+                    if (query) {
+                        const sanitizedQuery = DOMPurify.sanitize(query.trim()).toLowerCase();
+                        const queryWords = sanitizedQuery.split(/\s+/);
+                        filtered = filtered.filter((product: FlattenedProduct) => {
+                            const name = product.name.toLowerCase();
+                            const category = product.category.toLowerCase();
+                            const brand = product.brand?.toLowerCase() || '';
+                            const description = product.description?.toLowerCase() || '';
+                            const tags = product.tags.join(' ').toLowerCase();
 
-            // Apply price filter with fixed minimum price of 100
-            if (filters.ourPrice) {
-                const minPrice = 100; // Fixed minimum price
-                const maxPrice = Number(filters.ourPrice.max) || Infinity;
-                filtered = filtered.filter(product => {
-                    const price = Number(product.ourPrice) || 0;
-                    return price >= minPrice && price <= maxPrice;
-                });
-            }
+                            return queryWords.some(
+                                (word) =>
+                                    name.includes(word) ||
+                                    category.includes(word) ||
+                                    brand.includes(word) ||
+                                    description.includes(word) ||
+                                    tags.includes(word)
+                            );
+                        });
+                    }
 
-            // Apply color filter
-            if (filters.color?.length > 0) {
-                filtered = filtered.filter(product =>
-                    product.color && filters.color.includes(product.color)
-                );
-            }
+                    if (filters.ourPrice) {
+                        const minPrice = filters.ourPrice.min || filterOptions.priceRange.min;
+                        const maxPrice = Number(filters.ourPrice.max) || Infinity;
+                        filtered = filtered.filter((product) => {
+                            const price = Number(product.ourPrice) || 0;
+                            return price >= minPrice && price <= maxPrice;
+                        });
+                    }
 
-            // Apply brand filter
-            if (filters.brand?.length > 0) {
-                filtered = filtered.filter(product =>
-                    product.brand && filters.brand.includes(product.brand)
-                );
-            }
+                    if (filters.color?.length > 0) {
+                        filtered = filtered.filter((product) =>
+                            product.color && filters.color.includes(product.color)
+                        );
+                    }
 
-            // Apply rating filter
-            if (filters.rating?.length > 0) {
-                filtered = filtered.filter(product => {
-                    const minRating = Math.min(...filters.rating.map((r: string) => parseInt(r)));
-                    return (Number(product.averageRating) || 0) >= minRating;
-                });
-            }
+                    if (filters.storage?.length > 0) {
+                        filtered = filtered.filter((product) =>
+                            product.storage && filters.storage.includes(product.storage)
+                        );
+                    }
 
-            // Apply stock filter
-            if (filters.inStock) {
-                filtered = filtered.filter(product => Number(product.totalStocks) > 0);
-            }
+                    if (filters.brand?.length > 0) {
+                        filtered = filtered.filter((product) =>
+                            product.brand && filters.brand.includes(product.brand)
+                        );
+                    }
 
-            // Sort the filtered products
-            const sorted = [...filtered];
-            switch (sortOpt.toLowerCase()) {
-                case 'ourprice-low-high':
-                    sorted.sort((a, b) => (Number(a.ourPrice) || 0) - (Number(b.ourPrice) || 0));
-                    break;
-                case 'ourprice-high-low':
-                    sorted.sort((a, b) => (Number(b.ourPrice) || 0) - (Number(a.ourPrice) || 0));
-                    break;
-                case 'rating':
-                    sorted.sort((a, b) => (Number(b.averageRating) || 0) - (Number(a.averageRating) || 0));
-                    break;
-                case 'newest':
-                    sorted.sort((a, b) => {
-                        const dateA = a.createdAt ? new Date(a.createdAt).getTime() : 0;
-                        const dateB = b.createdAt ? new Date(b.createdAt).getTime() : 0;
-                        return dateB - dateA;
-                    });
-                    break;
-                case 'featured':
-                default:
-                    break;
-            }
+                    if (filters.rating?.length > 0) {
+                        const minRating = Math.min(...filters.rating.map((r: string) => parseInt(r)));
+                        filtered = filtered.filter((product) => {
+                            return (Number(product.averageRating) || 0) >= minRating;
+                        });
+                    }
 
-            setFilteredProducts(sorted);
-            setCurrentPage(1);
-        }, 300),
-        [category]
+                    if (filters.inStock) {
+                        filtered = filtered.filter((product) => Number(product.totalStocks) > 0);
+                    }
+
+                    const sorted = [...filtered];
+                    switch (sortOpt.toLowerCase()) {
+                        case 'ourprice-low-high':
+                            sorted.sort((a, b) => (Number(a.ourPrice) || 0) - (Number(b.ourPrice) || 0));
+                            break;
+                        case 'ourprice-high-low':
+                            sorted.sort((a, b) => (Number(b.ourPrice) || 0) - (Number(a.ourPrice) || 0));
+                            break;
+                        case 'rating':
+                            sorted.sort((a, b) => (Number(b.averageRating) || 0) - (Number(a.averageRating) || 0));
+                            break;
+                        case 'newest':
+                            sorted.sort((a, b) => {
+                                const dateA = a.createdAt ? new Date(a.createdAt).getTime() : 0;
+                                const dateB = b.createdAt ? new Date(b.createdAt).getTime() : 0;
+                                return dateB - dateA;
+                            });
+                            break;
+                        case 'featured':
+                        default:
+                            break;
+                    }
+
+                    setFilteredProducts(sorted);
+                    setCurrentPage(1);
+                },
+                300
+            ),
+        []
     );
+
+    useEffect(() => {
+        return () => {
+            debouncedApplyFilters.cancel();
+        };
+    }, [debouncedApplyFilters]);
+
+    const filterOptions = useMemo(() => {
+        const options = {
+            colors: new Set<string>(),
+            brands: new Set<string>(),
+            storageOptions: new Set<string>(),
+            minPrice: Infinity,
+            maxPrice: 0
+        };
+
+        products.forEach(product => {
+            if (product.color) options.colors.add(product.color);
+            if (product.brand) options.brands.add(product.brand);
+            if (product.storage) options.storageOptions.add(product.storage);
+            const price = Number(product.ourPrice) || 0;
+            if (price > 0) {
+                options.minPrice = Math.min(options.minPrice, price);
+                options.maxPrice = Math.max(options.maxPrice, price);
+            }
+        });
+
+        return {
+            colors: Array.from(options.colors),
+            brands: Array.from(options.brands),
+            storageOptions: Array.from(options.storageOptions),
+            priceRange: {
+                min: options.minPrice === Infinity ? 0 : options.minPrice,
+                max: options.maxPrice
+            }
+        };
+    }, [products]);
 
     useEffect(() => {
         const fetchAllProducts = async () => {
@@ -120,28 +257,30 @@ const ProductListing = ({ category, searchQuery }: { category?: string, searchQu
 
             try {
                 const startTime = performance.now();
-                const productData = await fetchProducts();
+                const productData: ProductType[] = await fetchProducts();
 
                 if (!productData) {
                     throw new Error('No product data received');
                 }
 
-                setProducts(productData);
+                const flattenedProducts = flattenProductVariants(productData);
+                console.log(originalProducts)
+                setOriginalProducts(flattenedProducts);
+                setProducts(flattenedProducts);
 
-                // Get filter values from URL params
+                // console.log("Flattened products data:", flattenedProducts);
+
                 const filters: Record<string, any> = {};
-
-                // Only get maxPrice from URL, minPrice is fixed at 100
                 const maxPrice = searchParams.get('maxPrice');
 
                 if (maxPrice) {
                     filters.ourPrice = {
-                        min: 100, // Fixed minimum price
+                        min: filterOptions.priceRange.min,
                         max: Number(maxPrice)
                     };
                 }
 
-                const possibleFilters = ['color', 'brand', 'category', 'rating'];
+                const possibleFilters = ['color', 'brand', 'category', 'rating', 'storage'];
                 possibleFilters.forEach(filter => {
                     const values = searchParams.getAll(filter);
                     if (values.length > 0) {
@@ -153,8 +292,7 @@ const ProductListing = ({ category, searchQuery }: { category?: string, searchQu
                     filters.inStock = true;
                 }
 
-                // Apply filters from URL
-                debouncedApplyFilters(productData, filters, sortOption, searchQuery || '');
+                debouncedApplyFilters(flattenedProducts, filters, sortOption, searchQuery || '');
 
                 const endTime = performance.now();
                 console.log(`Product fetch and initial filter took ${endTime - startTime}ms`);
@@ -167,11 +305,13 @@ const ProductListing = ({ category, searchQuery }: { category?: string, searchQu
         };
 
         fetchAllProducts();
-    }, [category, searchQuery, debouncedApplyFilters, searchParams]);
+    }, [category, searchQuery, debouncedApplyFilters, searchParams, filterOptions.priceRange.min]);
 
-    useEffect(() => {
-        updateDisplayedProducts();
-    }, [currentPage, filteredProducts]);
+    const displayedProducts = useMemo(() => {
+        const indexOfLastProduct = currentPage * productsPerPage;
+        const indexOfFirstProduct = indexOfLastProduct - productsPerPage;
+        return filteredProducts.slice(indexOfFirstProduct, indexOfLastProduct);
+    }, [currentPage, filteredProducts, productsPerPage]);
 
     const handleFilterChange = (filters: Record<string, any>) => {
         debouncedApplyFilters(products, filters, sortOption, searchQuery || '');
@@ -181,12 +321,6 @@ const ProductListing = ({ category, searchQuery }: { category?: string, searchQu
         const option = e.target.value;
         setSortOption(option);
         debouncedApplyFilters(products, {}, option, searchQuery || '');
-    };
-
-    const updateDisplayedProducts = () => {
-        const indexOfLastProduct = currentPage * productsPerPage;
-        const indexOfFirstProduct = indexOfLastProduct - productsPerPage;
-        setDisplayedProducts(filteredProducts.slice(indexOfFirstProduct, indexOfLastProduct));
     };
 
     const totalPages = Math.ceil(filteredProducts.length / productsPerPage);
@@ -206,7 +340,7 @@ const ProductListing = ({ category, searchQuery }: { category?: string, searchQu
                 onClick={() => handlePageChange(1)}
                 className={`px-3 py-1 mx-1 rounded ${currentPage === 1 ? 'bg-blue-500 text-white' : 'bg-gray-200 hover:bg-gray-300'}`}
                 disabled={currentPage === 1}
-                aria-label="First page"
+                aria-label="Go to first page"
             >
                 1
             </button>
@@ -229,7 +363,7 @@ const ProductListing = ({ category, searchQuery }: { category?: string, searchQu
                     key={i}
                     onClick={() => handlePageChange(i)}
                     className={`px-3 py-1 mx-1 rounded ${currentPage === i ? 'bg-blue-500 text-white' : 'bg-gray-200 hover:bg-gray-300'}`}
-                    aria-label={`Page ${i}`}
+                    aria-label={`Go to page ${i}`}
                     aria-current={currentPage === i ? 'page' : undefined}
                 >
                     {i}
@@ -248,7 +382,7 @@ const ProductListing = ({ category, searchQuery }: { category?: string, searchQu
                     onClick={() => handlePageChange(totalPages)}
                     className={`px-3 py-1 mx-1 rounded ${currentPage === totalPages ? 'bg-blue-500 text-white' : 'bg-gray-200 hover:bg-gray-300'}`}
                     disabled={currentPage === totalPages}
-                    aria-label="Last page"
+                    aria-label={`Go to last page, page ${totalPages}`}
                 >
                     {totalPages}
                 </button>
@@ -257,38 +391,15 @@ const ProductListing = ({ category, searchQuery }: { category?: string, searchQu
 
         return buttons;
     };
-
-    // Memoize displayed products to prevent unnecessary re-renders
-    const memoizedDisplayedProducts = useMemo(() => displayedProducts, [displayedProducts]);
-
     return (
         <div className="container mx-auto py-8" role="main">
             <div className="flex flex-col md:flex-row gap-6">
                 <aside className="w-full md:w-1/4">
                     <DynamicFilter
-                        products={
-                            // Filter products by category and search query first
-                            products.filter((product) => {
-                                // Apply category filter if provided
-                                const categoryMatch = !category || category.toLowerCase() === 'all' ||
-                                    product.category.toLowerCase() === category.toLowerCase();
-
-                                // Apply search query filter if provided
-                                let queryMatch = true;
-                                if (searchQuery) {
-                                    const sanitizedQuery = DOMPurify.sanitize(searchQuery.trim()).toLowerCase();
-                                    queryMatch = product.name.toLowerCase().includes(sanitizedQuery) ||
-                                    product.category.toLowerCase().includes(sanitizedQuery) ||
-                                    product.brand?.toLowerCase().includes(sanitizedQuery) === true ||
-                                    product.description?.toLowerCase().includes(sanitizedQuery) === true;
-                                
-                                }
-
-                                return categoryMatch && queryMatch;
-                            })
-                        }
+                        products={products}
                         category={category}
                         onFilterChange={handleFilterChange}
+                        filterOptions={filterOptions} // Pass extracted filter options
                     />
                 </aside>
 
@@ -349,16 +460,24 @@ const ProductListing = ({ category, searchQuery }: { category?: string, searchQu
                             ) : (
                                 <>
                                     <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
-                                        {memoizedDisplayedProducts.map((product) => (
+                                        {displayedProducts.map((product) => (
                                             <MemoizedProductCard
+                                                productId={product.productId}
+                                                variantId={product.id}
                                                 key={product.id || product.sku}
                                                 slug={product.slug}
                                                 name={product.name}
-                                                image={product.productImages?.[0] ?? '/placeholder.svg'}
+                                                image={Array.isArray(product.productImages) && product.productImages.length > 0
+                                                    ? product.productImages[0]
+                                                    : '/placeholder.svg'}
                                                 ourPrice={Number(product.ourPrice) || 0}
                                                 mrp={Number(product.mrp) || 0}
                                                 rating={Number(product.averageRating) || 0}
-                                                discount={product.discount ?? 0}
+                                                discount={
+                                                    product.mrp && product.ourPrice
+                                                        ? Math.round(((Number(product.mrp) - Number(product.ourPrice)) / Number(product.mrp)) * 100)
+                                                        : 0
+                                                }
                                                 showViewDetails={true}
                                                 isHeartNeed={true}
                                             />

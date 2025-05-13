@@ -1,9 +1,10 @@
 // components/Profile/Refferals.tsx
 'use client';
 import { useAuth } from '@/context/auth-context';
-import { useProfileContext } from '@/components/Profile/ProfileContext';
 import { useRef, useState } from 'react';
 import { AlertCircle, Copy, Check, Gift, Users, Award, Loader2, ExternalLink } from 'lucide-react';
+import Image from 'next/image';
+import { useProfileContext } from '@/context/profile-context';
 
 export default function Referrals() {
   const { user, isLoading: authLoading } = useAuth();
@@ -94,7 +95,7 @@ export default function Referrals() {
   return (
     <div className="mx-auto px-4 sm:px-6 lg:px-8 py-8">
       <div className="flex items-center justify-between mb-6">
-        <h1 className="text-2xl font-bold text-gray-900">Referral Program</h1>
+        <h1 className="text-2xl font-bold text-gray-900 nohemi-bold">Referral <span className='border-b-3 border-primary text-primary'>Program</span></h1>
       </div>
 
       {/* Referral Stats Cards */}
@@ -108,7 +109,7 @@ export default function Referrals() {
             </div>
           </div>
         </div>
-        <div className="bg-white shadow rounded-lg p-4 border border-gray-200">
+        <div className="bg-white  rounded-lg p-4 border border-gray-200">
           <div className="flex items-center">
             <Award className="h-8 w-8 text-green-500" />
             <div className="ml-4">
@@ -117,7 +118,7 @@ export default function Referrals() {
             </div>
           </div>
         </div>
-        <div className="bg-white shadow rounded-lg p-4 border border-gray-200">
+        <div className="bg-white  rounded-lg p-4 border border-gray-200">
           <div className="flex items-center">
             <Gift className="h-8 w-8 text-purple-500" />
             <div className="ml-4">
@@ -126,7 +127,7 @@ export default function Referrals() {
             </div>
           </div>
         </div>
-        <div className="bg-white shadow rounded-lg p-4 border border-gray-200">
+        <div className="bg-white  rounded-lg p-4 border border-gray-200">
           <div className="flex items-center">
             <Gift className="h-8 w-8 text-indigo-500" />
             <div className="ml-4">
@@ -152,7 +153,7 @@ export default function Referrals() {
       {!error && (
         <>
           {/* Referral Link Section */}
-          <div className="bg-white shadow sm:rounded-lg overflow-hidden border border-gray-200 mb-8">
+          <div className="bg-white  sm:rounded-lg overflow-hidden border border-gray-200 mb-8">
             <div className="px-4 py-5 sm:px-6 bg-blue-50 border-b border-gray-200">
               <h3 className="text-lg font-medium text-gray-900">Your Referral Link</h3>
               <p className="mt-1 text-sm text-gray-600">
@@ -164,13 +165,13 @@ export default function Referrals() {
                 <input
                   ref={linkInputRef}
                   type="text"
-                  className="flex-1 block w-full min-w-0 border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500 sm:text-sm"
+                  className="flex-1 block w-full min-w-0 border px-2 border-gray-300 rounded-md -sm focus:ring-blue-500 focus:border-blue-500 sm:text-sm"
                   value={referrals.referralLink}
                   readOnly
                 />
                 <button
                   onClick={handleCopyLink}
-                  className="inline-flex items-center px-4 py-2 border border-transparent shadow-sm text-sm font-medium rounded-md text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
+                  className="inline-flex items-center px-4 py-2 border border-transparent -sm text-sm font-medium rounded-md text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
                 >
                   {copied ? (
                     <>
@@ -190,27 +191,30 @@ export default function Referrals() {
                 <div className="flex space-x-2">
                   <button
                     onClick={() => handleShare('facebook')}
-                    className="inline-flex items-center px-3 py-2 border border-gray-300 shadow-sm text-sm font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
+                    className="inline-flex items-center  text-sm font-medium rounded-md text-gray-700 cursor-pointer focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
                   >
-                    Facebook
+                    <Image src='https://img.icons8.com/?size=100&id=uLWV5A9vXIPu&format=png&color=000000' alt='Facebook' width={40} height={40} />
                   </button>
                   <button
                     onClick={() => handleShare('twitter')}
-                    className="inline-flex items-center px-3 py-2 border border-gray-300 shadow-sm text-sm font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
+                    className="inline-flex items-center  text-sm font-medium rounded-md text-gray-700 cursor-pointer focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
                   >
-                    Twitter
+
+                    <Image src='https://img.icons8.com/?size=100&id=phOKFKYpe00C&format=png&color=000000' alt='X' width={40} height={40} />
                   </button>
                   <button
                     onClick={() => handleShare('whatsapp')}
-                    className="inline-flex items-center px-3 py-2 border border-gray-300 shadow-sm text-sm font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
+                    className="inline-flex items-center text-sm font-medium rounded-md text-gray-700 cursor-pointer focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
                   >
-                    WhatsApp
+                    <Image src='https://img.icons8.com/?size=100&id=16713&format=png&color=000000' alt='Whatsapp' width={40} height={40} />
+
                   </button>
                   <button
                     onClick={() => handleShare('email')}
-                    className="inline-flex items-center px-3 py-2 border border-gray-300 shadow-sm text-sm font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
+                    className="inline-flex items-center  text-sm font-medium rounded-md text-gray-700 cursor-pointer focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
                   >
-                    Email
+                    <Image src='https://img.icons8.com/?size=100&id=P7UIlhbpWzZm&format=png&color=000000' alt='Gmail' width={40} height={40} />
+                    
                   </button>
                 </div>
               </div>
@@ -225,7 +229,7 @@ export default function Referrals() {
           </div>
 
           {/* Your Available Coupons */}
-          <div className="bg-white shadow sm:rounded-lg overflow-hidden border border-gray-200 mb-8">
+          <div className="bg-white  sm:rounded-lg overflow-hidden border border-gray-200 mb-8">
             <div className="px-4 py-5 sm:px-6 bg-green-50 border-b border-gray-200">
               <h3 className="text-lg font-medium text-gray-900">Your Coupons</h3>
               <p className="mt-1 text-sm text-gray-600">
@@ -238,9 +242,8 @@ export default function Referrals() {
                   {referrals.coupons.map((coupon) => (
                     <div
                       key={coupon.id}
-                      className={`border ${
-                        coupon.isUsed ? 'border-gray-200 bg-gray-50' : 'border-green-200 bg-green-50'
-                      } rounded-lg p-4 flex justify-between items-center`}
+                      className={`border ${coupon.isUsed ? 'border-gray-200 bg-gray-50' : 'border-green-200 bg-green-50'
+                        } rounded-lg p-4 flex justify-between items-center`}
                     >
                       <div>
                         <div className="flex items-center">
@@ -280,7 +283,7 @@ export default function Referrals() {
           </div>
 
           {/* Referral History */}
-          <div className="bg-white shadow sm:rounded-lg overflow-hidden border border-gray-200">
+          <div className="bg-white  sm:rounded-lg overflow-hidden border border-gray-200">
             <div className="px-4 py-5 sm:px-6 bg-gray-50 border-b border-gray-200">
               <h3 className="text-lg font-medium text-gray-900">Referral History</h3>
               <p className="mt-1 text-sm text-gray-600">
@@ -330,11 +333,10 @@ export default function Referrals() {
                           </td>
                           <td className="px-6 py-4 whitespace-nowrap">
                             <span
-                              className={`inline-flex px-2 py-1 text-xs font-medium rounded-full ${
-                                referral.status === 'completed'
+                              className={`inline-flex px-2 py-1 text-xs font-medium rounded-full ${referral.status === 'completed'
                                   ? 'bg-green-100 text-green-800'
                                   : 'bg-yellow-100 text-yellow-800'
-                              }`}
+                                }`}
                             >
                               {referral.status === 'completed' ? 'Completed' : 'Pending'}
                             </span>

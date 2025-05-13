@@ -81,33 +81,33 @@ const UserButton = () => {
                 {/* User Info */}
                 {user && (
                   <div className="px-4 py-2 text-sm text-gray-600 border-b border-gray-200">
-                    {user.firstName || user.email}
+                    {`${user.firstName! + " " + user.lastName}` || user.email}
                   </div>
                 )}
                 {/* Menu Options */}
                 <button
-                  className="w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 transition"
+                  className="w-full text-left cursor-pointer px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 transition"
                   onClick={() => handleNavigation("/profile")}
                   role="menuitem"
                 >
-                  My Profile
+                  Profile
                 </button>
                 <button
-                  className="w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 transition"
-                  onClick={() => handleNavigation("/wishlist")}
+                  className="w-full text-left cursor-pointer px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 transition"
+                  onClick={() => handleNavigation("/profile?tab=wishlist")}
                   role="menuitem"
                 >
-                  My Wishlist
+                  Wishlist
                 </button>
                 <button
-                  className="w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 transition"
-                  onClick={() => handleNavigation("/orders")}
+                  className="w-full text-left cursor-pointer px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 transition"
+                  onClick={() => handleNavigation("/profile?tab=orders")}
                   role="menuitem"
                 >
                   My Orders
                 </button>
                 <button
-                  className="w-full text-left px-4 py-2 text-sm text-red-600 hover:bg-red-50 transition"
+                  className="w-full text-left cursor-pointer px-4 py-2 text-sm text-red-600 hover:bg-red-50 transition"
                   onClick={handleLogout}
                   role="menuitem"
                 >
@@ -117,14 +117,14 @@ const UserButton = () => {
             ) : (
               <>
                 <button
-                  className="w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 transition"
+                  className="w-full text-left cursor-pointer px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 transition"
                   onClick={() => handleNavigation("/signin")}
                   role="menuitem"
                 >
                   Signin
                 </button>
                 <button
-                  className="w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 transition"
+                  className="w-full text-left cursor-pointer px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 transition"
                   onClick={() => handleNavigation("/signup")}
                   role="menuitem"
                 >

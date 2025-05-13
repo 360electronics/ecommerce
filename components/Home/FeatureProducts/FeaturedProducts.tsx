@@ -1,14 +1,47 @@
-// components/Home/FeatureProducts/FeaturedProducts.tsx
 'use client';
-import { useState, memo } from 'react';
+import { useState, memo, useMemo } from 'react';
 import ProductCardwithoutCart from '@/components/Product/ProductCards/ProductCardwithoutCart';
 import PrimaryLinkButton from '@/components/Reusable/PrimaryLinkButton';
 import { ProductCardSkeleton } from '@/components/Reusable/ProductCardSkeleton';
 import { useHomeStore } from '@/store/home-store';
 
+interface VariantCard {
+  productId: string;
+  variantId: string;
+  variant: {
+    name: string;
+    slug: string;
+    mrp: number;
+    ourPrice: number;
+    productImages: string[];
+  };
+  averageRating: number;
+  createdAt: string;
+}
+
 const FeaturedProducts: React.FC = () => {
   const { featuredProducts } = useHomeStore();
-  const [loading] = useState(false); // No loading state since data is pre-fetched
+  const [loading] = useState(false);
+
+  const variantCards: VariantCard[] = useMemo(() => {
+    return featuredProducts
+      .map(({ productId, variantId, product, variant }: any) => ({
+        productId,
+        variantId,
+        variant,
+        averageRating: product?.averageRating ?? 0,
+        createdAt: product?.createdAt ?? '',
+      }))
+      .sort((a, b) =>
+        new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
+      )
+      .slice(0, 10);
+  }, [featuredProducts]);
+
+  const calculateDiscount = (mrp: number, ourPrice: number): number => {
+    if (mrp <= 0 || ourPrice >= mrp) return 0;
+    return Math.round(((mrp - ourPrice) / mrp) * 100);
+  };
 
   const renderSkeletons = () => {
     return Array(5)
@@ -33,24 +66,40 @@ const FeaturedProducts: React.FC = () => {
           <div className="flex overflow-x-auto pb-10 snap-x snap-mandatory minimal-scrollbar">
             {loading ? (
               <div className="flex gap-6 pl-1">{renderSkeletons()}</div>
-            ) : featuredProducts.length > 0 ? (
+            ) : variantCards.length > 0 ? (
               <div className="flex gap-6 pl-1">
-                {featuredProducts.map((product) => (
-                  <div key={product.id} className="snap-start flex-shrink-0 w-72">
-                    <ProductCardwithoutCart
-                      image={product.productImages[0] ?? 'placeholder.svg'}
-                      name={product.name}
-                      rating={Number(product.averageRating)}
-                      ourPrice={Number(product.ourPrice)}
-                      mrp={Number(product.mrp)}
-                      discount={product.discount}
-                      slug={product.slug}
-                    />
-                  </div>
-                ))}
+                {variantCards.map(({ productId, variantId, variant, averageRating }) => {
+                  const mrp = Number(variant.mrp);
+                  const ourPrice = Number(variant.ourPrice);
+                  const discount = calculateDiscount(mrp, ourPrice);
+
+                  return (
+                    <div
+                      key={`${productId}-${variantId}`}
+                      className="snap-start flex-shrink-0 relative"
+                      style={{ width: 'calc(80vw - 32px)', maxWidth: '22rem' }}
+                    >
+                      <span className="absolute top-2 left-2 bg-yellow-500 text-white text-xs px-2 py-1 rounded">
+                        Featured
+                      </span>
+                      <ProductCardwithoutCart
+                        productId={productId}
+                        variantId={variantId}
+                        slug={variant.slug}
+                        className="w-full h-full"
+                        image={variant.productImages?.[0] ?? '/placeholder.svg'}
+                        name={variant.name}
+                        rating={Number(averageRating)}
+                        ourPrice={ourPrice}
+                        mrp={mrp}
+                        discount={discount}
+                      />
+                    </div>
+                  );
+                })}
               </div>
             ) : (
-              <div className="flex flex-col items-center justify-center py-16 text-center px-4">
+              <div className="flex flex-col mx-auto items-center justify-center py-16 text-center px-4">
                 <div className="mb-6 text-primary animate-bounce">
                   <svg
                     xmlns="http://www.w3.org/2000/svg"
@@ -69,7 +118,7 @@ const FeaturedProducts: React.FC = () => {
                 </div>
                 <h3 className="text-2xl font-semibold text-gray-700 nohemi-bold">No Products Found</h3>
                 <p className="text-sm text-gray-500 mt-2 max-w-sm">
-                  We couldn&apos;t find any items in this category. Please try again later or explore other categories.
+                  No featured products are available. Please check back later or explore other categories.
                 </p>
                 <PrimaryLinkButton href="/category/all" className="mt-6">
                   Browse All Products

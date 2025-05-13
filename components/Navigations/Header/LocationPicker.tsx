@@ -100,9 +100,9 @@ const LocationPicker: React.FC<LocationPickerProps> = ({ isMobile = false }) => 
                 setDistrict(districtName);
                 setPincode(pincode);
                 
-                localStorage.setItem('userLocation', locationText);
-                localStorage.setItem('userDistrict', districtName);
-                localStorage.setItem('userPincode', pincode);
+                // localStorage.setItem('userLocation', locationText);
+                // localStorage.setItem('userDistrict', districtName);
+                // localStorage.setItem('userPincode', pincode);
             } else {
                 setError('Invalid pincode or location not found');
             }

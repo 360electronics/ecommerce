@@ -14,7 +14,7 @@ export async function fetchBanners() {
       }
   
       const data = await res.json();
-      console.log('fetchBanners response:', data); 
+      // console.log('fetchBanners response:', data); 
       return data; // Expected format: { data: Banner[] }
     } catch (error) {
       console.error('Failed to fetch banners:', error);

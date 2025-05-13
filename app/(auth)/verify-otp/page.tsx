@@ -1,12 +1,13 @@
 "use client";
 
-import { useState, useEffect, useCallback, useRef } from "react";
-import { useRouter } from "next/navigation";
+import { useState, useEffect, useCallback, useRef, Suspense } from "react";
+import { useRouter, useSearchParams } from "next/navigation"; // Import useSearchParams
 import Image from "next/image";
 import { toast } from "react-hot-toast";
 import Link from "next/link";
 import Cookies from "js-cookie";
 import { cn } from "@/lib/utils";
+import { useAuth } from "@/context/auth-context";
 
 interface Banner {
   id: string;
@@ -19,13 +20,24 @@ interface Banner {
   link: string;
 }
 
-interface VerifyOTPResponse {
+export interface VerifyOTPResponse {
+  message: string;
+  user: {
+    id: string;
+    firstName: string | null;
+    lastName: string | null;
+    email: string;
+    phoneNumber: string | null;
+    role: "user" | "admin" | "guest";
+    emailVerified: boolean;
+    phoneVerified: boolean;
+    lastLogin?: string;
+  };
   token: string;
-  user: { role: string };
   error?: string;
 }
 
-export default function VerifyOTPPage() {
+function VerifyOTPContent() {
   const [otp, setOTP] = useState<string[]>(["", "", "", "", "", ""]);
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
@@ -36,11 +48,12 @@ export default function VerifyOTPPage() {
   const [userId, setUserId] = useState<string | null>(null);
   const [type, setType] = useState<"email" | "phone">("email");
   const router = useRouter();
+  const searchParams = useSearchParams(); // Use useSearchParams
   const inputRefs = useRef<(HTMLInputElement | null)[]>(Array(6).fill(null));
+  const { setAuth } = useAuth();
 
   // Extract params from URL
   useEffect(() => {
-    const searchParams = new URLSearchParams(window.location.search);
     const userIdParam = searchParams.get("userId");
     const typeParam = (searchParams.get("type") as "email" | "phone") || "email";
 
@@ -50,7 +63,7 @@ export default function VerifyOTPPage() {
 
     setUserId(userIdParam);
     setType(typeParam);
-  }, []);
+  }, [searchParams]);
 
   // Countdown timer
   useEffect(() => {
@@ -99,20 +112,22 @@ export default function VerifyOTPPage() {
 
   // Handle OTP input changes
   const handleOTPChange = (index: number, value: string) => {
-    if (!/^\d?$/.test(value)) return; // Allow only single digits
+    if (!/^\d?$/.test(value)) return;
 
     const newOTP = [...otp];
     newOTP[index] = value;
     setOTP(newOTP);
 
-    // Auto-focus next input
     if (value && index < 5) {
       inputRefs.current[index + 1]?.focus();
     }
   };
 
   // Handle backspace
-  const handleKeyDown = (index: number, e: React.KeyboardEvent<HTMLInputElement>) => {
+  const handleKeyDown = (
+    index: number,
+    e: React.KeyboardEvent<HTMLInputElement>
+  ) => {
     if (e.key === "Backspace" && !otp[index] && index > 0) {
       inputRefs.current[index - 1]?.focus();
     }
@@ -172,11 +187,9 @@ export default function VerifyOTPPage() {
         throw new Error(data.error || "Failed to verify OTP");
       }
 
-      /// Store tokens
       localStorage.setItem("authToken", data.token);
       Cookies.set("authToken", data.token, { expires: 0.5 });
 
-      // Store userRole as plain string
       const roleValue =
         typeof data.user.role === "string"
           ? data.user.role
@@ -185,7 +198,14 @@ export default function VerifyOTPPage() {
       Cookies.set("userRole", roleValue, { expires: 0.5 });
 
       toast.success("OTP verified successfully!");
-      router.push("/");
+
+      if (roleValue === "admin") {
+        router.push("/admin/dashboard");
+      } else {
+        router.push("/");
+      }
+
+      setAuth(true, data.user);
     } catch (err: unknown) {
       const errorMessage = err instanceof Error ? err.message : "Failed to verify OTP";
       setError(errorMessage);
@@ -441,5 +461,13 @@ export default function VerifyOTPPage() {
         </div>
       </div>
     </div>
+  );
+}
+
+export default function VerifyOTPPage() {
+  return (
+    <Suspense fallback={<div className="min-h-screen bg-gray-50 flex items-center justify-center">Loading...</div>}>
+      <VerifyOTPContent />
+    </Suspense>
   );
 }

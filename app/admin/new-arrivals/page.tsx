@@ -10,8 +10,8 @@ import Image from "next/image"
 
 export default function NewArrivalsPage() {
   const [searchTerm, setSearchTerm] = useState("")
-  const [searchResults, setSearchResults] = useState<Product[]>([])
-  const [newArrivalsProducts, setNewArrivalsProducts] = useState<Product[]>([])
+  const [searchResults, setSearchResults] = useState<any[]>([])
+  const [newArrivalsVariants, setNewArrivalsVariants] = useState<any[]>([])
   const [showResults, setShowResults] = useState(false)
   const [isSaved, setIsSaved] = useState(false)
   const [isLoading, setIsLoading] = useState(false)
@@ -28,7 +28,16 @@ export default function NewArrivalsPage() {
         const newArrivals = await fetchNewArrivalsProducts()
 
         if (products) setAllProducts(products)
-        if (newArrivals) setNewArrivalsProducts(newArrivals)
+        if (newArrivals) {
+          setNewArrivalsVariants(
+            newArrivals.map(({ productId, variantId, product, variant }: any) => ({
+              productId,
+              variantId,
+              product,
+              variant,
+            }))
+          );
+        }
       } catch (error) {
         console.error("Error fetching products:", error)
       } finally {
@@ -40,24 +49,33 @@ export default function NewArrivalsPage() {
   }, [])
 
   // Filter available products based on search term
-  const filteredProducts = useMemo(() => {
+  const filteredVariants = useMemo(() => {
     if (!searchTerm.trim()) return []
 
-    const newArrivalsProductIds = newArrivalsProducts.map(p => p.id)
+    const newArrivalsVariantIds = newArrivalsVariants.map(p => p.id)
 
-    // Filter products that are not already newarrivals
+    // Flatten products to variants, excluding already featured ones
     return allProducts
-      .filter(product => !newArrivalsProductIds.includes(product.id))
-      .filter(product =>
-        product?.name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        String(product?.id).includes(searchTerm)
+      .flatMap((product) =>
+        product.variants.map((variant) => ({
+          productId: product.id,
+          variantId: variant.id,
+          product,
+          variant,
+        }))
       )
-  }, [allProducts, newArrivalsProducts, searchTerm])
-
+      .filter((selection) => !newArrivalsVariantIds.includes(selection.variantId))
+      .filter(
+        (selection) =>
+          selection.variant.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+          selection.product.shortName.toLowerCase().includes(searchTerm.toLowerCase()) ||
+          selection.variant.id.includes(searchTerm)
+      );
+  }, [allProducts, newArrivalsVariants, searchTerm]);
   // Update search results when filtered products change
   useEffect(() => {
-    setSearchResults(filteredProducts)
-  }, [filteredProducts])
+    setSearchResults(filteredVariants)
+  }, [filteredVariants])
 
   // Close search results when clicking outside
   useEffect(() => {
@@ -90,30 +108,33 @@ export default function NewArrivalsPage() {
     }, 300)
   }
 
-  // Handle product selection
-  const handleSelectProduct = (product: Product) => {
-    setNewArrivalsProducts(prev => [...prev, product])
-    setSearchResults(prev => prev.filter(p => p.id !== product.id))
-    setIsSaved(false)
-    setSearchTerm("")
-    setShowResults(false)
-  }
+  // Handle variant selection
+  const handleSelectVariant = (selection: any) => {
+    setNewArrivalsVariants((prev) => [...prev, selection]);
+    setSearchResults((prev) => prev.filter((v) => v.variantId !== selection.variantId));
+    setIsSaved(false);
+    setSearchTerm('');
+    setShowResults(false);
+  };
+
 
   // Handle product removal
-  const handleRemoveProduct = async (productId: string) => {
+  // Handle variant removal
+  const handleRemoveVariant = async (variantId: string) => {
     try {
       const res = await fetch('/api/products/new-arrivals', {
         method: 'DELETE',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ productId }),
+        body: JSON.stringify({ variantId }),
       });
 
-      if (!res.ok) throw new Error('Failed to remove product');
+      if (!res.ok) throw new Error('Failed to remove variant');
 
-      setNewArrivalsProducts(prev => prev.filter(product => product.id !== productId));
+      setNewArrivalsVariants((prev) => prev.filter((v) => v.variantId !== variantId));
       setIsSaved(false);
     } catch (error) {
-      console.error('Remove product error:', error);
+      console.error('Remove variant error:', error);
+      alert('Failed to remove featured variant');
     }
   };
 
@@ -121,38 +142,32 @@ export default function NewArrivalsPage() {
   const handleSave = async () => {
     setIsLoading(true);
     try {
-      // Extract product IDs from newarrivals products
-      const productIds = newArrivalsProducts.map(product => product.id);
+      const variantSelections = newArrivalsVariants.map(({ productId, variantId }) => ({
+        productId,
+        variantId,
+      }));
 
-      // Call the API to save newarrivals products
       const response = await fetch('/api/products/new-arrivals', {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({ productIds }),
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ variantSelections }),
       });
 
       if (!response.ok) {
         const errorData = await response.json();
-        throw new Error(errorData.message || 'Failed to save newarrivals products');
+        throw new Error(errorData.message || 'Failed to save featured variants');
       }
 
-      // Show success message
       setIsSaved(true);
-
-      // Hide success message after 3 seconds
-      setTimeout(() => {
-        setIsSaved(false);
-      }, 3000);
+      setTimeout(() => setIsSaved(false), 3000);
     } catch (error) {
-      console.error("Error saving newarrivals products:", error);
-      // Add better error handling here if needed
-      alert(error instanceof Error ? error.message : "Failed to save newarrivals products");
+      console.error('Error saving featured variants:', error);
+      alert(error instanceof Error ? error.message : 'Failed to save featured variants');
     } finally {
       setIsLoading(false);
     }
-  }
+  };
+
 
   // Clear search
   const clearSearch = () => {
@@ -185,11 +200,11 @@ export default function NewArrivalsPage() {
             <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
             <Input
               ref={searchInputRef}
-              placeholder="Search products by name or ID"
+              placeholder="Search variants by name or ID"
               value={searchTerm}
               onChange={(e) => handleSearch(e.target.value)}
               onFocus={() => {
-                if (searchTerm.trim()) setShowResults(true)
+                if (searchTerm.trim()) setShowResults(true);
               }}
               className="pl-10 py-4 w-full pr-10"
             />
@@ -202,11 +217,10 @@ export default function NewArrivalsPage() {
               </button>
             )}
           </div>
-
           <Button
             onClick={handleSave}
             className="flex items-center gap-2 bg-blue-600 hover:bg-blue-700 text-white"
-            disabled={newArrivalsProducts.length === 0}
+            disabled={newArrivalsVariants.length === 0 || isLoading}
           >
             <Save className="h-4 w-4" />
             Save
@@ -234,11 +248,11 @@ export default function NewArrivalsPage() {
             </div>
           ) : searchResults.length > 0 ? (
             <div className="grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-3">
-              {searchResults.map((product) => (
+              {searchResults.map((selection) => (
                 <div
-                  key={product.id}
+                  key={selection.variantId}
                   className="relative cursor-pointer transition-transform hover:scale-105"
-                  onClick={() => handleSelectProduct(product)}
+                  onClick={() => handleSelectVariant(selection)}
                 >
                   <div className="absolute right-3 top-3 z-20">
                     <Button
@@ -246,51 +260,43 @@ export default function NewArrivalsPage() {
                       variant="secondary"
                       className="bg-blue-500 hover:bg-blue-600 text-white"
                       onClick={(e) => {
-                        e.stopPropagation()
-                        handleSelectProduct(product)
+                        e.stopPropagation();
+                        handleSelectVariant(selection);
                       }}
                     >
                       Add
                     </Button>
                   </div>
-
                   <div>
-
                     <div className="mb-4 relative w-full aspect-square border group border-gray-100 rounded-md bg-[#F4F4F4] overflow-hidden">
                       <div className="absolute inset-0 flex items-center justify-center p-6">
                         <Image
-                          src={product.productImages?.[0] ?? '/placeholder.png' }
-                          alt={product.name}
+                          src={selection.variant.productImages[0] ?? '/placeholder.png'}
+                          alt={selection.variant.name}
                           width={250}
                           height={250}
                           className="max-h-full max-w-full object-contain group-hover:scale-105 duration-200"
                         />
                       </div>
                     </div>
-
                     <div className="space-y-2">
-                      <h3 className="text-base font-medium text-gray-900 line-clamp-2">{product.name}</h3>
-
-
-
-                      {/* Price */}
+                      <h3 className="text-base font-medium text-gray-900 line-clamp-2">
+                        {selection.variant.name}
+                      </h3>
+                      <p className="text-sm text-gray-500">{selection.product.shortName}</p>
                       <div className="flex items-center flex-wrap gap-2">
-                        {product.ourPrice !== null && product.ourPrice !== undefined && (
-                          <span className="text-lg font-bold">₹{product.ourPrice.toLocaleString()}</span>
+                        {selection.variant.ourPrice && (
+                          <span className="text-lg font-bold">
+                            ₹{Number(selection.variant.ourPrice).toLocaleString()}
+                          </span>
                         )}
-                        {product.mrp &&
-                          Number(product.mrp) > 0 &&
-                          product.ourPrice &&
-                          Number(product.mrp) > Number(product.ourPrice) && (
+                        {selection.variant.mrp &&
+                          Number(selection.variant.mrp) > Number(selection.variant.ourPrice) && (
                             <span className="text-sm text-gray-500 line-through">
-                              MRP {Number(product.mrp).toLocaleString()}
+                              MRP {Number(selection.variant.mrp).toLocaleString()}
                             </span>
                           )}
-
-
                       </div>
-
-
                     </div>
                   </div>
                 </div>
@@ -310,11 +316,11 @@ export default function NewArrivalsPage() {
 
       {/* Selected newarrivals products */}
       <div>
-        <h2 className="mb-4 text-lg font-medium">Current NewArrivals Products ({newArrivalsProducts.length})</h2>
-        {newArrivalsProducts.length > 0 ? (
+        <h2 className="mb-4 text-lg font-medium">Current NewArrivals Products ({newArrivalsVariants.length})</h2>
+        {newArrivalsVariants.length > 0 ? (
           <div className="grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-3">
-            {newArrivalsProducts.map((product) => (
-              <div key={product.id} className="relative group">
+            {newArrivalsVariants.map((selection) => (
+              <div key={selection.variant.id} className="relative group">
                 <div className="absolute right-3 top-3 z-20 opacity-0 group-hover:opacity-100 transition-opacity">
                   <Button
                     size="sm"
@@ -322,7 +328,7 @@ export default function NewArrivalsPage() {
                     className="bg-red-500 hover:bg-red-600 text-white"
                     onClick={(e) => {
                       e.stopPropagation()
-                      handleRemoveProduct(product.id!)
+                      handleRemoveVariant(selection.variant.id!)
                     }}
                   >
                     Remove
@@ -334,8 +340,8 @@ export default function NewArrivalsPage() {
                   <div className="mb-4 relative w-full aspect-square border group border-gray-100 rounded-md bg-[#F4F4F4] overflow-hidden">
                     <div className="absolute inset-0 flex items-center justify-center p-6">
                       <Image
-                        src={product.productImages?.[0] ?? '/placeholder.png' }
-                        alt={product.name}
+                        src={selection.variant.productImages?.[0] ?? '/placeholder.png'}
+                        alt={selection.variant.name}
                         width={250}
                         height={250}
                         className="max-h-full max-w-full object-contain group-hover:scale-105 duration-200"
@@ -344,25 +350,23 @@ export default function NewArrivalsPage() {
                   </div>
 
                   <div className="space-y-2">
-                    <h3 className="text-base font-medium text-gray-900 line-clamp-2">{product.name}</h3>
+                    <h3 className="text-base font-medium text-gray-900 line-clamp-2">{selection.variant.name}</h3>
 
 
 
                     {/* Price */}
                     <div className="flex items-center flex-wrap gap-2">
-                      {product.ourPrice !== null && product.ourPrice !== undefined && (
-                        <span className="text-lg font-bold">₹{product.ourPrice.toLocaleString()}</span>
+                      {selection.variant.ourPrice !== null && selection.variant.ourPrice !== undefined && (
+                        <span className="text-lg font-bold">₹{selection.variant.ourPrice}</span>
                       )}
-                      {product.mrp &&
-                        Number(product.mrp) > 0 &&
-                        product.ourPrice &&
-                        Number(product.mrp) > Number(product.ourPrice) && (
+                      {selection.variant.mrp &&
+                        Number(selection.variant.mrp) > 0 &&
+                        selection.variant.ourPrice &&
+                        Number(selection.variant.mrp) > Number(selection.variant.ourPrice) && (
                           <span className="text-sm text-gray-500 line-through">
-                            MRP {Number(product.mrp).toLocaleString()}
+                            MRP {Number(selection.variant.mrp)}
                           </span>
                         )}
-
-
                     </div>
 
 

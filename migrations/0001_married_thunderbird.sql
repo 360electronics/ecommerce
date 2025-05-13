@@ -1,0 +1,1 @@
+ALTER TABLE "variants" ADD COLUMN "storage" varchar(100);

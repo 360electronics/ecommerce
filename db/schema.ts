@@ -5,3 +5,5 @@ export * from "./schema/banners/banners.schema";
 export * from "./schema/orders/orders.schema";
 export * from "./schema/wishlist/wishlist.schema";
 export * from "./schema/referrals/referrals.schema";
+export * from "./schema/tickets/ticket.schema";
+export * from "./schema/cart/cart.schema";

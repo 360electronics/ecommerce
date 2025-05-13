@@ -1,7 +1,62 @@
-"use client";
+// components/Product/ProductDetails/ProductSpecifications.tsx
+'use client';
 
-import { useProductContext } from "@/context/product-context";
-import { Product } from "@/types/product";
+import { useProductContext } from '@/context/product-context';
+
+export interface FlattenedProduct {
+  id: string;
+  productId: string;
+  name: string;
+  mrp: number;
+  ourPrice: number;
+  averageRating: string;
+  brand: string;
+  category: string;
+  color: string;
+  createdAt: string;
+  description: string | null;
+  dimensions: string;
+  material: string;
+  productImages: string[];
+  productParent: {
+    averageRating: string;
+    brand: string;
+    category: string;
+    createdAt: string;
+    description: string | null;
+    id: string;
+    ratingCount: string;
+    shortName: string;
+    specifications: Array<{
+      groupName: string;
+      fields: Array<{ fieldName: string; fieldValue: string }>;
+    }>;
+    status: string;
+    subProductStatus: string;
+    tags: string[];
+    totalStocks: string;
+    updatedAt: string;
+    variants: Array<{
+      id: string;
+      color: string;
+      storage: string;
+      slug: string;
+      mrp: number;
+      ourPrice: number;
+      stock: string;
+    }>;
+  };
+  sku: string;
+  slug: string;
+  stock: string;
+  storage: string;
+  tags: string[];
+  totalStocks: string;
+  updatedAt: string;
+  weight: string;
+  deliveryDate?: string;
+  discount?: number;
+}
 
 interface ProductSpecificationsProps {
   className?: string;
@@ -10,17 +65,31 @@ interface ProductSpecificationsProps {
 export default function ProductSpecifications({ className }: ProductSpecificationsProps) {
   const { product } = useProductContext();
 
-  // Type guard to verify specifications is a valid array
+  // Type guard for specifications
   const isSpecificationArray = (
-    specs: Product["specifications"]
+    specs: FlattenedProduct['productParent']['specifications']
   ): specs is Array<{
     groupName: string;
     fields: Array<{ fieldName: string; fieldValue: string }>;
   }> => {
-    return Array.isArray(specs);
+    if (!Array.isArray(specs)) return false;
+  
+    return specs.every((spec) => {
+      if (typeof spec !== 'object' || spec === null) return false;
+      if (typeof spec.groupName !== 'string') return false;
+      if (!Array.isArray(spec.fields)) return false;
+  
+      return spec.fields.every((field) => {
+        if (typeof field !== 'object' || field === null) return false;
+        return (
+          typeof field.fieldName === 'string' &&
+          typeof field.fieldValue === 'string'
+        );
+      });
+    });
   };
 
-  const specifications = product.specifications;
+  const specifications = product.productParent.specifications;
   const hasSpecifications = isSpecificationArray(specifications) && specifications.length > 0;
 
   return (
@@ -32,7 +101,7 @@ export default function ProductSpecifications({ className }: ProductSpecificatio
 
         {hasSpecifications ? (
           specifications.map((section, sectionIndex) => (
-            <div key={sectionIndex} className={sectionIndex > 0 ? "mt-8 pt-8 border-t" : ""}>
+            <div key={sectionIndex} className={sectionIndex > 0 ? 'mt-8 pt-8 border-t' : ''}>
               <h3 className="md:font-bold font-medium md:text-base text-sm mb-4">
                 {section.groupName}
               </h3>
@@ -52,11 +121,7 @@ export default function ProductSpecifications({ className }: ProductSpecificatio
         ) : (
           <div className="py-4">
             <p className="text-gray-500">
-              {specifications === true
-                ? "Specifications available but not detailed."
-                : specifications === false
-                ? "No specifications available."
-                : "No detailed specifications available for this product."}
+              No detailed specifications available for this product.
             </p>
 
             {(product.brand || product.material || product.dimensions || product.weight) && (

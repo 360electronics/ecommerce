@@ -1,16 +1,32 @@
-// components/Profile/ProfileInfo.tsx
 'use client';
 import { useEffect, useState } from 'react';
 import { useAuth } from '@/context/auth-context';
-import { useProfileContext } from '@/components/Profile/ProfileContext';
+import { AlertCircle, Loader2, Pencil, UserRoundPen, X } from 'lucide-react';
+import { useProfileContext } from '@/context/profile-context';
+
+
+interface Address {
+  id: string;
+  fullName: string;
+  phoneNumber: string;
+  addressLine1: string;
+  addressLine2: string;
+  city: string;
+  state: string;
+  postalCode: string;
+  country: string;
+  addressType: 'home' | 'work' | 'other';
+}
 
 export default function ProfileInfo() {
   const { user, isLoggedIn, isLoading: authLoading, setAuth } = useAuth();
   const { profileData, isLoading, error: contextError, refetch } = useProfileContext();
+  const [isProfileModalOpen, setIsProfileModalOpen] = useState(false);
+  const [isAddressModalOpen, setIsAddressModalOpen] = useState(false);
+  const [editingAddress, setEditingAddress] = useState<Address | null>(null);
   const [name, setName] = useState(profileData.name);
   const [email, setEmail] = useState(profileData.email);
   const [phoneNumber, setPhoneNumber] = useState(profileData.phoneNumber);
-  const [addresses, setAddresses] = useState(profileData.addresses);
   const [newAddress, setNewAddress] = useState({
     fullName: '',
     phoneNumber: '',
@@ -20,21 +36,19 @@ export default function ProfileInfo() {
     state: '',
     postalCode: '',
     country: '',
-    addressType: '',
+    addressType: 'home' as 'home' | 'work' | 'other',
   });
   const [isSaving, setIsSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState<string | null>(null);
 
-  // Sync local state when context data changes
   useEffect(() => {
     setName(profileData.name);
     setEmail(profileData.email);
     setPhoneNumber(profileData.phoneNumber);
-    setAddresses(profileData.addresses);
   }, [profileData]);
 
-  const handleSave = async () => {
+  const handleSaveProfile = async () => {
     setError(null);
     setSuccess(null);
 
@@ -57,7 +71,8 @@ export default function ProfileInfo() {
 
       setAuth(true, data.user);
       setSuccess('Profile updated successfully');
-      refetch(); // Refetch data to update context
+      refetch();
+      setIsProfileModalOpen(false);
     } catch (err) {
       setError(err instanceof Error ? err.message : 'An error occurred');
     } finally {
@@ -65,19 +80,28 @@ export default function ProfileInfo() {
     }
   };
 
-  const handleAddAddress = async () => {
+  const handleSaveAddress = async () => {
+    setError(null);
+    setSuccess(null);
+
+    const addressData = { ...newAddress, userId: user?.id };
+    const isEditing = !!editingAddress;
+    const url = isEditing ? `/api/users/addresses/${editingAddress?.id}` : '/api/users/addresses';
+    const method = isEditing ? 'PUT' : 'POST';
+
     try {
-      const res = await fetch('/api/users/addresses', {
-        method: 'POST',
+      const res = await fetch(url, {
+        method,
         headers: { 'Content-Type': 'application/json' },
         credentials: 'include',
-        body: JSON.stringify({ ...newAddress, userId: user?.id }),
+        body: JSON.stringify(addressData),
       });
 
       const data = await res.json();
-      if (!res.ok) throw new Error(data.error || 'Failed to add address');
+      if (!res.ok) throw new Error(data.error || `Failed to ${isEditing ? 'update' : 'add'} address`);
 
-      setAddresses((prev) => [...prev, data]);
+      setSuccess(`Address ${isEditing ? 'updated' : 'added'} successfully`);
+      refetch();
       setNewAddress({
         fullName: '',
         phoneNumber: '',
@@ -89,138 +113,273 @@ export default function ProfileInfo() {
         country: '',
         addressType: 'home',
       });
-      setSuccess('Address added successfully');
-      refetch(); // Refetch data to update context
+      setEditingAddress(null);
+      setIsAddressModalOpen(false);
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Error adding address');
+      setError(err instanceof Error ? err.message : `Error ${isEditing ? 'updating' : 'adding'} address`);
     }
   };
 
-  if (authLoading || isLoading) return <div className="text-center">Loading profile...</div>;
-  if (!isLoggedIn || !user) return <div className="text-red-600 text-center">Please sign in</div>;
+  const handleEditAddress = (address: Address) => {
+    setEditingAddress(address);
+    setNewAddress(address);
+    setIsAddressModalOpen(true);
+  };
+
+  const handleCloseAddressModal = () => {
+    setIsAddressModalOpen(false);
+    setEditingAddress(null);
+    setNewAddress({
+      fullName: '',
+      phoneNumber: '',
+      addressLine1: '',
+      addressLine2: '',
+      city: '',
+      state: '',
+      postalCode: '',
+      country: '',
+      addressType: 'home',
+    });
+  };
+
+  if (authLoading || isLoading) {
+    return (
+      <div className="flex items-center justify-center py-12">
+        <Loader2 className="h-8 w-8 animate-spin text-gray-500" />
+        <span className="ml-2 text-gray-600">Loading profile...</span>
+      </div>
+    );
+  }
+
+  if (!isLoggedIn || !user) {
+    return (
+      <div className="bg-red-50 border border-red-200 rounded-md p-4 my-4 text-center">
+        <AlertCircle className="h-5 w-5 text-red-400 inline-block mr-2" />
+        <span className="text-red-700">Please sign in to view your profile.</span>
+      </div>
+    );
+  }
 
   return (
-    <div className="max-w-2xl mx-auto p-6 bg-white rounded-lg shadow-md space-y-6">
-      <h3 className="text-xl font-semibold">Profile Information</h3>
+    <div className=" mx-auto px-4 sm:px-6 lg:px-8 py-12">
+      <h1 className="text-2xl font-bold text-gray-900 mb-8 nohemi-bold">Your <span className=' text-primary border-b-3 border-primary'>Profile</span></h1>
 
       {(error || contextError) && (
-        <div className="p-3 bg-red-100 text-red-700 rounded-md">{error || contextError}</div>
+        <div className="mb-6 p-4 bg-red-50 border border-red-200 rounded-lg flex items-center">
+          <AlertCircle className="h-5 w-5 text-red-400 mr-2" />
+          <span className="text-sm text-red-700">{error || contextError}</span>
+        </div>
       )}
-      {success && <div className="p-3 bg-green-100 text-green-700 rounded-md">{success}</div>}
-
-      <div className="grid gap-4">
-        <div>
-          <label className="block text-sm font-medium">Name</label>
-          <input
-            type="text"
-            className="input"
-            value={name}
-            onChange={(e) => setName(e.target.value)}
-          />
+      {success && (
+        <div className="mb-6 p-4 bg-green-50 border border-green-200 rounded-lg flex items-center">
+          <span className="text-sm text-green-700">{success}</span>
         </div>
+      )}
 
-        <div>
-          <label className="block text-sm font-medium">Email</label>
-          <input
-            type="email"
-            className="input"
-            value={email}
-            onChange={(e) => setEmail(e.target.value)}
-          />
+      <div className="bg-white border border-gray-200 rounded-lg p-6 mb-8">
+        <div className="flex justify-between items-center mb-4">
+          <h2 className="text-xl font-semibold text-gray-900">Personal Details</h2>
+          <button
+            onClick={() => setIsProfileModalOpen(true)}
+            className=" flex items-center justify-center gap-1 hover:underline cursor-pointer font-medium text-sm transition-colors"
+          >
+            <UserRoundPen className=' text-primary' size={20} /> Manage Profile
+          </button>
         </div>
-
-        <div>
-          <label className="block text-sm font-medium">Phone</label>
-          <input
-            type="text"
-            className="input"
-            value={phoneNumber}
-            onChange={(e) => setPhoneNumber(e.target.value)}
-          />
-        </div>
-
-        <button
-          onClick={handleSave}
-          className="bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700 disabled:opacity-50"
-          disabled={isSaving}
-        >
-          {isSaving ? 'Saving...' : 'Save Changes'}
-        </button>
-      </div>
-
-      <div className="mt-8">
-        <h4 className="text-lg font-medium mb-2">Saved Addresses</h4>
-        <div className="space-y-2">
-          {addresses.length === 0 ? (
-            <p className="text-gray-500">No saved addresses.</p>
-          ) : (
-            addresses.map((addr, idx) => (
-              <div key={idx} className="border p-3 rounded bg-gray-50">
-                <p className="font-semibold">{addr.fullName}</p>
-                <p>
-                  {addr.addressLine1}, {addr.addressLine2}
-                </p>
-                <p>
-                  {addr.city}, {addr.state} - {addr.postalCode}
-                </p>
-                <p>
-                  {addr.country} ({addr.addressType})
-                </p>
-              </div>
-            ))
-          )}
-        </div>
-      </div>
-
-      <div className="mt-8">
-        <h4 className="text-lg font-medium mb-2">Add New Address</h4>
-        <div className="grid grid-cols-2 gap-4">
-          {[
-            'fullName',
-            'phoneNumber',
-            'addressLine1',
-            'addressLine2',
-            'city',
-            'state',
-            'postalCode',
-            'country',
-          ].map((field) => (
-            <div key={field}>
-              <label className="block text-sm font-medium capitalize">
-                {field.replace(/([A-Z])/g, ' $1')}
-              </label>
-              <input
-                type="text"
-                className="input"
-                value={newAddress[field as keyof typeof newAddress]}
-                onChange={(e) =>
-                  setNewAddress({ ...newAddress, [field]: e.target.value })
-                }
-              />
-            </div>
-          ))}
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
           <div>
-            <label className="block text-sm font-medium">Address Type</label>
-            <select
-              className="input"
-              value={newAddress.addressType}
-              onChange={(e) =>
-                setNewAddress({ ...newAddress, addressType: e.target.value })
-              }
-            >
-              <option value="home">Home</option>
-              <option value="work">Work</option>
-              <option value="other">Other</option>
-            </select>
+            <p className="text-sm text-gray-500">Name</p>
+            <p className="text-lg font-medium text-gray-900">{profileData.name || 'N/A'}</p>
+          </div>
+          <div>
+            <p className="text-sm text-gray-500">Email</p>
+            <p className="text-lg font-medium text-gray-900">{profileData.email || 'N/A'}</p>
+          </div>
+          <div>
+            <p className="text-sm text-gray-500">Phone</p>
+            <p className="text-lg font-medium text-gray-900">{profileData.phoneNumber || 'N/A'}</p>
           </div>
         </div>
-        <button
-          onClick={handleAddAddress}
-          className="mt-4 w-full bg-green-600 text-white px-4 py-2 rounded hover:bg-green-700"
-        >
-          Add Address
-        </button>
       </div>
+
+      <div className="bg-white border border-gray-200 rounded-lg p-6">
+        <div className="flex justify-between items-center mb-4">
+          <h2 className="text-xl font-semibold text-gray-900">Saved Addresses</h2>
+          <button
+            onClick={() => setIsAddressModalOpen(true)}
+            className="flex items-center justify-center gap-1 hover:underline font-medium text-sm transition-colors"
+          >
+           <Pencil size={20} className=' text-primary' />  Manage Addresses
+          </button>
+        </div>
+        {profileData.addresses.length === 0 ? (
+          <p className="text-gray-500 text-center py-4">No saved addresses.</p>
+        ) : (
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            {profileData.addresses.map((addr) => (
+              <div
+                key={addr.id}
+                className="border border-gray-200 rounded-lg p-4 hover:bg-gray-50 transition-colors"
+              >
+                <div className="flex justify-between items-start">
+                  <div>
+                    <p className="font-semibold text-gray-900">{addr.fullName}</p>
+                    <p className="text-sm text-gray-600">{addr.addressLine1}</p>
+                    {addr.addressLine2 && <p className="text-sm text-gray-600">{addr.addressLine2}</p>}
+                    <p className="text-sm text-gray-600">
+                      {addr.city}, {addr.state} {addr.postalCode}
+                    </p>
+                    <p className="text-sm text-gray-600">{addr.country}</p>
+                    <p className="text-sm text-gray-500 capitalize mt-1">{addr.addressType}</p>
+                  </div>
+                  <button
+                    onClick={() => handleEditAddress(addr)}
+                    className="text-blue-600 hover:text-blue-700 text-sm"
+                  >
+                    Edit
+                  </button>
+                </div>
+              </div>
+            ))}
+          </div>
+        )}
+      </div>
+
+      {isProfileModalOpen && (
+        <div className="fixed inset-0 max-h-screen overflow-auto bg-black/70 flex items-center justify-center z-50">
+          <div className="bg-white rounded-lg p-6 w-full max-w-xl animate-fade-in">
+            <div className="flex justify-between items-center mb-4">
+              <h3 className="text-xl font-semibold text-gray-900">Edit Profile</h3>
+              <button
+                onClick={() => setIsProfileModalOpen(false)}
+                className="text-gray-500 hover:text-gray-700"
+                aria-label="Close"
+              >
+                <X className="h-5 w-5" />
+              </button>
+            </div>
+            <div className="space-y-4">
+              <div>
+                <label className="block text-sm font-medium text-gray-700">Name</label>
+                <input
+                  type="text"
+                  className="mt-1 w-full border border-gray-300 rounded-md p-2 focus:ring-blue-500 focus:border-blue-500"
+                  value={name}
+                  onChange={(e) => setName(e.target.value)}
+                  disabled={isSaving}
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700">Email</label>
+                <input
+                  type="email"
+                  className="mt-1 w-full border border-gray-300 rounded-md p-2 focus:ring-blue-500 focus:border-blue-500"
+                  value={email}
+                  onChange={(e) => setEmail(e.target.value)}
+                  disabled={isSaving}
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700">Phone</label>
+                <input
+                  type="text"
+                  className="mt-1 w-full border border-gray-300 rounded-md p-2 focus:ring-blue-500 focus:border-blue-500"
+                  value={phoneNumber}
+                  onChange={(e) => setPhoneNumber(e.target.value)}
+                  disabled={isSaving}
+                />
+              </div>
+              <div className="flex justify-end space-x-2">
+                <button
+                  onClick={() => setIsProfileModalOpen(false)}
+                  className="px-4 py-2 text-gray-700 bg-gray-100 rounded-md hover:bg-gray-200"
+                  disabled={isSaving}
+                >
+                  Cancel
+                </button>
+                <button
+                  onClick={handleSaveProfile}
+                  className="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 disabled:opacity-50"
+                  disabled={isSaving}
+                >
+                  {isSaving ? 'Saving...' : 'Save Changes'}
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {isAddressModalOpen && (
+        <div className="fixed top-0 left-0 right-0 mx-auto max-h-screen overflow-auto p-10 bg-black/70 flex items-center justify-center z-50">
+          <div className="bg-white mt-[20%] rounded-lg p-6 w-full max-w-lg animate-fade-in">
+            <div className="flex justify-between items-center mb-4">
+              <h3 className="text-xl font-semibold text-gray-900">
+                {editingAddress ? 'Edit Address' : 'Add New Address'}
+              </h3>
+              <button
+                onClick={handleCloseAddressModal}
+                className="text-gray-500 hover:text-gray-700"
+                aria-label="Close"
+              >
+                <X className="h-5 w-5" />
+              </button>
+            </div>
+            <div className="grid grid-cols-1 gap-4">
+              {[
+                'fullName',
+                'phoneNumber',
+                'addressLine1',
+                'addressLine2',
+                'city',
+                'state',
+                'postalCode',
+                'country',
+              ].map((field) => (
+                <div key={field}>
+                  <label className="block text-sm font-medium text-gray-700 capitalize">
+                    {field.replace(/([A-Z])/g, ' $1')}
+                  </label>
+                  <input
+                    type="text"
+                    className="mt-1 w-full border border-gray-300 rounded-md p-2 focus:ring-blue-500 focus:border-blue-500"
+                    value={newAddress[field as keyof typeof newAddress]}
+                    onChange={(e) => setNewAddress({ ...newAddress, [field]: e.target.value })}
+                  />
+                </div>
+              ))}
+              <div>
+                <label className="block text-sm font-medium text-gray-700">Address Type</label>
+                <select
+                  className="mt-1 w-full border border-gray-300 rounded-md p-2 focus:ring-blue-500 focus:border-blue-500"
+                  value={newAddress.addressType}
+                  onChange={(e) =>
+                    setNewAddress({ ...newAddress, addressType: e.target.value as 'home' | 'work' | 'other' })
+                  }
+                >
+                  <option value="home">Home</option>
+                  <option value="work">Work</option>
+                  <option value="other">Other</option>
+                </select>
+              </div>
+              <div className="flex justify-end space-x-2">
+                <button
+                  onClick={handleCloseAddressModal}
+                  className="px-4 py-2 text-gray-700 bg-gray-100 rounded-md hover:bg-gray-200"
+                >
+                  Cancel
+                </button>
+                <button
+                  onClick={handleSaveAddress}
+                  className="px-4 py-2 bg-green-600 text-white rounded-md hover:bg-green-700"
+                >
+                  {editingAddress ? 'Update Address' : 'Add Address'}
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

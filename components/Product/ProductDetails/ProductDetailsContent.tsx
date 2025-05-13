@@ -1,11 +1,16 @@
-"use client"
+// components/Product/ProductDetails/ProductDetailsContent.tsx
+'use client';
 
-import { Heart, Minus, Plus, Share2, Truck } from "lucide-react"
-import { cn } from "@/lib/utils"
-import { useProductContext } from "@/context/product-context"
+import { Heart, Minus, Plus, Share2 } from 'lucide-react';
+import { cn } from '@/lib/utils';
+import { useProductContext } from '@/context/product-context';
+import { useRouter } from 'next/navigation';
+import { useEffect, useMemo } from 'react';
+import { encodeUUID } from '@/utils/Encryption';
+
 
 interface ProductDetailsContentProps {
-  className?: string
+  className?: string;
 }
 
 export default function ProductDetailsContent({ className }: ProductDetailsContentProps) {
@@ -17,35 +22,65 @@ export default function ProductDetailsContent({ className }: ProductDetailsConte
     setSelectedStorage,
     quantity,
     setQuantity,
-    isZooming,
     handleAddToCart,
     handleBuyNow,
-  } = useProductContext()
+  } = useProductContext();
+  const router = useRouter();
 
-  // Utility to parse comma-separated strings into an array
-  const parseOptions = (optionString: string): string[] => {
-    if (!optionString) return [];
-    return optionString.split(",").map((item) => item.trim()).filter(Boolean);
-  };
+  // Find the active variant based on selectedColor and selectedStorage
+  const activeVariant = useMemo(() => {
+    return product.productParent.variants.find(
+      (v) => v.color === selectedColor && v.storage === selectedStorage
+    ) || product.productParent.variants[0]; // Fallback to first variant
+  }, [selectedColor, selectedStorage, product.productParent.variants]);
 
-  // Utility to validate color values
-  const isValidColor = (color: string): boolean => {
-    const s = new Option().style;
-    s.backgroundColor = color;
-    return s.backgroundColor !== "";
-  };
+  // Get unique color options
+  const colorOptions = useMemo(() => {
+    const options = product.productParent.variants
+      .map((variant) => ({
+        value: variant.color,
+        name: variant.color,
+        isValid: true, // Simplified: assume all colors are valid
+        variantId: variant.id,
+        slug: variant.slug,
+      }))
+      .filter((option, index, self) => 
+        index === self.findIndex((t) => t.value === option.value)
+      );
+    return options;
+  }, [product.productParent.variants]);
 
-  // Parse color and storage options
-  const colorOptions = parseOptions(product.color).map((color) => ({
-    value: color,
-    name: color, // You can customize this (e.g., capitalize or map to friendly names)
-    isValid: isValidColor(color),
-  }));
+  // Get storage options filtered by selected color
+  const storageOptions = useMemo(() => {
+    const options = product.productParent.variants
+      .filter((variant) => variant.color === selectedColor)
+      .map((variant) => ({
+        value: variant.storage,
+        label: variant.storage,
+        variantId: variant.id,
+        slug: variant.slug,
+      }))
+      .filter((option, index, self) => 
+        index === self.findIndex((t) => t.value === option.value)
+      );
+    return options;
+  }, [selectedColor, product.productParent.variants]);
 
-  const storageOptions = parseOptions(product.storage).map((storage) => ({
-    value: storage,
-    label: storage, // You can customize this (e.g., format "8GB RAM / 256GB SSD" differently)
-  }));
+  // Update route and ensure valid selection when variant changes
+  useEffect(() => {
+    if (!activeVariant) {
+      // Reset to first available variant if current selection is invalid
+      const firstVariant = product.productParent.variants[0];
+      setSelectedColor(firstVariant.color);
+      setSelectedStorage(firstVariant.storage);
+      return;
+    }
+
+    if (activeVariant.id !== product.id) {
+      const encodedProductId = encodeUUID(product.productId);
+      router.push(`/product/${encodedProductId}/${activeVariant.slug}`);
+    }
+  }, [activeVariant, product, router, setSelectedColor, setSelectedStorage]);
 
   const increaseQuantity = () => {
     setQuantity(quantity + 1);
@@ -57,34 +92,41 @@ export default function ProductDetailsContent({ className }: ProductDetailsConte
     }
   };
 
+  // Calculate discount based on active variant
+  const discount = activeVariant.mrp && activeVariant.ourPrice && activeVariant.mrp > activeVariant.ourPrice
+    ? Math.round(((activeVariant.mrp - activeVariant.ourPrice) / activeVariant.mrp) * 100)
+    : product.discount || 0;
+
   return (
-    <div className={cn(`md:ml-14 ${isZooming ? "invisible" : "visible"}`, className)}>
+    <div className={cn(`md:ml-14`, className)}>
       <div className="hidden md:flex flex-row items-center gap-2 justify-end mb-5 my-2 cursor-pointer text-xs md:text-base">
         <Share2 className="md:w-5 md:h-5 w-4 h-4" />
         <p>Share</p>
       </div>
 
       {/* Product Name */}
-      <h1 className="md:text-xl text-sm md:font-medium md:mb-6 md:border-b md:pb-4 mt-5 mb-2 md:my-0">{product.name}</h1>
+      <h1 className="md:text-xl text-sm md:font-medium md:mb-6 md:border-b md:pb-4 mt-5 mb-2 md:my-0">
+        {product.name} ({selectedColor}, {selectedStorage})
+      </h1>
 
       {/* Mobile - Pricing */}
       <div className="md:hidden flex flex-row items-center justify-between">
         <div className="flex items-center gap-3 md:mb-6 mb-5">
-          {product.mrp && product.mrp > product.ourPrice && (
+          {activeVariant.mrp && activeVariant.mrp > activeVariant.ourPrice && (
             <div className="md:hidden items-center gap-1 text-base text-gray-400">
               <span>MRP</span>
               <div className="relative inline-block">
-                <span>₹{product.mrp.toString()}</span>
+                <span>₹{activeVariant.mrp.toLocaleString()}</span>
                 <span className="absolute left-0 top-1/2 w-full h-[1.5px] bg-gray-400 transform rotate-[5deg] origin-center" />
               </div>
             </div>
           )}
 
-          <span className="text-lg font-bold">₹{product.ourPrice.toString()}</span>
+          <span className="text-lg font-bold nohemi-bold">₹{activeVariant.ourPrice.toLocaleString()}</span>
 
-          {product.discount && product.discount > 0 && (
+          {discount > 0 && (
             <span className="bg-red-600 text-white text-xs font-lighter px-2 py-1 rounded-full">
-              {product.discount}% OFF
+              {discount}% OFF
             </span>
           )}
         </div>
@@ -114,7 +156,7 @@ export default function ProductDetailsContent({ className }: ProductDetailsConte
                 </button>
               </div>
 
-              {product.totalStocks > 0 && (
+              {Number(activeVariant.stock) > 0 && (
                 <button className="text-green-600 text-xs font-medium border border-green-600 bg-green-100 rounded-full px-2 p-1">
                   In Stock
                 </button>
@@ -122,10 +164,10 @@ export default function ProductDetailsContent({ className }: ProductDetailsConte
             </div>
 
             {/* Delivery */}
-            <div className="flex items-center gap-2 mt-3 text-xs text-gray-700">
+            {/* <div className="flex items-center gap-2 mt-3 text-xs text-gray-700">
               <Truck className="h-5 w-5 text-blue-500" />
-              <span>Free delivery by {product.deliveryDate}</span>
-            </div>
+              <span>Free delivery by {product.deliveryDate || 'TBD'}</span>
+            </div> */}
           </div>
         </div>
       </div>
@@ -142,10 +184,10 @@ export default function ProductDetailsContent({ className }: ProductDetailsConte
                   key={option.value}
                   onClick={() => setSelectedStorage(option.value)}
                   className={cn(
-                    "px-4 py-1.5 rounded-full md:text-sm text-xs border",
+                    'px-4 py-1.5 rounded-full md:text-sm text-xs border',
                     selectedStorage === option.value
-                      ? "bg-black text-white border-black"
-                      : "bg-white text-black border-gray-300 hover:border-gray-400",
+                      ? 'bg-black text-white border-black'
+                      : 'bg-white text-black border-gray-300 hover:border-gray-400',
                   )}
                 >
                   {option.label}
@@ -161,24 +203,29 @@ export default function ProductDetailsContent({ className }: ProductDetailsConte
             <div className="mb-2">
               <h3 className="text-base font-medium mb-3">Color</h3>
               <span className="text-gray-700">
-                {colorOptions.find((c) => c.value === selectedColor)?.name || "Default"}
+                {colorOptions.find((c) => c.value === selectedColor)?.name || 'Default'}
               </span>
             </div>
             <div className="flex gap-3">
               {colorOptions.map((color) => (
                 <button
                   key={color.value}
-                  onClick={() => color.isValid && setSelectedColor(color.value)}
+                  onClick={() => {
+                    setSelectedColor(color.value);
+                    // Set storage to first available for this color
+                    const validStorage = product.productParent.variants
+                      .find((v) => v.color === color.value)?.storage;
+                    if (validStorage) setSelectedStorage(validStorage);
+                  }}
                   className={cn(
-                    "w-10 h-10 rounded-full border",
+                    'w-10 h-10 rounded-full border',
                     selectedColor === color.value
-                      ? "p-1 outline-2 border border-white"
-                      : "border-gray-300",
-                    !color.isValid && "opacity-50 cursor-not-allowed",
+                      ? 'p-1 outline-2 border border-white'
+                      : 'border-gray-300',
+                    !color.isValid && 'opacity-50 cursor-not-allowed',
                   )}
-                  style={{ backgroundColor: color.isValid ? color.value : "#ccc" }}
+                  style={{ backgroundColor: color.value }}
                   aria-label={`Select ${color.name} color`}
-                  disabled={!color.isValid}
                 />
               ))}
             </div>
@@ -192,26 +239,26 @@ export default function ProductDetailsContent({ className }: ProductDetailsConte
         {/* Price */}
         <div className="flex flex-row items-center justify-between">
           <div className="flex items-center gap-3 mb-6 mt-6">
-            <span className="text-3xl font-bold">₹{product.ourPrice.toString()}</span>
+            <span className="text-3xl font-bold nohemi-bold">₹{activeVariant.ourPrice.toLocaleString()}</span>
 
-            {product.mrp && product.mrp > product.ourPrice && (
+            {activeVariant.mrp && activeVariant.mrp > activeVariant.ourPrice && (
               <div className="flex items-center gap-1 text-lg text-gray-400">
                 <span>MRP</span>
                 <div className="relative inline-block">
-                  <span>₹{product.mrp.toString()}</span>
+                  <span>₹{activeVariant.mrp.toLocaleString()}</span>
                   <span className="absolute left-0 top-1/2 w-full h-[1.5px] bg-gray-400 transform rotate-[5deg] origin-center" />
                 </div>
               </div>
             )}
 
-            {product.discount && product.discount > 0 && (
+            {discount > 0 && (
               <span className="bg-red-600 text-white text-xs font-lighter px-2 py-1 rounded-full">
-                {product.discount}% OFF
+                {discount}% OFF
               </span>
             )}
           </div>
 
-          {product.totalStocks > 0 && (
+          {Number(activeVariant.stock) > 0 && (
             <button className="text-green-600 text-sm font-medium border border-green-600 bg-green-100 rounded-full px-2 p-1">
               In Stock
             </button>
@@ -244,17 +291,16 @@ export default function ProductDetailsContent({ className }: ProductDetailsConte
             </div>
 
             {/* Delivery */}
-            <div className="flex items-center gap-2 text-sm text-gray-700 ml-10">
+            {/* <div className="flex items-center gap-2 text-sm text-gray-700 ml-10">
               <Truck className="h-5 w-5 text-blue-500" />
-              <span>Free delivery by {product.deliveryDate}</span>
-            </div>
+              <span>Free delivery by {product.deliveryDate || 'TBD'}</span>
+            </div> */}
           </div>
         </div>
       </div>
 
       {/* Desktop - Product Actions */}
       <div className="hidden md:block mt-2">
-        {/* Buttons */}
         <div className="grid grid-cols-2 gap-4 md:w-[60%]">
           <button
             onClick={handleAddToCart}
@@ -300,5 +346,5 @@ export default function ProductDetailsContent({ className }: ProductDetailsConte
         </div>
       </div>
     </div>
-  )
+  );
 }

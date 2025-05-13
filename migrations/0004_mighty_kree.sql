@@ -1,0 +1,2 @@
+ALTER TABLE "wishlists" ADD COLUMN "variant_id" uuid NOT NULL;--> statement-breakpoint
+ALTER TABLE "wishlists" ADD CONSTRAINT "wishlists_variant_id_variants_id_fk" FOREIGN KEY ("variant_id") REFERENCES "public"."variants"("id") ON DELETE cascade ON UPDATE no action;

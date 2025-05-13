@@ -1,58 +1,115 @@
-"use client"
+'use client';
 
-import type React from "react"
-import { createContext, useContext, useState } from "react"
-import type { Product } from "@/types/product"
+import { createContext, useContext, useState, ReactNode } from 'react';
 
-interface ProductContextType {
-  product: Product
-  selectedColor: string
-  setSelectedColor: (color: string) => void
-  selectedStorage: string
-  setSelectedStorage: (storage: string) => void
-  quantity: number
-  setQuantity: (quantity: number) => void
-  isZooming: boolean
-  setIsZooming: (isZooming: boolean) => void
-  zoomPosition: { x: number; y: number }
-  setZoomPosition: (position: { x: number; y: number }) => void
-  selectedImageIndex: number
-  setSelectedImageIndex: React.Dispatch<React.SetStateAction<number>>
-  handleAddToCart: () => void
-  handleBuyNow: () => void
+export interface FlattenedProduct {
+  id: string;
+  productId: string;
+  name: string;
+  mrp: number;
+  ourPrice: number;
+  averageRating: string;
+  brand: string;
+  category: string;
+  color: string;
+  createdAt: string;
+  description: string | null;
+  dimensions: string;
+  material: string;
+  productImages: string[];
+  productParent: {
+    averageRating: string;
+    brand: string;
+    category: string;
+    createdAt: string;
+    description: string | null;
+    id: string;
+    ratingCount: string;
+    shortName: string;
+    specifications: Array<{
+      groupName: string;
+      fields: Array<{ fieldName: string; fieldValue: string }>;
+    }>;
+    status: string;
+    subProductStatus: string;
+    tags: string[];
+    totalStocks: string;
+    updatedAt: string;
+    variants: Array<{
+      id: string;
+      color: string;
+      storage: string;
+      slug: string;
+      mrp: number;
+      ourPrice: number;
+      stock: string;
+    }>;
+  };
+  sku: string;
+  slug: string;
+  stock: string;
+  storage: string;
+  tags: string[];
+  totalStocks: string;
+  updatedAt: string;
+  weight: string;
+  deliveryDate?: string;
+  discount?: number;
 }
 
-const ProductContext = createContext<ProductContextType | undefined>(undefined)
+interface ProductContextType {
+  product: FlattenedProduct;
+  selectedColor: string;
+  setSelectedColor: (color: string) => void;
+  selectedStorage: string;
+  setSelectedStorage: (storage: string) => void;
+  quantity: number;
+  setQuantity: (quantity: number) => void;
+  selectedImageIndex: number;
+  setSelectedImageIndex: (index: number) => void;
+  lensPosition: { x: number; y: number };
+  setLensPosition: (position: { x: number; y: number }) => void;
+  handleAddToCart: () => void;
+  handleBuyNow: () => void;
+}
 
-export const ProductProvider: React.FC<{
-  children: React.ReactNode
-  product: Product
-}> = ({ children, product }) => {
-  // Initialize with default values or first item from arrays if they exist
-  const [selectedColor, setSelectedColor] = useState(product.color || "")
-  const [selectedStorage, setSelectedStorage] = useState(product.storage || "")
-  const [quantity, setQuantity] = useState(1)
-  const [isZooming, setIsZooming] = useState(false)
-  const [zoomPosition, setZoomPosition] = useState({ x: 0.5, y: 0.5 })
-  const [selectedImageIndex, setSelectedImageIndex] = useState(0)
+const ProductContext = createContext<ProductContextType | undefined>(undefined);
+
+export function ProductProvider({
+  product,
+  children,
+}: {
+  product: FlattenedProduct;
+  children: ReactNode;
+}) {
+  const [selectedColor, setSelectedColor] = useState(product.color || '');
+  const [selectedStorage, setSelectedStorage] = useState(product.storage || '');
+  const [quantity, setQuantity] = useState(1);
+  const [selectedImageIndex, setSelectedImageIndex] = useState(0);
+  // Change this to store percentages instead of pixel values
+  const [lensPosition, setLensPosition] = useState({ x: 0, y: 0 });
 
   const handleAddToCart = () => {
-    console.log("Adding to cart:", {
-      product: product.id,
+    const variant = product.productParent.variants.find(
+      (v) => v.color === selectedColor && v.storage === selectedStorage
+    );
+    console.log('Add to cart:', {
+      productId: product.id,
+      variantId: variant?.id,
       quantity,
-      color: selectedColor,
-      storage: selectedStorage,
-    })
-  }
+    });
+  };
 
   const handleBuyNow = () => {
-    console.log("Buy now:", {
-      product: product.id,
+    const variant = product.productParent.variants.find(
+      (v) => v.color === selectedColor && v.storage === selectedStorage
+    );
+    console.log('Buy now:', {
+      productId: product.id,
+      variantId: variant?.id,
       quantity,
-      color: selectedColor,
-      storage: selectedStorage,
-    })
-  }
+    });
+  };
 
   return (
     <ProductContext.Provider
@@ -64,25 +121,23 @@ export const ProductProvider: React.FC<{
         setSelectedStorage,
         quantity,
         setQuantity,
-        isZooming,
-        setIsZooming,
-        zoomPosition,
-        setZoomPosition,
         selectedImageIndex,
         setSelectedImageIndex,
+        lensPosition,
+        setLensPosition,
         handleAddToCart,
         handleBuyNow,
       }}
     >
       {children}
     </ProductContext.Provider>
-  )
+  );
 }
 
-export const useProductContext = () => {
-  const context = useContext(ProductContext)
-  if (context === undefined) {
-    throw new Error("useProductContext must be used within a ProductProvider")
+export function useProductContext() {
+  const context = useContext(ProductContext);
+  if (!context) {
+    throw new Error('useProductContext must be used within a ProductProvider');
   }
-  return context
+  return context;
 }

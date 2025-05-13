@@ -7,6 +7,13 @@ import { Heart, ShoppingCart, X } from "lucide-react"
 import Image from "next/image"
 import Link from "next/link"
 import { ProductCardProps } from "@/types/product"
+import { addToWishlist, removeFromWishlist } from "@/utils/wishlist.utils"; // Add removeFromWishlist
+import toast, { Toaster } from "react-hot-toast";
+import { useAuth } from "@/context/auth-context";
+import { useEffect, useState } from "react";
+import { useWishlist } from "@/context/wishlist-context";
+import { useProfileContext } from "@/context/profile-context";
+import { encodeUUID } from "@/utils/Encryption"
 
 
 const ProductCardwithCart: React.FC<ProductCardProps> = ({
@@ -21,47 +28,141 @@ const ProductCardwithCart: React.FC<ProductCardProps> = ({
   slug,
   onRemove,
   isHeartNeed = true,
+  productId,
+  variantId
 }) => {
-  // Calculate discount percentage if mrp and ourPrice are available, but no discount is provided
+  const { user } = useAuth();
+  const { refreshWishlist } = useWishlist();
+  const profileContext = useProfileContext();
+  const [isAdding, setIsAdding] = useState(false);
+  const [isInWishlist, setIsInWishlist] = useState(false);
+  const userId = user?.id;
+
+  // Check if product is in wishlist
+  useEffect(() => {
+    const checkWishlistStatus = async () => {
+      if (!userId || !productId) {
+        setIsInWishlist(false);
+        return;
+      }
+
+      // Use wishlistItems from ProfileContext if available
+      if (profileContext?.wishlistItems) {
+        setIsInWishlist(
+          profileContext.wishlistItems.some((item) => item.productId === productId)
+        );
+        return;
+      }
+
+      try {
+        const res = await fetch(`/api/users/wishlist?userId=${userId}`);
+        if (res.ok) {
+          const wishlistData = await res.json();
+          setIsInWishlist(
+            Array.isArray(wishlistData) &&
+            wishlistData.some((item: { productId: string }) => item.productId === productId)
+          );
+        } else {
+          setIsInWishlist(false);
+        }
+      } catch (error) {
+        console.error("Error checking wishlist status:", error);
+        setIsInWishlist(false);
+      }
+    };
+
+    checkWishlistStatus();
+  }, [userId, productId, profileContext?.wishlistItems]);
+
+  const handleWishlistClick = async (e: React.MouseEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+
+    if (!userId || !productId || !variantId) {
+      toast.error("Please login or provide valid product.");
+      return;
+    }
+
+    setIsAdding(true);
+    let result;
+    if (isInWishlist) {
+      // Remove from wishlist
+      result = await removeFromWishlist(userId, productId, variantId); // Implement removeFromWishlist
+    } else {
+      // Add to wishlist
+      result = await addToWishlist(userId, productId, variantId);
+    }
+    setIsAdding(false);
+
+    if (result.success) {
+      toast.success(isInWishlist ? "Removed from wishlist!" : "Added to wishlist!");
+      setIsInWishlist(!isInWishlist);
+      refreshWishlist();
+      if (profileContext?.refetch) {
+        profileContext.refetch(); // Refresh ProfileContext data
+      }
+    } else {
+      toast.error(result.message || `Failed to ${isInWishlist ? "remove from" : "add to"} wishlist`);
+    }
+  };
+
   const calculateDiscount = () => {
     if (mrp && ourPrice && mrp > ourPrice) {
-      return Math.round(((mrp - ourPrice) / mrp) * 100)
+      return Math.round(((mrp - ourPrice) / mrp) * 100);
     }
-    return null
-  }
+    return null;
+  };
 
-  // Use provided discount or calculate it
-  const discount = providedDiscount || calculateDiscount()
+  const discount = providedDiscount || calculateDiscount();
 
-  // Only render stars if rating exists and is a number
   const renderRating = () => {
-    if (rating === undefined || rating === null || typeof rating !== 'number' || isNaN(rating)) return null
+    if (typeof rating !== "number" || isNaN(rating)) return null;
 
     const stars = Array(5)
       .fill(0)
       .map((_, index) => (
-        <span key={index} className={`text-lg ${index < Math.floor(rating) ? "text-yellow-500" : "text-gray-300"}`}>
+        <span
+          key={index}
+          className={`text-lg ${index < Math.floor(rating) ? "text-yellow-500" : "text-gray-300"}`}
+        >
           ★
         </span>
-      ))
+      ));
 
     return (
       <div className="flex items-center">
         <span className="mr-1 font-medium">{rating.toFixed(1)}</span>
         <div className="flex">{stars}</div>
       </div>
-    )
-  }
+    );
+  };
+
+   // Encode productId for the URL
+   const encodedProductId = productId ? encodeUUID(productId) : '';
 
   return (
-    <Link href={`/product/${slug}`} className={`w-full rounded-lg cursor-pointer ${className}`}>
+    <Link href={`/product/${encodedProductId}/${slug}`} className={`w-full rounded-lg cursor-pointer ${className}`}>
+      <Toaster />
       <div className="relative">
         {/* Wishlist button */}
         {isHeartNeed && (
-          <button className="absolute right-5 top-5 z-10 text-gray-400 hover:text-gray-700">
-            <Heart size={20} />
+          <button
+            onClick={handleWishlistClick}
+            className={`absolute cursor-pointer right-2 top-2 z-10 p-2 rounded-full 
+              ${isInWishlist ? "text-red-500 bg-red-200" : "text-gray-400"} 
+              bg-gray-300 hover:text-gray-700 disabled:opacity-50`}
+            disabled={isAdding}
+            aria-label={isInWishlist ? "Remove from wishlist" : "Add to wishlist"}
+          >
+            <Heart
+              size={20}
+              fill={isInWishlist ? "red" : "none"}
+              className={isInWishlist ? "text-red-500" : "text-gray-400"}
+            />
           </button>
         )}
+
+        <span className=" absolute right-2 bottom-0 bg-black rounded-full p-2 text-white"><ShoppingCart size={18} /></span>
 
         {/* Remove button (only shown when onRemove is provided) */}
         {onRemove && (
@@ -109,8 +210,8 @@ const ProductCardwithCart: React.FC<ProductCardProps> = ({
             {discount && discount > 0 && (
               <span className="rounded-full bg-offer px-2 py-1 text-xs font-medium text-white">{discount}% Off</span>
             )}
-             <span className=" bg-black rounded-full p-2 text-white"><ShoppingCart size={18} /></span>
           </div>
+
 
           {/* View details link */}
           {showViewDetails && (

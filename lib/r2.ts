@@ -14,41 +14,36 @@ const r2Client = new S3Client({
 
 export const uploadProductImageToR2 = async (
   productName: string,
+  variantId: string,
   file: Buffer | Uint8Array | Blob | string,
   mimeType: string,
   fileName: string
 ) => {
   try {
-
     const sanitizedProductName = productName
-    .toLowerCase()
-    .trim()
-    .replace(/[^a-z0-9\s-]/g, "")
-    .replace(/\s+/g, "-")
-    .replace(/-+/g, "-");
-    const key = `products/${sanitizedProductName}/${fileName}`;
-    
+      .toLowerCase()
+      .trim()
+      .replace(/[^a-z0-9\s-]/g, '')
+      .replace(/\s+/g, '-')
+      .replace(/-+/g, '-');
+    const key = `products/${sanitizedProductName}/variants/${variantId}/${fileName}`;
+
     const command = new PutObjectCommand({
       Bucket: process.env.R2_BUCKET_NAME!,
       Key: key,
       Body: file,
       ContentType: mimeType,
     });
-    
-    await r2Client.send(command);
-    
-    // Return the URL from your R2 public bucket or custom domain
-    // If using public bucket access via Cloudflare R2
-    return `${process.env.R2_PUBLIC_URL}/${key}`;
-    
-    // If using Cloudflare Workers or custom domain for R2
-    // return `${process.env.CLOUDFLARE_WORKER_URL}/${key}`;
-  } catch (error) {
-    console.error("Error uploading to R2:", error);
-    throw new Error("Failed to upload file to R2.");
-  }
-}
 
+    await r2Client.send(command);
+
+    // Return the URL from your R2 public bucket
+    return `${process.env.R2_PUBLIC_URL}/${key}`;
+  } catch (error) {
+    console.error('[R2_UPLOAD_ERROR]', error);
+    throw new Error('Failed to upload file to R2.');
+  }
+};
 export const uploadBannerImageToR2 = async (
   type: string,
   file: Buffer | Uint8Array | Blob | string,
@@ -125,7 +120,7 @@ export const extractKeyFromR2Url = (url: string): string | null => {
     const pathParts = urlObj.pathname.split('/');
     
     // First part is empty, second is bucket name, rest is the key
-    if (pathParts.length < 2) {
+    if (pathParts.length < 4) {
       throw new Error("Invalid R2 URL format");
     }
     

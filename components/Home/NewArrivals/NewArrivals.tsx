@@ -1,6 +1,6 @@
 // components/Home/NewArrivals/NewArrivals.tsx
 'use client';
-import { useState, memo } from 'react';
+import { useState, memo, useMemo } from 'react';
 import ProductCardwithoutCart from '@/components/Product/ProductCards/ProductCardwithoutCart';
 import PrimaryLinkButton from '@/components/Reusable/PrimaryLinkButton';
 import { ProductCardSkeleton } from '@/components/Reusable/ProductCardSkeleton';
@@ -9,6 +9,27 @@ import { useHomeStore } from '@/store/home-store';
 const NewArrivals: React.FC = () => {
   const { newArrivals } = useHomeStore();
   const [loading] = useState(false); // No loading state since data is pre-fetched
+
+  // Memoize variant cards for performance
+  const variantCards = useMemo(() => {
+    return newArrivals
+      .map(({ productId, variantId, product, variant }: any) => ({
+        productId,
+        variantId,
+        variant,
+        averageRating: product.averageRating,
+        createdAt: product.createdAt,
+      }))
+      .sort((a, b) => {
+        // Sort by featuredProducts.createdAt (assumed in fetchFeaturedProducts)
+        if (a.createdAt && b.createdAt) {
+          return new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime();
+        }
+        return a.productId.localeCompare(b.productId);
+      })
+      .slice(0, 10);
+  }, [newArrivals]);
+
 
   const renderSkeletons = () => {
     return Array(4)
@@ -51,27 +72,29 @@ const NewArrivals: React.FC = () => {
 
             {loading ? (
               renderSkeletons()
-            ) : newArrivals.length > 0 ? (
-              newArrivals.map((product) => (
+            ) : variantCards.length > 0 ? (
+              variantCards.map(({ productId, variantId, variant, averageRating }) => (
                 <div
-                  key={product.id}
+                  key={`${productId}-${variantId}`}
                   className="snap-start flex-shrink-0"
                   style={{ width: 'calc(70vw - 24px)', maxWidth: '22rem' }}
                 >
                   <ProductCardwithoutCart
+                    productId={productId}
+                    variantId={variant.id}
                     className="w-full h-full"
-                    image={product.productImages[0] ?? 'placeholder.svg'}
-                    name={product.name}
-                    rating={Number(product.averageRating)}
-                    ourPrice={Number(product.ourPrice)}
-                    mrp={Number(product.mrp)}
-                    slug={product.slug}
-                    discount={product.discount}
+                    image={variant.productImages[0] ?? 'placeholder.svg'}
+                    name={variant.name}
+                    rating={Number(averageRating)}
+                    ourPrice={Number(variant.ourPrice)}
+                    mrp={Number(variant.mrp)}
+                    slug={variant.slug}
+                    discount={variant.discount}
                   />
                 </div>
               ))
             ) : (
-              <div className="flex flex-col items-center justify-center py-16 text-center px-4">
+              <div className="flex flex-col mx-auto items-center justify-center py-16 text-center px-4">
                 <div className="mb-6 text-primary animate-bounce">
                   <svg
                     xmlns="http://www.w3.org/2000/svg"

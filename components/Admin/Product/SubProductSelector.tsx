@@ -225,6 +225,8 @@ export function SubProductSelector() {
           {selectedProducts.map((product) => (
             <div key={product.id} className="flex-shrink-0 w-[300px]">
               <ProductCardwithoutCart
+                productId={product.id}
+                variantId={product.variant.id}
                 image={product.image}
                 name={product.name}
                 rating={product.rating}

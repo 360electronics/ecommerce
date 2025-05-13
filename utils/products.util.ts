@@ -8,7 +8,6 @@ export async function fetchProducts() {
       headers: {
         'Content-Type': 'application/json',
       },
-      cache: 'force-cache', // Cache for static rendering
     });
 
     if (!res.ok) {
@@ -16,6 +15,7 @@ export async function fetchProducts() {
     }
 
     const data = await res.json();
+    // console.log("All Product Data:",data)
     return data; // Expected format: Product[]
   } catch (error) {
     console.error('Failed to fetch products:', error);
@@ -30,7 +30,6 @@ export async function fetchSingleProduct(id: string) {
       headers: {
         'Content-Type': 'application/json',
       },
-      cache: 'force-cache',
     });
 
     if (!res.ok) {
@@ -40,7 +39,7 @@ export async function fetchSingleProduct(id: string) {
     const data = await res.json();
     return data; // Expected format: Product
   } catch (error) {
-    console.error('Failed to fetch single product:', error);
+    // console.error('Failed to fetch single product:', error);
     return null; // Keep null for single product as it may be used differently
   }
 }
@@ -52,7 +51,6 @@ export async function fetchFeaturedProducts() {
       headers: {
         'Content-Type': 'application/json',
       },
-      cache: 'force-cache',
     });
 
     if (!res.ok) {
@@ -60,6 +58,7 @@ export async function fetchFeaturedProducts() {
     }
 
     const data = await res.json();
+    // console.log("Featured Products", data)
     return data; // Expected format: Product[]
   } catch (error) {
     console.error('Failed to fetch featured products:', error);
@@ -74,7 +73,6 @@ export async function fetchNewArrivalsProducts() {
       headers: {
         'Content-Type': 'application/json',
       },
-      cache: 'force-cache',
     });
 
     if (!res.ok) {
@@ -82,6 +80,8 @@ export async function fetchNewArrivalsProducts() {
     }
 
     const data = await res.json();
+    // console.log('New Arrivals data:', data)
+
     return data; // Expected format: Product[]
   } catch (error) {
     console.error('Failed to fetch new arrivals:', error);
@@ -96,7 +96,6 @@ export async function fetchGamersZoneProducts() {
       headers: {
         'Content-Type': 'application/json',
       },
-      cache: 'no-store', // Keep your existing setting
     });
 
     if (!res.ok) {
@@ -106,6 +105,9 @@ export async function fetchGamersZoneProducts() {
     const data = await res.json();
 
     // Initialize default structure if categories are missing
+
+    // console.log('Gamers Zone data:', data)
+
     const categories = {
       consoles: data.consoles || [],
       accessories: data.accessories || [],
@@ -113,7 +115,8 @@ export async function fetchGamersZoneProducts() {
       'steering-chairs': data['steering-chairs'] || [],
     };
 
-    return categories; // Expected format: { consoles: Product[], accessories: Product[], laptops: Product[], 'steering-chairs': Product[] }
+    return categories;
+     // Expected format: { consoles: Product[], accessories: Product[], laptops: Product[], 'steering-chairs': Product[] }
   } catch (error) {
     console.error('Failed to fetch gamers zone products:', error);
     return {

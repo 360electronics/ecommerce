@@ -4,19 +4,59 @@ import React, { useState, useEffect, useMemo } from 'react';
 import { ChevronDown, ChevronUp, X } from 'lucide-react';
 import { useSearchParams } from 'next/navigation';
 import { Range } from 'react-range';
-import { Product } from '@/types/product';
 
-interface FilterOption {
+interface ProductVariant {
   id: string;
-  label: string;
-  checked: boolean;
+  productId: string;
+  name: string;
+  mrp: string;
+  ourPrice: string;
+  color?: string;
+  storage?: string;
+  stock: string;
+  slug: string;
+  productImages?: string[];
+  sku: string;
+  dimensions?: string;
+  material?: string;
+  weight?: string;
+  createdAt: string;
+  updatedAt: string;
+}
+
+interface ProductType {
+  id: string;
+  averageRating: string;
+  brand?: string;
+  category: string;
+  description?: string | null;
+  shortName?: string;
+  status: string;
+  subProductStatus?: string;
+  tags?: string | string[];
+  totalStocks: string;
+  ratingCount?: string;
+  specifications?: any[];
+  createdAt: string;
+  updatedAt: string;
+  variants?: ProductVariant[];
+}
+
+interface FlattenedProduct extends ProductVariant {
+  category: string;
+  brand?: string;
+  averageRating: string;
+  totalStocks: string;
+  tags: string[];
+  description?: string | null;
+  productParent?: ProductType;
 }
 
 interface FilterSection {
   id: string;
   title: string;
   type: 'checkbox' | 'range' | 'radio';
-  options?: FilterOption[];
+  options?: any[];
   min?: number;
   max?: number;
   currentMin?: number;
@@ -24,22 +64,32 @@ interface FilterSection {
   step?: number;
 }
 
+interface FilterOptions {
+  colors: string[];
+  brands: string[];
+  storageOptions: string[];
+  priceRange: {
+    min: number;
+    max: number;
+  };
+}
+
 interface FilterProps {
   category?: string;
-  products: Product[];
+  products: FlattenedProduct[];
   onFilterChange: (filters: FilterValues) => void;
+  filterOptions: FilterOptions; // Add filterOptions to props
 }
 
 interface FilterValues {
   [key: string]: string[] | boolean | { min: number; max: number };
 }
 
-
-
-// Filter configuration for customizable order and visibility
+// Filter configuration with storage added
 const filterConfig = [
   { id: 'price', title: 'Price', type: 'range', step: 10, enabled: true },
   { id: 'color', title: 'Color', type: 'checkbox', enabled: true },
+  { id: 'storage', title: 'Storage', type: 'checkbox', enabled: true }, // Added storage
   { id: 'size', title: 'Size', type: 'checkbox', enabled: true },
   { id: 'brand', title: 'Brands', type: 'checkbox', enabled: true },
   { id: 'category', title: 'Categories', type: 'checkbox', enabled: true },
@@ -47,41 +97,16 @@ const filterConfig = [
   { id: 'rating', title: 'Rating', type: 'checkbox', enabled: true },
 ] as const;
 
-const DynamicFilter: React.FC<FilterProps> = ({ category, products, onFilterChange }) => {
+const DynamicFilter: React.FC<FilterProps> = ({ category, products, onFilterChange, filterOptions }) => {
   const [expanded, setExpanded] = useState<{ [key: string]: boolean }>({});
   const [filterSections, setFilterSections] = useState<FilterSection[]>([]);
   const [excludeOutOfStock, setExcludeOutOfStock] = useState(false);
   const [mobileFiltersOpen, setMobileFiltersOpen] = useState(false);
   const [visibleOptions, setVisibleOptions] = useState<{ [key: string]: number }>({});
   const searchParams = useSearchParams();
-  // const router = useRouter();
 
-  // Generate price range from products
-
-  const generatePriceRange = (products: Product[]) => {
-    if (products.length === 0) {
-      return { min: 0, max: 1000 };
-    }
-
-    const prices = products
-      .map((product) => Number(product.ourPrice))
-      .filter((price) => !isNaN(price) && price > 0);
-
-    if (prices.length === 0) {
-      return { min: 0, max: 1000 };
-    }
-
-    const minPrice = 100;
-    const maxPrice = Math.ceil(Math.max(...prices));
-
-    return {
-      min: minPrice,
-      max: maxPrice,
-    };
-  };
-
-  // Generate options for checkbox filters
-  const generateOptions = (products: Product[], key: keyof Product) => {
+  // Generate options for non-precomputed fields (material, category)
+  const generateOptions = (products: FlattenedProduct[], key: keyof FlattenedProduct) => {
     const uniqueValues = new Set<string>();
 
     products.forEach((product) => {
@@ -102,8 +127,9 @@ const DynamicFilter: React.FC<FilterProps> = ({ category, products, onFilterChan
       }));
   };
 
-  // Generate rating options based on product ratings
-  const generateRatingOptions = (products: Product[]) => {
+  
+  // Generate rating options
+  const generateRatingOptions = (products: FlattenedProduct[]) => {
     const ratings = products
       .map((product) => Math.floor(Number(product.averageRating) || 0))
       .filter((rating) => rating >= 1 && rating <= 5);
@@ -116,24 +142,19 @@ const DynamicFilter: React.FC<FilterProps> = ({ category, products, onFilterChan
     }));
   };
 
-  // Generate filter sections based on products
+  // Generate filter sections using filterOptions
   const generatedSections = useMemo(() => {
-    if (!products || products.length === 0) return [];
-
     const sections: FilterSection[] = [];
-    const priceRange = generatePriceRange(products);
-    const colorOptions = generateOptions(products, 'color');
-    const brandOptions = generateOptions(products, 'brand');
-    const categoryOptions = category ? [] : generateOptions(products, 'category');
-    const materialOptions = generateOptions(products, 'material');
-    const ratingOptions = generateRatingOptions(products);
 
-    const optionsMap: { [key: string]: FilterOption[] } = {
-      color: colorOptions,
-      brand: brandOptions,
-      category: categoryOptions,
-      material: materialOptions,
-      rating: ratingOptions,
+    const optionsMap: { [key: string]: any[] } = {
+      color: filterOptions.colors.map((value) => ({ id: value, label: value, checked: false })),
+      brand: filterOptions.brands.map((value) => ({ id: value, label: value, checked: false })),
+      storage: filterOptions.storageOptions.map((value) => ({ id: value, label: value, checked: false })), // Use storageOptions
+      category: category
+        ? []
+        : generateOptions(products, 'category'),
+      material: generateOptions(products, 'material'),
+      rating: generateRatingOptions(products),
     };
 
     filterConfig.forEach((config) => {
@@ -144,10 +165,10 @@ const DynamicFilter: React.FC<FilterProps> = ({ category, products, onFilterChan
           id: 'price',
           title: config.title,
           type: 'range',
-          min: priceRange.min,
-          max: priceRange.max,
-          currentMin: priceRange.min,
-          currentMax: priceRange.max,
+          min: filterOptions.priceRange.min,
+          max: filterOptions.priceRange.max,
+          currentMin: filterOptions.priceRange.min,
+          currentMax: filterOptions.priceRange.max,
           step: config.step,
         });
       } else if (config.type === 'checkbox' && optionsMap[config.id]?.length > 0) {
@@ -161,7 +182,10 @@ const DynamicFilter: React.FC<FilterProps> = ({ category, products, onFilterChan
     });
 
     return sections;
-  }, [products, category]);
+  }, [products, category, filterOptions]);
+
+
+
 
   useEffect(() => {
     if (generatedSections.length === 0) return;
@@ -178,7 +202,7 @@ const DynamicFilter: React.FC<FilterProps> = ({ category, products, onFilterChan
     setVisibleOptions(initialVisibleOptions);
   }, [generatedSections]);
 
-  // Replace the useEffect that handles URL params with this updated version
+  // Handle URL params
   useEffect(() => {
     if (filterSections.length === 0) return;
 
@@ -232,9 +256,8 @@ const DynamicFilter: React.FC<FilterProps> = ({ category, products, onFilterChan
       setFilterSections(updatedSections);
       onFilterChange(getFilterValues(updatedSections, excludeOOS));
     }
-  }, [searchParams]);
+  }, [searchParams, filterSections, excludeOutOfStock, onFilterChange]);
 
-  // Add this helper function to extract filter values consistently
   const getFilterValues = (sections: FilterSection[], excludeOOS: boolean) => {
     const filters: FilterValues = {};
 
@@ -264,8 +287,6 @@ const DynamicFilter: React.FC<FilterProps> = ({ category, products, onFilterChan
 
     return filters;
   };
-
-
 
   const toggleSection = (sectionId: string) => {
     setExpanded((prev) => ({
@@ -322,19 +343,16 @@ const DynamicFilter: React.FC<FilterProps> = ({ category, products, onFilterChan
     }));
   };
 
-  // Update the applyFilters function to use getFilterValues
   const applyFilters = (sections: FilterSection[], excludeOOS: boolean) => {
     const filters = getFilterValues(sections, excludeOOS);
     updateUrlParams(filters);
     onFilterChange(filters);
   };
 
-
-
   const updateUrlParams = (filters: FilterValues) => {
     const params = new URLSearchParams(searchParams.toString());
 
-    const possibleFilterKeys = ['minPrice', 'maxPrice', 'price', 'color', 'brand', 'category', 'material', 'rating', 'inStock'];
+    const possibleFilterKeys = ['minPrice', 'maxPrice', 'price', 'color', 'brand', 'category', 'material', 'rating', 'inStock', 'storage']; // Added storage
     possibleFilterKeys.forEach((key) => params.delete(key));
 
     let hasChanges = false;
@@ -369,6 +387,7 @@ const DynamicFilter: React.FC<FilterProps> = ({ category, products, onFilterChan
       window.history.pushState({}, '', url.toString());
     }
   };
+
   const clearFilters = () => {
     const resetSections = filterSections.map((section) => {
       if (section.type === 'checkbox' && section.options) {
@@ -587,11 +606,11 @@ const DynamicFilter: React.FC<FilterProps> = ({ category, products, onFilterChan
                           </div>
                         )}
                         renderThumb={({ props, index }) => {
-                          const { key, ...restProps } = props; // Destructure key and collect remaining props
+                          const { key, ...restProps } = props;
                           return (
                             <div
-                              key={key} // Explicitly pass the key prop
-                              {...restProps} // Spread the remaining props
+                              key={key}
+                              {...restProps}
                               className="h-4 w-4 bg-blue-600 rounded-full focus:outline-none focus:ring-2 focus:ring-blue-500"
                               aria-label={index === 0 ? `Minimum ${section.title} thumb` : `Maximum ${section.title} thumb`}
                             />

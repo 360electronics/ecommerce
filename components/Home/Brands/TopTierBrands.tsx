@@ -1,11 +1,12 @@
 // components/Home/Brands/TopTierBrands.tsx
 'use client';
-import React, { useState, useCallback, memo, useEffect } from 'react';
+import React, { useState, useCallback, memo, useMemo } from 'react';
 import Image from 'next/image';
 import ProductCardwithoutCart from '@/components/Product/ProductCards/ProductCardwithoutCart';
 import { ProductCardSkeleton } from '@/components/Reusable/ProductCardSkeleton';
 import PrimaryLinkButton from '@/components/Reusable/PrimaryLinkButton';
 import { useHomeStore } from '@/store/home-store';
+import { Variant } from '@/types/product';
 
 interface Brand {
   name: string;
@@ -29,9 +30,7 @@ const BrandLogo: React.FC<BrandLogoProps> = memo(({ name, logoSrc, isActive, onC
   return (
     <button
       type="button"
-      className={`flex flex-col items-center p-2 sm:p-3 md:p-4 rounded-full bg-slate-100 cursor-pointer transition-all duration-200 hover:bg-slate-200 ${
-        isActive ? 'border-2 border-dashed border-primary' : 'border-2 border-transparent'
-      }`}
+      className={`flex flex-col items-center p-2 sm:p-3 md:p-4 rounded-full bg-slate-100 cursor-pointer transition-all duration-200 hover:bg-slate-200 ${isActive ? 'border-2 border-dashed border-primary' : 'border-2 border-transparent'}`}
       onClick={onClick}
       aria-label={`Select ${name} brand`}
       aria-pressed={isActive}
@@ -58,23 +57,39 @@ const TopTierBrands: React.FC = () => {
   const [activeBrand, setActiveBrand] = useState('apple');
   const [loading] = useState(false); 
 
+
   const handleBrandClick = useCallback((brandName: string) => {
     setActiveBrand(brandName);
   }, []);
 
-  useEffect(() => {
-    localStorage.setItem('activeBrand', activeBrand);
-  }, [activeBrand]);
 
-  const filteredProducts = brandProducts
-    .filter((product) => product.brand.toLowerCase() === activeBrand)
-    .sort((a, b) => {
-      if (a.createdAt && b.createdAt) {
-        return new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime();
-      }
-      return Number(b.id) - Number(a.id);
-    })
-    .slice(0, 10);
+
+  // Calculate discount for a variant
+  const calculateDiscount = (mrp: number, ourPrice: number): number => {
+    if (mrp <= 0 || ourPrice >= mrp) return 0;
+    return Math.round(((mrp - ourPrice) / mrp) * 100);
+  };
+
+  // Flatten products and variants, filter by brand, and sort
+  const variantCards = useMemo(() => {
+    return brandProducts
+      .filter((product) => product.brand.toLowerCase() === activeBrand)
+      .flatMap((product) =>
+        product.variants.map((variant: Variant) => ({
+          productId: product.id,
+          variant,
+          averageRating: product.averageRating,
+          createdAt: product.createdAt,
+        }))
+      )
+      .sort((a, b) => {
+        if (a.createdAt && b.createdAt) {
+          return new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime();
+        }
+        return Number(b.productId) - Number(a.productId);
+      })
+      .slice(0, 10);
+  }, [brandProducts, activeBrand]);
 
   const skeletonCards = Array(4)
     .fill(null)
@@ -122,26 +137,35 @@ const TopTierBrands: React.FC = () => {
             <div className="flex-shrink-0 w-4"></div>
           </div>
         </div>
-      ) : filteredProducts.length > 0 ? (
+      ) : variantCards.length > 0 ? (
         <div className="flex overflow-x-auto pb-6 sm:pb-8 snap-x snap-mandatory minimal-scrollbar scrollbar-hide">
           <div className="flex gap-3 sm:gap-4 md:gap-6 pl-1">
-            {filteredProducts.map((product) => (
-              <div
-                key={product.id}
-                className="snap-start flex-shrink-0"
-                style={{ width: 'calc(80vw - 32px)', maxWidth: '22rem' }}
-              >
-                <ProductCardwithoutCart
-                  className="w-full h-full"
-                  image={product.productImages[0] ?? 'placeholder.svg'}
-                  name={product.name}
-                  rating={Number(product.averageRating)}
-                  ourPrice={Number(product.ourPrice)}
-                  mrp={Number(product.mrp)}
-                  discount={product.discount}
-                />
-              </div>
-            ))}
+            {variantCards.map(({ productId, variant, averageRating }) => {
+              const mrp = Number(variant.mrp);
+              const ourPrice = Number(variant.ourPrice);
+              const discount = calculateDiscount(mrp, ourPrice);
+
+              return (
+                <div
+                  key={`${productId}-${variant.id}`}
+                  className="snap-start flex-shrink-0"
+                  style={{ width: 'calc(80vw - 32px)', maxWidth: '22rem' }}
+                >
+                  <ProductCardwithoutCart
+                    productId={productId}
+                    variantId={variant.id}
+                    slug={variant.slug}
+                    className="w-full h-full"
+                    image={variant.productImages[0] ?? '/placeholder.svg'}
+                    name={variant.name}
+                    rating={Number(averageRating)}
+                    ourPrice={ourPrice}
+                    mrp={mrp}
+                    discount={discount}
+                  />
+                </div>
+              );
+            })}
             <div className="flex-shrink-0 w-4"></div>
           </div>
         </div>

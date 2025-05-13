@@ -1,6 +1,6 @@
 // components/Home/GamersZone/GamersZone.tsx
 'use client';
-import React, { useState, useEffect, memo } from 'react';
+import React, { useState, memo, useMemo } from 'react';
 import ProductCardwithoutCart from '@/components/Product/ProductCards/ProductCardwithoutCart';
 import { ProductCardSkeleton } from '@/components/Reusable/ProductCardSkeleton';
 import PrimaryLinkButton from '@/components/Reusable/PrimaryLinkButton';
@@ -17,11 +17,9 @@ const categories = [
 const GamersZone: React.FC = () => {
   const { gamersZoneProducts } = useHomeStore();
   const [activeCategory, setActiveCategory] = useState('all');
-  const [loading] = useState(false); // No loading state since data is pre-fetched
+  const [loading] = useState(false); 
 
-  useEffect(() => {
-    localStorage.setItem('gamersZoneCategory', activeCategory);
-  }, [activeCategory]);
+
 
   const getFilteredProducts = () => {
     if (activeCategory === 'all') {
@@ -36,6 +34,32 @@ const GamersZone: React.FC = () => {
   };
 
   const filteredProducts = getFilteredProducts();
+
+  // Memoize variant cards for performance
+  const variantCards = useMemo(() => {
+    return filteredProducts
+      .map(({ productId, variantId, product, variant }: any) => ({
+        productId,
+        variantId,
+        variant,
+        averageRating: product.averageRating,
+        createdAt: product.createdAt,
+      }))
+      .sort((a, b) => {
+        // Sort by featuredProducts.createdAt (assumed in fetchFeaturedProducts)
+        if (a.createdAt && b.createdAt) {
+          return new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime();
+        }
+        return a.productId.localeCompare(b.productId);
+      })
+      .slice(0, 10);
+  }, [filteredProducts]);
+
+  // Calculate discount for a variant
+  const calculateDiscount = (mrp: number, ourPrice: number): number => {
+    if (mrp <= 0 || ourPrice >= mrp) return 0;
+    return Math.round(((mrp - ourPrice) / mrp) * 100);
+  };
 
   const renderSkeletons = () => {
     return Array(4)
@@ -75,11 +99,10 @@ const GamersZone: React.FC = () => {
             <button
               key={category.key}
               onClick={() => setActiveCategory(category.key)}
-              className={`px-4 py-2 rounded-full border text-sm font-medium transition-colors duration-200 whitespace-nowrap flex-shrink-0 ${
-                activeCategory === category.key
-                  ? 'bg-primary text-white border-primary'
-                  : 'bg-white text-black border-gray-300 hover:border-primary'
-              }`}
+              className={`px-4 py-2 rounded-full border text-sm font-medium transition-colors duration-200 whitespace-nowrap flex-shrink-0 ${activeCategory === category.key
+                ? 'bg-primary text-white border-primary'
+                : 'bg-white text-black border-gray-300 hover:border-primary'
+                }`}
             >
               {category.label}
             </button>
@@ -95,7 +118,7 @@ const GamersZone: React.FC = () => {
               {renderDesktopSkeletons()}
             </div>
           </>
-        ) : filteredProducts.length === 0 ? (
+        ) : variantCards.length === 0 ? (
           <div className="flex flex-col items-center justify-center py-16 text-center px-4">
             <div className="mb-6 text-primary animate-bounce">
               <svg
@@ -124,34 +147,66 @@ const GamersZone: React.FC = () => {
         ) : (
           <>
             <div className="sm:hidden flex overflow-x-auto pb-6 gap-4 snap-x snap-mandatory minimal-scrollbar">
-              {filteredProducts.map((product) => (
-                <div key={product.id} className="snap-start flex-shrink-0 w-64">
-                  <ProductCardwithoutCart
-                    className="w-full"
-                    image={product.productImages[0] || '/placeholder.svg'}
-                    name={product.name}
-                    rating={Number(product.averageRating)}
-                    ourPrice={Number(product.ourPrice)}
-                    mrp={Number(product.mrp)}
-                    discount={product.discount}
-                  />
-                </div>
-              ))}
+              {variantCards.map(({ productId, variantId, variant, averageRating }) => {
+                const mrp = Number(variant.mrp);
+                const ourPrice = Number(variant.ourPrice);
+                const discount = calculateDiscount(mrp, ourPrice);
+
+                return (
+                  <div
+                    key={`${productId}-${variantId}`}
+                    className="snap-start flex-shrink-0 relative"
+                    style={{ width: 'calc(80vw - 32px)', maxWidth: '22rem' }}
+                  >
+                    <span className="absolute top-2 left-2 bg-yellow-500 text-white text-xs px-2 py-1 rounded">
+                      Featured
+                    </span>
+                    <ProductCardwithoutCart
+                      productId={productId}
+                      variantId={variant.id}
+                      slug={variant.slug}
+                      className="w-full h-full"
+                      image={variant.productImages[0] ?? '/placeholder.svg'}
+                      name={variant.name}
+                      rating={Number(averageRating)}
+                      ourPrice={ourPrice}
+                      mrp={mrp}
+                      discount={discount}
+                    />
+                  </div>
+                );
+              })}
             </div>
             <div className="hidden sm:grid sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4 md:gap-6">
-              {filteredProducts.map((product) => (
-                <div key={product.id}>
-                  <ProductCardwithoutCart
-                    className="w-full"
-                    image={product.productImages[0] || '/placeholder.svg'}
-                    name={product.name}
-                    rating={Number(product.averageRating)}
-                    ourPrice={Number(product.ourPrice)}
-                    mrp={Number(product.mrp)}
-                    discount={product.discount}
-                  />
-                </div>
-              ))}
+              {variantCards.map(({ productId, variantId, variant, averageRating }) => {
+                const mrp = Number(variant.mrp);
+                const ourPrice = Number(variant.ourPrice);
+                const discount = calculateDiscount(mrp, ourPrice);
+
+                return (
+                  <div
+                    key={`${productId}-${variantId}`}
+                    className="snap-start flex-shrink-0 relative"
+                    style={{ width: 'calc(80vw - 32px)', maxWidth: '22rem' }}
+                  >
+                    <span className="absolute top-2 left-2 bg-yellow-500 text-white text-xs px-2 py-1 rounded">
+                      Featured
+                    </span>
+                    <ProductCardwithoutCart
+                      productId={productId}
+                      variantId={variant.id}
+                      slug={variant.slug}
+                      className="w-full h-full"
+                      image={variant.productImages[0] ?? '/placeholder.svg'}
+                      name={variant.name}
+                      rating={Number(averageRating)}
+                      ourPrice={ourPrice}
+                      mrp={mrp}
+                      discount={discount}
+                    />
+                  </div>
+                );
+              })}
             </div>
           </>
         )}

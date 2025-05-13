@@ -9,7 +9,7 @@ const OfferZoneCTA: React.FC = () => {
   const ctaBanner = banners.find((banner) => {
     const isCta = banner.type.toLowerCase() === 'cta';
     const isActive = banner.status.toLowerCase() === 'active';
-    console.log('Checking banner:', { id: banner.id, type: banner.type, status: banner.status, isCta, isActive });
+    // console.log('Checking banner:', { id: banner.id, type: banner.type, status: banner.status, isCta, isActive });
     return isCta && isActive;
   });
 

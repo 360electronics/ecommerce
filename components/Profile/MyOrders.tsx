@@ -1,9 +1,9 @@
-// components/Profile/MyOrders.tsx
 'use client';
 import { useAuth } from '@/context/auth-context';
-import { useProfileContext } from '@/components/Profile/ProfileContext';
 import { AlertCircle, ShoppingBag, Loader2 } from 'lucide-react';
 import Link from 'next/link';
+import Image from 'next/image';
+import { useProfileContext } from '@/context/profile-context';
 
 export default function Orders() {
   const { user, isLoading: authLoading } = useAuth();
@@ -21,7 +21,7 @@ export default function Orders() {
       };
       return new Date(dateString).toLocaleDateString(undefined, options);
     } catch (e) {
-      console.log(e)
+      console.error('Error formatting date:', e);
       return dateString;
     }
   };
@@ -29,13 +29,31 @@ export default function Orders() {
   // Function to get status badge color
   const getStatusColor = (status: string) => {
     switch (status.toLowerCase()) {
-      case 'completed':
+      case 'delivered':
         return 'bg-green-100 text-green-800';
-      case 'processing':
+      case 'confirmed':
         return 'bg-blue-100 text-blue-800';
       case 'cancelled':
         return 'bg-red-100 text-red-800';
       case 'shipped':
+        return 'bg-purple-100 text-purple-800';
+      case 'pending':
+        return 'bg-yellow-100 text-yellow-800';
+      default:
+        return 'bg-gray-100 text-gray-800';
+    }
+  };
+
+  // Function to get payment status color
+  const getPaymentStatusColor = (status: string) => {
+    switch (status.toLowerCase()) {
+      case 'paid':
+        return 'bg-green-100 text-green-800';
+      case 'pending':
+        return 'bg-yellow-100 text-yellow-800';
+      case 'failed':
+        return 'bg-red-100 text-red-800';
+      case 'refunded':
         return 'bg-purple-100 text-purple-800';
       default:
         return 'bg-gray-100 text-gray-800';
@@ -66,16 +84,16 @@ export default function Orders() {
   }
 
   return (
-    <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-      <div className="flex items-center justify-between mb-6">
-        <h1 className="text-2xl font-bold text-gray-900">My Orders</h1>
-        <span className="text-sm text-gray-500">
-          {orders.length} {orders.length === 1 ? 'order' : 'orders'}
+    <div className=" mx-auto px-4 sm:px-6 lg:px-8 py-8">
+      <div className="flex items-center gap-2 mb-6  ">
+        <h1 className="text-2xl font-bold text-gray-900 nohemi-bold">My <span className=' text-primary border-b-3 border-primary'>Orders</span></h1>
+        <span className="text-2xl text-gray-500 nohemi-bold">
+          ({orders.length})
         </span>
       </div>
 
       {error && (
-        <div className="bg-red-50 border border-red-200 rounded-md p-4">
+        <div className="bg-red-50 border border-red-200 rounded-md p-4 mb-6">
           <div className="flex">
             <AlertCircle className="h-5 w-5 text-red-400" />
             <div className="ml-3">
@@ -86,12 +104,12 @@ export default function Orders() {
         </div>
       )}
 
-      {orders.length > 0 && (
-        <div className="mt-6 space-y-4">
+      {orders.length > 0 ? (
+        <div className="mt-6 space-y-6">
           {orders.map((order) => (
             <div
               key={order.id}
-              className="bg-white shadow sm:rounded-lg overflow-hidden border border-gray-200 hover:shadow-md transition-shadow"
+              className="bg-white sm:rounded-lg overflow-hidden border border-gray-200 hover:shadow-md transition-shadow"
             >
               <div className="px-4 py-5 sm:px-6 bg-gray-50 border-b border-gray-200">
                 <div className="flex justify-between items-center">
@@ -101,42 +119,112 @@ export default function Orders() {
                     </h3>
                     <p className="text-sm text-gray-500 mt-1">{formatDate(order.createdAt)}</p>
                   </div>
-                  <span
-                    className={`inline-flex px-2 py-1 text-xs font-medium rounded-full ${getStatusColor(
-                      order.status
-                    )}`}
-                  >
-                    {order.status}
-                  </span>
+                  <div className="flex space-x-2">
+                    <span
+                      className={`inline-flex px-2 py-1 text-xs font-medium rounded-full capitalize ${getStatusColor(
+                        order.status
+                      )}`}
+                    >
+                      {order.status}
+                    </span>
+                    <span
+                      className={`inline-flex px-2 py-1 text-xs font-medium rounded-full capitalize ${getPaymentStatusColor(
+                        order.paymentStatus
+                      )}`}
+                    >
+                      {order.paymentStatus}
+                    </span>
+                  </div>
                 </div>
               </div>
               <div className="px-4 py-5 sm:p-6">
-                <div className="flex justify-between items-center">
-                  <div className="space-y-2">
-                    <p className="text-sm text-gray-600">
-                      Order Status: <span className="font-medium">{order.status}</span>
-                    </p>
-                  </div>
-                  <div className="text-right">
-                    <p className="text-sm text-gray-500">Total</p>
-                    <p className="text-lg font-bold">${order.totalAmount.toFixed(2)}</p>
+                <div className="space-y-4">
+                  {/* Order Items */}
+                  {order.items.length > 0 ? (
+                    <div className="space-y-4">
+                      {order.items.map((item) => (
+                        <div
+                          key={item.id}
+                          className="flex items-center space-x-4 border-b border-gray-100 pb-4 last:border-b-0"
+                        >
+                          <div className="flex-shrink-0">
+                            {item.product && item.product.productImages[0] ? (
+                              <Image
+                                src={item.product.productImages[0]}
+                                alt={item.product.name}
+                                width={80}
+                                height={80}
+                                className="rounded-md object-cover"
+                              />
+                            ) : (
+                              <div className="w-20 h-20 bg-gray-100 rounded-md flex items-center justify-center">
+                                <ShoppingBag className="h-8 w-8 text-gray-400" />
+                              </div>
+                            )}
+                          </div>
+                          <div className="flex-1">
+                            <h4 className="text-sm font-medium text-gray-900">
+                              {item.product?.name || 'Unknown Product'}
+                            </h4>
+                            <p className="text-sm text-gray-500">
+                              Quantity: {item.quantity}
+                            </p>
+                            <p className="text-sm text-gray-500">
+                              Unit Price: ${item.price}
+                            </p>
+                            {item.product && (
+                              <p className="text-sm text-gray-500">
+                                SKU: {item.product.sku}
+                              </p>
+                            )}
+                          </div>
+                          <div className="text-right">
+                            <p className="text-sm font-medium text-gray-900">
+                              ${(Number(item.price) * item.quantity).toFixed(2)}
+                            </p>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  ) : (
+                    <p className="text-sm text-gray-500">No items in this order.</p>
+                  )}
+
+                  {/* Order Summary */}
+                  <div className="flex justify-between items-center pt-4 border-t border-gray-200">
+                    <div className="space-y-2">
+                      <p className="text-sm text-gray-600">
+                        Order Status:{' '}
+                        <span className="font-medium capitalize">{order.status}</span>
+                      </p>
+                      <p className="text-sm text-gray-600">
+                        Payment Status:{' '}
+                        <span className="font-medium capitalize">{order.paymentStatus}</span>
+                      </p>
+                      <p className="text-sm text-gray-600">
+                        Payment Method:{' '}
+                        <span className="font-medium capitalize">{order.paymentMethod}</span>
+                      </p>
+                    </div>
+                    <div className="text-right">
+                      <p className="text-sm text-gray-500">Total</p>
+                      <p className="text-lg font-bold">${order.totalAmount}</p>
+                    </div>
                   </div>
                 </div>
               </div>
               <div className="px-4 py-3 bg-gray-50 border-t border-gray-200 text-right">
-                <a
+                <Link
                   href={`/orders/${order.id}`}
                   className="text-sm font-medium text-blue-600 hover:text-blue-500"
                 >
                   View Order Details →
-                </a>
+                </Link>
               </div>
             </div>
           ))}
         </div>
-      )}
-
-      {!error && orders.length === 0 && (
+      ) : (
         <div className="text-center py-12 bg-gray-50 rounded-lg">
           <ShoppingBag className="mx-auto h-12 w-12 text-gray-400" />
           <h3 className="mt-2 text-lg font-medium text-gray-900">No orders found</h3>

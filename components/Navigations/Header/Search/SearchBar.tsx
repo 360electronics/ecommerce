@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { Search } from 'lucide-react';
-import { useRouter } from 'next/navigation'; 
+import { Search, ChevronDown } from 'lucide-react';
+import { useRouter } from 'next/navigation';
 import SearchModal from './SearchModal';
 
 interface SearchProps {
@@ -10,7 +10,11 @@ interface SearchProps {
   autoFocus?: boolean;
 }
 
-const SearchBar: React.FC<SearchProps> = ({ onSearch, isMobile = false, inputRef, autoFocus = false }) => {
+const SearchBar: React.FC<SearchProps> = ({
+  onSearch,
+  inputRef,
+  autoFocus = false,
+}) => {
   const [searchQuery, setSearchQuery] = useState<string>('');
   const [category, setCategory] = useState<string>('All Categories');
   const [showCategories, setShowCategories] = useState<boolean>(false);
@@ -18,11 +22,20 @@ const SearchBar: React.FC<SearchProps> = ({ onSearch, isMobile = false, inputRef
   const [recentSearches, setRecentSearches] = useState<string[]>([]);
   const internalInputRef = useRef<HTMLInputElement>(null);
   const categoryDropdownRef = useRef<HTMLDivElement>(null);
-  const router = useRouter(); 
+  const router = useRouter();
 
   const actualInputRef = inputRef || internalInputRef;
 
-  const categories = ['All Categories','Laptops', 'Desktops', 'Components', 'Peripherals', 'Accessories'];
+  const categories = [
+    'All Categories',
+    'Laptops',
+    'Monitors',
+    'Processor',
+    'Graphics Card',
+    'Accessories',
+    'Storage',
+    'Cabinets',
+  ];
 
   useEffect(() => {
     const savedSearches = localStorage.getItem('recentSearches');
@@ -46,36 +59,28 @@ const SearchBar: React.FC<SearchProps> = ({ onSearch, isMobile = false, inputRef
         setShowCategories(false);
       }
     };
-
     document.addEventListener('mousedown', handleClickOutside);
     return () => document.removeEventListener('mousedown', handleClickOutside);
   }, []);
 
-  // Navigate to search page with query parameters
-  const navigateToSearch = (query: string, category: string) => {
+  const navigateToSearch = (query: string, selectedCategory: string) => {
     const params = new URLSearchParams();
-    
     if (query.trim()) {
       params.append('q', query.trim());
     }
-    
-    if (category !== 'All Categories') {
-      params.append('category', category);
+    if (selectedCategory !== 'All Categories') {
+      params.append('category', selectedCategory);
     }
-    
     router.push(`/search?${params.toString()}`);
   };
 
   const handleSearch = (e: React.FormEvent) => {
     e.preventDefault();
-    
     if (searchQuery.trim()) {
       addToRecentSearches(searchQuery);
-      
       if (onSearch) {
         onSearch(searchQuery, category);
       }
-      
       navigateToSearch(searchQuery, category);
       setShowSearchModal(false);
     }
@@ -84,16 +89,15 @@ const SearchBar: React.FC<SearchProps> = ({ onSearch, isMobile = false, inputRef
   const addToRecentSearches = (query: string) => {
     const updatedSearches = [
       query,
-      ...recentSearches.filter(item => item !== query)
+      ...recentSearches.filter((item) => item !== query),
     ].slice(0, 5);
-
     setRecentSearches(updatedSearches);
     localStorage.setItem('recentSearches', JSON.stringify(updatedSearches));
   };
 
   const removeRecentSearch = (search: string, e: React.MouseEvent) => {
     e.stopPropagation();
-    const updatedSearches = recentSearches.filter(item => item !== search);
+    const updatedSearches = recentSearches.filter((item) => item !== search);
     setRecentSearches(updatedSearches);
     localStorage.setItem('recentSearches', JSON.stringify(updatedSearches));
   };
@@ -106,11 +110,9 @@ const SearchBar: React.FC<SearchProps> = ({ onSearch, isMobile = false, inputRef
   const handleSearchItemClick = (search: string) => {
     setSearchQuery(search);
     addToRecentSearches(search);
-    
     if (onSearch) {
       onSearch(search, category);
     }
-    
     navigateToSearch(search, category);
     setShowSearchModal(false);
   };
@@ -118,33 +120,38 @@ const SearchBar: React.FC<SearchProps> = ({ onSearch, isMobile = false, inputRef
   const handleCategorySelect = (cat: string) => {
     setCategory(cat);
     setShowCategories(false);
-    // Removed the navigation here - only update the state
   };
 
   return (
-    <div className="relative w-full sm:px-3 md:px-4">
-      <form onSubmit={handleSearch} className="flex w-full">
-        <div ref={categoryDropdownRef} className="relative hidden sm:block">
+    <div className="relative w-full px-2 sm:px-4 md:px-6">
+      <form
+        onSubmit={handleSearch}
+        className="flex w-full items-center rounded-full border border-gray-200 bg-white focus-within:ring-none  transition-all duration-200 "
+      >
+        {/* Category Dropdown */}
+        <div ref={categoryDropdownRef} className="relative hidden  sm:block">
           <button
             type="button"
-            className="flex items-center cursor-pointer justify-between bg-black text-white rounded-l-3xl px-2 sm:px-3 md:px-4 py-[12.5px] text-sm whitespace-nowrap"
+            className="flex items-center justify-between cursor-pointer bg-black px-3 py-2.5 text-sm text-white rounded-l-full  transition-colors"
             onClick={() => setShowCategories(!showCategories)}
+            aria-haspopup="listbox"
+            aria-expanded={showCategories}
           >
-            <span className="hidden md:inline">{category}</span>
-            <span className="md:hidden">All</span>
-            <svg className="w-4 h-4 ml-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 9l-7 7-7-7"></path>
-            </svg>
+            <span className="truncate max-w-[120px] md:max-w-[150px]">
+              {category}
+            </span>
+            <ChevronDown size={16} className="ml-2" />
           </button>
-
           {showCategories && (
-            <div className="absolute top-full left-0 mt-1 w-40 sm:w-48 bg-white border border-gray-200 rounded-md shadow-lg z-50">
+            <div className="absolute top-full left-0 mt-2 w-48 bg-white border border-gray-200 rounded-lg shadow-lg z-50 animate-fadeIn">
               {categories.map((cat) => (
                 <button
                   key={cat}
                   type="button"
-                  className="block w-full cursor-pointer text-left px-4 py-3 text-sm hover:bg-gray-100"
+                  className="block cursor-pointer w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-blue-50 hover:text-blue-600 transition-colors"
                   onClick={() => handleCategorySelect(cat)}
+                  role="option"
+                  aria-selected={category === cat}
                 >
                   {cat}
                 </button>
@@ -152,50 +159,37 @@ const SearchBar: React.FC<SearchProps> = ({ onSearch, isMobile = false, inputRef
             </div>
           )}
         </div>
-        
+
+        {/* Search Input */}
         <div className="relative flex-1">
           <input
             ref={actualInputRef}
             type="text"
-            placeholder={isMobile ? "Search..." : "Search for Products, Brands & More"}
-            className="w-full border rounded-full md:rounded-none  sm:border-y border-gray-300 px-3 py-3 text-[10px] md:text-sm focus:outline-none"
+            placeholder="Search for Products, Brands & More"
+            className="w-full px-4 py-2.5 text-sm bg-transparent focus:outline-none placeholder-gray-400"
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
             onFocus={() => setShowSearchModal(true)}
+            onKeyDown={(e) => {
+              if (e.key === 'Enter') {
+                handleSearch(e);
+              }
+            }}
+            aria-label="Search products"
           />
-          
-          <button
-            type="submit"
-            className="absolute cursor-pointer right-0 top-0 h-full px-3 flex items-center justify-center sm:hidden"
-          >
-            <Search size={18} className="text-gray-500" />
-          </button>
         </div>
 
+        {/* Search Button */}
         <button
           type="submit"
-          className="hidden cursor-pointer sm:flex bg-black text-white rounded-r-3xl px-3 md:px-4 py-2 items-center justify-center"
+          className="flex cursor-pointer items-center justify-center bg-black/90 hover:bg-black text-white px-4 py-2.5 rounded-r-full  transition-colors"
+          aria-label="Search"
         >
           <Search size={20} />
         </button>
       </form>
 
-      {/* Mobile category selector */}
-      {/* <div className="flex sm:hidden mt-2 overflow-x-auto pb-2 no-scrollbar">
-        {categories.map((cat) => (
-          <button
-            key={cat}
-            type="button"
-            className={`flex-shrink-0 text-xs px-3 py-1 rounded-full mr-2 whitespace-nowrap ${
-              category === cat ? 'bg-black text-white' : 'bg-gray-100'
-            }`}
-            onClick={() => handleCategorySelect(cat)}
-          >
-            {cat}
-          </button>
-        ))}
-      </div> */}
-
+      {/* Search Modal */}
       {showSearchModal && (
         <SearchModal
           searchQuery={searchQuery}
