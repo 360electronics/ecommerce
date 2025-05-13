@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect } from 'react';
+import { useEffect, Suspense } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import UserLayout from '@/components/Layouts/UserLayout';
 import Breadcrumbs from '@/components/Reusable/BreadScrumb';
@@ -12,16 +12,41 @@ import Help from '@/components/Profile/Help';
 import ProfileInfo from '@/components/Profile/ProfileInfo';
 import { useProfileContext } from '@/context/profile-context';
 
+// Skeleton loader component for profile page
+function ProfileSkeleton() {
+  return (
+    <div className="min-h-screen flex flex-col md:flex-row">
+      {/* Sidebar skeleton */}
+      <div className="w-full md:w-64 bg-white shadow-sm md:min-h-screen p-4">
+        <div className="flex flex-col space-y-4">
+          <div className="h-20 bg-gray-200 rounded-md animate-pulse mb-4"></div>
+          {[1, 2, 3, 4, 5].map((item) => (
+            <div key={item} className="h-10 bg-gray-200 rounded-md animate-pulse"></div>
+          ))}
+        </div>
+      </div>
+      
+      {/* Main content skeleton */}
+      <div className="flex-1 p-4">
+        <div className="h-8 w-48 bg-gray-200 rounded-md animate-pulse mb-6"></div>
+        <div className="space-y-4">
+          <div className="h-40 bg-gray-200 rounded-md animate-pulse"></div>
+          <div className="h-60 bg-gray-200 rounded-md animate-pulse"></div>
+          <div className="h-40 bg-gray-200 rounded-md animate-pulse"></div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 function ProfileContent() {
   const { activeTab } = useProfileContext();
   
-
   return (
     <div className="min-h-screen flex flex-col md:flex-row">
       <Sidebar />
       <main className="flex-1">
         <div className="">
-          
           {/* Content based on active tab */}
           {activeTab === 'profile' && <ProfileInfo />}
           {activeTab === 'orders' && <Orders />}
@@ -31,23 +56,6 @@ function ProfileContent() {
         </div>
       </main>
     </div>
-  );
-}
-
-export default function ProfilePage() {
-  
-  const breadcrumbItems = [
-    { name: 'Home', path: '/' },
-    { name: 'Profile', path: '/profile' },
-  ];
-
-  return (
-    <UserLayout>
-      <Breadcrumbs breadcrumbs={breadcrumbItems} />
-      <div>
-        <ProfileContentWithTabSync />
-      </div>
-    </UserLayout>
   );
 }
 
@@ -83,4 +91,32 @@ function ProfileContentWithTabSync() {
   }, [activeTab, router, searchParams]);
   
   return <ProfileContent />;
+}
+
+function ProfilePageContent() {
+  const breadcrumbItems = [
+    { name: 'Home', path: '/' },
+    { name: 'Profile', path: '/profile' },
+  ];
+
+  return (
+    <>
+      <Breadcrumbs breadcrumbs={breadcrumbItems} />
+      <div>
+        <Suspense fallback={<ProfileSkeleton />}>
+          <ProfileContentWithTabSync />
+        </Suspense>
+      </div>
+    </>
+  );
+}
+
+export default function ProfilePage() {
+  return (
+    <UserLayout>
+      <Suspense fallback={<ProfileSkeleton />}>
+        <ProfilePageContent />
+      </Suspense>
+    </UserLayout>
+  );
 }

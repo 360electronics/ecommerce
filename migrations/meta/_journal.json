@@ -5,50 +5,8 @@
     {
       "idx": 0,
       "version": "7",
-      "when": 1747032734123,
-      "tag": "0000_absent_shocker",
-      "breakpoints": true
-    },
-    {
-      "idx": 1,
-      "version": "7",
-      "when": 1747033888339,
-      "tag": "0001_married_thunderbird",
-      "breakpoints": true
-    },
-    {
-      "idx": 2,
-      "version": "7",
-      "when": 1747034742815,
-      "tag": "0002_overrated_talkback",
-      "breakpoints": true
-    },
-    {
-      "idx": 3,
-      "version": "7",
-      "when": 1747055509802,
-      "tag": "0003_misty_goliath",
-      "breakpoints": true
-    },
-    {
-      "idx": 4,
-      "version": "7",
-      "when": 1747064454518,
-      "tag": "0004_mighty_kree",
-      "breakpoints": true
-    },
-    {
-      "idx": 5,
-      "version": "7",
-      "when": 1747130451126,
-      "tag": "0005_acoustic_cardiac",
-      "breakpoints": true
-    },
-    {
-      "idx": 6,
-      "version": "7",
-      "when": 1747136662689,
-      "tag": "0006_absent_mystique",
+      "when": 1747140728225,
+      "tag": "0000_plain_cannonball",
       "breakpoints": true
     }
   ]

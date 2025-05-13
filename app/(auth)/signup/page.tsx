@@ -6,6 +6,7 @@ import Image from "next/image";
 import { toast } from "react-hot-toast";
 import Link from "next/link";
 import { cn } from "@/lib/utils";
+import { useSearchParams } from "next/navigation";
 
 interface Banner {
   id: string;
@@ -31,7 +32,7 @@ interface SignupResponse {
   error?: string;
 }
 
-// Client Component that uses searchParams
+// SignupForm component that doesn't directly use searchParams
 function SignupForm({ referralCode = "" }) {
   const [formData, setFormData] = useState<SignupFormData>({
     firstName: "",
@@ -448,18 +449,15 @@ function SignupForm({ referralCode = "" }) {
   );
 }
 
-// Create a client component wrapper for handling searchParams
-import { useSearchParams as useNextSearchParams } from "next/navigation";
-
-function SearchParamsWrapper() {
-  const searchParams = useNextSearchParams();
-  const referralCodeFromUrl = searchParams.get("ref") || "";
-  
-  return <SignupForm referralCode={referralCodeFromUrl} />;
-}
-
-// Main export with Suspense boundary
+// Main export with proper Suspense boundary
 export default function SignupPage() {
+  // Move useSearchParams call inside a component wrapped by Suspense
+  function SearchParamsHandler() {
+    const searchParams = useSearchParams();
+    const referralCodeFromUrl = searchParams.get("ref") || "";
+    return <SignupForm referralCode={referralCodeFromUrl} />;
+  }
+
   return (
     <Suspense fallback={
       <div className="flex min-h-screen bg-gray-50 items-center justify-center">
@@ -469,7 +467,7 @@ export default function SignupPage() {
         </div>
       </div>
     }>
-      <SearchParamsWrapper />
+      <SearchParamsHandler />
     </Suspense>
   );
 }
