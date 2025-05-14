@@ -315,6 +315,45 @@ export const CartProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
           setCouponStatus('invalid');
           toast.error('Invalid coupon code');
         }
+      }
+
+      response = await fetch(`/api/discount/special-coupons?code=${upperCode}&userId=${user.id}`);
+      if (response.ok) {
+        const { amount, percentage, id } = await response.json();
+        if (amount) {
+          setCoupon({
+            code: upperCode,
+            type: 'amount',
+            value: amount,
+            couponId: id,
+            couponType: 'special',
+          });
+          setCouponStatus('applied');
+          toast.success(`Coupon ${upperCode} applied! ₹${amount} off`);
+        } else if (percentage) {
+          setCoupon({
+            code: upperCode,
+            type: 'percentage',
+            value: percentage,
+            couponId: id,
+            couponType: 'special',
+          });
+          setCouponStatus('applied');
+          toast.success(`Coupon ${upperCode} applied! ${percentage}% off`);
+        }
+        return;
+      } else {
+        const errorData = await response.json();
+        if (errorData.error.includes('expired')) {
+          setCouponStatus('expired');
+          toast.error('Coupon has expired');
+        } else if (errorData.error.includes('used')) {
+          setCouponStatus('used');
+          toast.error('Coupon has already been used');
+        } else {
+          setCouponStatus('invalid');
+          toast.error('Invalid coupon code');
+        }
         return;
       }
   
