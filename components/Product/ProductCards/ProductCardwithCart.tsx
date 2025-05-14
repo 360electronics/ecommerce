@@ -10,10 +10,11 @@ import { ProductCardProps } from "@/types/product"
 import { addToWishlist, removeFromWishlist } from "@/utils/wishlist.utils"; // Add removeFromWishlist
 import toast, { Toaster } from "react-hot-toast";
 import { useAuth } from "@/context/auth-context";
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import { useWishlist } from "@/context/wishlist-context";
 import { useProfileContext } from "@/context/profile-context";
 import { encodeUUID } from "@/utils/Encryption"
+import { useCart } from "@/context/cart-context"
 
 
 const ProductCardwithCart: React.FC<ProductCardProps> = ({
@@ -32,78 +33,58 @@ const ProductCardwithCart: React.FC<ProductCardProps> = ({
   variantId
 }) => {
   const { user } = useAuth();
-  const { refreshWishlist } = useWishlist();
-  const profileContext = useProfileContext();
+  const { isInWishlist, refreshWishlist } = useWishlist();
+  const { refetch: refetchProfile } = useProfileContext();
   const [isAdding, setIsAdding] = useState(false);
-  const [isInWishlist, setIsInWishlist] = useState(false);
   const userId = user?.id;
 
-  // Check if product is in wishlist
-  useEffect(() => {
-    const checkWishlistStatus = async () => {
-      if (!userId || !productId) {
-        setIsInWishlist(false);
-        return;
-      }
+  const { addToCart } = useCart();
 
-      // Use wishlistItems from ProfileContext if available
-      if (profileContext?.wishlistItems) {
-        setIsInWishlist(
-          profileContext.wishlistItems.some((item) => item.productId === productId)
-        );
-        return;
-      }
-
-      try {
-        const res = await fetch(`/api/users/wishlist?userId=${userId}`);
-        if (res.ok) {
-          const wishlistData = await res.json();
-          setIsInWishlist(
-            Array.isArray(wishlistData) &&
-            wishlistData.some((item: { productId: string }) => item.productId === productId)
-          );
-        } else {
-          setIsInWishlist(false);
-        }
-      } catch (error) {
-        console.error("Error checking wishlist status:", error);
-        setIsInWishlist(false);
-      }
-    };
-
-    checkWishlistStatus();
-  }, [userId, productId, profileContext?.wishlistItems]);
+  const isInWishlistStatus = productId && variantId ? isInWishlist(productId, variantId) : false;
 
   const handleWishlistClick = async (e: React.MouseEvent) => {
     e.preventDefault();
     e.stopPropagation();
 
     if (!userId || !productId || !variantId) {
-      toast.error("Please login or provide valid product.");
+      toast.error('Please login or provide valid product.');
       return;
     }
 
     setIsAdding(true);
     let result;
-    if (isInWishlist) {
-      // Remove from wishlist
-      result = await removeFromWishlist(userId, productId, variantId); // Implement removeFromWishlist
+    if (isInWishlistStatus) {
+      result = await removeFromWishlist(userId, productId, variantId);
     } else {
-      // Add to wishlist
       result = await addToWishlist(userId, productId, variantId);
     }
     setIsAdding(false);
 
     if (result.success) {
-      toast.success(isInWishlist ? "Removed from wishlist!" : "Added to wishlist!");
-      setIsInWishlist(!isInWishlist);
+      toast.success(isInWishlistStatus ? 'Removed from wishlist!' : 'Added to wishlist!');
       refreshWishlist();
-      if (profileContext?.refetch) {
-        profileContext.refetch(); // Refresh ProfileContext data
+      if (refetchProfile) {
+        refetchProfile();
       }
     } else {
-      toast.error(result.message || `Failed to ${isInWishlist ? "remove from" : "add to"} wishlist`);
+      toast.error(result.message || `Failed to ${isInWishlistStatus ? 'remove from' : 'add to'} wishlist`);
     }
+  };
+
+  const handleCartClick = async (e: React.MouseEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+
+    if (!userId || !productId || !variantId) {
+      toast.error('Please login or provide valid product.');
+      return;
+    }
+
+    setIsAdding(true);
+    
+    await addToCart(productId, variantId, 1);
+
+    setIsAdding(false);
   };
 
   const calculateDiscount = () => {
@@ -137,8 +118,8 @@ const ProductCardwithCart: React.FC<ProductCardProps> = ({
     );
   };
 
-   // Encode productId for the URL
-   const encodedProductId = productId ? encodeUUID(productId) : '';
+  // Encode productId for the URL
+  const encodedProductId = productId ? encodeUUID(productId) : '';
 
   return (
     <Link href={`/product/${encodedProductId}/${slug}`} className={`w-full rounded-lg cursor-pointer ${className}`}>
@@ -148,21 +129,23 @@ const ProductCardwithCart: React.FC<ProductCardProps> = ({
         {isHeartNeed && (
           <button
             onClick={handleWishlistClick}
-            className={`absolute cursor-pointer right-2 top-2 z-10 p-2 rounded-full 
-              ${isInWishlist ? "text-red-500 bg-red-200" : "text-gray-400"} 
+            className={`absolute cursor-pointer right-12 bottom-0 z-10 p-2 rounded-full 
+              ${isInWishlistStatus ? 'text-red-500 bg-red-200' : 'text-gray-400'} 
               bg-gray-300 hover:text-gray-700 disabled:opacity-50`}
             disabled={isAdding}
-            aria-label={isInWishlist ? "Remove from wishlist" : "Add to wishlist"}
+            aria-label={isInWishlistStatus ? 'Remove from wishlist' : 'Add to wishlist'}
           >
             <Heart
-              size={20}
-              fill={isInWishlist ? "red" : "none"}
-              className={isInWishlist ? "text-red-500" : "text-gray-400"}
+              size={18}
+              fill={isInWishlistStatus ? 'red' : 'none'}
+              className={isInWishlistStatus ? 'text-red-500' : 'text-gray-400'}
             />
           </button>
         )}
 
-        <span className=" absolute right-2 bottom-0 bg-black rounded-full p-2 text-white"><ShoppingCart size={18} /></span>
+        <button onClick={handleCartClick} className=" absolute right-2 bottom-0 bg-black rounded-full p-2 text-white cursor-pointer">
+          <ShoppingCart size={18} />
+        </button>
 
         {/* Remove button (only shown when onRemove is provided) */}
         {onRemove && (

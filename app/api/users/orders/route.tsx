@@ -151,6 +151,9 @@ export async function GET(req: NextRequest) {
           acc.push({
             ...order,
             items: item ? [item] : [],
+            couponCode: null,
+            discountAmount: "",
+            couponId: null
           });
         }
         return acc;

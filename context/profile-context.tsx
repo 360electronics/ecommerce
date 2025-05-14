@@ -41,6 +41,8 @@ interface OrderItem {
   quantity: number;
   price: string;
   product: Product | null;
+  variant: Variant;
+  unitPrice: number;
 }
 
 interface Product {
@@ -161,6 +163,7 @@ const fetchOrders = async (userId: string): Promise<Order[]> => {
       throw new Error(`Error fetching orders: ${response.status}`);
     }
     const ordersData = await response.json();
+    console.log("My Order are :", ordersData)
     return Array.isArray(ordersData) ? ordersData : [];
   } catch (error) {
     console.error('Failed to fetch orders:', error);

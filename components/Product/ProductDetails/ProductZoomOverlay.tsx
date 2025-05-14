@@ -34,7 +34,7 @@ export default function ProductZoomOverlay({
   return (
     <div
       className={cn(
-        'absolute top-0 right-0 z-0 w-[60%] h-full border-l border-gray-200 bg-white',
+        'absolute top-0 right-0 z-0 w-[60%] h-full border border-gray-200 bg-white',
         'overflow-hidden',
         className
       )}

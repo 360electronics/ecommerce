@@ -12,6 +12,7 @@ import { useEffect, useState } from "react";
 import { useWishlist } from "@/context/wishlist-context";
 import { useProfileContext } from "@/context/profile-context";
 import { encodeUUID } from "@/utils/Encryption";
+import { useCart } from "@/context/cart-context";
 
 
 const WishlistProductCard: React.FC<ProductCardProps> = ({
@@ -24,7 +25,7 @@ const WishlistProductCard: React.FC<ProductCardProps> = ({
   showViewDetails = true,
   className = "",
   slug,
-  onRemove,
+  onAddToCart,
   isHeartNeed = true,
   productId,
   variantId
@@ -36,7 +37,8 @@ const WishlistProductCard: React.FC<ProductCardProps> = ({
   const [isInWishlist, setIsInWishlist] = useState(false);
   const userId = user?.id;
 
-  
+  const { addToCart } = useCart();
+
   // Check if product is in wishlist
   useEffect(() => {
     const checkWishlistStatus = async () => {
@@ -44,7 +46,7 @@ const WishlistProductCard: React.FC<ProductCardProps> = ({
         setIsInWishlist(false);
         return;
       }
- 
+
       // Use wishlistItems from ProfileContext if available
       if (profileContext?.wishlistItems) {
         setIsInWishlist(
@@ -147,30 +149,26 @@ const WishlistProductCard: React.FC<ProductCardProps> = ({
         {isHeartNeed && (
           <button
             onClick={handleWishlistClick}
-            className={`absolute cursor-pointer right-14 bottom-0 z-10 p-2 rounded-full 
+            className={`absolute cursor-pointer right-12 bottom-0 z-10 p-2 rounded-full 
               ${isInWishlist ? "text-red-500 bg-red-200" : "text-gray-400"} 
               bg-gray-300 hover:text-gray-700 disabled:opacity-50`}
             disabled={isAdding}
             aria-label={isInWishlist ? "Remove from wishlist" : "Add to wishlist"}
           >
             <Heart
-              size={20}
+              size={18}
               fill={isInWishlist ? "red" : "none"}
               className={isInWishlist ? "text-red-500" : "text-gray-400"}
             />
           </button>
         )}
         {/* Remove button (only shown when onRemove is provided) */}
-        {onRemove && (
+        {onAddToCart && (
           <button
-            onClick={(e) => {
-              e.preventDefault();
-              e.stopPropagation();
-              onRemove();
-            }}
-            className="absolute right-5 bottom-0 z-10 rounded-full bg-black p-2 text-white shadow-md hover:bg-red-500 hover:text-white cursor-pointer"
+            onClick={() => addToCart(productId, variantId, 1)}
+            className="absolute right-2 bottom-0 z-10 rounded-full bg-black p-2 text-white shadow-md hover:text-white cursor-pointer"
           >
-            <ShoppingCart size={16} />
+            <ShoppingCart size={18} />
           </button>
         )}
 

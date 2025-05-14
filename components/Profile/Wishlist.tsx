@@ -9,7 +9,7 @@ export default function Wishlist() {
   const { user, isLoading: authLoading } = useAuth();
   const { wishlistItems, isLoading, error } = useProfileContext();
 
-  
+
 
 
   // Function to calculate discount percentage
@@ -96,8 +96,8 @@ export default function Wishlist() {
             <div key={item.id} className="relative">
               {item.product ? (
                 <WishlistProductCard
-                productId={item.product.id}
-                variantId={item.variant.id}
+                  productId={item.product.id}
+                  variantId={item.variant.id}
                   image={item.variant.productImages[0] || '/default-product.jpg'}
                   name={item.variant.name}
                   rating={parseFloat(item.product.averageRating) || 0}
@@ -107,6 +107,7 @@ export default function Wishlist() {
                   showViewDetails={true}
                   slug={item.variant.slug}
                   isHeartNeed={true}
+                  onAddToCart={true}
                 />
               ) : (
                 <div className="bg-white shadow rounded-lg border border-gray-200 p-4 text-center">
@@ -118,7 +119,7 @@ export default function Wishlist() {
                   </button>
                 </div>
               )}
-              
+
             </div>
           ))}
         </div>

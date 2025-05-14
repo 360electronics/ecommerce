@@ -7,3 +7,5 @@ export * from "./schema/wishlist/wishlist.schema";
 export * from "./schema/referrals/referrals.schema";
 export * from "./schema/tickets/ticket.schema";
 export * from "./schema/cart/cart.schema";
+export * from "./schema/checkout/checkout.schema";
+export * from "./schema/coupons/coupons.schema";

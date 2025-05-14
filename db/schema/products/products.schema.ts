@@ -12,8 +12,6 @@ import {
 import { users } from '../user/users.schema';
 import { sql } from 'drizzle-orm';
 
-
-
 // Products table
 export const products = pgTable(
   'products',

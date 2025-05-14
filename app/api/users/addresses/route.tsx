@@ -3,6 +3,28 @@ import { savedAddresses } from "@/db/schema";
 import { eq } from "drizzle-orm";
 import { NextResponse } from "next/server";
 
+
+export async function GET(req: Request) {
+  try {
+    const { searchParams } = new URL(req.url);
+    const userId = searchParams.get("userId");
+
+    if (!userId) {
+      return NextResponse.json({ error: "Missing userId" }, { status: 400 });
+    }
+
+    const addresses = await db
+      .select()
+      .from(savedAddresses)
+      .where(eq(savedAddresses.userId, userId));
+
+    return NextResponse.json(addresses, { status: 200 });
+  } catch (err) {
+    console.error("Fetch addresses error:", err);
+    return NextResponse.json({ error: "Failed to fetch addresses" }, { status: 500 });
+  }
+}
+
 export async function POST(req: Request) {
   try {
     const body = await req.json();

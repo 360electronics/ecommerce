@@ -1,30 +1,44 @@
-// CartButton.jsx
+'use client';
+
 import React from 'react';
 import { ShoppingCart } from 'lucide-react';
 import Link from 'next/link';
+import { useCart } from '@/context/cart-context';
 
 const CartButton = () => {
-  const cartItems = 2; 
-  const cartTotal = '₹1.99k'; 
+  const { getItemCount, getCartTotal } = useCart();
+
+  const cartItems = getItemCount();
+  const cartTotal = getCartTotal();
+
+  // Format total for display (e.g., ₹1,234 → ₹1.23k, ₹12,345 → ₹12.35k)
+  const formatCartTotal = (total:any) => {
+    if (total >= 1000) {
+      return `₹${(total / 1000).toFixed(2)}k`;
+    }
+    return `₹${total.toLocaleString('en-IN')}`;
+  };
 
   return (
     <div className="relative">
-      <Link href="/cart" className="flex items-center">
+      <Link href="/cart" className="flex items-center gap-2">
         <div className="relative">
-          <ShoppingCart size={24} className="text-primary" />
+          <ShoppingCart size={28} className=" text-primary hover:text-primary-hover transition-colors" />
           {cartItems > 0 && (
-            <span className="absolute -top-2 -right-2 bg-red-500 text-white text-xs rounded-full h-5 w-5 flex items-center justify-center">
+            <span className="absolute -top-2 -right-2 bg-red-500 text-white text-xs font-medium rounded-full h-5 w-5 flex items-center justify-center">
               {cartItems}
             </span>
           )}
         </div>
-        
-        <span className="hidden xs:inline-block ml-1 text-sm font-medium">
-          {cartTotal}
+
+        <span className=" text-sm font-medium text-gray-900">
+          {formatCartTotal(cartTotal)}
         </span>
-        
-        <div className="hidden md:block border-l border-gray-300 ml-2 pl-2">
-          <span className="text-sm underline">View Cart</span>
+
+        <div className="hidden md:block border-l border-gray-200 ml-2 pl-2">
+          <span className="text-sm  hover:underline transition-colors">
+            View Cart
+          </span>
         </div>
       </Link>
     </div>

@@ -69,6 +69,7 @@ export interface ProductCardProps {
   className?: string
   slug?: string
   onRemove?: () => void
+  onAddToCart?: boolean
   isHeartNeed?: boolean
   productId: string;
   variantId: string;

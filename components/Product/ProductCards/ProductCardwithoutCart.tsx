@@ -111,14 +111,14 @@ const ProductCardwithoutCart: React.FC<ProductCardProps> = ({
         {isHeartNeed && (
           <button
             onClick={handleWishlistClick}
-            className={`absolute cursor-pointer right-5 bottom-0 z-10 p-2 rounded-full 
+            className={`absolute cursor-pointer right-0 bottom-0 z-10 p-2 rounded-full 
               ${isInWishlistStatus ? 'text-red-500 bg-red-200' : 'text-gray-400'} 
               bg-gray-300 hover:text-gray-700 disabled:opacity-50`}
             disabled={isAdding}
             aria-label={isInWishlistStatus ? 'Remove from wishlist' : 'Add to wishlist'}
           >
             <Heart
-              size={20}
+              size={18}
               fill={isInWishlistStatus ? 'red' : 'none'}
               className={isInWishlistStatus ? 'text-red-500' : 'text-gray-400'}
             />

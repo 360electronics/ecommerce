@@ -1,37 +1,16 @@
-import { NextRequest, NextResponse } from "next/server";
-import { eq, and } from "drizzle-orm";
-import { cart, products, variants } from "@/db/schema";
-import { db } from "@/db/drizzle";
+import { db } from '@/db/drizzle';
+import { cart, products, variants } from '@/db/schema';
+import { and, eq } from 'drizzle-orm';
+import { NextRequest, NextResponse } from 'next/server';
 
-// Type for POST request body
-interface AddToCartBody {
-  productId: string;
-  variantId: string;
-  quantity?: number;
-}
 
-// Type for PUT request body
-// interface UpdateCartBody {
-//   quantity: number;
-// }
-
-// Helper function to validate UUID
-function isValidUUID(str: string): boolean {
-  const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
-  return uuidRegex.test(str);
-}
-
-// GET: Fetch user's cart
-export async function GET(req: NextRequest) {
+export async function GET(req: Request) {
   try {
-    // Assume userId is obtained from auth (e.g., session, token)
-    const body = await req.json();
+    const url = new URL(req.url);
+    const userId = url.searchParams.get('userId');
 
-    const { user_id } = body;
-    const userId = user_id;
-
-    if (!userId || !isValidUUID(userId)) {
-      return NextResponse.json({ error: "Unauthorized or invalid user ID" }, { status: 401 });
+    if (!userId) {
+      return NextResponse.json({ error: 'User ID is required' }, { status: 400 });
     }
 
     const cartItems = await db
@@ -44,80 +23,93 @@ export async function GET(req: NextRequest) {
         createdAt: cart.createdAt,
         updatedAt: cart.updatedAt,
         product: {
+          id: products.id,
           shortName: products.shortName,
-          description: products.description,
           brand: products.brand,
+          category: products.category,
+          description: products.description,
+          status: products.status,
+          subProductStatus: products.subProductStatus,
+          deliveryMode: products.deliveryMode,
+          tags: products.tags,
+          totalStocks: products.totalStocks,
+          averageRating: products.averageRating,
+          ratingCount: products.ratingCount,
+          createdAt: products.createdAt,
+          updatedAt: products.updatedAt,
+          specifications: products.specifications,
         },
         variant: {
+          id: variants.id,
+          productId: variants.productId,
           name: variants.name,
           sku: variants.sku,
+          slug: variants.slug,
           color: variants.color,
+          material: variants.material,
+          dimensions: variants.dimensions,
+          weight: variants.weight,
           storage: variants.storage,
+          stock: variants.stock,
+          mrp: variants.mrp,
           ourPrice: variants.ourPrice,
           productImages: variants.productImages,
         },
       })
       .from(cart)
-      .innerJoin(products, eq(cart.productId, products.id))
       .innerJoin(variants, eq(cart.variantId, variants.id))
+      .innerJoin(products, eq(cart.productId, products.id))
       .where(eq(cart.userId, userId));
 
-    return NextResponse.json({ cartItems }, { status: 200 });
+    // Sanitize quantities
+    const sanitizedItems = cartItems.map((item) => ({
+      ...item,
+      quantity: Number.isNaN(Number(item.quantity)) || item.quantity <= 0 ? 1 : item.quantity,
+    }));
+
+    return NextResponse.json(sanitizedItems, { status: 200 });
   } catch (error) {
-    console.error("Error fetching cart:", error);
-    return NextResponse.json({ error: "Internal server error" }, { status: 500 });
+    console.error('[GET_CART_ERROR]', {
+      message: error instanceof Error ? error.message : 'Unknown error',
+      userId: new URL(req.url).searchParams.get('userId'),
+      stack: error instanceof Error ? error.stack : undefined,
+    });
+    return NextResponse.json({ error: 'Failed to fetch cart' }, { status: 500 });
   }
 }
 
-// POST: Add item to cart
+// POST /api/cart - Add or update item in cart
 export async function POST(req: NextRequest) {
   try {
-    const userId = req.headers.get("x-user-id");
-    if (!userId || !isValidUUID(userId)) {
-      return NextResponse.json({ error: "Unauthorized or invalid user ID" }, { status: 401 });
+    const { userId, productId, variantId, quantity } = await req.json();
+
+    if (!userId || !productId || !variantId || !quantity || quantity < 1) {
+      return NextResponse.json(
+        { error: 'Missing or invalid required fields' },
+        { status: 400 }
+      );
     }
 
-    const body: AddToCartBody = await req.json();
-    const { productId, variantId, quantity = 1 } = body;
-
-    // Validate inputs
-    if (!productId || !isValidUUID(productId)) {
-      return NextResponse.json({ error: "Invalid product ID" }, { status: 400 });
-    }
-    if (!variantId || !isValidUUID(variantId)) {
-      return NextResponse.json({ error: "Invalid variant ID" }, { status: 400 });
-    }
-    if (!Number.isInteger(quantity) || quantity < 1) {
-      return NextResponse.json({ error: "Quantity must be a positive integer" }, { status: 400 });
-    }
-
-    // Verify product and variant exist
     const productExists = await db
       .select({ id: products.id })
       .from(products)
       .where(eq(products.id, productId))
       .limit(1);
-    if (productExists.length === 0) {
-      return NextResponse.json({ error: "Product not found" }, { status: 404 });
-    }
-
     const variantExists = await db
-      .select({ id: variants.id, stock: variants.stock })
+      .select({ id: variants.id })
       .from(variants)
-      .where(and(eq(variants.id, variantId), eq(variants.productId, productId)))
+      .where(eq(variants.id, variantId))
       .limit(1);
-    if (variantExists.length === 0) {
-      return NextResponse.json({ error: "Variant not found or does not belong to product" }, { status: 404 });
+
+    if (productExists.length === 0 || variantExists.length === 0) {
+      return NextResponse.json(
+        { error: 'Product or variant not found' },
+        { status: 404 }
+      );
     }
 
-    // Check stock availability
-    if (parseInt(variantExists[0].stock) < quantity) {
-      return NextResponse.json({ error: "Insufficient stock" }, { status: 400 });
-    }
-
-    // Check if item already exists in cart
     const existingCartItem = await db
-      .select({ id: cart.id, quantity: cart.quantity })
+      .select()
       .from(cart)
       .where(
         and(
@@ -129,133 +121,116 @@ export async function POST(req: NextRequest) {
       .limit(1);
 
     if (existingCartItem.length > 0) {
-      // Update quantity if item exists
-      const newQuantity = existingCartItem[0].quantity + quantity;
-      if (parseInt(variantExists[0].stock) < newQuantity) {
-        return NextResponse.json({ error: "Insufficient stock for updated quantity" }, { status: 400 });
-      }
-
       const updatedCartItem = await db
         .update(cart)
-        .set({ quantity: newQuantity, updatedAt: new Date() })
-        .where(eq(cart.id, existingCartItem[0].id))
+        .set({ quantity: existingCartItem[0].quantity + quantity, updatedAt: new Date() })
+        .where(
+          and(
+            eq(cart.userId, userId),
+            eq(cart.productId, productId),
+            eq(cart.variantId, variantId)
+          )
+        )
         .returning();
 
-      return NextResponse.json({ cartItem: updatedCartItem[0] }, { status: 200 });
+      return NextResponse.json(updatedCartItem[0], { status: 200 });
+    } else {
+      const newCartItem = await db
+        .insert(cart)
+        .values({
+          userId,
+          productId,
+          variantId,
+          quantity,
+        })
+        .returning();
+
+      return NextResponse.json(newCartItem[0], { status: 201 });
     }
-
-    // Add new item to cart
-    const newCartItem = await db
-      .insert(cart)
-      .values({
-        userId,
-        productId,
-        variantId,
-        quantity,
-      })
-      .returning();
-
-    return NextResponse.json({ cartItem: newCartItem[0] }, { status: 201 });
   } catch (error) {
-    console.error("Error adding to cart:", error);
-    return NextResponse.json({ error: "Internal server error" }, { status: 500 });
+    console.error('Error in POST /api/cart:', error);
+    return NextResponse.json(
+      { error: 'Internal server error' },
+      { status: 500 }
+    );
   }
 }
 
-// PUT: Update cart item quantity
+// PUT /api/cart - Update cart item quantity
 export async function PUT(req: NextRequest) {
   try {
-    const body = await req.json();
+    const { userId, cartItemId, quantity } = await req.json();
 
-    const { user_id } = body;
-    const userId = user_id;
-    if (!userId || !isValidUUID(userId)) {
-      return NextResponse.json({ error: "Unauthorized or invalid user ID" }, { status: 401 });
+    if (!userId || !cartItemId || !quantity || quantity < 1) {
+      return NextResponse.json(
+        { error: 'Missing or invalid required fields' },
+        { status: 400 }
+      );
     }
 
-    const { quantity } = body;
-
-    // Validate inputs
-    if (!Number.isInteger(quantity) || quantity < 1) {
-      return NextResponse.json({ error: "Quantity must be a positive integer" }, { status: 400 });
-    }
-
-    const cartItemId = new URL(req.url).searchParams.get("cartItemId");
-    if (!cartItemId || !isValidUUID(cartItemId)) {
-      return NextResponse.json({ error: "Invalid cart item ID" }, { status: 400 });
-    }
-
-    // Verify cart item exists and belongs to user
-    const cartItem = await db
-      .select({
-        id: cart.id,
-        variantId: cart.variantId,
-      })
-      .from(cart)
-      .where(and(eq(cart.id, cartItemId), eq(cart.userId, userId)))
-      .limit(1);
-
-    if (cartItem.length === 0) {
-      return NextResponse.json({ error: "Cart item not found or unauthorized" }, { status: 404 });
-    }
-
-    // Check stock for the variant
-    const variant = await db
-      .select({ stock: variants.stock })
-      .from(variants)
-      .where(eq(variants.id, cartItem[0].variantId))
-      .limit(1);
-
-    if (parseInt(variant[0].stock) < quantity) {
-      return NextResponse.json({ error: "Insufficient stock" }, { status: 400 });
-    }
+    const sanitizedQuantity = Math.max(1, Math.floor(Number(quantity)));
 
     const updatedCartItem = await db
       .update(cart)
-      .set({ quantity, updatedAt: new Date() })
-      .where(eq(cart.id, cartItemId))
+      .set({ quantity: sanitizedQuantity, updatedAt: new Date() })
+      .where(and(eq(cart.id, cartItemId), eq(cart.userId, userId)))
       .returning();
 
-    return NextResponse.json({ cartItem: updatedCartItem[0] }, { status: 200 });
+    if (updatedCartItem.length === 0) {
+      return NextResponse.json(
+        { error: 'Cart item not found' },
+        { status: 404 }
+      );
+    }
+
+    return NextResponse.json(updatedCartItem[0], { status: 200 });
   } catch (error) {
-    console.error("Error updating cart:", error);
-    return NextResponse.json({ error: "Internal server error" }, { status: 500 });
+    console.error('Error in PUT /api/cart:', error);
+    return NextResponse.json(
+      { error: 'Internal server error' },
+      { status: 500 }
+    );
   }
 }
-
-// DELETE: Remove item from cart
+// DELETE /api/cart - Remove item from cart
 export async function DELETE(req: NextRequest) {
   try {
-    const body = await req.json();
+    const { userId, productId, variantId } = await req.json();
 
-    const { user_id } = body;
-    const userId = user_id;
-    
-    if (!userId || !isValidUUID(userId)) {
-      return NextResponse.json({ error: "Unauthorized or invalid user ID" }, { status: 401 });
+    if (!userId || !productId || !variantId) {
+      return NextResponse.json(
+        { error: 'Missing required fields' },
+        { status: 400 }
+      );
     }
 
-    const cartItemId = new URL(req.url).searchParams.get("cartItemId");
-    if (!cartItemId || !isValidUUID(cartItemId)) {
-      return NextResponse.json({ error: "Invalid cart item ID" }, { status: 400 });
+    const deletedCartItem = await db
+      .delete(cart)
+      .where(
+        and(
+          eq(cart.userId, userId),
+          eq(cart.productId, productId),
+          eq(cart.variantId, variantId)
+        )
+      )
+      .returning();
+
+    if (deletedCartItem.length === 0) {
+      return NextResponse.json(
+        { error: 'Cart item not found' },
+        { status: 404 }
+      );
     }
 
-    // Verify cart item exists and belongs to user
-    const cartItem = await db
-      .select({ id: cart.id })
-      .from(cart)
-      .where(and(eq(cart.id, cartItemId), eq(cart.userId, userId)))
-      .limit(1);
-
-    if (cartItem.length === 0) {
-      return NextResponse.json({ error: "Cart item not found or unauthorized" }, { status: 404 });
-    }
-
-    await db.delete(cart).where(eq(cart.id, cartItemId));
-
-    return NextResponse.json({ message: "Cart item removed" }, { status: 200 });
+    return NextResponse.json(
+      { message: 'Cart item deleted successfully' },
+      { status: 200 }
+    );
   } catch (error) {
-    console.error("Error removing from cart:", error);
-    return NextResponse.json({ error: "Internal server error" }, { status: 500 });
+    console.error('Error in DELETE /api/cart:', error);
+    return NextResponse.json(
+      { error: 'Internal server error' },
+      { status: 500 }
+    );
   }
 }

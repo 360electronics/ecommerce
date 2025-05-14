@@ -1,13 +1,17 @@
-// components/Product/ProductDetails/ProductDetailsContent.tsx
 'use client';
 
 import { Heart, Minus, Plus, Share2 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useProductContext } from '@/context/product-context';
 import { useRouter } from 'next/navigation';
-import { useEffect, useMemo } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { encodeUUID } from '@/utils/Encryption';
-
+import { useAuth } from '@/context/auth-context';
+import { useProfileContext } from '@/context/profile-context';
+import { useWishlist } from '@/context/wishlist-context';
+import toast, { Toaster } from 'react-hot-toast';
+import { addToWishlist, removeFromWishlist } from '@/utils/wishlist.utils';
+import { useCart } from '@/context/cart-context';
 
 interface ProductDetailsContentProps {
   className?: string;
@@ -22,11 +26,64 @@ export default function ProductDetailsContent({ className }: ProductDetailsConte
     setSelectedStorage,
     quantity,
     setQuantity,
-    handleAddToCart,
     handleBuyNow,
   } = useProductContext();
   const router = useRouter();
+  const { user } = useAuth();
+  const { isInWishlist, refreshWishlist } = useWishlist();
+  const { refetch: refetchProfile } = useProfileContext();
+  const { addToCart } = useCart();
+  const [isAdding, setIsAdding] = useState(false);
+  const userId = user?.id;
 
+  const isInWishlistStatus = product.productId && product.id ? isInWishlist(product.productId, product.id) : false;
+
+  const handleWishlistClick = async (e: React.MouseEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+
+    if (!userId || !product.productId || !product.id) {
+      toast.error('Please login or provide valid product.');
+      return;
+    }
+
+    setIsAdding(true);
+    let result;
+    if (isInWishlistStatus) {
+      result = await removeFromWishlist(userId, product.productId, product.id);
+    } else {
+      result = await addToWishlist(userId, product.productId, product.id);
+    }
+    setIsAdding(false);
+
+    if (result.success) {
+      toast.success(isInWishlistStatus ? 'Removed from wishlist!' : 'Added to wishlist!');
+      refreshWishlist();
+      if (refetchProfile) {
+        refetchProfile();
+      }
+    } else {
+      toast.error(result.message || `Failed to ${isInWishlistStatus ? 'remove from' : 'add to'} wishlist`);
+    }
+  };
+
+  const handleCartClick = async (e: React.MouseEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+
+    if (!userId || !product.productId || !product.id) {
+      toast.error('Please login or provide valid product.');
+      return;
+    }
+
+    setIsAdding(true);
+    
+
+    await addToCart(product.productId, product.id, quantity);
+
+    setIsAdding(false);
+  };
+  
   // Find the active variant based on selectedColor and selectedStorage
   const activeVariant = useMemo(() => {
     return product.productParent.variants.find(
@@ -44,7 +101,7 @@ export default function ProductDetailsContent({ className }: ProductDetailsConte
         variantId: variant.id,
         slug: variant.slug,
       }))
-      .filter((option, index, self) => 
+      .filter((option, index, self) =>
         index === self.findIndex((t) => t.value === option.value)
       );
     return options;
@@ -60,7 +117,7 @@ export default function ProductDetailsContent({ className }: ProductDetailsConte
         variantId: variant.id,
         slug: variant.slug,
       }))
-      .filter((option, index, self) => 
+      .filter((option, index, self) =>
         index === self.findIndex((t) => t.value === option.value)
       );
     return options;
@@ -99,6 +156,7 @@ export default function ProductDetailsContent({ className }: ProductDetailsConte
 
   return (
     <div className={cn(`md:ml-14`, className)}>
+      <Toaster />
       <div className="hidden md:flex flex-row items-center gap-2 justify-end mb-5 my-2 cursor-pointer text-xs md:text-base">
         <Share2 className="md:w-5 md:h-5 w-4 h-4" />
         <p>Share</p>
@@ -162,12 +220,6 @@ export default function ProductDetailsContent({ className }: ProductDetailsConte
                 </button>
               )}
             </div>
-
-            {/* Delivery */}
-            {/* <div className="flex items-center gap-2 mt-3 text-xs text-gray-700">
-              <Truck className="h-5 w-5 text-blue-500" />
-              <span>Free delivery by {product.deliveryDate || 'TBD'}</span>
-            </div> */}
           </div>
         </div>
       </div>
@@ -236,7 +288,6 @@ export default function ProductDetailsContent({ className }: ProductDetailsConte
 
       {/* Desktop - Product Pricing */}
       <div className="hidden md:flex flex-col gap-2">
-        {/* Price */}
         <div className="flex flex-row items-center justify-between">
           <div className="flex items-center gap-3 mb-6 mt-6">
             <span className="text-3xl font-bold nohemi-bold">₹{activeVariant.ourPrice.toLocaleString()}</span>
@@ -286,15 +337,20 @@ export default function ProductDetailsContent({ className }: ProductDetailsConte
               </button>
             </div>
 
-            <div className="border border-gray-400 rounded-full p-2 ml-4">
-              <Heart className="w-5 h-5" />
-            </div>
-
-            {/* Delivery */}
-            {/* <div className="flex items-center gap-2 text-sm text-gray-700 ml-10">
-              <Truck className="h-5 w-5 text-blue-500" />
-              <span>Free delivery by {product.deliveryDate || 'TBD'}</span>
-            </div> */}
+            <button
+              onClick={handleWishlistClick}
+              className={` cursor-pointer ml-2 z-0 p-2 rounded-full 
+              ${isInWishlistStatus ? 'text-red-500 bg-red-200' : 'text-gray-400'} 
+              bg-gray-300 hover:text-gray-700 disabled:opacity-50`}
+              disabled={isAdding}
+              aria-label={isInWishlistStatus ? 'Remove from wishlist' : 'Add to wishlist'}
+            >
+              <Heart
+                size={20}
+                fill={isInWishlistStatus ? 'red' : 'none'}
+                className={isInWishlistStatus ? 'text-red-500' : 'text-gray-400'}
+              />
+            </button>
           </div>
         </div>
       </div>
@@ -303,10 +359,11 @@ export default function ProductDetailsContent({ className }: ProductDetailsConte
       <div className="hidden md:block mt-2">
         <div className="grid grid-cols-2 gap-4 md:w-[60%]">
           <button
-            onClick={handleAddToCart}
-            className="flex-1 py-3 px-4 rounded-full cursor-pointer border border-gray-300 hover:border-gray-400 flex items-center justify-center gap-2 font-medium"
+            onClick={handleCartClick}
+            className="flex-1 py-3 px-4 rounded-full cursor-pointer border border-gray-300 hover:border-gray-400 flex items-center justify-center gap-2 font-medium disabled:opacity-50"
+            disabled={isAdding}
           >
-            Add to cart
+            {isAdding ? 'Adding...' : 'Add to cart'}
             <svg width="20" height="20" viewBox="0 0 20 20" fill="none" xmlns="http://www.w3.org/2000/svg">
               <path d="M5 5H17.5L16 12H6.5L5 5Z" stroke="currentColor" strokeWidth="1.5" strokeLinejoin="round" />
               <path

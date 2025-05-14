@@ -12,13 +12,3 @@ export const referrals = pgTable("referrals", {
   createdAt: timestamp("created_at").defaultNow().notNull(),
 });
 
-export const coupons = pgTable("coupons", {
-  id: uuid("id").primaryKey().default(sql`gen_random_uuid()`),
-  userId: uuid("user_id").notNull().references(() => users.id, { onDelete: "cascade" }),
-  referralId: uuid("referral_id").references(() => referrals.id, { onDelete: "set null" }),
-  code: varchar("code", { length: 10 }).unique().notNull(),
-  amount: numeric("amount").notNull(),
-  isUsed: boolean("is_used").default(false).notNull(),
-  expiryDate: timestamp("expiry_date").notNull(),
-  createdAt: timestamp("created_at").defaultNow().notNull(),
-});

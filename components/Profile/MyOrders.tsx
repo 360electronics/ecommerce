@@ -19,7 +19,7 @@ export default function Orders() {
         hour: '2-digit',
         minute: '2-digit',
       };
-      return new Date(dateString).toLocaleDateString(undefined, options);
+      return new Date(dateString).toLocaleDateString('en-IN', options);
     } catch (e) {
       console.error('Error formatting date:', e);
       return dateString;
@@ -84,12 +84,12 @@ export default function Orders() {
   }
 
   return (
-    <div className=" mx-auto px-4 sm:px-6 lg:px-8 py-8">
-      <div className="flex items-center gap-2 mb-6  ">
-        <h1 className="text-2xl font-bold text-gray-900 nohemi-bold">My <span className=' text-primary border-b-3 border-primary'>Orders</span></h1>
-        <span className="text-2xl text-gray-500 nohemi-bold">
-          ({orders.length})
-        </span>
+    <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8 py-8">
+      <div className="flex items-center gap-2 mb-6">
+        <h1 className="text-2xl font-bold text-gray-900 nohemi-bold">
+          My <span className="text-primary border-b-3 border-primary">Orders</span>
+        </h1>
+        <span className="text-2xl text-gray-500 nohemi-bold">({orders.length})</span>
       </div>
 
       {error && (
@@ -109,7 +109,7 @@ export default function Orders() {
           {orders.map((order) => (
             <div
               key={order.id}
-              className="bg-white sm:rounded-lg overflow-hidden border border-gray-200 hover:shadow-md transition-shadow"
+              className="bg-white sm:rounded-lg overflow-hidden border border-gray-200 "
             >
               <div className="px-4 py-5 sm:px-6 bg-gray-50 border-b border-gray-200">
                 <div className="flex justify-between items-center">
@@ -148,10 +148,10 @@ export default function Orders() {
                           className="flex items-center space-x-4 border-b border-gray-100 pb-4 last:border-b-0"
                         >
                           <div className="flex-shrink-0">
-                            {item.product && item.product.productImages[0] ? (
+                            {item.variant && item.variant.productImages?.[0] ? (
                               <Image
-                                src={item.product.productImages[0]}
-                                alt={item.product.name}
+                                src={item.variant.productImages[0]}
+                                alt={item.variant.name || 'Product'}
                                 width={80}
                                 height={80}
                                 className="rounded-md object-cover"
@@ -164,23 +164,19 @@ export default function Orders() {
                           </div>
                           <div className="flex-1">
                             <h4 className="text-sm font-medium text-gray-900">
-                              {item.product?.name || 'Unknown Product'}
+                              {item.variant?.name || 'Unknown Product'}
                             </h4>
+                            <p className="text-sm text-gray-500">Quantity: {item.quantity}</p>
                             <p className="text-sm text-gray-500">
-                              Quantity: {item.quantity}
-                            </p>
-                            <p className="text-sm text-gray-500">
-                              Unit Price: ${item.price}
+                              Unit Price: ₹{Number(item.unitPrice).toLocaleString('en-IN')}
                             </p>
                             {item.product && (
-                              <p className="text-sm text-gray-500">
-                                SKU: {item.product.sku}
-                              </p>
+                              <p className="text-sm text-gray-500">SKU: {item.variant.sku}</p>
                             )}
                           </div>
                           <div className="text-right">
                             <p className="text-sm font-medium text-gray-900">
-                              ${(Number(item.price) * item.quantity).toFixed(2)}
+                              ₹{(Number(item.unitPrice) * item.quantity).toLocaleString('en-IN')}
                             </p>
                           </div>
                         </div>
@@ -208,7 +204,9 @@ export default function Orders() {
                     </div>
                     <div className="text-right">
                       <p className="text-sm text-gray-500">Total</p>
-                      <p className="text-lg font-bold">${order.totalAmount}</p>
+                      <p className="text-lg font-bold">
+                        ₹{Number(order.totalAmount).toLocaleString('en-IN')}
+                      </p>
                     </div>
                   </div>
                 </div>
@@ -234,7 +232,7 @@ export default function Orders() {
           <div className="mt-6">
             <Link
               href="/category/all"
-              className="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md shadow-sm text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
+              className="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
             >
               Browse products
             </Link>

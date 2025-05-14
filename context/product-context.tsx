@@ -1,6 +1,11 @@
 'use client';
 
 import { createContext, useContext, useState, ReactNode } from 'react';
+import { useRouter } from 'next/navigation';
+import toast from 'react-hot-toast';
+import { useCart } from './cart-context';
+import { useAuth } from './auth-context';
+import { useCheckout } from './checkout-context';
 
 export interface FlattenedProduct {
   id: string;
@@ -69,8 +74,8 @@ interface ProductContextType {
   setSelectedImageIndex: (index: number) => void;
   lensPosition: { x: number; y: number };
   setLensPosition: (position: { x: number; y: number }) => void;
-  handleAddToCart: () => void;
-  handleBuyNow: () => void;
+  handleAddToCart: () => Promise<void>;
+  handleBuyNow: () => Promise<void>;
 }
 
 const ProductContext = createContext<ProductContextType | undefined>(undefined);
@@ -86,29 +91,65 @@ export function ProductProvider({
   const [selectedStorage, setSelectedStorage] = useState(product.storage || '');
   const [quantity, setQuantity] = useState(1);
   const [selectedImageIndex, setSelectedImageIndex] = useState(0);
-  // Change this to store percentages instead of pixel values
   const [lensPosition, setLensPosition] = useState({ x: 0, y: 0 });
+  const { addToCart, error } = useCart();
+  const { addToCheckout } = useCheckout();
+  const { isLoggedIn, user } = useAuth();
+  const router = useRouter();
 
-  const handleAddToCart = () => {
+  const handleAddToCart = async () => {
+    if (!isLoggedIn || !user?.id) {
+      toast.error('Please log in to add items to cart');
+      router.push('/login');
+      return;
+    }
+
     const variant = product.productParent.variants.find(
       (v) => v.color === selectedColor && v.storage === selectedStorage
     );
-    console.log('Add to cart:', {
-      productId: product.id,
-      variantId: variant?.id,
-      quantity,
-    });
+
+    if (!variant) {
+      toast.error('Selected variant is not available');
+      return;
+    }
+
+    try {
+      await addToCart(product.productId, variant.id, quantity);
+      if (!error) {
+        toast.success(`${product.name} (${selectedColor}, ${selectedStorage}) added to cart!`);
+      } else {
+        toast.error(error || 'Failed to add item to cart');
+      }
+    } catch (err) {
+      toast.error('An unexpected error occurred');
+    }
   };
 
-  const handleBuyNow = () => {
-    const variant = product.productParent.variants.find(
-      (v) => v.color === selectedColor && v.storage === selectedStorage
-    );
-    console.log('Buy now:', {
-      productId: product.id,
-      variantId: variant?.id,
-      quantity,
-    });
+  const handleBuyNow = async () => {
+    if (!isLoggedIn || !user?.id) {
+      toast.error('Please log in to proceed with purchase');
+      router.push('/login');
+      return;
+    }
+
+    const item = {
+      userId: user.id,
+      productId: product.productId,
+      variantId: product.id,
+      totalPrice: product.ourPrice,
+      quantity: 1
+    }
+
+    try {
+      await addToCheckout(item);
+      if (!error) {
+        router.push('/checkout');
+      } else {
+        toast.error(error || 'Failed to proceed to checkout');
+      }
+    } catch (err) {
+      toast.error('An unexpected error occurred');
+    }
   };
 
   return (

@@ -8,6 +8,48 @@
       "when": 1747140728225,
       "tag": "0000_plain_cannonball",
       "breakpoints": true
+    },
+    {
+      "idx": 1,
+      "version": "7",
+      "when": 1747162225665,
+      "tag": "0001_sticky_monster_badoon",
+      "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "7",
+      "when": 1747164096439,
+      "tag": "0002_good_shocker",
+      "breakpoints": true
+    },
+    {
+      "idx": 3,
+      "version": "7",
+      "when": 1747164418796,
+      "tag": "0003_hot_william_stryker",
+      "breakpoints": true
+    },
+    {
+      "idx": 4,
+      "version": "7",
+      "when": 1747164605912,
+      "tag": "0004_busy_black_widow",
+      "breakpoints": true
+    },
+    {
+      "idx": 5,
+      "version": "7",
+      "when": 1747165921510,
+      "tag": "0005_legal_leper_queen",
+      "breakpoints": true
+    },
+    {
+      "idx": 6,
+      "version": "7",
+      "when": 1747209324209,
+      "tag": "0006_mixed_raider",
+      "breakpoints": true
     }
   ]
 }
