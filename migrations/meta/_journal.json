@@ -50,6 +50,13 @@
       "when": 1747209324209,
       "tag": "0006_mixed_raider",
       "breakpoints": true
+    },
+    {
+      "idx": 7,
+      "version": "7",
+      "when": 1747284960402,
+      "tag": "0007_chemical_mystique",
+      "breakpoints": true
     }
   ]
 }

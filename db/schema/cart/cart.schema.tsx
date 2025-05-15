@@ -31,17 +31,17 @@ export const cart = pgTable(
   ])
 );
 
-// export const cart_offer_products = pgTable(
-//   "cart_offer_products",
-//   {
-//     id: uuid("id").primaryKey().default(sql`gen_random_uuid()`),
-//     productName: varchar('name', { length: 255 }).notNull(),
-//     productImage: varchar("product_id")
-//       .notNull(),
-//     range: varchar("range").notNull(),
-//     ourPrice: numeric('our_price', { precision: 10, scale: 2 }).notNull(),
-//     quantity: integer("quantity").notNull().default(1),
-//     createdAt: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
-//     updatedAt: timestamp("updated_at", { withTimezone: true }).defaultNow().notNull(),
-//   },
-// );
+export const cart_offer_products = pgTable(
+  "cart_offer_products",
+  {
+    id: uuid("id").primaryKey().default(sql`gen_random_uuid()`),
+    productName: varchar('name', { length: 255 }).notNull(),
+    productImage: varchar("product_id")
+      .notNull(),
+    range: varchar("range").notNull(),
+    ourPrice: numeric('our_price', { precision: 10, scale: 2 }).notNull(),
+    quantity: integer("quantity").notNull().default(1),
+    createdAt: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
+    updatedAt: timestamp("updated_at", { withTimezone: true }).defaultNow().notNull(),
+  },
+);

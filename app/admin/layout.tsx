@@ -17,7 +17,8 @@ import {
   Menu,
   Home,
   X,
-  ImageIcon
+  ImageIcon,
+  ShoppingCart
 } from "lucide-react"
 import Breadcrumbs from "@/components/Reusable/BreadScrumb"
 
@@ -85,6 +86,7 @@ export default function Layout({ children }: AdminLayoutProps) {
     { name: "Featured Products", path: "/admin/featured-products", icon: Heart },
     { name: "New Arrival", path: "/admin/new-arrivals", icon: Briefcase },
     { name: "Gamer Zone", path: "/admin/gamer-zone", icon: Gamepad2 },
+    { name: "Cart Value Offers", path: "/admin/cart-offer-products", icon: ShoppingCart },
     { name: "Promotional Banners", path: "/admin/promotional-banners", icon: ImageIcon },
   ]
 

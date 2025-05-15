@@ -84,7 +84,7 @@ export const CartProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
 
   const fetchCart = async () => {
     if (!isLoggedIn || !user?.id || isLoading) return;
-
+  
     try {
       const response = await fetch(`/api/cart?userId=${user.id}`, {
         method: 'GET',
@@ -92,12 +92,13 @@ export const CartProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
           'Content-Type': 'application/json',
         },
       });
-
+  
       if (response.ok) {
         const data = await response.json();
         const sanitizedItems = (data || []).map((item: CartItem) => ({
           ...item,
           quantity: Number.isNaN(Number(item.quantity)) || item.quantity <= 0 ? 1 : Math.floor(Number(item.quantity)),
+          isOfferProduct: item.productId.startsWith('offer_'),
         })).filter((item: CartItem) => item.variant && item.variant.ourPrice);
         setCartItems(sanitizedItems);
       } else {
@@ -129,27 +130,37 @@ export const CartProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
       toast.error('Please log in to add items to cart');
       return;
     }
-
+  
     try {
-      const response = await fetch('/api/cart', {
+      const isOfferProduct = productId.startsWith('offer_');
+      const endpoint = isOfferProduct ? '/api/cart/offer-products' : '/api/cart';
+      const body = isOfferProduct
+        ? {
+            userId: user.id,
+            offerProductId: productId.replace('offer_', ''), // Remove offer_ prefix
+            quantity,
+          }
+        : {
+            userId: user.id,
+            productId,
+            variantId,
+            quantity,
+          };
+  
+      const response = await fetch(endpoint, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify({
-          userId: user.id,
-          productId,
-          variantId,
-          quantity: quantity,
-        }),
+        body: JSON.stringify(body),
       });
-
+  
       if (!response.ok) {
         const errorData = await response.json();
         toast.error(errorData.error || 'Failed to add item to cart.');
         return;
       }
-
+  
       await fetchCart();
       toast.success('Item added to cart!');
     } catch (error) {
@@ -405,25 +416,27 @@ export const CartProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
       0
     );
   };
-
+  
   const getCartTotal = () => {
     const subtotal = getCartSubtotal();
     if (!coupon || couponStatus !== 'applied') return subtotal;
     const discount = coupon.type === 'amount' ? coupon.value : (subtotal * coupon.value) / 100;
     return Math.max(0, subtotal - discount);
   };
+  
+  const getSavings = () => {
+    return cartItems.reduce(
+      (total, item) =>
+        total +
+        (parseFloat(item.variant.mrp || item.variant.ourPrice) - parseFloat(item.variant.ourPrice)) * item.quantity,
+      0
+    );
+  };
 
   const getItemCount = () => {
     return cartItems.reduce((count, item) => count + item.quantity, 0);
   };
 
-  const getSavings = () => {
-    return cartItems.reduce(
-      (total, item) =>
-        total + (parseFloat(item.variant.mrp) - parseFloat(item.variant.ourPrice)) * item.quantity,
-      0
-    );
-  };
 
   return (
     <CartContext.Provider

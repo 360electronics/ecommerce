@@ -44,6 +44,7 @@ export const uploadProductImageToR2 = async (
     throw new Error('Failed to upload file to R2.');
   }
 };
+
 export const uploadBannerImageToR2 = async (
   type: string,
   file: Buffer | Uint8Array | Blob | string,
@@ -53,6 +54,37 @@ export const uploadBannerImageToR2 = async (
   try {
 
     const key = `promotional-banners/${type}/${fileName}`;
+    
+    const command = new PutObjectCommand({
+      Bucket: process.env.R2_BUCKET_NAME!,
+      Key: key,
+      Body: file,
+      ContentType: mimeType,
+    });
+    
+    await r2Client.send(command);
+    
+    // Return the URL from your R2 public bucket or custom domain
+    // If using public bucket access via Cloudflare R2
+    return `${process.env.R2_PUBLIC_URL}/${key}`;
+    
+    // If using Cloudflare Workers or custom domain for R2
+    // return `${process.env.CLOUDFLARE_WORKER_URL}/${key}`;
+  } catch (error) {
+    console.error("Error uploading to R2:", error);
+    throw new Error("Failed to upload file to R2.");
+  }
+}
+
+export const uploadCartOffProductImageToR2 = async (
+  type: string,
+  file: Buffer | Uint8Array | Blob | string,
+  mimeType: string,
+  fileName: string
+) => {
+  try {
+
+    const key = `cart-val-off/${type}/${fileName}`;
     
     const command = new PutObjectCommand({
       Bucket: process.env.R2_BUCKET_NAME!,
