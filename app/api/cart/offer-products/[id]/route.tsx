@@ -3,10 +3,12 @@ import { eq } from 'drizzle-orm';
 import { db } from '@/db/drizzle';
 import { cart_offer_products } from '@/db/schema';
 
+type Params = Promise<{ id: string; }>;
+
 // DELETE: Remove a cart offer product by ID
-export async function DELETE(request: Request, { params }: { params: { id: string } }) {
+export async function DELETE(request: Request, { params }: {params :Params}) {
   try {
-    const { id } = params;
+    const { id } = await params;
     const [deletedProduct] = await db
       .delete(cart_offer_products)
       .where(eq(cart_offer_products.id, id))

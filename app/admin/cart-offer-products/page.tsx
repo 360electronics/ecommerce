@@ -72,6 +72,7 @@ export default function CartOfferProductsPage() {
         setCategorizedProducts(categorized);
       } catch (err) {
         setError('Failed to fetch cart offer products');
+        console.log(err)
         toast.error('Failed to fetch cart offer products');
       } finally {
         setLoading(false);
@@ -115,6 +116,7 @@ export default function CartOfferProductsPage() {
       }));
       toast.success('Product removed!');
     } catch (err) {
+      console.log(err)
       setError('Failed to remove product');
       toast.error('Failed to remove product');
     } finally {
@@ -166,6 +168,7 @@ export default function CartOfferProductsPage() {
       setIsAddFormOpen(false);
     } catch (err) {
       setError('Failed to add cart offer product');
+      console.log(err)
       toast.error('Failed to add cart offer product');
     } finally {
       setLoading(false);
@@ -413,7 +416,7 @@ export default function CartOfferProductsPage() {
           ) : (
             <div className="rounded-lg border border-dashed border-gray-300 bg-gray-50 p-8 text-center">
               <p className="text-gray-500">
-                No products in {CATEGORIES[activeCategory]}. Click "Add New Product" to add one.
+                No products in {CATEGORIES[activeCategory]}. Click &quot;Add New Product&quot; to add one.
               </p>
             </div>
           )}

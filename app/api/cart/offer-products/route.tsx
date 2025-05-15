@@ -1,6 +1,6 @@
 import { CartItem } from '@/components/Cart/CartItem';
 import { db } from '@/db/drizzle';
-import { cart, cart_offer_products, products, variants } from '@/db/schema';
+import { cart, cart_offer_products } from '@/db/schema';
 import { and, eq } from 'drizzle-orm';
 import { NextRequest, NextResponse } from 'next/server';
 

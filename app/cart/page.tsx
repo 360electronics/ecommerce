@@ -136,47 +136,47 @@ const CartPage: React.FC = () => {
       await addToCart(pseudoProductId, pseudoVariantId, 1);
 
       // Update cart items locally to reflect the offer product
-      const pseudoCartItem: any = {
-        id: `temp_${pseudoProductId}`, // Temporary ID, will be updated by fetchCart
-        userId: user.id,
-        productId: pseudoProductId,
-        variantId: pseudoVariantId,
-        quantity: offerProduct.quantity,
-        createdAt: new Date().toISOString(),
-        updatedAt: new Date().toISOString(),
-        product: {
-          id: pseudoProductId,
-          shortName: offerProduct.productName,
-          description: null,
-          category: 'offer',
-          brand: 'Offer',
-          status: 'active',
-          subProductStatus: 'active',
-          totalStocks: offerProduct.quantity.toString(),
-          averageRating: '0',
-          ratingCount: '0',
-          createdAt: new Date().toISOString(),
-          updatedAt: new Date().toISOString(),
-        },
-        variant: {
-          id: pseudoVariantId,
-          productId: pseudoProductId,
-          name: offerProduct.productName,
-          sku: `OFFER-${offerProduct.id}`,
-          slug: `offer-${offerProduct.id}`,
-          color: '',
-          material: null,
-          dimensions: null,
-          weight: null,
-          storage: null,
-          stock: offerProduct.quantity.toString(),
-          mrp: offerProduct.ourPrice,
-          ourPrice: offerProduct.ourPrice,
-          productImages: [offerProduct.productImage],
-          createdAt: new Date().toISOString(),
-          updatedAt: new Date().toISOString(),
-        },
-      };
+      // const pseudoCartItem: any = {
+      //   id: `temp_${pseudoProductId}`, // Temporary ID, will be updated by fetchCart
+      //   userId: user.id,
+      //   productId: pseudoProductId,
+      //   variantId: pseudoVariantId,
+      //   quantity: offerProduct.quantity,
+      //   createdAt: new Date().toISOString(),
+      //   updatedAt: new Date().toISOString(),
+      //   product: {
+      //     id: pseudoProductId,
+      //     shortName: offerProduct.productName,
+      //     description: null,
+      //     category: 'offer',
+      //     brand: 'Offer',
+      //     status: 'active',
+      //     subProductStatus: 'active',
+      //     totalStocks: offerProduct.quantity.toString(),
+      //     averageRating: '0',
+      //     ratingCount: '0',
+      //     createdAt: new Date().toISOString(),
+      //     updatedAt: new Date().toISOString(),
+      //   },
+      //   variant: {
+      //     id: pseudoVariantId,
+      //     productId: pseudoProductId,
+      //     name: offerProduct.productName,
+      //     sku: `OFFER-${offerProduct.id}`,
+      //     slug: `offer-${offerProduct.id}`,
+      //     color: '',
+      //     material: null,
+      //     dimensions: null,
+      //     weight: null,
+      //     storage: null,
+      //     stock: offerProduct.quantity.toString(),
+      //     mrp: offerProduct.ourPrice,
+      //     ourPrice: offerProduct.ourPrice,
+      //     productImages: [offerProduct.productImage],
+      //     createdAt: new Date().toISOString(),
+      //     updatedAt: new Date().toISOString(),
+      //   },
+      // };
 
       toast.success(`${offerProduct.productName} added to cart!`);
       setSelectedOfferProduct(null);
