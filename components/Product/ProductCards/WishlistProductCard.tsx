@@ -5,14 +5,14 @@ import { Heart, ShoppingCart } from "lucide-react";
 import Image from "next/image"
 import Link from "next/link"
 import { ProductCardProps } from "@/types/product"
-import { addToWishlist, removeFromWishlist } from "@/utils/wishlist.utils"; // Add removeFromWishlist
+import { addToWishlist, removeFromWishlist } from "@/utils/wishlist.utils"; 
 import toast, { Toaster } from "react-hot-toast";
-import { useAuth } from "@/context/auth-context";
 import { useEffect, useState } from "react";
-import { useWishlist } from "@/context/wishlist-context";
-import { useProfileContext } from "@/context/profile-context";
 import { encodeUUID } from "@/utils/Encryption";
-import { useCart } from "@/context/cart-context";
+import { useAuthStore } from "@/store/auth-store";
+import { useWishlistStore } from "@/store/wishlist-store";
+import { useProfileStore } from "@/store/profile-store";
+import { useCartStore } from "@/store/cart-store";
 
 
 const WishlistProductCard: React.FC<ProductCardProps> = ({
@@ -30,14 +30,14 @@ const WishlistProductCard: React.FC<ProductCardProps> = ({
   productId,
   variantId
 }) => {
-  const { user } = useAuth();
-  const { refreshWishlist } = useWishlist();
-  const profileContext = useProfileContext();
+  const { user } = useAuthStore();
+  const { fetchWishlist } = useWishlistStore();
+  const profileContext = useProfileStore();
   const [isAdding, setIsAdding] = useState(false);
   const [isInWishlist, setIsInWishlist] = useState(false);
   const userId = user?.id;
 
-  const { addToCart } = useCart();
+  const { addToCart } = useCartStore();
 
   // Check if product is in wishlist
   useEffect(() => {
@@ -98,9 +98,9 @@ const WishlistProductCard: React.FC<ProductCardProps> = ({
     if (result.success) {
       toast.success(isInWishlist ? "Removed from wishlist!" : "Added to wishlist!");
       setIsInWishlist(!isInWishlist);
-      refreshWishlist();
+      fetchWishlist();
       if (profileContext?.refetch) {
-        profileContext.refetch(); // Refresh ProfileContext data
+        profileContext.refetch('wishlist', userId, true); 
       }
     } else {
       toast.error(result.message || `Failed to ${isInWishlist ? "remove from" : "add to"} wishlist`);

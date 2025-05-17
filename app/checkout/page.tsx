@@ -2,14 +2,14 @@
 
 import React, { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
-import { useAuth } from '@/context/auth-context';
-import { useCheckout } from '@/context/checkout-context';
-import { useCart } from '@/context/cart-context';
 import UserLayout from '@/components/Layouts/UserLayout';
 import CheckoutLayout from '@/components/Layouts/CheckoutLayout';
 import toast from 'react-hot-toast';
 import { Plus, Check, Truck, CreditCard, IndianRupee as Cash, Loader2 } from 'lucide-react';
 import Script from 'next/script';
+import { useAuthStore } from '@/store/auth-store';
+import { useCheckoutStore } from '@/store/checkout-store';
+import { useCartStore } from '@/store/cart-store';
 
 interface Address {
   id: string;
@@ -27,9 +27,9 @@ interface Address {
 
 
 const CheckoutPage: React.FC = () => {
-  const { isLoggedIn, isLoading, user } = useAuth();
-  const { checkoutItems, fetchCheckoutItems, clearCheckout } = useCheckout();
-  const { coupon, couponStatus, applyCoupon, removeCoupon, markCouponUsed, clearCoupon } = useCart();
+  const { isLoggedIn, isLoading, user } = useAuthStore();
+  const { checkoutItems, fetchCheckoutItems, clearCheckout } = useCheckoutStore();
+  const { coupon, couponStatus, applyCoupon, removeCoupon, markCouponUsed, clearCoupon } = useCartStore();
   const router = useRouter();
 
   const [addresses, setAddresses] = useState<Address[]>([]);
@@ -304,7 +304,7 @@ const CheckoutPage: React.FC = () => {
 
             // Mark coupon as used if applied
             if (coupon && coupon.code && couponStatus === 'applied') {
-              await markCouponUsed(coupon.code, user!.id);
+              await markCouponUsed(coupon.code);
             }
 
             // Clear coupon in frontend
@@ -423,7 +423,7 @@ const CheckoutPage: React.FC = () => {
       } else {
         // For COD, mark coupon as used and update status
         if (coupon && coupon.code && couponStatus === 'applied') {
-          await markCouponUsed(coupon.code, user!.id);
+          await markCouponUsed(coupon.code);
         }
         await fetch('/api/orders/update-status', {
           method: 'POST',

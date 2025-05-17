@@ -1,30 +1,21 @@
-// components/Profile/Refferals.tsx
 'use client';
-import { useAuth } from '@/context/auth-context';
-import { useRef, useState } from 'react';
-import { AlertCircle, Copy, Check, Gift, Users, Award, Loader2, ExternalLink } from 'lucide-react';
+
+import { useAuthStore } from '@/store/auth-store';
+import { useProfileStore } from '@/store/profile-store';
+import { useState } from 'react';
+import { AlertCircle, Gift, Users, Award, Loader2, ExternalLink, Check, Copy } from 'lucide-react';
 import Image from 'next/image';
-import { useProfileContext } from '@/context/profile-context';
+import SkeletonLoader from '../Reusable/SkeletonLoader';
 
 export default function Referrals() {
-  const { user, isLoading: authLoading } = useAuth();
-  const { referrals, isLoading, error } = useProfileContext();
+  const { user, isLoading: authLoading } = useAuthStore();
+  const { referrals, isLoading, isRefetching, errors, shareCurrentPage } = useProfileStore();
   const [copied, setCopied] = useState(false);
-  const linkInputRef = useRef<HTMLInputElement>(null);
 
   const handleCopyLink = () => {
-    if (linkInputRef.current) {
-      linkInputRef.current.select();
-      navigator.clipboard
-        .writeText(referrals.referralLink)
-        .then(() => {
-          setCopied(true);
-          setTimeout(() => setCopied(false), 2000);
-        })
-        .catch((err) => {
-          console.error('Failed to copy text: ', err);
-        });
-    }
+    shareCurrentPage('referrals');
+    setCopied(true);
+    setTimeout(() => setCopied(false), 2000);
   };
 
   const formatDate = (dateString: string) => {
@@ -36,7 +27,7 @@ export default function Referrals() {
       };
       return new Date(dateString).toLocaleDateString(undefined, options);
     } catch (e) {
-      console.log(e)
+      console.error(e);
       return dateString;
     }
   };
@@ -67,11 +58,11 @@ export default function Referrals() {
     }
   };
 
-  if (authLoading || isLoading) {
+  if (authLoading || isLoading || isRefetching) {
     return (
-      <div className="flex flex-col items-center justify-center py-12">
-        <Loader2 className="h-8 w-8 animate-spin text-gray-500" />
-        <p className="mt-4 text-gray-600">Loading...</p>
+      <div className="mx-auto px-4 sm:px-6 lg:px-8 py-8">
+        <SkeletonLoader count={4} className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-8" />
+        <SkeletonLoader count={2} className="space-y-8" />
       </div>
     );
   }
@@ -95,10 +86,11 @@ export default function Referrals() {
   return (
     <div className="mx-auto px-4 sm:px-6 lg:px-8 py-8">
       <div className="flex items-center justify-between mb-6">
-        <h1 className="text-2xl font-bold text-gray-900 nohemi-bold">Referral <span className='border-b-3 border-primary text-primary'>Program</span></h1>
+        <h1 className="text-2xl font-bold text-gray-900 nohemi-bold">
+          Referral <span className="border-b-3 border-primary text-primary">Program</span>
+        </h1>
       </div>
 
-      {/* Referral Stats Cards */}
       <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-8">
         <div className="rounded-lg p-4 border border-gray-200">
           <div className="flex items-center">
@@ -109,7 +101,7 @@ export default function Referrals() {
             </div>
           </div>
         </div>
-        <div className="bg-white  rounded-lg p-4 border border-gray-200">
+        <div className="bg-white rounded-lg p-4 border border-gray-200">
           <div className="flex items-center">
             <Award className="h-8 w-8 text-green-500" />
             <div className="ml-4">
@@ -118,7 +110,7 @@ export default function Referrals() {
             </div>
           </div>
         </div>
-        <div className="bg-white  rounded-lg p-4 border border-gray-200">
+        <div className="bg-white rounded-lg p-4 border border-gray-200">
           <div className="flex items-center">
             <Gift className="h-8 w-8 text-purple-500" />
             <div className="ml-4">
@@ -127,7 +119,7 @@ export default function Referrals() {
             </div>
           </div>
         </div>
-        <div className="bg-white  rounded-lg p-4 border border-gray-200">
+        <div className="bg-white rounded-lg p-4 border border-gray-200">
           <div className="flex items-center">
             <Gift className="h-8 w-8 text-indigo-500" />
             <div className="ml-4">
@@ -138,32 +130,30 @@ export default function Referrals() {
         </div>
       </div>
 
-      {error && (
-        <div className="bg-red-50 border border-red-200 rounded-md p-4 mb-6">
+      {errors.referrals && (
+        <div className="bg-red-50 border border-yellow-200 rounded-md p-4 my-4">
           <div className="flex">
             <AlertCircle className="h-5 w-5 text-red-400" />
             <div className="ml-3">
               <h3 className="text-sm font-medium text-red-800">Error</h3>
-              <p className="text-sm text-red-700 mt-1">{error}</p>
+              <p className="text-sm text-red-700 mt-1">{errors.referrals}</p>
             </div>
           </div>
         </div>
       )}
 
-      {!error && (
+      {!errors.referrals && (
         <>
-          {/* Referral Link Section */}
-          <div className="bg-white  sm:rounded-lg overflow-hidden border border-gray-200 mb-8">
+          <div className="bg-white sm:rounded-lg overflow-hidden border border-gray-200 mb-8">
             <div className="px-4 py-5 sm:px-6 bg-blue-50 border-b border-gray-200">
               <h3 className="text-lg font-medium text-gray-900">Your Referral Link</h3>
               <p className="mt-1 text-sm text-gray-600">
-                Share this link with friends. When they sign up, you&apos;ll both receive rewards!
+                Share this link with friends. When they sign up, you'll both receive rewards!
               </p>
             </div>
             <div className="px-4 py-5 sm:p-6">
               <div className="flex flex-col sm:flex-row space-y-2 sm:space-y-0 sm:space-x-2">
                 <input
-                  ref={linkInputRef}
                   type="text"
                   className="flex-1 block w-full min-w-0 border px-2 border-gray-300 rounded-md -sm focus:ring-blue-500 focus:border-blue-500 sm:text-sm"
                   value={referrals.referralLink}
@@ -189,33 +179,26 @@ export default function Referrals() {
               <div className="mt-6">
                 <p className="text-sm text-gray-500 mb-3">Share via:</p>
                 <div className="flex space-x-2">
-                  <button
-                    onClick={() => handleShare('facebook')}
-                    className="inline-flex items-center  text-sm font-medium rounded-md text-gray-700 cursor-pointer focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
-                  >
-                    <Image src='https://img.icons8.com/?size=100&id=uLWV5A9vXIPu&format=png&color=000000' alt='Facebook' width={40} height={40} />
-                  </button>
-                  <button
-                    onClick={() => handleShare('twitter')}
-                    className="inline-flex items-center  text-sm font-medium rounded-md text-gray-700 cursor-pointer focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
-                  >
-
-                    <Image src='https://img.icons8.com/?size=100&id=phOKFKYpe00C&format=png&color=000000' alt='X' width={40} height={40} />
-                  </button>
-                  <button
-                    onClick={() => handleShare('whatsapp')}
-                    className="inline-flex items-center text-sm font-medium rounded-md text-gray-700 cursor-pointer focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
-                  >
-                    <Image src='https://img.icons8.com/?size=100&id=16713&format=png&color=000000' alt='Whatsapp' width={40} height={40} />
-
-                  </button>
-                  <button
-                    onClick={() => handleShare('email')}
-                    className="inline-flex items-center  text-sm font-medium rounded-md text-gray-700 cursor-pointer focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
-                  >
-                    <Image src='https://img.icons8.com/?size=100&id=P7UIlhbpWzZm&format=png&color=000000' alt='Gmail' width={40} height={40} />
-                    
-                  </button>
+                  {['facebook', 'twitter', 'whatsapp', 'email'].map((platform) => (
+                    <button
+                      key={platform}
+                      onClick={() => handleShare(platform as 'facebook' | 'twitter' | 'whatsapp' | 'email')}
+                      className="inline-flex items-center text-sm font-medium rounded-md text-gray-700 cursor-pointer focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
+                      aria-label={`Share referral link on ${platform}`}
+                    >
+                      <Image
+                        src={`https://img.icons8.com/?size=100&id=${
+                          platform === 'facebook' ? 'uLWV5A9vXIPu' :
+                          platform === 'twitter' ? 'phOKFKYpe00C' :
+                          platform === 'whatsapp' ? '16713' : 'P7UIlhbpWzZm'
+                        }&format=png&color=000000`}
+                        alt={platform}
+                        width={40}
+                        height={40}
+                        loading="lazy"
+                      />
+                    </button>
+                  ))}
                 </div>
               </div>
             </div>
@@ -228,12 +211,11 @@ export default function Referrals() {
             </div>
           </div>
 
-          {/* Your Available Coupons */}
-          <div className="bg-white  sm:rounded-lg overflow-hidden border border-gray-200 mb-8">
+          <div className="bg-white sm:rounded-lg overflow-hidden border border-gray-200 mb-8">
             <div className="px-4 py-5 sm:px-6 bg-green-50 border-b border-gray-200">
               <h3 className="text-lg font-medium text-gray-900">Your Coupons</h3>
               <p className="mt-1 text-sm text-gray-600">
-                Coupons you&apos;ve earned from successful referrals
+                Coupons you've earned from successful referrals
               </p>
             </div>
             <div className="px-4 py-5 sm:p-6">
@@ -242,8 +224,9 @@ export default function Referrals() {
                   {referrals.coupons.map((coupon) => (
                     <div
                       key={coupon.id}
-                      className={`border ${coupon.isUsed ? 'border-gray-200 bg-gray-50' : 'border-green-200 bg-green-50'
-                        } rounded-lg p-4 flex justify-between items-center`}
+                      className={`border ${
+                        coupon.isUsed ? 'border-gray-200 bg-gray-50' : 'border-green-200 bg-green-50'
+                      } rounded-lg p-4 flex justify-between items-center`}
                     >
                       <div>
                         <div className="flex items-center">
@@ -282,12 +265,11 @@ export default function Referrals() {
             </div>
           </div>
 
-          {/* Referral History */}
-          <div className="bg-white  sm:rounded-lg overflow-hidden border border-gray-200">
+          <div className="bg-white sm:rounded-lg overflow-hidden border border-gray-200">
             <div className="px-4 py-5 sm:px-6 bg-gray-50 border-b border-gray-200">
               <h3 className="text-lg font-medium text-gray-900">Referral History</h3>
               <p className="mt-1 text-sm text-gray-600">
-                Track the status of people you&apos;ve referred
+                Track the status of people you've referred
               </p>
             </div>
             <div className="px-4 py-5 sm:p-6">
@@ -333,10 +315,11 @@ export default function Referrals() {
                           </td>
                           <td className="px-6 py-4 whitespace-nowrap">
                             <span
-                              className={`inline-flex px-2 py-1 text-xs font-medium rounded-full ${referral.status === 'completed'
+                              className={`inline-flex px-2 py-1 text-xs font-medium rounded-full ${
+                                referral.status === 'completed'
                                   ? 'bg-green-100 text-green-800'
                                   : 'bg-yellow-100 text-yellow-800'
-                                }`}
+                              }`}
                             >
                               {referral.status === 'completed' ? 'Completed' : 'Pending'}
                             </span>
@@ -367,7 +350,6 @@ export default function Referrals() {
             </div>
           </div>
 
-          {/* Referral Program Info */}
           <div className="mt-8 bg-blue-50 rounded-lg p-6 border border-blue-100">
             <h3 className="text-lg font-medium text-blue-900">How Our Referral Program Works</h3>
             <div className="mt-4 space-y-4">
@@ -393,7 +375,7 @@ export default function Referrals() {
                 <div className="ml-4">
                   <p className="text-sm font-medium text-blue-900">Friends sign up using your link</p>
                   <p className="mt-1 text-sm text-blue-700">
-                    When someone uses your link to create an account, they&apos;re added to your referrals.
+                    When someone uses your link to create an account, they're added to your referrals.
                   </p>
                 </div>
               </div>
@@ -408,7 +390,7 @@ export default function Referrals() {
                     Earn rewards when they complete a purchase
                   </p>
                   <p className="mt-1 text-sm text-blue-700">
-                    After your referred friend makes their first purchase, you&apos;ll receive a ₹100 coupon.
+                    After your referred friend makes their first purchase, you'll receive a ₹100 coupon.
                   </p>
                 </div>
               </div>

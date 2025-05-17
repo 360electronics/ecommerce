@@ -114,12 +114,3 @@ interface ProductType {
   variants?: ProductVariant[];
 }
 
-export interface FlattenedProduct extends ProductVariant {
-  category: string;
-  brand?: string;
-  averageRating: string;
-  totalStocks: string;
-  tags: string[]; // Normalized to string[]
-  description?: string | null;
-  productParent?: ProductType;
-}

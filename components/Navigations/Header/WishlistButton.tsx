@@ -3,10 +3,12 @@
 import React from 'react';
 import { Heart } from 'lucide-react';
 import Link from 'next/link';
-import { useWishlist } from '@/context/wishlist-context';
+import { useWishlistStore } from '@/store/wishlist-store';
 
 const WishlistButton = () => {
-  const { wishlistCount } = useWishlist(); 
+  const { wishlistCount } = useWishlistStore(); 
+
+  console.log(wishlistCount)
 
  
 

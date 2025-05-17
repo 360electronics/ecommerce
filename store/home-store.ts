@@ -1,8 +1,11 @@
+'use client';
+
 import { create } from 'zustand';
+import toast from 'react-hot-toast';
 import { Product } from '@/types/product';
 import { Banner } from '@/types/banner';
 
-interface HomeStore {
+interface HomeState {
   banners: Banner[];
   featuredProducts: Product[];
   newArrivals: Product[];
@@ -13,19 +16,13 @@ interface HomeStore {
     'steering-chairs': Product[];
   };
   brandProducts: Product[];
-  setBanners: (banners: Banner[]) => void;
-  setFeaturedProducts: (products: Product[]) => void;
-  setNewArrivals: (products: Product[]) => void;
-  setGamersZoneProducts: (products: {
-    consoles: Product[];
-    accessories: Product[];
-    laptops: Product[];
-    'steering-chairs': Product[];
-  }) => void;
-  setBrandProducts: (products: Product[]) => void;
+  isLoading: boolean;
+  error: string | null;
+  hasLoadedOnce: boolean;
+  fetchHomeData: () => Promise<void>;
 }
 
-export const useHomeStore = create<HomeStore>((set) => ({
+export const useHomeStore = create<HomeState>()((set, get) => ({
   banners: [],
   featuredProducts: [],
   newArrivals: [],
@@ -36,9 +33,69 @@ export const useHomeStore = create<HomeStore>((set) => ({
     'steering-chairs': [],
   },
   brandProducts: [],
-  setBanners: (banners) => set({ banners }),
-  setFeaturedProducts: (products) => set({ featuredProducts: products }),
-  setNewArrivals: (products) => set({ newArrivals: products }),
-  setGamersZoneProducts: (products) => set({ gamersZoneProducts: products }),
-  setBrandProducts: (products) => set({ brandProducts: products }),
+  isLoading: false,
+  error: null,
+  hasLoadedOnce: false,
+  fetchHomeData: async () => {
+    // If we've already loaded data once during this session, do nothing
+    if (get().hasLoadedOnce) {
+      return;
+    }
+
+    try {
+      set({ isLoading: true, error: null });
+      const [bannersRes, featuredRes, newArrivalsRes, gamersZoneRes, brandProductsRes] = await Promise.all([
+        fetch('/api/banner', { cache: 'no-store' }),
+        fetch('/api/products/featured', { cache: 'no-store' }),
+        fetch('/api/products/new-arrivals', { cache: 'no-store' }),
+        fetch('/api/products/gamers-zone', { cache: 'no-store' }),
+        fetch('/api/products', { cache: 'no-store' }),
+      ]);
+
+      if (!bannersRes.ok) throw new Error('Failed to fetch banners');
+      if (!featuredRes.ok) throw new Error('Failed to fetch featured products');
+      if (!newArrivalsRes.ok) throw new Error('Failed to fetch new arrivals');
+      if (!gamersZoneRes.ok) throw new Error('Failed to fetch gamers zone products');
+      if (!brandProductsRes.ok) throw new Error('Failed to fetch brand products');
+
+      const [banners, featuredProducts, newArrivals, gamersZoneProducts, brandProducts] = await Promise.all([
+        bannersRes.json(),
+        featuredRes.json(),
+        newArrivalsRes.json(),
+        gamersZoneRes.json(),
+        brandProductsRes.json(),
+      ]);
+
+      // Validate responses
+      const safeBanners = Array.isArray(banners?.data) ? banners.data : [];
+      const safeFeaturedProducts = Array.isArray(featuredProducts) ? featuredProducts : [];
+      const safeNewArrivals = Array.isArray(newArrivals) ? newArrivals : [];
+      const safeGamersZoneProducts = gamersZoneProducts && typeof gamersZoneProducts === 'object' ? {
+        consoles: Array.isArray(gamersZoneProducts.consoles) ? gamersZoneProducts.consoles : [],
+        accessories: Array.isArray(gamersZoneProducts.accessories) ? gamersZoneProducts.accessories : [],
+        laptops: Array.isArray(gamersZoneProducts.laptops) ? gamersZoneProducts.laptops : [],
+        'steering-chairs': Array.isArray(gamersZoneProducts['steering-chairs']) ? gamersZoneProducts['steering-chairs'] : [],
+      } : {
+        consoles: [],
+        accessories: [],
+        laptops: [],
+        'steering-chairs': [],
+      };
+      const safeBrandProducts = Array.isArray(brandProducts) ? brandProducts : [];
+
+      set({
+        banners: safeBanners,
+        featuredProducts: safeFeaturedProducts,
+        newArrivals: safeNewArrivals,
+        gamersZoneProducts: safeGamersZoneProducts,
+        brandProducts: safeBrandProducts,
+        isLoading: false,
+        hasLoadedOnce: true,
+      });
+    } catch (error) {
+      console.error('Error fetching home data:', error);
+      set({ error: 'Failed to load home data', isLoading: false });
+      toast.error('Failed to load home data');
+    }
+  },
 }));

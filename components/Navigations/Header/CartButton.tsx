@@ -4,9 +4,10 @@ import React from 'react';
 import { ShoppingCart } from 'lucide-react';
 import Link from 'next/link';
 import { useCart } from '@/context/cart-context';
+import { useCartStore } from '@/store/cart-store';
 
 const CartButton = () => {
-  const { getItemCount, getCartTotal } = useCart();
+  const { getItemCount, getCartTotal } = useCartStore();
 
   const cartItems = getItemCount();
   const cartTotal = getCartTotal();

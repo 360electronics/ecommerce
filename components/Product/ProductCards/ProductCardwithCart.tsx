@@ -7,14 +7,15 @@ import { Heart, ShoppingCart, X } from "lucide-react"
 import Image from "next/image"
 import Link from "next/link"
 import { ProductCardProps } from "@/types/product"
-import { addToWishlist, removeFromWishlist } from "@/utils/wishlist.utils"; // Add removeFromWishlist
+import { addToWishlist, removeFromWishlist } from "@/utils/wishlist.utils"; 
 import toast, { Toaster } from "react-hot-toast";
-import { useAuth } from "@/context/auth-context";
 import { useState } from "react";
-import { useWishlist } from "@/context/wishlist-context";
-import { useProfileContext } from "@/context/profile-context";
 import { encodeUUID } from "@/utils/Encryption"
 import { useCart } from "@/context/cart-context"
+import { useAuthStore } from "@/store/auth-store"
+import { useWishlistStore } from "@/store/wishlist-store"
+import { useProfileStore } from "@/store/profile-store"
+import { useCartStore } from "@/store/cart-store"
 
 
 const ProductCardwithCart: React.FC<ProductCardProps> = ({
@@ -32,13 +33,13 @@ const ProductCardwithCart: React.FC<ProductCardProps> = ({
   productId,
   variantId
 }) => {
-  const { user } = useAuth();
-  const { isInWishlist, refreshWishlist } = useWishlist();
-  const { refetch: refetchProfile } = useProfileContext();
+  const { user } = useAuthStore();
+  const { isInWishlist, fetchWishlist } = useWishlistStore();
+  const { refetch: refetchProfile } = useProfileStore();
   const [isAdding, setIsAdding] = useState(false);
   const userId = user?.id;
 
-  const { addToCart } = useCart();
+  const { addToCart } = useCartStore();
 
   const isInWishlistStatus = productId && variantId ? isInWishlist(productId, variantId) : false;
 
@@ -62,7 +63,7 @@ const ProductCardwithCart: React.FC<ProductCardProps> = ({
 
     if (result.success) {
       toast.success(isInWishlistStatus ? 'Removed from wishlist!' : 'Added to wishlist!');
-      refreshWishlist();
+      fetchWishlist();
       if (refetchProfile) {
         refetchProfile();
       }

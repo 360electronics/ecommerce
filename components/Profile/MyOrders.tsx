@@ -1,15 +1,16 @@
 'use client';
-import { useAuth } from '@/context/auth-context';
+
+import { useAuthStore } from '@/store/auth-store';
+import { useProfileStore } from '@/store/profile-store';
 import { AlertCircle, ShoppingBag, Loader2 } from 'lucide-react';
 import Link from 'next/link';
 import Image from 'next/image';
-import { useProfileContext } from '@/context/profile-context';
+import SkeletonLoader from '../Reusable/SkeletonLoader';
 
 export default function Orders() {
-  const { user, isLoading: authLoading } = useAuth();
-  const { orders, isLoading, error } = useProfileContext();
+  const { user, isLoading: authLoading } = useAuthStore();
+  const { orders, isLoading, isRefetching, errors } = useProfileStore();
 
-  // Function to format date nicely
   const formatDate = (dateString: string) => {
     try {
       const options: Intl.DateTimeFormatOptions = {
@@ -26,7 +27,6 @@ export default function Orders() {
     }
   };
 
-  // Function to get status badge color
   const getStatusColor = (status: string) => {
     switch (status.toLowerCase()) {
       case 'delivered':
@@ -44,7 +44,6 @@ export default function Orders() {
     }
   };
 
-  // Function to get payment status color
   const getPaymentStatusColor = (status: string) => {
     switch (status.toLowerCase()) {
       case 'paid':
@@ -60,14 +59,14 @@ export default function Orders() {
     }
   };
 
-  if (authLoading || isLoading) {
+  if (authLoading || isLoading || isRefetching) {
     return (
-      <div className="flex flex-col items-center justify-center py-12">
-        <Loader2 className="h-8 w-8 animate-spin text-gray-500" />
-        <p className="mt-4 text-gray-600">Loading...</p>
+      <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8 py-8">
+        <SkeletonLoader count={3} className="space-y-6" />
       </div>
     );
   }
+
 
   if (!user) {
     return (
@@ -92,13 +91,13 @@ export default function Orders() {
         <span className="text-2xl text-gray-500 nohemi-bold">({orders.length})</span>
       </div>
 
-      {error && (
+      {errors.orders && (
         <div className="bg-red-50 border border-red-200 rounded-md p-4 mb-6">
           <div className="flex">
             <AlertCircle className="h-5 w-5 text-red-400" />
             <div className="ml-3">
               <h3 className="text-sm font-medium text-red-800">Error</h3>
-              <p className="text-sm text-red-700 mt-1">{error}</p>
+              <p className="text-sm text-red-700 mt-1">{errors.orders}</p>
             </div>
           </div>
         </div>
@@ -109,7 +108,7 @@ export default function Orders() {
           {orders.map((order) => (
             <div
               key={order.id}
-              className="bg-white sm:rounded-lg overflow-hidden border border-gray-200 "
+              className="bg-white sm:rounded-lg overflow-hidden border border-gray-200"
             >
               <div className="px-4 py-5 sm:px-6 bg-gray-50 border-b border-gray-200">
                 <div className="flex justify-between items-center">
@@ -139,7 +138,6 @@ export default function Orders() {
               </div>
               <div className="px-4 py-5 sm:p-6">
                 <div className="space-y-4">
-                  {/* Order Items */}
                   {order.items.length > 0 ? (
                     <div className="space-y-4">
                       {order.items.map((item) => (
@@ -155,6 +153,7 @@ export default function Orders() {
                                 width={80}
                                 height={80}
                                 className="rounded-md object-cover"
+                                loading="lazy"
                               />
                             ) : (
                               <div className="w-20 h-20 bg-gray-100 rounded-md flex items-center justify-center">
@@ -186,20 +185,16 @@ export default function Orders() {
                     <p className="text-sm text-gray-500">No items in this order.</p>
                   )}
 
-                  {/* Order Summary */}
                   <div className="flex justify-between items-center pt-4 border-t border-gray-200">
                     <div className="space-y-2">
                       <p className="text-sm text-gray-600">
-                        Order Status:{' '}
-                        <span className="font-medium capitalize">{order.status}</span>
+                        Order Status: <span className="font-medium capitalize">{order.status}</span>
                       </p>
                       <p className="text-sm text-gray-600">
-                        Payment Status:{' '}
-                        <span className="font-medium capitalize">{order.paymentStatus}</span>
+                        Payment Status: <span className="font-medium capitalize">{order.paymentStatus}</span>
                       </p>
                       <p className="text-sm text-gray-600">
-                        Payment Method:{' '}
-                        <span className="font-medium capitalize">{order.paymentMethod}</span>
+                        Payment Method: <span className="font-medium capitalize">{order.paymentMethod}</span>
                       </p>
                     </div>
                     <div className="text-right">
@@ -215,6 +210,7 @@ export default function Orders() {
                 <Link
                   href={`/orders/${order.id}`}
                   className="text-sm font-medium text-blue-600 hover:text-blue-500"
+                  aria-label={`View details for order ${order.id.substring(0, 8)}`}
                 >
                   View Order Details →
                 </Link>
@@ -233,6 +229,7 @@ export default function Orders() {
             <Link
               href="/category/all"
               className="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
+              aria-label="Browse products"
             >
               Browse products
             </Link>

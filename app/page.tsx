@@ -1,45 +1,25 @@
-// app/page.tsx
-import TopTierBrands from '@/components/Home/Brands/TopTierBrands';
-import OfferZoneCTA from '@/components/Home/CTA/OfferZoneCTA';
-import FeaturedProducts from '@/components/Home/FeatureProducts/FeaturedProducts';
-import GamersZone from '@/components/Home/GamersZone/GamersZone';
-import HeroBanner from '@/components/Home/Hero/HeroBanner';
-import NewArrivals from '@/components/Home/NewArrivals/NewArrivals';
+
 import UserLayout from '@/components/Layouts/UserLayout';
-import HomeDataInitializer from '@/components/Home/HomeDataInitializer';
-import { fetchFeaturedProducts, fetchNewArrivalsProducts, fetchGamersZoneProducts, fetchProducts } from '@/utils/products.util';
-import { fetchBanners } from '@/utils/banners.utils';
+import HomeContent from '@/components/Home/HomeContent';
 
-export default async function Home() {
-  const banners = await fetchBanners();
-  const featuredProducts = await fetchFeaturedProducts();
-  const newArrivals = await fetchNewArrivalsProducts();
-  const gamersZoneProducts = await fetchGamersZoneProducts();
-  const brandProducts = await fetchProducts();
+// Metadata for SEO
+export const metadata = {
+  title: '360 Electronics - Shop the Latest Products',
+  description: 'Discover featured products, new arrivals, and gamers zone items at the best prices.',
+  openGraph: {
+    title: 'Your E-Commerce Store',
+    description: 'Shop the latest products at unbeatable prices.',
+    url: 'https://your-site.com',
+    type: 'website',
+  },
+};
 
+export const revalidate = 3600; // ISR: Revalidate every hour
+
+export default function Home() {
   return (
     <UserLayout>
-      <HomeDataInitializer
-        initialBanners={banners.data || []}
-        initialFeaturedProducts={featuredProducts || []}
-        initialNewArrivals={newArrivals || []}
-        initialGamersZoneProducts={gamersZoneProducts || {
-          consoles: [],
-          accessories: [],
-          laptops: [],
-          'steering-chairs': [],
-        }}
-        initialBrandProducts={brandProducts || []}
-      />
-      <HeroBanner />
-      <FeaturedProducts />
-      <OfferZoneCTA  />
-      <NewArrivals />
-      <GamersZone />
-      <TopTierBrands />
+      <HomeContent />
     </UserLayout>
   );
 }
-
-export const dynamic = 'force-static';
-export const revalidate = 3600;

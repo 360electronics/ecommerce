@@ -3,6 +3,7 @@
 import { useEffect, useState, useMemo } from 'react';
 import { useProductContext } from '@/context/product-context';
 import { cn } from '@/lib/utils';
+import { useProductStore } from '@/store/product-store';
 
 interface ProductZoomOverlayProps {
   zoomFactor?: number;
@@ -13,7 +14,7 @@ export default function ProductZoomOverlay({
   zoomFactor = 2.5,
   className,
 }: ProductZoomOverlayProps) {
-  const { product, selectedImageIndex, lensPosition } = useProductContext();
+  const { product, selectedImageIndex, lensPosition } = useProductStore();
   const [isMounted, setIsMounted] = useState(false);
   
   useEffect(() => {

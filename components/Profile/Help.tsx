@@ -1,6 +1,6 @@
 'use client';
-import { useAuth } from '@/context/auth-context';
-import { useState, useCallback } from 'react';
+
+import { useState, useCallback, useEffect } from 'react';
 import { IoArrowForwardCircleSharp as RightArrow } from 'react-icons/io5';
 import { FaCheckCircle, FaTimesCircle, FaPlus, FaSpinner } from 'react-icons/fa';
 import { BiSend } from 'react-icons/bi';
@@ -8,8 +8,8 @@ import { MdAttachFile, MdRefresh } from 'react-icons/md';
 import { Button } from '@/components/ui/button';
 import { format } from 'date-fns';
 import toast from 'react-hot-toast';
-import { useProfileContext } from '@/context/profile-context';
-
+import { useAuthStore } from '@/store/auth-store';
+import { useProfileStore } from '@/store/profile-store';
 
 interface Ticket {
   id: string;
@@ -28,8 +28,8 @@ interface Reply {
 }
 
 export default function Help() {
-  const { user } = useAuth();
-  const { tickets, isLoading, refetch } = useProfileContext();
+  const { user } = useAuthStore();
+  const { tickets, isLoading, isRefetching, refetch } = useProfileStore();
   const [issueType, setIssueType] = useState('');
   const [description, setDescription] = useState('');
   const [selectedTicket, setSelectedTicket] = useState<Ticket | null>(null);
@@ -37,35 +37,54 @@ export default function Help() {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [filterStatus, setFilterStatus] = useState<string>('all');
+  const [error, setError] = useState<string | null>(null);
+
+  // Handle modal close on Escape key
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'Escape' && isModalOpen) {
+        setIsModalOpen(false);
+      }
+    };
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [isModalOpen]);
 
   // Handle ticket submission
   const handleSubmit = useCallback(
     async (e: React.FormEvent) => {
       e.preventDefault();
+      if (!user?.id) {
+        setError('Please sign in to submit a ticket.');
+        toast.error('Please sign in to submit a ticket.');
+        return;
+      }
       setIsSubmitting(true);
+      setError(null);
 
       try {
         const res = await fetch('/api/tickets', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
-            user_id: user?.id,
+            user_id: user.id,
             type: issueType,
             issue_desc: description,
           }),
         });
 
         const data = await res.json();
-        if (!res.ok) throw new Error(data.error || 'Failed to submit');
+        if (!res.ok) throw new Error(data.error || 'Failed to submit ticket');
 
         toast.success('Your ticket has been submitted successfully.');
         setIssueType('');
         setDescription('');
         setIsModalOpen(false);
-        refetch();
+        refetch('tickets', user.id, true);
       } catch (error) {
-        console.error(error);
-        toast.error('Failed to submit ticket. Please try again.');
+        const message = error instanceof Error ? error.message : 'Failed to submit ticket';
+        setError(message);
+        toast.error(message);
       } finally {
         setIsSubmitting(false);
       }
@@ -80,6 +99,7 @@ export default function Help() {
       if (!selectedTicket || !newReply.trim()) return;
 
       setIsSubmitting(true);
+      setError(null);
 
       try {
         const res = await fetch('/api/ticket-replies', {
@@ -96,10 +116,12 @@ export default function Help() {
         if (!res.ok) throw new Error(data.error || 'Failed to submit reply');
 
         setNewReply('');
-        refetch();
+        refetch('tickets', user?.id!, true);
+        toast.success('Reply submitted successfully.');
       } catch (error) {
-        console.error(error);
-        toast.error('Failed to submit reply. Please try again.');
+        const message = error instanceof Error ? error.message : 'Failed to submit reply';
+        setError(message);
+        toast.error(message);
       } finally {
         setIsSubmitting(false);
       }
@@ -111,9 +133,8 @@ export default function Help() {
   const formatDate = (dateString: string) => {
     try {
       return format(new Date(dateString), 'PPP');
-    } catch (e) {
-      console.log(e)
-      return dateString;
+    } catch {
+      return 'Invalid date';
     }
   };
 
@@ -121,20 +142,19 @@ export default function Help() {
   const formatTime = (dateString: string) => {
     try {
       return format(new Date(dateString), 'p');
-    } catch (e) {
-      console.log(e)
-
-      return dateString;
+    } catch {
+      return 'Invalid time';
     }
   };
 
   // Select ticket
   const handleTicketSelect = useCallback((ticket: Ticket) => {
     setSelectedTicket(ticket);
+    setError(null);
   }, []);
 
   // Filter tickets based on status
-  const filteredTickets = filterStatus === 'all' ? tickets : tickets.filter((ticket: { status: string; }) => ticket.status === filterStatus);
+  const filteredTickets = filterStatus === 'all' ? tickets : tickets.filter((ticket: { status: string }) => ticket.status === filterStatus);
 
   // Get status badge
   const getStatusBadge = (status: string) => {
@@ -180,10 +200,17 @@ export default function Help() {
   return (
     <div className="flex items-start justify-center p-4 md:p-6 min-h-screen">
       <div className="w-full max-w-7xl">
+        {error && (
+          <div className="mb-6 p-4 bg-red-50 border border-red-200 rounded-lg flex items-center">
+            <FaTimesCircle className="h-5 w-5 text-red-400 mr-2" />
+            <span className="text-sm text-red-700">{error}</span>
+          </div>
+        )}
+
         <div className="flex flex-col md:flex-row justify-between items-start md:items-center mb-6 gap-4">
           <div>
             <h1 className="text-2xl font-bold text-gray-900 nohemi-bold">
-              Support <span className="text-primary  border-b-3 border-primary">Tickets</span>
+              Support <span className="text-primary border-b-3 border-primary">Tickets</span>
             </h1>
             <p className="text-gray-500 text-sm mt-1">Submit and track your support requests</p>
           </div>
@@ -193,7 +220,8 @@ export default function Help() {
               <select
                 value={filterStatus}
                 onChange={(e) => setFilterStatus(e.target.value)}
-                className="w-full sm:w-auto pl-3 pr-10 py-2 text-sm border border-gray-300 rounded-md bg-white  focus:outline-none focus:ring-2 focus:ring-blue-500"
+                className="w-full sm:w-auto pl-3 pr-10 py-2 text-sm border border-gray-300 rounded-md bg-white focus:outline-none focus:ring-2 focus:ring-blue-500"
+                aria-label="Filter tickets by status"
               >
                 <option value="all">All Tickets</option>
                 <option value="active">Active</option>
@@ -205,17 +233,24 @@ export default function Help() {
             <Button
               onClick={() => setIsModalOpen(true)}
               className="flex items-center justify-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 transition w-full sm:w-auto"
+              aria-label="Create new ticket"
             >
               <FaPlus size={16} /> New Ticket
             </Button>
 
             <Button
-              onClick={refetch}
+              onClick={() => refetch('tickets', user?.id!, true)}
               variant="outline"
               className="flex items-center justify-center gap-2 px-4 py-2 border border-gray-300 rounded-md hover:bg-gray-50 transition w-full sm:w-auto"
-              disabled={isLoading}
+              disabled={isLoading || isRefetching}
+              aria-label="Refresh tickets"
             >
-              {isLoading ? <FaSpinner className="animate-spin" size={16} /> : <MdRefresh size={16} />} Refresh
+              {isLoading || isRefetching ? (
+                <FaSpinner className="animate-spin" size={16} />
+              ) : (
+                <MdRefresh size={16} />
+              )}
+              Refresh
             </Button>
           </div>
         </div>
@@ -242,11 +277,13 @@ export default function Help() {
                 <div className="max-h-[600px] overflow-y-auto">
                   <div className="divide-y divide-gray-200">
                     {filteredTickets.map((ticket: Ticket) => (
-                      <div
+                      <button
                         key={ticket.id}
                         onClick={() => handleTicketSelect(ticket)}
-                        className={`p-4 cursor-pointer hover:bg-gray-50 transition ${selectedTicket?.id === ticket.id ? 'bg-blue-50 border-l-4 border-blue-500' : ''
-                          }`}
+                        className={`w-full p-4 text-left cursor-pointer hover:bg-gray-50 transition ${
+                          selectedTicket?.id === ticket.id ? 'bg-blue-50 border-l-4 border-blue-500' : ''
+                        }`}
+                        aria-label={`Select ticket: ${getTicketTypeLabel(ticket.type)}`}
                       >
                         <div className="flex items-start justify-between">
                           <div className="flex-1 min-w-0">
@@ -262,7 +299,7 @@ export default function Help() {
                           </div>
                           <div className="ml-4">{getStatusBadge(ticket.status)}</div>
                         </div>
-                      </div>
+                      </button>
                     ))}
                   </div>
                 </div>
@@ -273,7 +310,7 @@ export default function Help() {
           {/* Selected Ticket and Replies */}
           <div className="lg:col-span-2">
             {selectedTicket ? (
-              <div className="bg-white rounded-lg border border-slate-200  h-full flex flex-col">
+              <div className="bg-white rounded-lg border border-slate-200 h-full flex flex-col">
                 <div className="p-4 border-b border-gray-200 bg-gray-50 flex justify-between items-center">
                   <div>
                     <h2 className="text-lg font-medium text-gray-900">{getTicketTypeLabel(selectedTicket.type)}</h2>
@@ -285,7 +322,7 @@ export default function Help() {
 
                 <div className="p-4 bg-gray-50 border-b border-gray-200">
                   <h3 className="text-sm font-medium text-gray-700 mb-2">Description</h3>
-                  <p className="text-gray-700 text-sm whitespace-pre-wrap bg-white p-3 rounded-md ">
+                  <p className="text-gray-700 text-sm whitespace-pre-wrap bg-white p-3 rounded-md">
                     {selectedTicket.issueDesc}
                   </p>
                 </div>
@@ -304,10 +341,11 @@ export default function Help() {
                           className={`flex ${reply.sender === 'user' ? 'justify-end' : 'justify-start'}`}
                         >
                           <div
-                            className={`max-w-[80%] p-3 rounded-lg ${reply.sender === 'user'
-                              ? 'bg-blue-600 text-white rounded-tr-none'
-                              : 'bg-white  text-gray-800 rounded-tl-none'
-                              }`}
+                            className={`max-w-[80%] p-3 rounded-lg ${
+                              reply.sender === 'user'
+                                ? 'bg-blue-600 text-white rounded-tr-none'
+                                : 'bg-white text-gray-800 rounded-tl-none'
+                            }`}
                           >
                             <p className="whitespace-pre-wrap">{reply.message}</p>
                             <div className="flex justify-end mt-1">
@@ -333,13 +371,15 @@ export default function Help() {
                         placeholder="Type your reply..."
                         className="flex-1 border border-gray-300 rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm"
                         disabled={isSubmitting}
+                        aria-label="Reply to ticket"
                       />
                       <Button
                         type="button"
                         variant="outline"
                         className="px-3 py-2 border border-gray-300 rounded-md hover:bg-gray-50 transition"
-                        title="Attach Files"
-                        disabled={isSubmitting}
+                        title="Attach Files (coming soon)"
+                        disabled={true}
+                        aria-label="Attach files (disabled)"
                       >
                         <MdAttachFile size={18} />
                       </Button>
@@ -347,6 +387,7 @@ export default function Help() {
                         type="submit"
                         className="px-4 bg-blue-600 text-white py-2 rounded-md hover:bg-blue-700 transition flex items-center gap-2"
                         disabled={!newReply.trim() || isSubmitting}
+                        aria-label="Send reply"
                       >
                         {isSubmitting ? <FaSpinner className="animate-spin" size={16} /> : <BiSend size={18} />}
                         <span className="hidden sm:inline">Send</span>
@@ -360,7 +401,7 @@ export default function Help() {
                 )}
               </div>
             ) : (
-              <div className="bg-white rounded-lg border border-slate-200  p-8 text-center h-full flex flex-col items-center justify-center text-gray-500">
+              <div className="bg-white rounded-lg border border-slate-200 p-8 text-center h-full flex flex-col items-center justify-center text-gray-500">
                 <div className="p-4 rounded-full bg-gray-100 mb-4">
                   <svg
                     xmlns="http://www.w3.org/2000/svg"
@@ -382,6 +423,7 @@ export default function Help() {
                 <Button
                   onClick={() => setIsModalOpen(true)}
                   className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 transition"
+                  aria-label="Create new ticket"
                 >
                   <FaPlus size={16} /> New Ticket
                 </Button>
@@ -391,22 +433,36 @@ export default function Help() {
         </div>
 
         {isModalOpen && (
-          <div className=' fixed inset-0 flex flex-col items-center justify-center w-full max-h-screen overflow-auto bg-black/80'>
+          <div className="fixed inset-0 flex flex-col items-center justify-center w-full max-h-screen overflow-auto bg-black/80">
+            <section className="max-w-4xl w-full mx-auto p-6 bg-white border border-slate-200 rounded-lg mt-10">
+              <h2 className="text-2xl font-semibold mb-4 text-gray-800 nohemi-bold">
+                Describe your <span className="text-primary">Issue</span>
+              </h2>
 
-            <section className="max-w-4xl w-full mx-auto p-6 bg-white  border border-slate-200 rounded-lg mt-10">
-              <h2 className="text-2xl font-semibold mb-4 text-gray-800 nohemi-bold">Describe your <span className=' text-primary'>Issue</span></h2>
+              {error && (
+                <div className="mb-4 p-3 bg-red-50 border border-red-200 rounded-md flex items-center">
+                  <FaTimesCircle className="h-5 w-5 text-red-400 mr-2" />
+                  <span className="text-sm text-red-700">{error}</span>
+                </div>
+              )}
 
               <form onSubmit={handleSubmit} className="space-y-4">
                 <div>
-                  <label className="block mb-1 text-base font-medium text-gray-700">Issue Type</label>
+                  <label className="block mb-1 text-base font-medium text-gray-700" htmlFor="issue-type">
+                    Issue Type
+                  </label>
                   <select
+                    id="issue-type"
                     value={issueType}
                     onChange={(e) => setIssueType(e.target.value)}
                     required
                     className="w-full border border-gray-300 rounded-md p-2.5 focus:outline-none focus:ring-2 focus:ring-blue-500 text-base"
                     disabled={isSubmitting}
+                    aria-label="Select issue type"
                   >
-                    <option value="" disabled>Select an issue</option>
+                    <option value="" disabled>
+                      Select an issue
+                    </option>
                     <option value="feature">Shipping & Delivery</option>
                     <option value="account">Order Related</option>
                     <option value="payment">Payment Problem</option>
@@ -416,8 +472,11 @@ export default function Help() {
                 </div>
 
                 <div>
-                  <label className="block mb-1 text-base font-medium text-gray-700">Description</label>
+                  <label className="block mb-1 text-base font-medium text-gray-700" htmlFor="description">
+                    Description
+                  </label>
                   <textarea
+                    id="description"
                     value={description}
                     onChange={(e) => setDescription(e.target.value)}
                     rows={4}
@@ -425,6 +484,7 @@ export default function Help() {
                     placeholder="Please describe your issue in detail..."
                     className="w-full border border-gray-300 rounded-md p-2.5 focus:outline-none focus:ring-2 focus:ring-blue-500 text-base"
                     disabled={isSubmitting}
+                    aria-label="Describe your issue"
                   />
                 </div>
 
@@ -434,6 +494,7 @@ export default function Help() {
                     className="px-4 py-2 border border-gray-300 rounded-full hover:bg-gray-50 transition text-base"
                     disabled={isSubmitting}
                     onClick={() => setIsModalOpen(false)}
+                    aria-label="Cancel ticket submission"
                   >
                     Cancel
                   </button>
@@ -441,6 +502,7 @@ export default function Help() {
                     type="submit"
                     className="px-4 bg-blue-600 text-white py-2 rounded-full hover:bg-blue-700 transition flex items-center gap-2 text-base"
                     disabled={isSubmitting}
+                    aria-label="Submit ticket"
                   >
                     {isSubmitting ? (
                       <>
@@ -448,7 +510,7 @@ export default function Help() {
                       </>
                     ) : (
                       <>
-                      Submit Ticket <RightArrow className=' ' size={20} />
+                        Submit Ticket <RightArrow className="" size={20} />
                       </>
                     )}
                   </button>
@@ -457,10 +519,7 @@ export default function Help() {
             </section>
           </div>
         )}
-
-
-
       </div>
-    </div >
+    </div>
   );
 }

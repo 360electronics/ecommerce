@@ -1,5 +1,6 @@
-'use client'
-import { useAuth } from "@/context/auth-context";
+'use client';
+
+import { useAuthStore } from "@/store/auth-store";
 import { User } from "lucide-react";
 import { useRouter } from "next/navigation";
 import React, { useEffect, useState } from "react";
@@ -7,14 +8,15 @@ import React, { useEffect, useState } from "react";
 const UserButton = () => {
   const [isMounted, setIsMounted] = useState(false);
   const [isDropdownOpen, setIsDropdownOpen] = useState(false);
-  const { isLoggedIn, user, isLoading, setAuth } = useAuth();
+  const { isLoggedIn, user, isLoading, setAuth, fetchAuthStatus } = useAuthStore();
   const router = useRouter();
 
   useEffect(() => {
     setIsMounted(true);
-  }, []);
+    // Fetch auth status on mount to sync with server
+    fetchAuthStatus();
+  }, [fetchAuthStatus]);
 
-  // Fix incorrect event handler
   const handleButtonClick = () => {
     setIsDropdownOpen(!isDropdownOpen);
   };
@@ -26,9 +28,9 @@ const UserButton = () => {
         credentials: "include",
       });
       localStorage.removeItem("authToken");
-      localStorage.removeItem("userRole");
+      // localStorage.removeItem("userRole");
       document.cookie = "authToken=; expires=Thu, 01 Jan 1970 00:00:00 GMT; path=/";
-      document.cookie = "userRole=; expires=Thu, 01 Jan 1970 00:00:00 GMT; path=/";
+      // document.cookie = "userRole=; expires=Thu, 01 Jan 1970 00:00:00 GMT; path=/";
       setAuth(false, null);
       setIsDropdownOpen(false);
       router.push("/signin");
@@ -77,7 +79,9 @@ const UserButton = () => {
               <>
                 {user && (
                   <div className="px-4 py-2 text-sm text-gray-600 border-b border-gray-200">
-                    {`${user.firstName! + " " + user.lastName}` || user.email}
+                    {user.firstName && user.lastName
+                      ? `${user.firstName} ${user.lastName}`
+                      : user.email}
                   </div>
                 )}
                 <button

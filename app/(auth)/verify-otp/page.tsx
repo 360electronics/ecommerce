@@ -7,7 +7,7 @@ import { toast } from "react-hot-toast";
 import Link from "next/link";
 import Cookies from "js-cookie";
 import { cn } from "@/lib/utils";
-import { useAuth } from "@/context/auth-context";
+import { useAuthStore } from "@/store/auth-store";
 
 interface Banner {
   id: string;
@@ -50,7 +50,7 @@ function VerifyOTPContent() {
   const router = useRouter();
   const searchParams = useSearchParams(); // Use useSearchParams
   const inputRefs = useRef<(HTMLInputElement | null)[]>(Array(6).fill(null));
-  const { setAuth } = useAuth();
+  const { setAuth, fetchAuthStatus } = useAuthStore();
 
   // Extract params from URL
   useEffect(() => {
@@ -194,8 +194,7 @@ function VerifyOTPContent() {
         typeof data.user.role === "string"
           ? data.user.role
           : data.user.role || "unknown";
-      localStorage.setItem("userRole", roleValue);
-      Cookies.set("userRole", roleValue, { expires: 0.5 });
+    
 
       toast.success("OTP verified successfully!");
 

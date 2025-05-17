@@ -1,69 +1,14 @@
-// components/Product/ProductDetails/ProductSpecifications.tsx
 'use client';
 
-import { useProductContext } from '@/context/product-context';
-
-export interface FlattenedProduct {
-  id: string;
-  productId: string;
-  name: string;
-  mrp: number;
-  ourPrice: number;
-  averageRating: string;
-  brand: string;
-  category: string;
-  color: string;
-  createdAt: string;
-  description: string | null;
-  dimensions: string;
-  material: string;
-  productImages: string[];
-  productParent: {
-    averageRating: string;
-    brand: string;
-    category: string;
-    createdAt: string;
-    description: string | null;
-    id: string;
-    ratingCount: string;
-    shortName: string;
-    specifications: Array<{
-      groupName: string;
-      fields: Array<{ fieldName: string; fieldValue: string }>;
-    }>;
-    status: string;
-    subProductStatus: string;
-    tags: string[];
-    totalStocks: string;
-    updatedAt: string;
-    variants: Array<{
-      id: string;
-      color: string;
-      storage: string;
-      slug: string;
-      mrp: number;
-      ourPrice: number;
-      stock: string;
-    }>;
-  };
-  sku: string;
-  slug: string;
-  stock: string;
-  storage: string;
-  tags: string[];
-  totalStocks: string;
-  updatedAt: string;
-  weight: string;
-  deliveryDate?: string;
-  discount?: number;
-}
+import { useProductStore } from '@/store/product-store';
+import { FlattenedProduct } from '@/store/types';
 
 interface ProductSpecificationsProps {
   className?: string;
 }
 
 export default function ProductSpecifications({ className }: ProductSpecificationsProps) {
-  const { product } = useProductContext();
+  const { product } = useProductStore();
 
   // Type guard for specifications
   const isSpecificationArray = (
@@ -73,12 +18,12 @@ export default function ProductSpecifications({ className }: ProductSpecificatio
     fields: Array<{ fieldName: string; fieldValue: string }>;
   }> => {
     if (!Array.isArray(specs)) return false;
-  
+
     return specs.every((spec) => {
       if (typeof spec !== 'object' || spec === null) return false;
       if (typeof spec.groupName !== 'string') return false;
       if (!Array.isArray(spec.fields)) return false;
-  
+
       return spec.fields.every((field) => {
         if (typeof field !== 'object' || field === null) return false;
         return (
@@ -88,6 +33,22 @@ export default function ProductSpecifications({ className }: ProductSpecificatio
       });
     });
   };
+
+  // Render a placeholder if product is null
+  if (!product) {
+    return (
+      <div className={`${className}`}>
+        <h2 className="md:text-4xl text-lg md:font-bold font-medium mb-4">Description</h2>
+        <div className="border rounded-lg p-6 bg-gray-100">
+          <h2 className="md:text-xl md:font-bold font-medium mb-4">Product Features & Specification</h2>
+          <p className="text-gray-600 mb-8 text-sm md:text-base">Loading product specifications...</p>
+          <div className="py-4">
+            <p className="text-gray-500">No product details available.</p>
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   const specifications = product.productParent.specifications;
   const hasSpecifications = isSpecificationArray(specifications) && specifications.length > 0;

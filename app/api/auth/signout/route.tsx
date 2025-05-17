@@ -17,7 +17,7 @@ export async function POST(request: Request) {
     // Clear cookies
     const response = NextResponse.json({ message: "Signed out successfully" });
     response.cookies.set("authToken", "", { expires: new Date(0), path: "/" });
-    response.cookies.set("userRole", "", { expires: new Date(0), path: "/" });
+    response.cookies.set("profile-store", "", { expires: new Date(0), path: "/" });
     return response;
   } catch (error) {
     console.error("Error signing out:", {

@@ -3,15 +3,15 @@
 import React, { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
-import { useAuth } from '@/context/auth-context';
 import UserLayout from '@/components/Layouts/UserLayout';
 import Breadcrumbs from '@/components/Reusable/BreadScrumb';
 import toast from 'react-hot-toast';
-import { useCart } from '@/context/cart-context';
 import { CartItemComponent } from '@/components/Cart/CartItem';
-import { useCheckout } from '@/context/checkout-context';
 import Image from 'next/image';
 import { Button } from '@/components/ui/button';
+import { useAuthStore } from '@/store/auth-store';
+import { useCheckoutStore } from '@/store/checkout-store';
+import { useCartStore } from '@/store/cart-store';
 
 type CartOfferProduct = {
   id: string;
@@ -37,12 +37,12 @@ const CartPage: React.FC = () => {
     getCartTotal,
     getItemCount,
     getSavings,
-  } = useCart();
-  const { isLoggedIn, isLoading, user } = useAuth();
+  } = useCartStore();
+  const { isLoggedIn, isLoading, user } = useAuthStore();
   const router = useRouter();
   const [isUpdating, setIsUpdating] = useState<string | null>(null);
   const [couponCode, setCouponCode] = useState('');
-  const { addToCheckout } = useCheckout();
+  const { addToCheckout } = useCheckoutStore();
   const [offerProducts, setOfferProducts] = useState<CartOfferProduct[]>([]);
   const [selectedOfferProduct, setSelectedOfferProduct] = useState<string | null>(null);
   const [isFetchingOffers, setIsFetchingOffers] = useState(false);

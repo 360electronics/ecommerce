@@ -1,9 +1,10 @@
 'use client';
-import { useEffect, useState } from 'react';
-import { useAuth } from '@/context/auth-context';
-import { AlertCircle, Loader2, Pencil, UserRoundPen, X } from 'lucide-react';
-import { useProfileContext } from '@/context/profile-context';
 
+import { useEffect, useState } from 'react';
+import { AlertCircle, Loader2, Pencil, UserRoundPen, X } from 'lucide-react';
+import { useAuthStore } from '@/store/auth-store';
+import { useProfileStore } from '@/store/profile-store';
+import toast from 'react-hot-toast';
 
 interface Address {
   id: string;
@@ -19,8 +20,8 @@ interface Address {
 }
 
 export default function ProfileInfo() {
-  const { user, isLoggedIn, isLoading: authLoading, setAuth } = useAuth();
-  const { profileData, isLoading, error: contextError, refetch } = useProfileContext();
+  const { user, isLoggedIn, isLoading: authLoading, setAuth } = useAuthStore();
+  const { profileData, isLoading, isRefetching, errors, refetch } = useProfileStore();
   const [isProfileModalOpen, setIsProfileModalOpen] = useState(false);
   const [isAddressModalOpen, setIsAddressModalOpen] = useState(false);
   const [editingAddress, setEditingAddress] = useState<Address | null>(null);
@@ -54,6 +55,7 @@ export default function ProfileInfo() {
 
     if (!name.trim() || !email.trim()) {
       setError('Name and email are required.');
+      toast.error('Name and email are required.');
       return;
     }
 
@@ -71,10 +73,13 @@ export default function ProfileInfo() {
 
       setAuth(true, data.user);
       setSuccess('Profile updated successfully');
-      refetch();
+      toast.success('Profile updated successfully');
+      refetch('profile', user?.id || '', true);
       setIsProfileModalOpen(false);
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'An error occurred');
+      const message = err instanceof Error ? err.message : 'An error occurred';
+      setError(message);
+      toast.error(message);
     } finally {
       setIsSaving(false);
     }
@@ -101,7 +106,8 @@ export default function ProfileInfo() {
       if (!res.ok) throw new Error(data.error || `Failed to ${isEditing ? 'update' : 'add'} address`);
 
       setSuccess(`Address ${isEditing ? 'updated' : 'added'} successfully`);
-      refetch();
+      toast.success(`Address ${isEditing ? 'updated' : 'added'} successfully`);
+      refetch('profile', user?.id || '', true);
       setNewAddress({
         fullName: '',
         phoneNumber: '',
@@ -116,7 +122,9 @@ export default function ProfileInfo() {
       setEditingAddress(null);
       setIsAddressModalOpen(false);
     } catch (err) {
-      setError(err instanceof Error ? err.message : `Error ${isEditing ? 'updating' : 'adding'} address`);
+      const message = err instanceof Error ? err.message : `Error ${isEditing ? 'updating' : 'adding'} address`;
+      setError(message);
+      toast.error(message);
     }
   };
 
@@ -161,13 +169,15 @@ export default function ProfileInfo() {
   }
 
   return (
-    <div className=" mx-auto px-4 sm:px-6 lg:px-8 py-12">
-      <h1 className="text-2xl font-bold text-gray-900 mb-8 nohemi-bold">Your <span className=' text-primary border-b-3 border-primary'>Profile</span></h1>
+    <div className="mx-auto px-4 sm:px-6 lg:px-8 py-12">
+      <h1 className="text-2xl font-bold text-gray-900 mb-8 nohemi-bold">
+        Your <span className="text-primary border-b-3 border-primary">Profile</span>
+      </h1>
 
-      {(error || contextError) && (
+      {(error || errors.profile) && (
         <div className="mb-6 p-4 bg-red-50 border border-red-200 rounded-lg flex items-center">
           <AlertCircle className="h-5 w-5 text-red-400 mr-2" />
-          <span className="text-sm text-red-700">{error || contextError}</span>
+          <span className="text-sm text-red-700">{error || errors.profile}</span>
         </div>
       )}
       {success && (
@@ -181,9 +191,10 @@ export default function ProfileInfo() {
           <h2 className="text-xl font-semibold text-gray-900">Personal Details</h2>
           <button
             onClick={() => setIsProfileModalOpen(true)}
-            className=" flex items-center justify-center gap-1 hover:underline cursor-pointer font-medium text-sm transition-colors"
+            className="flex items-center justify-center gap-1 hover:underline cursor-pointer font-medium text-sm transition-colors"
+            aria-label="Manage profile"
           >
-            <UserRoundPen className=' text-primary' size={20} /> Manage Profile
+            <UserRoundPen className="text-primary" size={20} /> Manage Profile
           </button>
         </div>
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
@@ -208,8 +219,9 @@ export default function ProfileInfo() {
           <button
             onClick={() => setIsAddressModalOpen(true)}
             className="flex items-center justify-center gap-1 hover:underline font-medium text-sm transition-colors"
+            aria-label="Manage addresses"
           >
-           <Pencil size={20} className=' text-primary' />  Manage Addresses
+            <Pencil size={20} className="text-primary" /> Manage Addresses
           </button>
         </div>
         {profileData.addresses.length === 0 ? (
@@ -235,6 +247,7 @@ export default function ProfileInfo() {
                   <button
                     onClick={() => handleEditAddress(addr)}
                     className="text-blue-600 hover:text-blue-700 text-sm"
+                    aria-label={`Edit address for ${addr.fullName}`}
                   >
                     Edit
                   </button>
@@ -246,14 +259,14 @@ export default function ProfileInfo() {
       </div>
 
       {isProfileModalOpen && (
-        <div className="fixed inset-0 max-h-screen overflow-auto bg-black/70 flex items-center justify-center z-50">
-          <div className="bg-white rounded-lg p-6 w-full max-w-xl animate-fade-in">
+        <div className="fixed inset-0 bg-black/70 flex items-center justify-center z-50">
+          <div className="bg-white rounded-lg p-6 w-full max-w-xl max-h-[80vh] overflow-auto animate-fade-in">
             <div className="flex justify-between items-center mb-4">
               <h3 className="text-xl font-semibold text-gray-900">Edit Profile</h3>
               <button
                 onClick={() => setIsProfileModalOpen(false)}
                 className="text-gray-500 hover:text-gray-700"
-                aria-label="Close"
+                aria-label="Close profile modal"
               >
                 <X className="h-5 w-5" />
               </button>
@@ -267,6 +280,7 @@ export default function ProfileInfo() {
                   value={name}
                   onChange={(e) => setName(e.target.value)}
                   disabled={isSaving}
+                  aria-label="Name"
                 />
               </div>
               <div>
@@ -277,6 +291,7 @@ export default function ProfileInfo() {
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
                   disabled={isSaving}
+                  aria-label="Email"
                 />
               </div>
               <div>
@@ -287,6 +302,7 @@ export default function ProfileInfo() {
                   value={phoneNumber}
                   onChange={(e) => setPhoneNumber(e.target.value)}
                   disabled={isSaving}
+                  aria-label="Phone number"
                 />
               </div>
               <div className="flex justify-end space-x-2">
@@ -294,6 +310,7 @@ export default function ProfileInfo() {
                   onClick={() => setIsProfileModalOpen(false)}
                   className="px-4 py-2 text-gray-700 bg-gray-100 rounded-md hover:bg-gray-200"
                   disabled={isSaving}
+                  aria-label="Cancel profile edit"
                 >
                   Cancel
                 </button>
@@ -301,6 +318,7 @@ export default function ProfileInfo() {
                   onClick={handleSaveProfile}
                   className="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 disabled:opacity-50"
                   disabled={isSaving}
+                  aria-label="Save profile changes"
                 >
                   {isSaving ? 'Saving...' : 'Save Changes'}
                 </button>
@@ -311,8 +329,8 @@ export default function ProfileInfo() {
       )}
 
       {isAddressModalOpen && (
-        <div className="fixed top-0 left-0 right-0 mx-auto max-h-screen overflow-auto p-10 bg-black/70 flex items-center justify-center z-50">
-          <div className="bg-white mt-[20%] rounded-lg p-6 w-full max-w-lg animate-fade-in">
+        <div className="fixed inset-0 bg-black/70 flex items-center justify-center z-50">
+          <div className="bg-white rounded-lg p-6 w-full max-w-lg max-h-[80vh] overflow-auto animate-fade-in">
             <div className="flex justify-between items-center mb-4">
               <h3 className="text-xl font-semibold text-gray-900">
                 {editingAddress ? 'Edit Address' : 'Add New Address'}
@@ -320,7 +338,7 @@ export default function ProfileInfo() {
               <button
                 onClick={handleCloseAddressModal}
                 className="text-gray-500 hover:text-gray-700"
-                aria-label="Close"
+                aria-label="Close address modal"
               >
                 <X className="h-5 w-5" />
               </button>
@@ -345,6 +363,7 @@ export default function ProfileInfo() {
                     className="mt-1 w-full border border-gray-300 rounded-md p-2 focus:ring-blue-500 focus:border-blue-500"
                     value={newAddress[field as keyof typeof newAddress]}
                     onChange={(e) => setNewAddress({ ...newAddress, [field]: e.target.value })}
+                    aria-label={field.replace(/([A-Z])/g, ' $1')}
                   />
                 </div>
               ))}
@@ -356,6 +375,7 @@ export default function ProfileInfo() {
                   onChange={(e) =>
                     setNewAddress({ ...newAddress, addressType: e.target.value as 'home' | 'work' | 'other' })
                   }
+                  aria-label="Address type"
                 >
                   <option value="home">Home</option>
                   <option value="work">Work</option>
@@ -366,12 +386,14 @@ export default function ProfileInfo() {
                 <button
                   onClick={handleCloseAddressModal}
                   className="px-4 py-2 text-gray-700 bg-gray-100 rounded-md hover:bg-gray-200"
+                  aria-label="Cancel address edit"
                 >
                   Cancel
                 </button>
                 <button
                   onClick={handleSaveAddress}
                   className="px-4 py-2 bg-green-600 text-white rounded-md hover:bg-green-700"
+                  aria-label={editingAddress ? 'Update address' : 'Add address'}
                 >
                   {editingAddress ? 'Update Address' : 'Add Address'}
                 </button>

@@ -13,6 +13,9 @@ import { useProfileContext } from '@/context/profile-context';
 import { useState } from 'react';
 import { addToWishlist, removeFromWishlist } from '@/utils/wishlist.utils';
 import { encodeUUID } from '@/utils/Encryption';
+import { useProfileStore } from '@/store/profile-store';
+import { useWishlistStore } from '@/store/wishlist-store';
+import { useAuthStore } from '@/store/auth-store';
 
 
 
@@ -31,9 +34,9 @@ const ProductCardwithoutCart: React.FC<ProductCardProps> = ({
   productId,
   variantId,
 }) => {
-  const { user } = useAuth();
-  const { isInWishlist, refreshWishlist } = useWishlist();
-  const { refetch: refetchProfile } = useProfileContext();
+  const { user } = useAuthStore();
+  const { isInWishlist, fetchWishlist } = useWishlistStore();
+  const { refetch: refetchProfile } = useProfileStore();
   const [isAdding, setIsAdding] = useState(false);
   const userId = user?.id;
 
@@ -59,7 +62,7 @@ const ProductCardwithoutCart: React.FC<ProductCardProps> = ({
 
     if (result.success) {
       toast.success(isInWishlistStatus ? 'Removed from wishlist!' : 'Added to wishlist!');
-      refreshWishlist();
+      fetchWishlist();
       if (refetchProfile) {
         refetchProfile();
       }

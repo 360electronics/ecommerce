@@ -2,16 +2,16 @@
 
 import { Heart, Minus, Plus, Share2 } from 'lucide-react';
 import { cn } from '@/lib/utils';
-import { useProductContext } from '@/context/product-context';
 import { useRouter } from 'next/navigation';
 import { useEffect, useMemo, useState } from 'react';
 import { encodeUUID } from '@/utils/Encryption';
-import { useAuth } from '@/context/auth-context';
-import { useProfileContext } from '@/context/profile-context';
-import { useWishlist } from '@/context/wishlist-context';
 import toast, { Toaster } from 'react-hot-toast';
 import { addToWishlist, removeFromWishlist } from '@/utils/wishlist.utils';
-import { useCart } from '@/context/cart-context';
+import { useProfileStore } from '@/store/profile-store';
+import { useWishlistStore } from '@/store/wishlist-store';
+import { useProductStore } from '@/store/product-store';
+import { useCartStore } from '@/store/cart-store';
+import { useAuthStore } from '@/store/auth-store';
 
 interface ProductDetailsContentProps {
   className?: string;
@@ -27,23 +27,41 @@ export default function ProductDetailsContent({ className }: ProductDetailsConte
     quantity,
     setQuantity,
     handleBuyNow,
-  } = useProductContext();
+  } = useProductStore();
   const router = useRouter();
-  const { user } = useAuth();
-  const { isInWishlist, refreshWishlist } = useWishlist();
-  const { refetch: refetchProfile } = useProfileContext();
-  const { addToCart } = useCart();
+  const { user } = useAuthStore();
+  const { isInWishlist, fetchWishlist } = useWishlistStore();
+  const { refetch: refetchProfile } = useProfileStore();
+  const { addToCart, error: cartError } = useCartStore();
   const [isAdding, setIsAdding] = useState(false);
   const userId = user?.id;
 
-  const isInWishlistStatus = product.productId && product.id ? isInWishlist(product.productId, product.id) : false;
+  // Render placeholder UI if product is null
+  if (!product) {
+    return (
+      <div className={cn(`md:ml-14`, className)}>
+        <Toaster />
+        <div className="hidden md:flex flex-row items-center gap-2 justify-end mb-5 my-2 cursor-pointer text-xs md:text-base">
+          <Share2 className="md:w-5 md:h-5 w-4 h-4" />
+          <p>Share</p>
+        </div>
+        <h1 className="md:text-xl text-sm md:font-medium md:mb-6 md:border-b md:pb-4 mt-5 mb-2 md:my-0">
+          Loading product...
+        </h1>
+        <p className="text-gray-500">Product details are not available.</p>
+      </div>
+    );
+  }
+
+  const isInWishlistStatus = isInWishlist(product.productId, product.id);
 
   const handleWishlistClick = async (e: React.MouseEvent) => {
     e.preventDefault();
     e.stopPropagation();
 
-    if (!userId || !product.productId || !product.id) {
-      toast.error('Please login or provide valid product.');
+    if (!userId) {
+      toast.error('Please login to manage wishlist.');
+      router.push('/login');
       return;
     }
 
@@ -58,7 +76,7 @@ export default function ProductDetailsContent({ className }: ProductDetailsConte
 
     if (result.success) {
       toast.success(isInWishlistStatus ? 'Removed from wishlist!' : 'Added to wishlist!');
-      refreshWishlist();
+      fetchWishlist();
       if (refetchProfile) {
         refetchProfile();
       }
@@ -71,24 +89,30 @@ export default function ProductDetailsContent({ className }: ProductDetailsConte
     e.preventDefault();
     e.stopPropagation();
 
-    if (!userId || !product.productId || !product.id) {
-      toast.error('Please login or provide valid product.');
+    if (!userId) {
+      toast.error('Please login to add to cart.');
+      router.push('/login');
       return;
     }
 
     setIsAdding(true);
-    
-
     await addToCart(product.productId, product.id, quantity);
-
     setIsAdding(false);
+
+    if (cartError) {
+      toast.error(cartError || 'Failed to add item to cart');
+    } else {
+      toast.success(`${product.name} added to cart!`);
+    }
   };
-  
+
   // Find the active variant based on selectedColor and selectedStorage
   const activeVariant = useMemo(() => {
-    return product.productParent.variants.find(
-      (v) => v.color === selectedColor && v.storage === selectedStorage
-    ) || product.productParent.variants[0]; // Fallback to first variant
+    return (
+      product.productParent.variants.find(
+        (v) => v.color === selectedColor && v.storage === selectedStorage
+      ) || product.productParent.variants[0] // Fallback to first variant
+    );
   }, [selectedColor, selectedStorage, product.productParent.variants]);
 
   // Get unique color options
@@ -101,9 +125,7 @@ export default function ProductDetailsContent({ className }: ProductDetailsConte
         variantId: variant.id,
         slug: variant.slug,
       }))
-      .filter((option, index, self) =>
-        index === self.findIndex((t) => t.value === option.value)
-      );
+      .filter((option, index, self) => index === self.findIndex((t) => t.value === option.value));
     return options;
   }, [product.productParent.variants]);
 
@@ -117,9 +139,7 @@ export default function ProductDetailsContent({ className }: ProductDetailsConte
         variantId: variant.id,
         slug: variant.slug,
       }))
-      .filter((option, index, self) =>
-        index === self.findIndex((t) => t.value === option.value)
-      );
+      .filter((option, index, self) => index === self.findIndex((t) => t.value === option.value));
     return options;
   }, [selectedColor, product.productParent.variants]);
 
@@ -150,9 +170,10 @@ export default function ProductDetailsContent({ className }: ProductDetailsConte
   };
 
   // Calculate discount based on active variant
-  const discount = activeVariant.mrp && activeVariant.ourPrice && activeVariant.mrp > activeVariant.ourPrice
-    ? Math.round(((activeVariant.mrp - activeVariant.ourPrice) / activeVariant.mrp) * 100)
-    : product.discount || 0;
+  const discount =
+    activeVariant.mrp && activeVariant.ourPrice && activeVariant.mrp > activeVariant.ourPrice
+      ? Math.round(((activeVariant.mrp - activeVariant.ourPrice) / activeVariant.mrp) * 100)
+      : product.discount || 0;
 
   return (
     <div className={cn(`md:ml-14`, className)}>
@@ -239,7 +260,7 @@ export default function ProductDetailsContent({ className }: ProductDetailsConte
                     'px-4 py-1.5 rounded-full md:text-sm text-xs border',
                     selectedStorage === option.value
                       ? 'bg-black text-white border-black'
-                      : 'bg-white text-black border-gray-300 hover:border-gray-400',
+                      : 'bg-white text-black border-gray-300 hover:border-gray-400'
                   )}
                 >
                   {option.label}
@@ -265,8 +286,9 @@ export default function ProductDetailsContent({ className }: ProductDetailsConte
                   onClick={() => {
                     setSelectedColor(color.value);
                     // Set storage to first available for this color
-                    const validStorage = product.productParent.variants
-                      .find((v) => v.color === color.value)?.storage;
+                    const validStorage = product.productParent.variants.find(
+                      (v) => v.color === color.value
+                    )?.storage;
                     if (validStorage) setSelectedStorage(validStorage);
                   }}
                   className={cn(
@@ -274,7 +296,7 @@ export default function ProductDetailsContent({ className }: ProductDetailsConte
                     selectedColor === color.value
                       ? 'p-1 outline-2 border border-white'
                       : 'border-gray-300',
-                    !color.isValid && 'opacity-50 cursor-not-allowed',
+                    !color.isValid && 'opacity-50 cursor-not-allowed'
                   )}
                   style={{ backgroundColor: color.value }}
                   aria-label={`Select ${color.name} color`}
@@ -339,9 +361,11 @@ export default function ProductDetailsContent({ className }: ProductDetailsConte
 
             <button
               onClick={handleWishlistClick}
-              className={` cursor-pointer ml-2 z-0 p-2 rounded-full 
-              ${isInWishlistStatus ? 'text-red-500 bg-red-200' : 'text-gray-400'} 
-              bg-gray-300 hover:text-gray-700 disabled:opacity-50`}
+              className={cn(
+                'cursor-pointer ml-2 z-0 p-2 rounded-full',
+                isInWishlistStatus ? 'text-red-500 bg-red-200' : 'text-gray-400 bg-gray-300',
+                'hover:text-gray-700 disabled:opacity-50'
+              )}
               disabled={isAdding}
               aria-label={isInWishlistStatus ? 'Remove from wishlist' : 'Add to wishlist'}
             >
@@ -385,7 +409,9 @@ export default function ProductDetailsContent({ className }: ProductDetailsConte
             </svg>
           </button>
           <button
-            onClick={handleBuyNow}
+            onClick={() =>
+              handleBuyNow()
+            }
             className="flex-1 py-3 px-4 rounded-full cursor-pointer bg-blue-500 hover:bg-blue-600 text-white flex items-center justify-center gap-2 font-medium"
           >
             Buy Now

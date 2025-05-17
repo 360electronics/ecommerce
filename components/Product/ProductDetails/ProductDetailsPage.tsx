@@ -1,70 +1,27 @@
+'use client';
+
+import { useEffect } from 'react';
 import ProductImageGallery from './ProductImageGallery';
 import ProductDetailsContent from './ProductDetailsContent';
 import ProductSpecifications from './ProductSpecifications';
 import Breadcrumbs from '@/components/Reusable/BreadScrumb';
-import { ProductProvider } from '@/context/product-context';
 import ProductZoomOverlay from './ProductZoomOverlay';
-
-export interface FlattenedProduct {
-  id: string;
-  productId: string;
-  name: string;
-  mrp: number;
-  ourPrice: number;
-  averageRating: string;
-  brand: string;
-  category: string;
-  color: string;
-  createdAt: string;
-  description: string | null;
-  dimensions: string;
-  material: string;
-  productImages: string[];
-  productParent: {
-    averageRating: string;
-    brand: string;
-    category: string;
-    createdAt: string;
-    description: string | null;
-    id: string;
-    ratingCount: string;
-    shortName: string;
-    specifications: Array<{
-      groupName: string;
-      fields: Array<{ fieldName: string; fieldValue: string }>;
-    }>;
-    status: string;
-    subProductStatus: string;
-    tags: string[];
-    totalStocks: string;
-    updatedAt: string;
-    variants: Array<{
-      id: string;
-      color: string;
-      storage: string;
-      slug: string;
-      mrp: number;
-      ourPrice: number;
-      stock: string;
-    }>;
-  };
-  sku: string;
-  slug: string;
-  stock: string;
-  storage: string;
-  tags: string[];
-  totalStocks: string;
-  updatedAt: string;
-  weight: string;
-  deliveryDate?: string;
-  discount?: number;
-}
+import { useProductStore } from '@/store/product-store';
+import { FlattenedProduct } from '@/store/types';
 
 interface ProductDetailPageProps {
   product: FlattenedProduct;
 }
 
 export default function ProductDetailPage({ product }: ProductDetailPageProps) {
+  const { setProduct } = useProductStore();
+
+  // Initialize and reset product store
+  useEffect(() => {
+    setProduct(product);
+    return () => useProductStore.getState().reset(); // Reset on unmount
+  }, [product, setProduct]);
+
   // Prepare breadcrumb items
   const breadcrumbItems = [
     { name: 'Home', path: '/' },
@@ -76,25 +33,23 @@ export default function ProductDetailPage({ product }: ProductDetailPageProps) {
   ];
 
   return (
-    <ProductProvider product={product}>
-      <div className="mx-auto px-4 pb-8">
-        <Breadcrumbs breadcrumbs={breadcrumbItems} className="my-6 hidden md:block" />
+    <div className="mx-auto px-4 pb-8">
+      <Breadcrumbs breadcrumbs={breadcrumbItems} className="my-6 hidden md:block" />
 
-        <div className="flex flex-col md:flex-row md:mb-12 mb-1 relative">
-          <div className="w-full md:w-[40%]">
-            <ProductImageGallery />
-          </div>
-
-          <div className="w-full md:w-[60%] product-details">
-            <ProductDetailsContent />
-            <ProductZoomOverlay className="hidden md:block" />
-          </div>
+      <div className="flex flex-col md:flex-row md:mb-12 mb-1 relative">
+        <div className="w-full md:w-[40%]">
+          <ProductImageGallery />
         </div>
 
-        <ProductSpecifications className="mb-12" />
-
-        {/* <ProductRatingsReviews /> */}
+        <div className="w-full md:w-[60%] product-details">
+          <ProductDetailsContent />
+          <ProductZoomOverlay className="hidden md:block" />
+        </div>
       </div>
-    </ProductProvider>
+
+      <ProductSpecifications className="mb-12" />
+
+      {/* <ProductRatingsReviews /> */}
+    </div>
   );
 }

@@ -25,6 +25,10 @@ const nextConfig: NextConfig = {
         protocol: "https", 
         hostname: "pub-24a64e6c279d47a78e0cfeb74ea9ab44.r2.dev",
       },
+      {
+        protocol: "https", 
+        hostname: "assets.360electronics.in",
+      },
     ],
   },
 };

@@ -1,63 +1,45 @@
 'use client';
-import { useAuth } from '@/context/auth-context';
-import { useProfileContext } from '@/context/profile-context';
-import { LogOut, User, ShoppingBag, Heart, Share2, HelpCircle } from 'lucide-react';
-import { useRouter, useSearchParams } from 'next/navigation';
+
+import Link from 'next/link';
+import { usePathname } from 'next/navigation';
 import { useState } from 'react';
+import { LogOut, User, ShoppingBag, Heart, Share2, HelpCircle } from 'lucide-react';
+import { useAuthStore } from '@/store/auth-store';
+import { useRouter } from 'next/navigation';
 
 const navItems = [
-  { id: 'profile', label: 'Profile', icon: User },
-  { id: 'orders', label: 'My Orders', icon: ShoppingBag },
-  { id: 'wishlist', label: 'Wishlist', icon: Heart },
-  { id: 'referrals', label: 'Referrals', icon: Share2 },
-  { id: 'help', label: 'Help', icon: HelpCircle },
+  { id: 'info', label: 'Profile', path: '/profile/info', icon: User },
+  { id: 'orders', label: 'My Orders', path: '/profile/orders', icon: ShoppingBag },
+  { id: 'wishlist', label: 'Wishlist', path: '/profile/wishlist', icon: Heart },
+  { id: 'referrals', label: 'Referrals', path: '/profile/referrals', icon: Share2 },
+  { id: 'help', label: 'Help', path: '/profile/help', icon: HelpCircle },
 ];
 
 export default function Sidebar() {
+  const pathname = usePathname();
   const router = useRouter();
-  const { setAuth } = useAuth();
-  const { activeTab, setActiveTab } = useProfileContext();
+  const { setAuth } = useAuthStore();
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
-  const searchParams = useSearchParams();
 
-  // Handle tab change - update context and URL
-  const handleTabChange = (tabId: string) => {
-    setActiveTab(tabId as any);
-
-    // Create new URLSearchParams instance
-    const params = new URLSearchParams(searchParams);
-    params.set('tab', tabId);
-
-    // Update URL without refresh
-    router.replace(`/profile?${params.toString()}`, { scroll: false });
-
-    // On mobile, close menu when tab is selected
-    if (isMobileMenuOpen) {
-      setIsMobileMenuOpen(false);
-    }
-  };
-
-  // Handle logout
   const handleLogout = async () => {
     try {
-      await fetch("/api/auth/signout", {
-        method: "POST",
-        credentials: "include",
+      await fetch('/api/auth/signout', {
+        method: 'POST',
+        credentials: 'include',
       });
-      localStorage.removeItem("authToken");
-      localStorage.removeItem("userRole");
-      document.cookie = "authToken=; expires=Thu, 01 Jan 1970 00:00:00 GMT; path=/";
-      document.cookie = "userRole=; expires=Thu, 01 Jan 1970 00:00:00 GMT; path=/";
-      setAuth(false, null); // Update global auth state
-      router.push("/signin");
+      localStorage.removeItem('authToken');
+      localStorage.removeItem('userRole');
+      document.cookie = 'authToken=; expires=Thu, 01 Jan 1970 00:00:00 GMT; path=/';
+      document.cookie = 'userRole=; expires=Thu, 01 Jan 1970 00:00:00 GMT; path=/';
+      setAuth(false, null);
+      router.push('/signin');
     } catch (error) {
-      console.error("Error signing out:", error);
+      console.error('Error signing out:', error);
     }
   };
 
   return (
     <>
-      {/* Mobile menu toggle */}
       <div className="block md:hidden p-4 bg-white border-b border-gray-200 sticky top-0 z-10">
         <button
           onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
@@ -75,14 +57,11 @@ export default function Sidebar() {
         </button>
       </div>
 
-      {/* Sidebar - Desktop always visible, mobile conditionally */}
       <aside
-        className={`bg-white border-r border-slate-200 ${isMobileMenuOpen
-            ? 'block fixed inset-0 z-50 w-full h-screen'
-            : 'hidden md:block'
-          } md:static md:w-64 md:h-auto`}
+        className={`bg-white border-r border-slate-200 ${
+          isMobileMenuOpen ? 'block fixed inset-0 z-50 w-full h-screen' : 'hidden md:block'
+        } md:static md:w-64 md:h-auto`}
       >
-        {/* Mobile close button */}
         {isMobileMenuOpen && (
           <div className="flex items-center justify-between p-4 border-b border-gray-200 md:hidden">
             <h2 className="text-xl font-bold">Menu</h2>
@@ -105,17 +84,20 @@ export default function Sidebar() {
 
         <nav className="mt-4">
           {navItems.map((item) => (
-            <button
+            <Link
               key={item.id}
-              onClick={() => handleTabChange(item.id)}
-              className={`flex items-center w-full px-6 py-3 text-left font-medium transition ${activeTab === item.id
+              href={item.path}
+              className={`flex items-center w-full px-6 py-3 text-left font-medium transition ${
+                pathname === item.path
                   ? 'text-blue-600 bg-blue-50 border-l-4 border-blue-600'
                   : 'text-gray-600 hover:text-black hover:bg-gray-50'
-                }`}
+              }`}
+              onClick={() => setIsMobileMenuOpen(false)}
+              aria-current={pathname === item.path ? 'page' : undefined}
             >
               <item.icon className="w-5 h-5 mr-3" />
               {item.label}
-            </button>
+            </Link>
           ))}
 
           <button
@@ -128,7 +110,6 @@ export default function Sidebar() {
         </nav>
       </aside>
 
-      {/* Overlay for mobile menu */}
       {isMobileMenuOpen && (
         <div
           className="fixed inset-0 bg-black/20 z-40 md:hidden"
