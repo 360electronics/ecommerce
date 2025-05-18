@@ -1,445 +1,454 @@
-import { NextResponse } from 'next/server';
+import { NextRequest, NextResponse } from 'next/server';
 import { db } from '@/db/drizzle';
-import { products, variants } from '@/db/schema/products/products.schema';
-import { deleteFromR2, extractKeyFromR2Url, uploadProductImageToR2 } from '@/lib/r2';
-import { inArray, eq } from 'drizzle-orm';
+import { products, variants, categories, subcategories, brands } from '@/db/schema';
+import { eq, and, isNull, inArray } from 'drizzle-orm';
+import { z } from 'zod';
+import { uploadProductImageToR2, extractKeyFromR2Url, deleteFromR2 } from '@/lib/r2';
+import formidable from 'formidable';
+import { IncomingMessage } from 'http';
+import { Buffer } from 'buffer';
+import fs from 'fs/promises';
 
+// Configure formidable for parsing multipart/form-data
+const form = formidable({ multiples: true, maxFileSize: 10 * 1024 * 1024 }); // 10MB limit
 
-interface ErrorResponse {
-  message: string;
-  error: string;
-}
-
-// Define the structure for a specification group (aligned with schema)
-interface SpecificationGroup {
-  groupName: string;
-  fields: { fieldName: string; fieldValue: string }[];
-}
-
-// Define the structure for a product with specifications and variants
-interface ProductWithSpecifications {
-  id: string;
-  shortName: string;
-  description: string | null;
-  category: string;
-  brand: string;
-  status: 'active' | 'inactive';
-  subProductStatus: 'active' | 'inactive';
-  totalStocks: string;
-  deliveryMode: 'standard' | 'express';
-  tags: string | null;
-  specifications: SpecificationGroup[];
-  averageRating: string;
-  ratingCount: string;
-  createdAt: Date;
-  updatedAt: Date;
-  variants: VariantData[];
-}
-
-
-interface VariantData {
-  id: string;
-  productId: string;
-  name: string;
-  sku: string;
-  slug: string;
-  color: string;
-  material: string | null;
-  dimensions: string | null;
-  weight: string | null;
-  storage: string | null;
-  stock: string;
-  mrp: string;
-  ourPrice: string;
-  productImages: string[];
-  createdAt: Date;
-  updatedAt: Date;
-}
-
-interface ErrorResponse {
-  message: string;
-  error: string;
-}
-
-interface ProductResponse {
-  success: boolean;
-  productId: string;
-  message: string;
-  variantImageUrls: { [variantId: string]: string[] };
-}
-
-export async function POST(req: Request) {
-  try {
-    const formData = await req.formData();
-
-    // Extract product fields
-    const shortName = formData.get('shortName')?.toString();
-    const category = formData.get('category')?.toString();
-    const brand = formData.get('brand')?.toString();
-    const description = formData.get('description')?.toString() || null;
-    const status = (formData.get('status')?.toString() || 'active') as 'active' | 'inactive';
-    const subProductStatus = (formData.get('subProductStatus')?.toString() || 'active') as 'active' | 'inactive';
-    const totalStocks = formData.get('totalStocks')?.toString();
-    const deliveryMode = (formData.get('deliveryMode')?.toString() || 'standard') as 'standard' | 'express';
-    const tags = formData.get('tags')?.toString() || null;
-    const specificationsRaw = formData.get('specifications')?.toString() || '[]';
-    const variantsRaw = formData.get('variants')?.toString();
-
-    // Validate required product fields
-    if (!shortName) {
-      return NextResponse.json<ErrorResponse>(
-        { message: 'Product short name is required', error: 'Missing shortName' },
-        { status: 400 }
-      );
-    }
-    if (!category) {
-      return NextResponse.json<ErrorResponse>(
-        { message: 'Category is required', error: 'Missing category' },
-        { status: 400 }
-      );
-    }
-    if (!brand) {
-      return NextResponse.json<ErrorResponse>(
-        { message: 'Brand is required', error: 'Missing brand' },
-        { status: 400 }
-      );
-    }
-    if (!totalStocks || !/^\d+$/.test(totalStocks)) {
-      return NextResponse.json<ErrorResponse>(
-        { message: 'Total stocks must be a valid integer', error: 'Invalid totalStocks' },
-        { status: 400 }
-      );
-    }
-
-    // Parse and validate specifications
-    let specifications: { groupName: string; fields: { fieldName: string; fieldValue: string }[] }[];
-    try {
-      specifications = JSON.parse(specificationsRaw);
-      if (!Array.isArray(specifications)) {
-        throw new Error('Specifications must be an array');
-      }
-    } catch {
-      return NextResponse.json<ErrorResponse>(
-        { message: 'Invalid specifications format', error: 'Specifications must be valid JSON' },
-        { status: 400 }
-      );
-    }
-
-    // Parse and validate variants
-    let variantsData: VariantData[];
-    try {
-      variantsData = JSON.parse(variantsRaw || '[]') as VariantData[];
-      if (!Array.isArray(variantsData) || variantsData.length === 0) {
-        return NextResponse.json<ErrorResponse>(
-          { message: 'At least one variant is required', error: 'Missing or invalid variants' },
-          { status: 400 }
-        );
-      }
-    } catch {
-      return NextResponse.json<ErrorResponse>(
-        { message: 'Invalid variants format', error: 'Variants must be valid JSON' },
-        { status: 400 }
-      );
-    }
-
-    // Validate variant fields
-    for (const variant of variantsData) {
-      if (!variant.name) {
-        return NextResponse.json<ErrorResponse>(
-          { message: 'Variant name is required', error: 'Missing variant name' },
-          { status: 400 }
-        );
-      }
-      if (!variant.sku) {
-        return NextResponse.json<ErrorResponse>(
-          { message: 'Variant SKU is required', error: 'Missing variant SKU' },
-          { status: 400 }
-        );
-      }
-      if (!variant.slug) {
-        return NextResponse.json<ErrorResponse>(
-          { message: 'Variant slug is required', error: 'Missing variant slug' },
-          { status: 400 }
-        );
-      }
-      if (!variant.color) {
-        return NextResponse.json<ErrorResponse>(
-          { message: 'Variant color is required', error: 'Missing variant color' },
-          { status: 400 }
-        );
-      }
-      if (!variant.mrp || !/^\d+\.\d{2}$/.test(variant.mrp)) {
-        return NextResponse.json<ErrorResponse>(
-          { message: 'Variant MRP must be a valid number with two decimal places', error: 'Invalid variant MRP' },
-          { status: 400 }
-        );
-      }
-      if (!variant.ourPrice || !/^\d+\.\d{2}$/.test(variant.ourPrice)) {
-        return NextResponse.json<ErrorResponse>(
-          { message: 'Variant Our Price must be a valid number with two decimal places', error: 'Invalid variant Our Price' },
-          { status: 400 }
-        );
-      }
-      if (!variant.stock || !/^\d+$/.test(variant.stock)) {
-        return NextResponse.json<ErrorResponse>(
-          { message: 'Variant stock must be a valid integer', error: 'Invalid variant stock' },
-          { status: 400 }
-        );
-      }
-      if (!variant.productImages || variant.productImages.length === 0) {
-        return NextResponse.json<ErrorResponse>(
-          { message: 'At least one image is required for each variant', error: 'Missing variant images' },
-          { status: 400 }
-        );
-      }
-    }
-
-    // Validate total stocks
-    const totalVariantStock = variantsData.reduce((sum, v) => sum + parseInt(v.stock), 0);
-    if (totalVariantStock !== parseInt(totalStocks)) {
-      return NextResponse.json<ErrorResponse>(
-        { message: 'Total stock must equal the sum of variant stocks', error: 'Stock mismatch' },
-        { status: 400 }
-      );
-    }
-
-    // Insert product
-    const productData = {
-      shortName,
-      description,
-      category,
-      brand,
-      status,
-      subProductStatus,
-      totalStocks, // Keep as string
-      deliveryMode,
-      tags,
-      specifications,
-      createdAt: new Date(),
-      updatedAt: new Date(),
-    };
-
-    const [insertedProduct] = await db.insert(products).values(productData).returning();
-    const productId = insertedProduct.id;
-
-    // Process variant images and insert variants
-    const variantImageUrls: { [variantId: string]: string[] } = {};
-    try {
-      for (const variant of variantsData) {
-        const variantId = `variant-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`; // Temporary ID for image organization
-        const uploadedImageUrls: string[] = [];
-
-        // Upload images for the variant
-        for (let i = 0; i < variant.productImages.length; i++) {
-          const imageData = variant.productImages[i];
-          if (imageData && imageData.startsWith('data:')) {
-            const matches = imageData.match(/^data:([A-Za-z-+\/]+);base64,(.+)$/);
-            if (!matches) {
-              throw new Error(`Invalid base64 image data for variant ${variant.name}`);
-            }
-            const mimeType = matches[1];
-            const base64Data = matches[2];
-            const buffer = Buffer.from(base64Data, 'base64');
-            const fileName = `image-${i + 1}-${Date.now()}.${mimeType.split('/')[1] || 'jpg'}`;
-            const imageUrl = await uploadProductImageToR2(shortName, variantId, buffer, mimeType, fileName);
-            uploadedImageUrls.push(imageUrl);
-          }
-        }
-
-        variantImageUrls[variantId] = uploadedImageUrls;
-
-        // Insert variant
-        const variantData = {
-          productId,
-          name: variant.name,
-          sku: variant.sku,
-          slug: variant.slug, // Added slug field
-          color: variant.color,
-          material: variant.material || null,
-          dimensions: variant.dimensions || null,
-          weight: variant.weight || null,
-          storage: variant.storage || null, // Align with schema
-          stock: variant.stock, // Keep as string
-          mrp: variant.mrp, // Keep as string
-          ourPrice: variant.ourPrice, // Keep as string
-          productImages: uploadedImageUrls,
-          createdAt: new Date(),
-          updatedAt: new Date(),
-        };
-
-        await db.insert(variants).values(variantData);
-      }
-    } catch (error) {
-      // Cleanup: Delete the inserted product if variant insertion fails
-      try {
-        await db.delete(products).where(eq(products.id, productId));
-        console.log(`[PRODUCT_POST_CLEANUP] Deleted product ${productId} due to error`);
-      } catch (cleanupError) {
-        console.error(`[PRODUCT_POST_CLEANUP_ERROR] Failed to delete product ${productId}:`, cleanupError);
-      }
-      throw error;
-    }
-
-    return NextResponse.json<ProductResponse>({
-      success: true,
-      productId,
-      message: 'Product created successfully',
-      variantImageUrls,
+// Parse FormData with formidable
+const parseForm = (req: NextRequest): Promise<{ fields: formidable.Fields; files: formidable.Files }> => {
+  return new Promise((resolve, reject) => {
+    form.parse(req as unknown as IncomingMessage, (err, fields, files) => {
+      if (err) reject(err);
+      else resolve({ fields, files });
     });
-  } catch (error) {
-    console.error('[PRODUCT_POST_ERROR]', error);
-    return NextResponse.json<ErrorResponse>(
-      {
-        message: 'Internal Server Error',
-        error: error instanceof Error ? error.message : String(error),
-      },
-      { status: 500 }
-    );
-  }
-}
+  });
+};
 
+// Utility to convert numeric fields to strings for Drizzle ORM
+const toNumericString = (value: number | undefined | null, defaultValue?: string): string | undefined =>
+  value != null ? value.toString() : defaultValue;
+
+// Utility to parse JSON fields safely, avoiding JSX ambiguity
+const parseJSONField = (field: string | string[] | undefined, defaultValue: any = {}): any => {
+  try {
+    const value = Array.isArray(field) ? field[0] : field || JSON.stringify(defaultValue);
+    return JSON.parse(value);
+  } catch (error) {
+    console.warn('Failed to parse JSON field:', error);
+    return defaultValue;
+  }
+};
+
+// Input validation schema for POST
+const createProductSchema = z.object({
+  shortName: z.string().min(1).max(255),
+  fullName: z.string().min(1).max(500),
+  slug: z.string().min(1).max(255),
+  description: z.string().optional(),
+  categoryId: z.string().uuid(),
+  subcategoryId: z.string().uuid().optional(),
+  brandId: z.string().uuid(),
+  status: z.enum(['active', 'inactive', 'coming_soon', 'discontinued']).default('active'),
+  isFeatured: z.boolean().default(false),
+  totalStocks: z.number().int().min(0).default(0),
+  deliveryMode: z.enum(['standard', 'express', 'same_day', 'pickup']).default('standard'),
+  tags: z.array(z.string()).default([]),
+  attributes: z.record(z.string(), z.union([z.string(), z.number(), z.boolean()])).default({}),
+  specifications: z
+    .array(
+      z.object({
+        groupName: z.string(),
+        fields: z.array(z.object({ fieldName: z.string(), fieldValue: z.string() })),
+      })
+    )
+    .default([]),
+  warranty: z.string().max(100).optional(),
+  averageRating: z.number().min(0).max(5).default(0.0).optional(),
+  ratingCount: z.number().int().min(0).default(0).optional(),
+  metaTitle: z.string().max(255).optional(),
+  metaDescription: z.string().optional(),
+  variant: z.object({
+    name: z.string().min(1).max(255),
+    sku: z.string().min(1).max(100),
+    slug: z.string().min(1).max(255),
+    attributes: z.record(z.string(), z.union([z.string(), z.number(), z.boolean()])).default({}),
+    stock: z.number().int().min(0).default(0),
+    lowStockThreshold: z.number().int().min(0).default(5),
+    isBackorderable: z.boolean().default(false),
+    mrp: z.number().positive(),
+    ourPrice: z.number().positive(),
+    salePrice: z.number().positive().optional(),
+    isOnSale: z.boolean().default(false),
+    productImages: z
+      .array(
+        z.object({
+          fileName: z.string().regex(/^[a-zA-Z0-9_-]+\.(jpg|jpeg|png|webp)$/i, 'Invalid file name'),
+          mimeType: z.enum(['image/jpeg', 'image/png', 'image/webp']),
+          alt: z.string().max(255),
+          isFeatured: z.boolean(),
+          displayOrder: z.number().int().min(0),
+        })
+      )
+      .default([]),
+    weight: z.number().positive().optional(),
+    weightUnit: z.string().max(10).default('kg'),
+    dimensions: z
+      .object({
+        length: z.number().positive(),
+        width: z.number().positive(),
+        height: z.number().positive(),
+        unit: z.string(),
+      })
+      .optional(),
+    isDefault: z.boolean().default(true),
+  }),
+});
+
+// Input validation schema for PATCH (bulk update)
+const bulkUpdateProductSchema = z.object({
+  status: z.enum(['inactive', 'discontinued']).optional(),
+  delete: z.boolean().default(false),
+});
+
+// GET: Fetch all products with related data
 export async function GET() {
   try {
-    // Fetch products with their variants
     const allProducts = await db
       .select({
         product: products,
-        variant: variants,
+        category: categories,
+        subcategory: subcategories,
+        brand: brands,
+        variants: variants,
       })
       .from(products)
+      .leftJoin(categories, eq(products.categoryId, categories.id))
+      .leftJoin(subcategories, eq(products.subcategoryId, subcategories.id))
+      .leftJoin(brands, eq(products.brandId, brands.id))
       .leftJoin(variants, eq(products.id, variants.productId));
 
-    // Group by product and format specifications and variants
-    const formattedProducts = allProducts.reduce((acc: Record<string, ProductWithSpecifications>, row) => {
+    // Group variants by product
+    const groupedProducts = allProducts.reduce((acc, row) => {
       const productId = row.product.id;
-
       if (!acc[productId]) {
         acc[productId] = {
-          id: row.product.id,
-          shortName: row.product.shortName,
-          description: row.product.description,
-          category: row.product.category,
-          brand: row.product.brand,
-          status: row.product.status,
-          subProductStatus: row.product.subProductStatus,
-          totalStocks: row.product.totalStocks,
-          deliveryMode: row.product.deliveryMode,
-          tags: row.product.tags,
-          specifications: row.product.specifications, // Directly use JSONB specifications
-          averageRating: row.product.averageRating,
-          ratingCount: row.product.ratingCount,
-          createdAt: row.product.createdAt,
-          updatedAt: row.product.updatedAt,
+          ...row.product,
+          category: row.category,
+          subcategory: row.subcategory,
+          brand: row.brand,
           variants: [],
         };
       }
-
-      // Handle variants
-      if (row.variant) {
-        const variantId = row.variant.id;
-        const existingVariant = acc[productId].variants.find((v) => v.id === variantId);
-
-        if (!existingVariant) {
-          acc[productId].variants.push({
-            id: row.variant.id,
-            productId: row.variant.productId,
-            name: row.variant.name,
-            sku: row.variant.sku,
-            slug: row.variant.slug,
-            color: row.variant.color,
-            material: row.variant.material,
-            dimensions: row.variant.dimensions,
-            weight: row.variant.weight,
-            storage: row.variant.storage,
-            stock: row.variant.stock,
-            mrp: row.variant.mrp,
-            ourPrice: row.variant.ourPrice,
-            productImages: row.variant.productImages,
-            createdAt: row.variant.createdAt,
-            updatedAt: row.variant.updatedAt,
-          });
-        }
+      if (row.variants) {
+        acc[productId].variants.push(row.variants);
       }
-
       return acc;
-    }, {});
+    }, {} as Record<string, any>);
 
-    return NextResponse.json<ProductWithSpecifications[]>(Object.values(formattedProducts), { status: 200 });
+    return NextResponse.json(Object.values(groupedProducts));
   } catch (error) {
     console.error('Error fetching products:', error);
-    return NextResponse.json<ErrorResponse>(
-      { message: 'Failed to fetch products', error: String(error) },
-      { status: 500 }
-    );
+    return NextResponse.json({ error: 'Internal Server Error' }, { status: 500 });
   }
 }
 
-
-export async function DELETE(req: Request) {
+// POST: Add a new product with its variant and upload images to R2
+export async function POST(req: NextRequest) {
   try {
-    const body = await req.json();
-    const { ids }: { ids: string[] } = body;
+    // Parse multipart/form-data
+    const { fields, files } = await parseForm(req);
 
-    // Validate input
-    if (!Array.isArray(ids) || ids.length === 0) {
-      return NextResponse.json<ErrorResponse>(
-        { message: "Product IDs are required", error: "Invalid IDs" },
-        { status: 400 }
-      );
+    // Convert fields to appropriate types
+    const parseField = (field: string | string[] | undefined): string =>
+      Array.isArray(field) ? field[0] : field || '';
+
+    // Construct product data
+    const productData = {
+      shortName: parseField(fields.shortName),
+      fullName: parseField(fields.fullName),
+      slug: parseField(fields.slug),
+      description: fields.description ? parseField(fields.description) : undefined,
+      categoryId: parseField(fields.categoryId),
+      subcategoryId: fields.subcategoryId ? parseField(fields.subcategoryId) : undefined,
+      brandId: parseField(fields.brandId),
+      status: parseField(fields.status || 'active') as
+        | 'active'
+        | 'inactive'
+        | 'coming_soon'
+        | 'discontinued',
+      isFeatured: parseField(fields.isFeatured || 'false') === 'true',
+      totalStocks: parseInt(parseField(fields.totalStocks || '0')),
+      deliveryMode: parseField(fields.deliveryMode || 'standard') as
+        | 'standard'
+        | 'express'
+        | 'same_day'
+        | 'pickup',
+      tags: parseJSONField(fields.tags, []) as string[],
+      attributes: parseJSONField(fields.attributes, {}) as Record<string, string | number | boolean>,
+      specifications: parseJSONField(fields.specifications, []) as {
+        groupName: string;
+        fields: { fieldName: string; fieldValue: string }[];
+      }[],
+      warranty: fields.warranty ? parseField(fields.warranty) : undefined,
+      averageRating: fields.averageRating
+        ? parseFloat(parseField(fields.averageRating))
+        : undefined,
+      ratingCount: fields.ratingCount ? parseInt(parseField(fields.ratingCount)) : undefined,
+      metaTitle: fields.metaTitle ? parseField(fields.metaTitle) : undefined,
+      metaDescription: fields.metaDescription ? parseField(fields.metaDescription) : undefined,
+      variant: {
+        name: parseField(fields['variant.name']),
+        sku: parseField(fields['variant.sku']),
+        slug: parseField(fields['variant.slug']),
+        attributes: parseJSONField(fields['variant.attributes'], {}) as Record<
+          string,
+          string | number | boolean
+        >,
+        stock: parseInt(parseField(fields['variant.stock'] || '0')),
+        lowStockThreshold: parseInt(parseField(fields['variant.lowStockThreshold'] || '5')),
+        isBackorderable: parseField(fields['variant.isBackorderable'] || 'false') === 'true',
+        mrp: parseFloat(parseField(fields['variant.mrp'])),
+        ourPrice: parseFloat(parseField(fields['variant.ourPrice'])),
+        salePrice: fields['variant.salePrice']
+          ? parseFloat(parseField(fields['variant.salePrice']))
+          : undefined,
+        isOnSale: parseField(fields['variant.isOnSale'] || 'false') === 'true',
+        productImages: parseJSONField(fields['variant.productImages'], []) as {
+          fileName: string;
+          mimeType: string;
+          alt: string;
+          isFeatured: boolean;
+          displayOrder: number;
+        }[],
+        weight: fields['variant.weight']
+          ? parseFloat(parseField(fields['variant.weight']))
+          : undefined,
+        weightUnit: parseField(fields['variant.weightUnit'] || 'kg'),
+        dimensions: parseJSONField(fields['variant.dimensions'], undefined) as
+          | { length: number; width: number; height: number; unit: string }
+          | undefined,
+        isDefault: parseField(fields['variant.isDefault'] || 'true') === 'true',
+      },
+    };
+
+    // Validate the parsed data
+    const validatedData = createProductSchema.parse(productData);
+
+    // Check if slug already exists
+    const existingProduct = await db
+      .select()
+      .from(products)
+      .where(eq(products.slug, validatedData.slug))
+      .limit(1);
+    if (existingProduct.length > 0) {
+      return NextResponse.json({ error: 'Product slug already exists' }, { status: 400 });
     }
 
-    // Fetch variants to get image URLs
-    const variantList = await db
-      .select({ productImages: variants.productImages })
-      .from(variants)
-      .where(inArray(variants.productId, ids));
+    // Upload images to R2 and track for potential cleanup
+    const tempVariantId = 'temp-' + Date.now().toString();
+    const uploadedImages: { url: string; alt: string; isFeatured: boolean; displayOrder: number }[] = [];
 
-    // Delete images from R2
-    for (const variant of variantList) {
-      if (Array.isArray(variant.productImages)) {
-        for (const url of variant.productImages) {
-          const key = extractKeyFromR2Url(url);
+    try {
+      for (const [index, image] of validatedData.variant.productImages.entries()) {
+        const file = files[`variant.productImages[${index}].file`];
+        if (!file) {
+          throw new Error(`No file provided for image at index ${index}`);
+        }
+        const fileData = Array.isArray(file) ? file[0] : file;
+        const buffer = await fs.readFile(fileData.filepath);
+
+        const url = await uploadProductImageToR2(
+          validatedData.shortName,
+          tempVariantId,
+          buffer,
+          image.mimeType,
+          image.fileName
+        );
+
+        uploadedImages.push({
+          url,
+          alt: image.alt,
+          isFeatured: image.isFeatured,
+          displayOrder: image.displayOrder,
+        });
+      }
+
+      // Insert product
+      const [newProduct] = await db
+        .insert(products)
+        .values({
+          shortName: validatedData.shortName,
+          fullName: validatedData.fullName,
+          slug: validatedData.slug,
+          description: validatedData.description,
+          categoryId: validatedData.categoryId,
+          subcategoryId: validatedData.subcategoryId,
+          brandId: validatedData.brandId,
+          status: validatedData.status,
+          isFeatured: validatedData.isFeatured,
+          totalStocks: toNumericString(validatedData.totalStocks, '0'),
+          deliveryMode: validatedData.deliveryMode,
+          tags: validatedData.tags,
+          attributes: validatedData.attributes,
+          specifications: validatedData.specifications,
+          warranty: validatedData.warranty,
+          averageRating: toNumericString(validatedData.averageRating, '0.0'),
+          ratingCount: toNumericString(validatedData.ratingCount, '0'),
+          metaTitle: validatedData.metaTitle,
+          metaDescription: validatedData.metaDescription,
+        })
+        .returning();
+
+      // Insert variant - using the newly created product's ID
+      const [newVariant] = await db
+        .insert(variants)
+        .values({
+          productId: newProduct.id, // Use the ID from the newly created product
+          name: validatedData.variant.name,
+          sku: validatedData.variant.sku,
+          slug: validatedData.variant.slug,
+          attributes: validatedData.variant.attributes,
+          stock: toNumericString(validatedData.variant.stock, '0') || '0',
+          lowStockThreshold: toNumericString(validatedData.variant.lowStockThreshold, '5') || '5',
+          isBackorderable: validatedData.variant.isBackorderable,
+          mrp: toNumericString(validatedData.variant.mrp, '0') || '0',
+          ourPrice: toNumericString(validatedData.variant.ourPrice, '0') || '0',
+          salePrice: toNumericString(validatedData.variant.salePrice),
+          isOnSale: validatedData.variant.isOnSale,
+          productImages: uploadedImages,
+          weight: toNumericString(validatedData.variant.weight),
+          weightUnit: validatedData.variant.weightUnit,
+          dimensions: validatedData.variant.dimensions,
+          isDefault: validatedData.variant.isDefault,
+        })
+        .returning();
+
+      return NextResponse.json({ product: newProduct, variant: newVariant }, { status: 201 });
+    } catch (error) {
+      // Clean up uploaded images on failure
+      for (const image of uploadedImages) {
+        const key = extractKeyFromR2Url(image.url);
+        if (key) {
+          await deleteFromR2(key).catch((err) =>
+            console.warn(`Failed to delete R2 image ${key} during cleanup:`, err)
+          );
+        }
+      }
+      throw error;
+    }
+  } catch (error) {
+    if (error instanceof z.ZodError) {
+      return NextResponse.json({ error: error.errors }, { status: 400 });
+    }
+    if (error instanceof Error && error.message.includes('No file provided')) {
+      return NextResponse.json({ error: error.message }, { status: 400 });
+    }
+    console.error('Error creating product:', error);
+    return NextResponse.json({ error: 'Internal Server Error' }, { status: 500 });
+  }
+}
+
+// DELETE: Delete all products and their images from R2
+export async function DELETE() {
+  try {
+    // Fetch all variants to get image URLs
+    const allVariants = await db.select({ productImages: variants.productImages }).from(variants);
+
+    // Delete R2 images
+    const deletePromises = allVariants.flatMap((variant) =>
+      (variant.productImages as { url: string; alt: string; isFeatured: boolean; displayOrder: number }[])
+        .map(async (image) => {
+          const key = extractKeyFromR2Url(image.url);
           if (key) {
             try {
               await deleteFromR2(key);
-              console.log(`Deleted R2 object with key: ${key}`);
-            } catch (err) {
-              console.error(`Failed to delete R2 object with key ${key}:`, err);
-              // Continue with other deletions instead of failing the entire operation
+            } catch (error) {
+              console.warn(`Failed to delete R2 image with key ${key}:`, error);
             }
           }
-        }
-      }
-    }
-
-    // Delete products (variants are automatically deleted due to cascading delete)
-    const result = await db
-      .delete(products)
-      .where(inArray(products.id, ids))
-      .returning();
-
-    if (result.length === 0) {
-      return NextResponse.json<ErrorResponse>(
-        { message: "No products found to delete", error: "Invalid or non-existent product IDs" },
-        { status: 404 }
-      );
-    }
-
-    return NextResponse.json(
-      {
-        message: "Products and associated variant images removed successfully",
-        deletedProducts: result,
-      },
-      { status: 200 }
+        })
     );
+
+    await Promise.all(deletePromises);
+
+    // Delete all products (cascading deletes will handle variants)
+    await db.delete(products);
+
+    return NextResponse.json({ message: 'All products and images deleted successfully' });
   } catch (error) {
-    console.error("[PRODUCT_DELETE_ERROR]", error);
-    return NextResponse.json<ErrorResponse>(
-      {
-        message: "Failed to delete products",
-        error: error instanceof Error ? error.message : String(error),
-      },
-      { status: 500 }
-    );
+    console.error('Error deleting products:', error);
+    return NextResponse.json({ error: 'Internal Server Error' }, { status: 500 });
+  }
+}
+
+// PATCH: Bulk update or delete incomplete or inactive products
+export async function PATCH(req: NextRequest) {
+  try {
+    const body = await req.json();
+    const validatedData = bulkUpdateProductSchema.parse(body);
+
+    // Identify incomplete products (e.g., no variants or inactive status)
+    const incompleteProducts = await db
+      .select({ id: products.id, variants: variants.id })
+      .from(products)
+      .leftJoin(variants, eq(products.id, variants.productId))
+      .where(
+        and(
+          isNull(variants.id), // No variants
+          eq(products.status, 'active') // Still active
+        )
+      );
+
+    if (incompleteProducts.length === 0) {
+      return NextResponse.json({ message: 'No incomplete products found' });
+    }
+
+    if (validatedData.delete) {
+      // Delete incomplete products and associated images
+      const productIds = incompleteProducts.map((p) => p.id);
+      const variantsToDelete = productIds.length
+        ? await db
+          .select({ productImages: variants.productImages })
+          .from(variants)
+          .where(inArray(variants.productId, productIds))
+        : [];
+
+      const deleteImagePromises = variantsToDelete.flatMap((variant) =>
+        (variant.productImages as { url: string; alt: string; isFeatured: boolean; displayOrder: number }[])
+          .map(async (image) => {
+            const key = extractKeyFromR2Url(image.url);
+            if (key) {
+              try {
+                await deleteFromR2(key);
+              } catch (error) {
+                console.warn(`Failed to delete R2 image with key ${key}:`, error);
+              }
+            }
+          })
+      );
+
+      await Promise.all(deleteImagePromises);
+
+      // Delete products
+      await db.delete(products).where(inArray(products.id, productIds));
+
+      return NextResponse.json({
+        message: `${incompleteProducts.length} incomplete products deleted`,
+      });
+    } else {
+      // Update status of incomplete products
+      await db
+        .update(products)
+        .set({ status: validatedData.status || 'inactive', updatedAt: new Date() })
+        .where(inArray(products.id, incompleteProducts.map((p) => p.id)));
+
+      return NextResponse.json({
+        message: `${incompleteProducts.length} incomplete products updated to ${validatedData.status || 'inactive'}`,
+      });
+    }
+  } catch (error) {
+    if (error instanceof z.ZodError) {
+      return NextResponse.json({ error: error.errors }, { status: 400 });
+    }
+    console.error('Error updating products:', error);
+    return NextResponse.json({ error: 'Internal Server Error' }, { status: 500 });
   }
 }

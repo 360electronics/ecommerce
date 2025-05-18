@@ -1,33 +1,178 @@
 "use client";
-import React from "react";
-import { useState, useRef, useEffect } from "react";
+import React, { useState, useRef, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import Image from "next/image";
 import { ChevronDown, Plus, X, GripVertical } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { SubProductSelector } from "@/components/Admin/Product/SubProductSelector";
+import { Textarea } from "@/components/ui/textarea";
 import { DndProvider, useDrag, useDrop } from "react-dnd";
 import { HTML5Backend } from "react-dnd-html5-backend";
 import { slugify } from "@/utils/slugify";
+
+export const computerCategoryPresets = {
+  laptops: {
+    attributes: [
+      { name: 'processor', type: 'text', isFilterable: true, isRequired: true, displayOrder: 1 },
+      { name: 'series', type: 'text', isFilterable: true, isRequired: true, displayOrder: 2 },
+      { name: 'ram', type: 'text', isFilterable: true, isRequired: true, displayOrder: 3 },
+      { name: 'storage', type: 'text', isFilterable: true, isRequired: true, displayOrder: 4 },
+      { name: 'graphics', type: 'text', isFilterable: true, isRequired: true, displayOrder: 5 },
+      { name: 'display_size', type: 'text', isFilterable: true, isRequired: true, displayOrder: 6 },
+      { name: 'resolution', type: 'text', isFilterable: true, isRequired: true, displayOrder: 7 },
+      { name: 'operating_system', type: 'text', isFilterable: true, isRequired: true, displayOrder: 8 },
+      { name: 'battery_life', type: 'text', isFilterable: true, isRequired: true, displayOrder: 9 },
+      { name: 'weight', type: 'text', isFilterable: true, isRequired: true, displayOrder: 10 },
+    ],
+    subcategories: [
+      'Gaming Laptops',
+      'Business Laptops',
+      'Ultrabooks',
+      'Budget Laptops',
+      'Student Laptops',
+      'Workstation Laptops',
+    ],
+  },
+  monitors: {
+    attributes: [
+      { name: 'display_size', type: 'text', isFilterable: true, isRequired: true, displayOrder: 1 },
+      { name: 'resolution', type: 'text', isFilterable: true, isRequired: true, displayOrder: 2 },
+      { name: 'panel_type', type: 'text', isFilterable: true, isRequired: true, displayOrder: 3 },
+      { name: 'refresh_rate', type: 'text', isFilterable: true, isRequired: true, displayOrder: 4 },
+      { name: 'response_time', type: 'text', isFilterable: true, isRequired: true, displayOrder: 5 },
+      { name: 'connectivity', type: 'text', isFilterable: true, isRequired: true, displayOrder: 6 },
+      { name: 'adaptive_sync', type: 'text', isFilterable: true, isRequired: false, displayOrder: 7 },
+      { name: 'hdr_support', type: 'text', isFilterable: true, isRequired: false, displayOrder: 8 },
+    ],
+    subcategories: [
+      'Gaming Monitors',
+      'UltraWide Monitors',
+      'Professional Monitors',
+      'Budget Monitors',
+      '4K Monitors',
+      'Curved Monitors',
+    ],
+  },
+  processors: {
+    attributes: [
+      { name: 'series', type: 'text', isFilterable: true, isRequired: true, displayOrder: 1 },
+      { name: 'socket', type: 'text', isFilterable: true, isRequired: true, displayOrder: 2 },
+      { name: 'cores', type: 'text', isFilterable: true, isRequired: true, displayOrder: 3 },
+      { name: 'threads', type: 'text', isFilterable: true, isRequired: true, displayOrder: 4 },
+      { name: 'base_clock', type: 'text', isFilterable: true, isRequired: true, displayOrder: 5 },
+      { name: 'boost_clock', type: 'text', isFilterable: true, isRequired: true, displayOrder: 6 },
+      { name: 'cache', type: 'text', isFilterable: true, isRequired: true, displayOrder: 7 },
+      { name: 'tdp', type: 'text', isFilterable: true, isRequired: true, displayOrder: 8 },
+    ],
+    subcategories: [
+      'Intel Core',
+      'AMD Ryzen',
+      'Server Processors',
+      'Budget Processors',
+      'High-End Processors',
+    ],
+  },
+  graphics_cards: {
+    attributes: [
+      { name: 'chipset', type: 'text', isFilterable: true, isRequired: true, displayOrder: 1 },
+      { name: 'memory_size', type: 'text', isFilterable: true, isRequired: true, displayOrder: 2 },
+      { name: 'memory_type', type: 'text', isFilterable: true, isRequired: true, displayOrder: 3 },
+      { name: 'core_clock', type: 'text', isFilterable: true, isRequired: true, displayOrder: 4 },
+      { name: 'boost_clock', type: 'text', isFilterable: true, isRequired: true, displayOrder: 5 },
+      { name: 'interface', type: 'text', isFilterable: true, isRequired: true, displayOrder: 6 },
+      { name: 'tdp', type: 'text', isFilterable: true, isRequired: true, displayOrder: 7 },
+      { name: 'power_connectors', type: 'text', isFilterable: true, isRequired: true, displayOrder: 8 },
+    ],
+    subcategories: [
+      'NVIDIA GeForce',
+      'AMD Radeon',
+      'Workstation Graphics',
+      'Entry-Level Graphics Cards',
+      'Mid-Range Graphics Cards',
+      'High-End Graphics Cards',
+    ],
+  },
+  storage: {
+    attributes: [
+      { name: 'type', type: 'text', isFilterable: true, isRequired: true, displayOrder: 1 },
+      { name: 'capacity', type: 'text', isFilterable: true, isRequired: true, displayOrder: 2 },
+      { name: 'interface', type: 'text', isFilterable: true, isRequired: true, displayOrder: 3 },
+      { name: 'read_speed', type: 'text', isFilterable: true, isRequired: true, displayOrder: 4 },
+      { name: 'write_speed', type: 'text', isFilterable: true, isRequired: true, displayOrder: 5 },
+      { name: 'form_factor', type: 'text', isFilterable: true, isRequired: true, displayOrder: 6 },
+      { name: 'cache', type: 'text', isFilterable: true, isRequired: false, displayOrder: 7 },
+    ],
+    subcategories: [
+      'SSD',
+      'HDD',
+      'NVMe SSDs',
+      'External Storage',
+      'USB Flash Drives',
+      'Memory Cards',
+    ],
+  },
+  cabinets: {
+    attributes: [
+      { name: 'form_factor', type: 'text', isFilterable: true, isRequired: true, displayOrder: 1 },
+      { name: 'motherboard_support', type: 'text', isFilterable: true, isRequired: true, displayOrder: 2 },
+      { name: 'drive_bays', type: 'text', isFilterable: true, isRequired: true, displayOrder: 3 },
+      { name: 'expansion_slots', type: 'text', isFilterable: true, isRequired: true, displayOrder: 4 },
+      { name: 'cooling_options', type: 'text', isFilterable: true, isRequired: true, displayOrder: 5 },
+      { name: 'front_panel_ports', type: 'text', isFilterable: true, isRequired: true, displayOrder: 6 },
+      { name: 'gpu_clearance', type: 'text', isFilterable: true, isRequired: true, displayOrder: 7 },
+      { name: 'psu_support', type: 'text', isFilterable: true, isRequired: true, displayOrder: 8 },
+    ],
+    subcategories: [
+      'Mid Tower',
+      'Full Tower',
+      'Mini Tower',
+      'Micro ATX',
+      'ITX Cases',
+      'Gaming Cases',
+    ],
+  },
+  accessories: {
+    attributes: [
+      { name: 'connectivity', type: 'text', isFilterable: true, isRequired: true, displayOrder: 1 },
+      { name: 'compatibility', type: 'text', isFilterable: true, isRequired: true, displayOrder: 2 },
+      { name: 'color', type: 'text', isFilterable: true, isRequired: true, displayOrder: 3 },
+    ],
+    subcategories: [
+      'Keyboards',
+      'Mice',
+      'Headsets',
+      'Webcams',
+      'Microphones',
+      'Controllers',
+      'Cables',
+      'Adapters',
+    ],
+  },
+}
 
 // Status options
 const statusOptions = [
   { value: "active", label: "Active" },
   { value: "inactive", label: "Inactive" },
+  { value: "coming_soon", label: "Coming Soon" },
+  { value: "discontinued", label: "Discontinued" },
 ];
 
-// Product categories
-const categories = ['Laptops', 'Monitors', 'Processor', 'Graphics Card', 'Accessories', 'Storage', 'Cabinets'];
+// Delivery mode options
+const deliveryModeOptions = [
+  { value: "standard", label: "Standard" },
+  { value: "express", label: "Express" },
+  { value: "same_day", label: "Same Day" },
+  { value: "pickup", label: "Pickup" },
+];
 
-// Interface for specification field
+// Interface definitions
 interface SpecField {
   id: string;
   label: string;
   value: string;
 }
 
-// Interface for specification section
 interface SpecSection {
   id: string;
   name: string;
@@ -36,30 +181,42 @@ interface SpecSection {
   isFixed?: boolean;
 }
 
-// Interface for variant
+interface Attribute {
+  name: string;
+  value: string | number | boolean;
+  type: "text" | "number" | "boolean" | "select";
+  isRequired: boolean;
+  isFilterable: boolean;
+  options?: string[];
+  unit?: string;
+}
+
 interface Variant {
   id: string;
   name: string;
   sku: string;
-  color: string;
-  material: string;
-  dimensions: string;
-  weight: string;
-  mrp: string;
-  storage: string;
-  ourPrice: string;
+  attributes: Record<string, string | number | boolean>;
   stock: string;
+  lowStockThreshold: string;
+  isBackorderable: boolean;
+  mrp: string;
+  ourPrice: string;
+  salePrice: string;
+  isOnSale: boolean;
   productImages: (string | null)[];
+  weight: string;
+  weightUnit: string;
+  dimensions: { length: number; width: number; height: number; unit: string };
+  isDefault: boolean;
 }
 
-// Type for drag item
 interface DragItem {
   index: number;
   id: string;
   type: string;
 }
 
-// DraggableSpecSection component (unchanged)
+// DraggableSpecSection component
 const DraggableSpecSection = ({
   section,
   index,
@@ -80,13 +237,12 @@ const DraggableSpecSection = ({
   removeFieldFromSection: (sectionId: string, fieldId: string) => void;
 }) => {
   const ref = useRef<HTMLDivElement>(null);
-
   const canDrag = !section.isFixed;
 
   const [{ isDragging }, drag] = useDrag({
     type: "SPEC_SECTION",
     item: () => ({ index, id: section.id, type: "SPEC_SECTION" }),
-    canDrag: canDrag,
+    canDrag,
     collect: (monitor) => ({
       isDragging: monitor.isDragging(),
     }),
@@ -94,16 +250,11 @@ const DraggableSpecSection = ({
 
   const [{ isOver, canDrop }] = useDrop({
     accept: "SPEC_SECTION",
-    canDrop: (item: DragItem) => {
-      if (section.isFixed) return false;
-      if (item.id === "general") return false;
-      return true;
-    },
+    canDrop: (item: DragItem) => !section.isFixed && item.id !== "general" && item.id !== "warranty",
     hover: (item: DragItem, monitor) => {
-      if (!ref.current) return;
+      if (!ref.current || item.index === index || section.isFixed) return;
       const dragIndex = item.index;
       const hoverIndex = index;
-      if (dragIndex === hoverIndex || section.isFixed) return;
       const hoverBoundingRect = ref.current.getBoundingClientRect();
       const hoverMiddleY = (hoverBoundingRect.bottom - hoverBoundingRect.top) / 2;
       const clientOffset = monitor.getClientOffset();
@@ -120,42 +271,30 @@ const DraggableSpecSection = ({
     }),
   });
 
-  const attachRef = (el: HTMLDivElement | null) => {
-    ref.current = el;
-    // const dropRef = drop(el);
-    if (canDrag) {
-      drag(el);
-    }
-  };
+  // drag(drop(ref));
 
   const borderStyle = isOver && canDrop ? "border-blue-400" : isOver && !canDrop ? "border-red-400" : "border-gray-200";
 
   return (
     <div
-      ref={attachRef}
+      ref={ref}
       className={`rounded-md border p-4 transition-colors ${borderStyle} ${isDragging ? "opacity-50" : "opacity-100"}`}
       style={{ cursor: canDrag ? "move" : "default" }}
     >
       <div className="mb-4 flex items-center justify-between">
         {section.id === "general" ? (
-          <div className="flex items-center">
-            <h3 className="font-medium">
-              General <span className="text-xs text-red-500">(Required)</span>
-            </h3>
-          </div>
+          <h3 className="font-medium">
+            General <span className="text-xs text-red-500">(Required)</span>
+          </h3>
         ) : section.id === "warranty" ? (
-          <div className="flex items-center">
-            <h3 className="font-medium">Warranty</h3>
-          </div>
+          <h3 className="font-medium">Warranty</h3>
         ) : (
           <div className="flex items-center space-x-2 w-full">
-            <div className="cursor-move">
-              <GripVertical className="h-5 w-5 text-gray-400" />
-            </div>
+            <GripVertical className="h-5 w-5 text-gray-400 cursor-move" />
             <Input
               value={section.name}
               onChange={(e) => updateSectionName(section.id, e.target.value)}
-              placeholder="Row Name"
+              placeholder="Section Name"
               className="h-8"
             />
             <button type="button" onClick={() => removeSection(section.id)} className="text-red-500 hover:text-red-700">
@@ -168,16 +307,14 @@ const DraggableSpecSection = ({
       <div className="space-y-3">
         {section.fields.map((field) => (
           <div key={field.id} className="grid grid-cols-1 gap-4 md:grid-cols-2">
-            <div className="relative">
+            <Input
+              placeholder={`Label (e.g. ${section.name === "General" ? "Model Name" : section.name === "Warranty" ? "Warranty Period" : "Processor"})`}
+              value={field.label}
+              onChange={(e) => handleSpecFieldChange(section.id, field.id, "label", e.target.value)}
+            />
+            <div className="flex items-center">
               <Input
-                placeholder={`label name (e.g. ${section.name === "General" ? "Model name, Brand" : section.name === "Warranty" ? "Warranty Summary" : "Processor"} )`}
-                value={field.label}
-                onChange={(e) => handleSpecFieldChange(section.id, field.id, "label", e.target.value)}
-              />
-            </div>
-            <div className="relative flex items-center">
-              <Input
-                placeholder={`value name (e.g. ${section.name === "General" ? "HP ProBook, HP" : section.name === "Warranty" ? "1 Year" : "Intel i7"} )`}
+                placeholder={`Value (e.g. ${section.name === "General" ? "ProBook 450" : section.name === "Warranty" ? "1 Year" : "Intel i7"})`}
                 value={field.value}
                 onChange={(e) => handleSpecFieldChange(section.id, field.id, "value", e.target.value)}
                 className="flex-1"
@@ -207,149 +344,131 @@ const DraggableSpecSection = ({
 
 export default function AddProductPage() {
   const router = useRouter();
-
-  // Global product state
   const [product, setProduct] = useState({
     shortName: "",
+    fullName: "",
     category: "",
+    subcategory: "",
     brand: "",
     description: "",
     status: "active",
-    subProductStatus: "active",
+    isFeatured: false,
     deliveryMode: "standard",
     tags: "",
+    warranty: "",
+    metaTitle: "",
+    metaDescription: "",
   });
-
-  // Variants state
   const [variants, setVariants] = useState<Variant[]>([
     {
       id: `variant-${Date.now()}`,
       name: "",
       sku: "",
-      color: "",
-      material: "",
-      dimensions: "",
-      weight: "",
+      attributes: {},
+      stock: "0",
+      lowStockThreshold: "5",
+      isBackorderable: false,
       mrp: "",
       ourPrice: "",
-      storage: "", // Initialize storage
-      stock: "",
+      salePrice: "",
+      isOnSale: false,
       productImages: Array(6).fill(null),
+      weight: "",
+      weightUnit: "kg",
+      dimensions: { length: 0, width: 0, height: 0, unit: "cm" },
+      isDefault: true,
     },
   ]);
-
-  // Specification sections state
+  const [customAttributes, setCustomAttributes] = useState<{ [variantId: string]: Attribute[] }>({});
   const [specSections, setSpecSections] = useState<SpecSection[]>([
     {
       id: "general",
       name: "General",
       fields: [
         { id: "field1", label: "Brand", value: "" },
-        { id: "field2", label: "Material", value: "" },
-        { id: "field3", label: "Color", value: "" },
+        { id: "field2", label: "Model", value: "" },
       ],
       isRequired: true,
       isFixed: true,
     },
     {
-      id: "physical",
-      name: "Dimensions",
-      fields: [
-        { id: "field1", label: "Dimensions", value: "" },
-        { id: "field2", label: "Weight", value: "" },
-      ],
-      isFixed: false,
+      id: "warranty",
+      name: "Warranty",
+      fields: [{ id: "field1", label: "Warranty Period", value: "" }],
+      isFixed: true,
     },
   ]);
-
-  // Dropdown state
   const [openDropdown, setOpenDropdown] = useState<string | null>(null);
-
-  // Refs for image inputs (one set per variant)
   const variantImageInputRefs = useRef<{
     [variantId: string]: { main: React.RefObject<HTMLInputElement | null>; additional: (HTMLInputElement | null)[] };
   }>({});
 
-  // Initialize refs for initial variants
-  variants.forEach((variant) => {
-    if (!variantImageInputRefs.current[variant.id]) {
-      variantImageInputRefs.current[variant.id] = {
-        main: React.createRef<HTMLInputElement | null>(),
-        additional: Array(5).fill(null),
-      };
-    }
-  });
-
-  // Update refs when variants change
+  // Initialize refs
   useEffect(() => {
     variants.forEach((variant) => {
       if (!variantImageInputRefs.current[variant.id]) {
         variantImageInputRefs.current[variant.id] = {
-          main: React.createRef<HTMLInputElement | null>(),
+          main: React.createRef<HTMLInputElement>(),
           additional: Array(5).fill(null),
         };
       }
     });
-
-    // Cleanup refs for removed variants
-    const variantIds = new Set(variants.map((v) => v.id));
     Object.keys(variantImageInputRefs.current).forEach((id) => {
-      if (!variantIds.has(id)) {
+      if (!variants.find((v) => v.id === id)) {
         delete variantImageInputRefs.current[id];
       }
     });
   }, [variants]);
 
-  // Handle variant field changes
-  const handleVariantChange = (id: string, field: keyof Variant, value: string) => {
-    setVariants((prev) =>
-      prev.map((variant) => (variant.id === id ? { ...variant, [field]: value } : variant))
-    );
-  };
-
-  // Add variant
-  const addVariant = () => {
-    const newVariant = {
-      id: `variant-${Date.now()}`,
-      name: "",
-      sku: "",
-      color: "",
-      material: "",
-      dimensions: "",
-      weight: "",
-      mrp: "",
-      ourPrice: "",
-      storage: "", // Initialize storage
-      stock: "",
-      productImages: Array(6).fill(null),
-    };
-    setVariants((prev) => [...prev, newVariant]);
-  };
-
-  // Remove variant
-  const removeVariant = (id: string) => {
-    if (variants.length === 1) return; // Prevent removing the last variant
-    setVariants((prev) => prev.filter((variant) => variant.id !== id));
-    // Deletion moved to useEffect cleanup
-  };
-
-  // Sync product fields with specSections
+  // Sync product fields and initialize attributes
   useEffect(() => {
     setSpecSections((prev) =>
       prev.map((section) => {
         if (section.id === "general") {
-          const updatedFields = section.fields.map((field) => {
-            if (field.label.toLowerCase() === "brand") return { ...field, value: product.brand };
-            return field;
-          });
-          return { ...section, fields: updatedFields };
+          return {
+            ...section,
+            fields: section.fields.map((field) =>
+              field.label.toLowerCase() === "brand" ? { ...field, value: product.brand } : field
+            ),
+          };
+        } else if (section.id === "warranty") {
+          return {
+            ...section,
+            fields: section.fields.map((field) => ({ ...field, value: product.warranty })),
+          };
         }
         return section;
       })
     );
-  }, [product.brand]);
 
-  // Close dropdown on click outside
+    // Initialize attributes for each variant based on category
+    setVariants((prev) =>
+      prev.map((variant) => {
+        const presetAttributes = product.category
+          ? computerCategoryPresets[product.category as keyof typeof computerCategoryPresets]?.attributes || []
+          : [];
+        const initialAttributes: Record<string, string | number | boolean> = {};
+        presetAttributes.forEach((attr) => {
+          initialAttributes[attr.name] = "";
+        });
+        return {
+          ...variant,
+          attributes: { ...initialAttributes, ...variant.attributes },
+        };
+      })
+    );
+
+    // Initialize custom attributes
+    const newCustomAttributes = { ...customAttributes };
+    variants.forEach((variant) => {
+      if (!newCustomAttributes[variant.id]) {
+        newCustomAttributes[variant.id] = [];
+      }
+    });
+    setCustomAttributes(newCustomAttributes);
+  }, [product.brand, product.warranty, product.category]);
+
+  // Dropdown handling
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
       if (openDropdown && !(event.target as Element).closest(".dropdown-container")) {
@@ -360,12 +479,11 @@ export default function AddProductPage() {
     return () => document.removeEventListener("mousedown", handleClickOutside);
   }, [openDropdown]);
 
-  // Handle dropdown toggle
   const toggleDropdown = (dropdownName: string) => {
     setOpenDropdown(openDropdown === dropdownName ? null : dropdownName);
   };
 
-  // Convert File to base64 string
+  // Image handling
   const fileToBase64 = (file: File): Promise<string> => {
     return new Promise((resolve, reject) => {
       const reader = new FileReader();
@@ -375,7 +493,6 @@ export default function AddProductPage() {
     });
   };
 
-  // Handle image upload for variants
   const handleImageUpload = async (variantId: string, index: number, e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (file) {
@@ -384,16 +501,15 @@ export default function AddProductPage() {
         prev.map((variant) =>
           variant.id === variantId
             ? {
-              ...variant,
-              productImages: variant.productImages.map((img, i) => (i === index ? base64 : img)),
-            }
+                ...variant,
+                productImages: variant.productImages.map((img, i) => (i === index ? base64 : img)),
+              }
             : variant
         )
       );
     }
   };
 
-  // Handle drag and drop for images
   const handleImageDrop = async (variantId: string, index: number, e: React.DragEvent) => {
     e.preventDefault();
     const file = e.dataTransfer.files?.[0];
@@ -403,30 +519,126 @@ export default function AddProductPage() {
         prev.map((variant) =>
           variant.id === variantId
             ? {
-              ...variant,
-              productImages: variant.productImages.map((img, i) => (i === index ? base64 : img)),
-            }
+                ...variant,
+                productImages: variant.productImages.map((img, i) => (i === index ? base64 : img)),
+              }
             : variant
         )
       );
     }
   };
 
-  const handleDragOver = (e: React.DragEvent) => {
-    e.preventDefault();
+  // Variant handling
+  const handleVariantChange = (id: string, field: keyof Variant, value: any) => {
+    setVariants((prev) =>
+      prev.map((variant) =>
+        variant.id === id ? { ...variant, [field]: value } : variant
+      )
+    );
   };
 
-  // Handle specification field changes
+  const handleAttributeChange = (variantId: string, attrName: string, value: string | number | boolean) => {
+    setVariants((prev) =>
+      prev.map((variant) =>
+        variant.id === variantId
+          ? {
+              ...variant,
+              attributes: { ...variant.attributes, [attrName]: value },
+            }
+          : variant
+      )
+    );
+  };
+
+  const addCustomAttribute = (variantId: string) => {
+    setCustomAttributes((prev) => ({
+      ...prev,
+      [variantId]: [
+        ...(prev[variantId] || []),
+        {
+          name: "",
+          value: "",
+          type: "text",
+          isRequired: false,
+          isFilterable: false,
+        },
+      ],
+    }));
+  };
+
+  const updateCustomAttribute = (variantId: string, index: number, field: keyof Attribute, value: any) => {
+    setCustomAttributes((prev) => ({
+      ...prev,
+      [variantId]: prev[variantId].map((attr, i) =>
+        i === index ? { ...attr, [field]: value } : attr
+      ),
+    }));
+  };
+
+  const removeCustomAttribute = (variantId: string, index: number) => {
+    setCustomAttributes((prev) => ({
+      ...prev,
+      [variantId]: prev[variantId].filter((_, i) => i !== index),
+    }));
+  };
+
+  const addVariant = () => {
+    const newVariantId = `variant-${Date.now()}`;
+    const presetAttributes = product.category
+      ? computerCategoryPresets[product.category as keyof typeof computerCategoryPresets]?.attributes || []
+      : [];
+    const initialAttributes: Record<string, string | number | boolean> = {};
+    presetAttributes.forEach((attr) => {
+      initialAttributes[attr.name] = "";
+    });
+    setVariants((prev) => [
+      ...prev,
+      {
+        id: newVariantId,
+        name: "",
+        sku: "",
+        attributes: initialAttributes,
+        stock: "0",
+        lowStockThreshold: "5",
+        isBackorderable: false,
+        mrp: "",
+        ourPrice: "",
+        salePrice: "",
+        isOnSale: false,
+        productImages: Array(6).fill(null),
+        weight: "",
+        weightUnit: "kg",
+        dimensions: { length: 0, width: 0, height: 0, unit: "cm" },
+        isDefault: prev.length === 0,
+      },
+    ]);
+    setCustomAttributes((prev) => ({
+      ...prev,
+      [newVariantId]: [],
+    }));
+  };
+
+  const removeVariant = (id: string) => {
+    if (variants.length === 1) return;
+    setVariants((prev) => prev.filter((variant) => variant.id !== id));
+    setCustomAttributes((prev) => {
+      const newCustom = { ...prev };
+      delete newCustom[id];
+      return newCustom;
+    });
+  };
+
+  // Specification handling
   const handleSpecFieldChange = (sectionId: string, fieldId: string, type: "label" | "value", value: string) => {
     setSpecSections((prev) =>
       prev.map((section) =>
         section.id === sectionId
           ? {
-            ...section,
-            fields: section.fields.map((field) =>
-              field.id === fieldId ? { ...field, [type]: value } : field
-            ),
-          }
+              ...section,
+              fields: section.fields.map((field) =>
+                field.id === fieldId ? { ...field, [type]: value } : field
+              ),
+            }
           : section
       )
     );
@@ -437,12 +649,12 @@ export default function AddProductPage() {
       prev.map((section) =>
         section.id === sectionId
           ? {
-            ...section,
-            fields: [
-              ...section.fields,
-              { id: `field${section.fields.length + 1}-${Date.now()}`, label: "", value: "" },
-            ],
-          }
+              ...section,
+              fields: [
+                ...section.fields,
+                { id: `field${section.fields.length + 1}-${Date.now()}`, label: "", value: "" },
+              ],
+            }
           : section
       )
     );
@@ -450,15 +662,14 @@ export default function AddProductPage() {
 
   const removeFieldFromSection = (sectionId: string, fieldId: string) => {
     setSpecSections((prev) =>
-      prev.map((section) => {
-        if (section.id === sectionId && section.fields.length > 1) {
-          return {
-            ...section,
-            fields: section.fields.filter((field) => field.id !== fieldId),
-          };
-        }
-        return section;
-      })
+      prev.map((section) =>
+        section.id === sectionId && section.fields.length > 1
+          ? {
+              ...section,
+              fields: section.fields.filter((field) => field.id !== fieldId),
+            }
+          : section
+      )
     );
   };
 
@@ -474,178 +685,125 @@ export default function AddProductPage() {
   };
 
   const addNewSection = () => {
-    const newSectionId = `section${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
-    const warrantyIndex = specSections.findIndex((section) => section.id === "warranty");
-    const newSections = [...specSections];
-    const insertIndex = warrantyIndex !== -1 ? warrantyIndex : specSections.length;
-    newSections.splice(insertIndex, 0, {
-      id: newSectionId,
-      name: "New Row",
-      fields: [{ id: "field1", label: "", value: "" }],
+    const newSection = {
+      id: `section-${Date.now()}`,
+      name: "New Section",
+      fields: [{ id: `field1-${Date.now()}`, label: "", value: "" }],
       isFixed: false,
-    });
-    setSpecSections(newSections);
+    };
+    setSpecSections((prev) => [...prev, newSection]);
   };
 
   const moveSection = (dragIndex: number, hoverIndex: number) => {
     const dragSection = specSections[dragIndex];
-    if (dragSection.id === "general" || dragSection.id === "warranty" || hoverIndex === 0) return;
-    if (hoverIndex === specSections.length - 1 && specSections[specSections.length - 1].id === "warranty") return;
-    setSpecSections((prevSections) => {
-      const newSections = [...prevSections];
+    if (dragSection.isFixed || specSections[hoverIndex].isFixed) return;
+    setSpecSections((prev) => {
+      const newSections = [...prev];
       newSections.splice(dragIndex, 1);
       newSections.splice(hoverIndex, 0, dragSection);
       return newSections;
     });
   };
 
-  const parseColors = (colorString: string): string[] => {
-    if (!colorString) return [];
-    return colorString.split(",").map((c) => c.trim()).filter(Boolean);
-  };
-
-  const isValidColor = (color: string): boolean => {
-    const s = new Option().style;
-    s.backgroundColor = color;
-    return s.backgroundColor !== "";
-  };
-
-  const parseTagsToArray = (tagString: string): string[] => {
-    if (!tagString) return [];
-    return tagString.split(",").map((tag) => tag.trim()).filter(Boolean);
-  };
-
-  const addTagsToFormData = (formData: FormData, tagString: string) => {
-    const tags = parseTagsToArray(tagString);
-    if (tags.length > 0) {
-      formData.append("tags", tagString); // Keep as comma-separated string to match schema
-    }
-  };
-
+  // Form submission
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
 
-    // Global validations
-    if (!product.shortName) return alert("Product short name is required");
+    // Validations
+    if (!product.shortName) return alert("Short name is required");
+    if (!product.fullName) return alert("Full name is required");
     if (!product.category) return alert("Category is required");
     if (!product.brand) return alert("Brand is required");
 
-    // Variant validations
-    const validVariants = variants.filter(
-      (v) =>
+    const presetAttributes = product.category
+      ? computerCategoryPresets[product.category as keyof typeof computerCategoryPresets]?.attributes || []
+      : [];
+
+    const validVariants = variants.filter((v) => {
+      const requiredAttributesFilled = presetAttributes
+        .filter((attr) => attr.isRequired)
+        .every((attr) => v.attributes[attr.name] !== "" && v.attributes[attr.name] !== undefined);
+      return (
         v.name.trim() &&
         v.sku.trim() &&
-        v.color.trim() &&
-        parseColors(v.color).some((c) => isValidColor(c)) &&
         v.mrp.trim() &&
         Number(v.mrp) > 0 &&
         v.ourPrice.trim() &&
         Number(v.ourPrice) > 0 &&
-        v.stock.trim() &&
-        (product.category !== 'Laptops' || v.storage.trim()) &&
         Number(v.stock) >= 0 &&
-        v.productImages[0]
-    );
+        v.productImages[0] &&
+        requiredAttributesFilled
+      );
+    });
+
     if (validVariants.length === 0) {
-      return alert("At least one valid variant with all required fields and main image is required");
+      return alert("At least one valid variant with all required fields and attributes is required");
     }
 
-    const generalSection = specSections.find((section) => section.id === "general");
-    if (
-      !generalSection ||
-      !generalSection.fields.some((field) => field.label.trim() && field.value.trim())
-    ) {
-      return alert("At least one field in the General section is required");
+    const generalSection = specSections.find((s) => s.id === "general");
+    if (!generalSection?.fields.some((f) => f.label.trim() && f.value.trim())) {
+      return alert("General section requires at least one field");
     }
 
-    // Generate slug from shortName
-  
-
-    // Prepare FormData
     const formData = new FormData();
     formData.append("shortName", product.shortName);
+    formData.append("fullName", product.fullName);
+    formData.append("slug", slugify(product.fullName));
     formData.append("category", product.category);
+    formData.append("subcategory", product.subcategory || "");
     formData.append("brand", product.brand);
     formData.append("description", product.description || "");
     formData.append("status", product.status);
-    formData.append("subProductStatus", product.subProductStatus);
+    formData.append("isFeatured", product.isFeatured.toString());
     formData.append("deliveryMode", product.deliveryMode);
-    addTagsToFormData(formData, product.tags || "");
+    formData.append("tags", product.tags || "");
+    formData.append("warranty", product.warranty || "");
+    formData.append("metaTitle", product.metaTitle || "");
+    formData.append("metaDescription", product.metaDescription || "");
+    formData.append("totalStocks", validVariants.reduce((sum, v) => sum + Number(v.stock), 0).toString());
 
-    // Calculate total stocks from variants
-    const totalStocks = validVariants.reduce((sum, v) => sum + Number(v.stock), 0);
-    formData.append("totalStocks", totalStocks.toString());
-
-    // Add variants to FormData
-    const variantsPayload = validVariants.map((v) => ({
-
-      
-
-      name: v.name,
-      slug: slugify(v.name),
-      sku: v.sku,
-      color: v.color,
-      material: v.material || "",
-      dimensions: v.dimensions || "",
-      weight: v.weight || "",
-      mrp: v.mrp,
-      ourPrice: v.ourPrice,
-      stock: v.stock,
-      storage: v.storage || "", // Include storag
-      productImages: v.productImages.filter((img): img is string => img !== null),
-    }));
+    const variantsPayload = validVariants.map((v) => {
+      const combinedAttributes = { ...v.attributes };
+      customAttributes[v.id]?.forEach((attr) => {
+        if (attr.name && attr.value !== "") {
+          combinedAttributes[attr.name] = attr.value;
+        }
+      });
+      return {
+        name: v.name,
+        sku: v.sku,
+        slug: slugify(v.name),
+        attributes: combinedAttributes,
+        stock: v.stock,
+        lowStockThreshold: v.lowStockThreshold,
+        isBackorderable: v.isBackorderable,
+        mrp: v.mrp,
+        ourPrice: v.ourPrice,
+        salePrice: v.salePrice || "",
+        isOnSale: v.isOnSale,
+        productImages: v.productImages
+          .filter((img): img is string => img !== null)
+          .map((url, index) => ({
+            url,
+            alt: `${v.name} image ${index + 1}`,
+            isFeatured: index === 0,
+            displayOrder: index,
+          })),
+        weight: v.weight,
+        weightUnit: v.weightUnit,
+        dimensions: v.dimensions,
+        isDefault: v.isDefault,
+      };
+    });
     formData.append("variants", JSON.stringify(variantsPayload));
 
-    // Add images to FormData
-    for (const variant of validVariants) {
-      let mainImageAdded = false;
-      if (typeof variant.productImages[0] === "string" && variant.productImages[0].startsWith("data:")) {
-        try {
-          const response = await fetch(variant.productImages[0]);
-          const blob = await response.blob();
-          formData.append(
-            `variant-${variant.id}-images`,
-            blob,
-            `main-image-${variant.id}-${Date.now()}.${blob.type.split("/")[1] || "jpg"}`
-          );
-          mainImageAdded = true;
-        } catch (error) {
-          console.error(`Error converting main image for variant ${variant.id}:`, error);
-        }
-      }
-      if (!mainImageAdded) {
-        return alert(`Main product image for variant ${variant.name} could not be processed`);
-      }
-
-      for (let i = 1; i < variant.productImages.length; i++) {
-        const image = variant.productImages[i];
-        if (typeof image === "string" && image.startsWith("data:")) {
-          try {
-            const response = await fetch(image);
-            const blob = await response.blob();
-            formData.append(
-              `variant-${variant.id}-images`,
-              blob,
-              `additional-image-${variant.id}-${Date.now()}-${i}.${blob.type.split("/")[1] || "jpg"}`
-            );
-          } catch (error) {
-            console.error(`Error converting additional image ${i} for variant ${variant.id}:`, error);
-          }
-        }
-      }
-    }
-
-    // Prepare specifications payload
     const specificationsPayload = specSections
-      .filter((section) => section.fields.some((f) => f.label.trim() && f.value.trim()))
-      .map((section) => ({
-        groupName: section.name,
-        fields: section.fields
+      .filter((s) => s.fields.some((f) => f.label.trim() && f.value.trim()))
+      .map((s) => ({
+        groupName: s.name,
+        fields: s.fields
           .filter((f) => f.label.trim() && f.value.trim())
-          .map((f) => ({
-            fieldName: f.label,
-            fieldValue: f.value,
-          })),
+          .map((f) => ({ fieldName: f.label, fieldValue: f.value })),
       }));
     formData.append("specifications", JSON.stringify(specificationsPayload));
 
@@ -655,23 +813,15 @@ export default function AddProductPage() {
         body: formData,
       });
 
-      const responseText = await res.text();
-      let result;
-      try {
-        result = JSON.parse(responseText);
-      } catch {
-        result = { message: responseText };
-      }
-
       if (!res.ok) {
-        throw new Error(result.message || "Failed to create product");
+        const error = await res.json();
+        throw new Error(error.message || "Failed to create product");
       }
 
       alert("Product added successfully!");
       router.push("/admin/products");
     } catch (error) {
-      console.error("Error submitting product:", error);
-      alert(`Error: ${error instanceof Error ? error.message : "Unknown error occurred"}`);
+      alert(`Error: ${error instanceof Error ? error.message : "Unknown error"}`);
     }
   };
 
@@ -680,67 +830,105 @@ export default function AddProductPage() {
       <div className="space-y-6">
         <div className="flex items-center justify-between">
           <div>
-            <h1 className="text-2xl font-bold tracking-tight">Add Product</h1>
-            <p className="text-sm text-muted-foreground">Create a new product with variants in your inventory</p>
+            <h1 className="text-2xl font-bold">Add Product</h1>
+            <p className="text-sm text-muted-foreground">Create a new product with variants</p>
           </div>
-          <div className="flex items-center space-x-2">
-            <Button variant="outline" onClick={() => router.back()}>
-              Cancel
-            </Button>
-          </div>
+          <Button variant="outline" onClick={() => router.back()}>
+            Cancel
+          </Button>
         </div>
 
         <form onSubmit={handleSubmit} className="space-y-8">
           {/* Global Fields */}
           <div className="grid grid-cols-1 gap-6 md:grid-cols-2">
             <div>
-              <label htmlFor="short-name" className="block text-sm font-medium text-gray-700">
-                Product Name
+              <label htmlFor="shortName" className="block text-sm font-medium text-gray-700">
+                Short Name
               </label>
               <Input
-                id="short-name"
+                id="shortName"
                 value={product.shortName}
-                onChange={(e) => setProduct((prev) => ({ ...prev, shortName: e.target.value }))}
+                onChange={(e) => setProduct({ ...product, shortName: e.target.value })}
                 placeholder="e.g. ProBook 450"
-                className="mt-1"
                 required
               />
             </div>
-
+            <div>
+              <label htmlFor="fullName" className="block text-sm font-medium text-gray-700">
+                Full Name
+              </label>
+              <Input
+                id="fullName"
+                value={product.fullName}
+                onChange={(e) => setProduct({ ...product, fullName: e.target.value })}
+                placeholder="e.g. HP ProBook 450 G8 Laptop"
+                required
+              />
+            </div>
             <div>
               <label htmlFor="category" className="block text-sm font-medium text-gray-700">
                 Category
               </label>
-              <div className="relative mt-1 dropdown-container">
+              <div className="relative dropdown-container">
                 <button
                   type="button"
-                  className="flex w-full items-center justify-between rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                  className="flex w-full items-center justify-between rounded-md border border-input bg-background px-3 py-2 text-sm"
                   onClick={() => toggleDropdown("category")}
                 >
-                  <span>{product.category || "Select the Category"}</span>
+                  <span>{product.category ? product.category.charAt(0).toUpperCase() + product.category.slice(1) : "Select Category"}</span>
                   <ChevronDown className="h-4 w-4 opacity-50" />
                 </button>
                 {openDropdown === "category" && (
-                  <div className="absolute z-10 mt-1 w-full rounded-md border border-gray-200 bg-white shadow-lg">
-                    <div className="max-h-60 overflow-auto py-1">
-                      {categories.map((cat) => (
-                        <div
-                          key={cat}
-                          className="cursor-pointer px-4 py-2 text-sm hover:bg-gray-100"
-                          onClick={() => {
-                            setProduct((prev) => ({ ...prev, category: cat }));
-                            setOpenDropdown(null);
-                          }}
-                        >
-                          {cat}
-                        </div>
-                      ))}
-                    </div>
+                  <div className="absolute z-10 mt-1 w-full rounded-md border bg-white shadow-lg">
+                    {Object.keys(computerCategoryPresets).map((cat) => (
+                      <div
+                        key={cat}
+                        className="cursor-pointer px-4 py-2 text-sm hover:bg-gray-100"
+                        onClick={() => {
+                          setProduct({ ...product, category: cat, subcategory: "" });
+                          setOpenDropdown(null);
+                        }}
+                      >
+                        {cat.charAt(0).toUpperCase() + cat.slice(1)}
+                      </div>
+                    ))}
                   </div>
                 )}
               </div>
             </div>
-
+            <div>
+              <label htmlFor="subcategory" className="block text-sm font-medium text-gray-700">
+                Subcategory
+              </label>
+              <div className="relative dropdown-container">
+                <button
+                  type="button"
+                  className="flex w-full items-center justify-between rounded-md border border-input bg-background px-3 py-2 text-sm"
+                  onClick={() => toggleDropdown("subcategory")}
+                >
+                  <span>{product.subcategory || "Select Subcategory"}</span>
+                  <ChevronDown className="h-4 w-4 opacity-50" />
+                </button>
+                {openDropdown === "subcategory" && product.category && (
+                  <div className="absolute z-10 mt-1 w-full rounded-md border bg-white shadow-lg">
+                    {computerCategoryPresets[product.category as keyof typeof computerCategoryPresets]?.subcategories.map(
+                      (subcat) => (
+                        <div
+                          key={subcat}
+                          className="cursor-pointer px-4 py-2 text-sm hover:bg-gray-100"
+                          onClick={() => {
+                            setProduct({ ...product, subcategory: subcat });
+                            setOpenDropdown(null);
+                          }}
+                        >
+                          {subcat}
+                        </div>
+                      )
+                    )}
+                  </div>
+                )}
+              </div>
+            </div>
             <div>
               <label htmlFor="brand" className="block text-sm font-medium text-gray-700">
                 Brand
@@ -748,139 +936,128 @@ export default function AddProductPage() {
               <Input
                 id="brand"
                 value={product.brand}
-                onChange={(e) => setProduct((prev) => ({ ...prev, brand: e.target.value }))}
+                onChange={(e) => setProduct({ ...product, brand: e.target.value })}
                 placeholder="e.g. HP, Dell"
-                className="mt-1"
                 required
               />
             </div>
-
             <div>
               <label htmlFor="status" className="block text-sm font-medium text-gray-700">
                 Status
               </label>
-              <div className="relative mt-1 dropdown-container">
+              <div className="relative dropdown-container">
                 <button
                   type="button"
-                  className="flex w-full items-center justify-between rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                  className="flex w-full items-center justify-between rounded-md border border-input bg-background px-3 py-2 text-sm"
                   onClick={() => toggleDropdown("status")}
                 >
                   <span>{statusOptions.find((opt) => opt.value === product.status)?.label || "Select Status"}</span>
                   <ChevronDown className="h-4 w-4 opacity-50" />
                 </button>
                 {openDropdown === "status" && (
-                  <div className="absolute z-10 mt-1 w-full rounded-md border border-gray-200 bg-white shadow-lg">
-                    <div className="max-h-60 overflow-auto py-1">
-                      {statusOptions.map((option) => (
-                        <div
-                          key={option.value}
-                          className="cursor-pointer capitalize px-4 py-2 text-sm hover:bg-gray-100"
-                          onClick={() => {
-                            setProduct((prev) => ({ ...prev, status: option.value }));
-                            setOpenDropdown(null);
-                          }}
-                        >
-                          {option.label}
-                        </div>
-                      ))}
-                    </div>
+                  <div className="absolute z-10 mt-1 w-full rounded-md border bg-white shadow-lg">
+                    {statusOptions.map((option) => (
+                      <div
+                        key={option.value}
+                        className="cursor-pointer px-4 py-2 text-sm hover:bg-gray-100"
+                        onClick={() => {
+                          setProduct({ ...product, status: option.value });
+                          setOpenDropdown(null);
+                        }}
+                      >
+                        {option.label}
+                      </div>
+                    ))}
                   </div>
                 )}
               </div>
             </div>
-
             <div>
-              <label htmlFor="sub-status" className="block text-sm font-medium text-gray-700">
-                Sub Product Status
-              </label>
-              <div className="relative mt-1 dropdown-container">
-                <button
-                  type="button"
-                  className="flex w-full items-center justify-between rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
-                  onClick={() => toggleDropdown("subStatus")}
-                >
-                  <span>{product.subProductStatus === "active" ? "Active" : "Inactive"}</span>
-                  <ChevronDown className="h-4 w-4 opacity-50" />
-                </button>
-                {openDropdown === "subStatus" && (
-                  <div className="absolute z-10 mt-1 w-full rounded-md border border-gray-200 bg-white shadow-lg">
-                    <div className="max-h-60 overflow-auto py-1">
-                      {statusOptions.map((option) => (
-                        <div
-                          key={option.value}
-                          className="cursor-pointer capitalize px-4 py-2 text-sm hover:bg-gray-100"
-                          onClick={() => {
-                            setProduct((prev) => ({ ...prev, subProductStatus: option.value }));
-                            setOpenDropdown(null);
-                          }}
-                        >
-                          {option.label}
-                        </div>
-                      ))}
-                    </div>
-                  </div>
-                )}
-              </div>
-            </div>
-
-            <div>
-              <label htmlFor="delivery-mode" className="block text-sm font-medium text-gray-700">
+              <label htmlFor="deliveryMode" className="block text-sm font-medium text-gray-700">
                 Delivery Mode
               </label>
-              <div className="relative mt-1 dropdown-container">
+              <div className="relative dropdown-container">
                 <button
                   type="button"
-                  className="flex w-full items-center justify-between rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                  className="flex w-full items-center justify-between rounded-md border border-input bg-background px-3 py-2 text-sm"
                   onClick={() => toggleDropdown("deliveryMode")}
                 >
-                  <span>{product.deliveryMode === "standard" ? "Standard" : "Express"}</span>
+                  <span>{deliveryModeOptions.find((opt) => opt.value === product.deliveryMode)?.label || "Select Delivery Mode"}</span>
                   <ChevronDown className="h-4 w-4 opacity-50" />
                 </button>
                 {openDropdown === "deliveryMode" && (
-                  <div className="absolute z-10 mt-1 w-full rounded-md border border-gray-200 bg-white shadow-lg">
-                    <div className="max-h-60 overflow-auto py-1">
-                      {["standard", "express"].map((option) => (
-                        <div
-                          key={option}
-                          className="cursor-pointer px-4 py-2 text-sm hover:bg-gray-100"
-                          onClick={() => {
-                            setProduct((prev) => ({ ...prev, deliveryMode: option }));
-                            setOpenDropdown(null);
-                          }}
-                        >
-                          {option === "standard" ? "Standard" : "Express"}
-                        </div>
-                      ))}
-                    </div>
+                  <div className="absolute z-10 mt-1 w-full rounded-md border bg-white shadow-lg">
+                    {deliveryModeOptions.map((option) => (
+                      <div
+                        key={option.value}
+                        className="cursor-pointer px-4 py-2 text-sm hover:bg-gray-100"
+                        onClick={() => {
+                          setProduct({ ...product, deliveryMode: option.value });
+                          setOpenDropdown(null);
+                        }}
+                      >
+                        {option.label}
+                      </div>
+                    ))}
                   </div>
                 )}
               </div>
             </div>
-
             <div>
               <label htmlFor="tags" className="block text-sm font-medium text-gray-700">
                 Tags
               </label>
               <Input
                 id="tags"
-                value={product.tags || ""}
-                onChange={(e) => setProduct((prev) => ({ ...prev, tags: e.target.value }))}
+                value={product.tags}
+                onChange={(e) => setProduct({ ...product, tags: e.target.value })}
                 placeholder="e.g. gaming, portable, lightweight"
-                className="mt-1"
               />
             </div>
-
             <div>
-              <label htmlFor="short-description" className="block text-sm font-medium text-gray-700">
-                Short Description
+              <label htmlFor="warranty" className="block text-sm font-medium text-gray-700">
+                Warranty
               </label>
-              <textarea
-                id="short-description"
-                value={product.description || ""}
-                onChange={(e) => setProduct((prev) => ({ ...prev, description: e.target.value }))}
-                placeholder="Brief description of the product"
-                className="mt-1 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+              <Input
+                id="warranty"
+                value={product.warranty}
+                onChange={(e) => setProduct({ ...product, warranty: e.target.value })}
+                placeholder="e.g. 1 Year"
+              />
+            </div>
+            <div>
+              <label htmlFor="metaTitle" className="block text-sm font-medium text-gray-700">
+                Meta Title
+              </label>
+              <Input
+                id="metaTitle"
+                value={product.metaTitle}
+                onChange={(e) => setProduct({ ...product, metaTitle: e.target.value })}
+                placeholder="e.g. HP ProBook 450 G8 Laptop"
+              />
+            </div>
+            <div className="md:col-span-2">
+              <label htmlFor="metaDescription" className="block text-sm font-medium text-gray-700">
+                Meta Description
+              </label>
+              <Textarea
+                id="metaDescription"
+                value={product.metaDescription}
+                onChange={(e) => setProduct({ ...product, metaDescription: e.target.value })}
+                placeholder="e.g. Buy HP ProBook 450 G8 with Intel i7, 16GB RAM"
                 rows={4}
+              />
+            </div>
+            <div className="md:col-span-2">
+              <label htmlFor="description" className="block text-sm font-medium text-gray-700">
+                Description
+              </label>
+              <Textarea
+                id="description"
+                value={product.description}
+                onChange={(e) => setProduct({ ...product, description: e.target.value })}
+                placeholder="Detailed product description"
+                rows={6}
               />
             </div>
           </div>
@@ -889,118 +1066,54 @@ export default function AddProductPage() {
           <div>
             <div className="mb-4 flex items-center justify-between">
               <h2 className="text-lg font-medium">Variants</h2>
-              <Button type="button" variant="outline" size="sm" onClick={addVariant} className="flex items-center">
-                <Plus className="mr-1 h-4 w-4" />
-                Add Variant
+              <Button type="button" variant="outline" size="sm" onClick={addVariant}>
+                <Plus className="mr-1 h-4 w-4" /> Add Variant
               </Button>
             </div>
 
-            {variants.map((variant, variantIndex) => (
-              <div key={variant.id} className="mb-8 rounded-md border p-4">
-                <div className="flex items-center justify-between mb-4">
-                  <h3 className="text-md font-medium">Variant {variantIndex + 1}</h3>
-                  {variants.length > 1 && (
-                    <button
-                      type="button"
-                      onClick={() => removeVariant(variant.id)}
-                      className="text-red-500 hover:text-red-700"
-                    >
-                      <X className="h-5 w-5" />
-                    </button>
-                  )}
-                </div>
-
-                {/* Variant Images */}
-                <div className="grid grid-cols-1 gap-6 md:grid-cols-6 mb-6">
-                  <div className="md:col-span-2">
-                    <div className="flex flex-col items-center">
-                      <div
-                        className="relative h-[300px] w-full overflow-hidden rounded-md border-2 border-dashed border-gray-300 bg-gray-50"
-                        onDrop={(e) => handleImageDrop(variant.id, 0, e)}
-                        onDragOver={handleDragOver}
+            {variants.map((variant, variantIndex) => {
+              const presetAttributes = product.category
+                ? computerCategoryPresets[product.category as keyof typeof computerCategoryPresets]?.attributes || []
+                : [];
+              return (
+                <div key={variant.id} className="mb-8 rounded-md border p-4">
+                  <div className="flex items-center justify-between mb-4">
+                    <h3 className="text-md font-medium">Variant {variantIndex + 1}</h3>
+                    {variants.length > 1 && (
+                      <button
+                        type="button"
+                        onClick={() => removeVariant(variant.id)}
+                        className="text-red-500 hover:text-red-700"
                       >
-                        {variant.productImages[0] ? (
-                          <div className="relative h-full w-full">
-                            <Image
-                              src={variant.productImages[0]}
-                              alt={`Main image for variant ${variantIndex + 1}`}
-                              fill
-                              className="object-contain p-2"
-                            />
-                            <button
-                              type="button"
-                              onClick={() =>
-                                setVariants((prev) =>
-                                  prev.map((v) =>
-                                    v.id === variant.id
-                                      ? {
-                                        ...v,
-                                        productImages: v.productImages.map((img, i) => (i === 0 ? null : img)),
-                                      }
-                                      : v
-                                  )
-                                )
-                              }
-                              className="absolute right-2 top-2 rounded-full bg-white p-1 shadow-md"
-                            >
-                              <X className="h-4 w-4" />
-                            </button>
-                          </div>
-                        ) : (
-                          <div
-                            className="flex h-full w-full cursor-pointer flex-col items-center justify-center"
-                            onClick={() => variantImageInputRefs.current[variant.id]?.main.current?.click()}
-                          >
-                            <div className="flex h-12 w-12 items-center justify-center rounded-full bg-blue-100 text-blue-600">
-                              <Plus className="h-6 w-6" />
-                            </div>
-                            <p className="mt-2 text-sm font-medium text-blue-600">Upload Image</p>
-                            <p className="text-xs text-gray-500">or drop a file</p>
-                          </div>
-                        )}
-                        <input
-                          ref={variantImageInputRefs.current[variant.id]?.main}
-                          type="file"
-                          accept="image/*"
-                          className="hidden"
-                          onChange={(e) => handleImageUpload(variant.id, 0, e)}
-                        />
-                      </div>
-                    </div>
+                        <X className="h-5 w-5" />
+                      </button>
+                    )}
                   </div>
 
-                  <div className="md:col-span-4">
-                    <div className="grid grid-cols-2 gap-4 md:grid-cols-3">
-                      {variant.productImages.slice(1).map((image, index) => (
+                  {/* Variant Images */}
+                  <div className="grid grid-cols-1 gap-6 md:grid-cols-6 mb-6">
+                    <div className="md:col-span-2">
+                      <div className="flex flex-col items-center">
                         <div
-                          key={index}
-                          className="relative h-[140px] w-full overflow-hidden rounded-md border-2 border-dashed border-gray-300 bg-gray-50"
-                          onDrop={(e) => handleImageDrop(variant.id, index + 1, e)}
-                          onDragOver={handleDragOver}
+                          className="relative h-[300px] w-full overflow-hidden rounded-md border-2 border-dashed border-gray-300 bg-gray-50"
+                          onDrop={(e) => handleImageDrop(variant.id, 0, e)}
+                          onDragOver={(e) => e.preventDefault()}
                         >
-                          {image ? (
+                          {variant.productImages[0] ? (
                             <div className="relative h-full w-full">
                               <Image
-                                src={image}
-                                alt={`Additional image ${index + 1} for variant ${variantIndex + 1}`}
+                                src={variant.productImages[0]}
+                                alt={`Main image for variant ${variantIndex + 1}`}
                                 fill
                                 className="object-contain p-2"
                               />
                               <button
                                 type="button"
                                 onClick={() =>
-                                  setVariants((prev) =>
-                                    prev.map((v) =>
-                                      v.id === variant.id
-                                        ? {
-                                          ...v,
-                                          productImages: v.productImages.map((img, i) =>
-                                            i === index + 1 ? null : img
-                                          ),
-                                        }
-                                        : v
-                                    )
-                                  )
+                                  handleVariantChange(variant.id, "productImages", [
+                                    null,
+                                    ...variant.productImages.slice(1),
+                                  ])
                                 }
                                 className="absolute right-2 top-2 rounded-full bg-white p-1 shadow-md"
                               >
@@ -1010,215 +1123,369 @@ export default function AddProductPage() {
                           ) : (
                             <div
                               className="flex h-full w-full cursor-pointer flex-col items-center justify-center"
-                              onClick={() =>
-                                variantImageInputRefs.current[variant.id]?.additional[index]?.click()
-                              }
+                              onClick={() => variantImageInputRefs.current[variant.id]?.main.current?.click()}
                             >
-                              <div className="flex h-8 w-8 items-center justify-center rounded-full bg-blue-100 text-blue-600">
-                                <Plus className="h-4 w-4" />
+                              <div className="flex h-12 w-12 items-center justify-center rounded-full bg-blue-100 text-blue-600">
+                                <Plus className="h-6 w-6" />
                               </div>
-                              <p className="mt-1 text-xs font-medium text-blue-600">Upload Image</p>
-                              <p className="text-[10px] text-gray-500">or drop a file</p>
+                              <p className="mt-2 text-sm font-medium text-blue-600">Upload Main Image</p>
+                              <p className="text-xs text-gray-500">or drop a file</p>
                             </div>
                           )}
                           <input
-                            ref={(el) => {
-                              const variantRefs = variantImageInputRefs.current[variant.id];
-                              if (variantRefs && el !== null) {
-                                variantRefs.additional[index] = el;
-                              } else if (variantRefs && el === null) {
-                                variantRefs.additional[index] = null;
-                              }
-                            }}
+                            ref={variantImageInputRefs.current[variant.id]?.main}
                             type="file"
                             accept="image/*"
                             className="hidden"
-                            onChange={(e) => handleImageUpload(variant.id, index + 1, e)}
+                            onChange={(e) => handleImageUpload(variant.id, 0, e)}
                           />
                         </div>
-                      ))}
+                      </div>
                     </div>
-                  </div>
-                </div>
-
-                {/* Variant Fields */}
-                <div className="grid grid-cols-1 gap-6 md:grid-cols-2">
-                  <div>
-                    <label htmlFor={`variant-name-${variant.id}`} className="block text-sm font-medium text-gray-700">
-                      Variant Name
-                    </label>
-                    <Input
-                      id={`variant-name-${variant.id}`}
-                      value={variant.name}
-                      onChange={(e) => handleVariantChange(variant.id, "name", e.target.value)}
-                      placeholder="e.g. ProBook 450 G8"
-                      className="mt-1"
-                      required
-                    />
-                  </div>
-
-                  <div>
-                    <label htmlFor={`sku-${variant.id}`} className="block text-sm font-medium text-gray-700">
-                      Stock Keeping Unit (SKU)
-                    </label>
-                    <Input
-                      id={`sku-${variant.id}`}
-                      value={variant.sku}
-                      onChange={(e) => handleVariantChange(variant.id, "sku", e.target.value)}
-                      placeholder="e.g. PB450-256-BLUE"
-                      className="mt-1"
-                      required
-                    />
-                  </div>
-
-                  <div>
-                    <label htmlFor={`colors-${variant.id}`} className="block text-sm font-medium text-gray-700">
-                      Colors
-                    </label>
-                    <div className="relative mt-1 flex items-center">
-                      <Input
-                        id={`colors-${variant.id}`}
-                        value={variant.color}
-                        onChange={(e) => handleVariantChange(variant.id, "color", e.target.value)}
-                        placeholder="e.g. Red, Blue, #000000"
-                        className="pr-16"
-                        required
-                      />
-                      <div className="absolute right-2 flex items-center space-x-1">
-                        {parseColors(variant.color).map((c, index) => (
-                          isValidColor(c) && (
-                            <div
-                              key={index}
-                              className="h-4 w-4 rounded-full border border-gray-300"
-                              style={{ backgroundColor: c }}
-                              title={c}
+                    <div className="md:col-span-4">
+                      <div className="grid grid-cols-2 gap-4 md:grid-cols-3">
+                        {variant.productImages.slice(1).map((image, index) => (
+                          <div
+                            key={index}
+                            className="relative h-[140px] w-full overflow-hidden rounded-md border-2 border-dashed border-gray-300 bg-gray-50"
+                            onDrop={(e) => handleImageDrop(variant.id, index + 1, e)}
+                            onDragOver={(e) => e.preventDefault()}
+                          >
+                            {image ? (
+                              <div className="relative h-full w-full">
+                                <Image
+                                  src={image}
+                                  alt={`Additional image ${index + 1}`}
+                                  fill
+                                  className="object-contain p-2"
+                                />
+                                <button
+                                  type="button"
+                                  onClick={() =>
+                                    handleVariantChange(variant.id, "productImages", [
+                                      ...variant.productImages.slice(0, index + 1),
+                                      null,
+                                      ...variant.productImages.slice(index + 2),
+                                    ])
+                                  }
+                                  className="absolute right-2 top-2 rounded-full bg-white p-1 shadow-md"
+                                >
+                                  <X className="h-4 w-4" />
+                                </button>
+                              </div>
+                            ) : (
+                              <div
+                                className="flex h-full w-full cursor-pointer flex-col items-center justify-center"
+                                onClick={() =>
+                                  variantImageInputRefs.current[variant.id]?.additional[index]?.click()
+                                }
+                              >
+                                <div className="flex h-8 w-8 items-center justify-center rounded-full bg-blue-100 text-blue-600">
+                                  <Plus className="h-4 w-4" />
+                                </div>
+                                <p className="mt-1 text-xs font-medium text-blue-600">Upload Image</p>
+                                <p className="text-[10px] text-gray-500">or drop a file</p>
+                              </div>
+                            )}
+                            <input
+                              ref={(el) => {
+                                if (variantImageInputRefs.current[variant.id]) {
+                                  variantImageInputRefs.current[variant.id].additional[index] = el;
+                                }
+                              }}
+                              type="file"
+                              accept="image/*"
+                              className="hidden"
+                              onChange={(e) => handleImageUpload(variant.id, index + 1, e)}
                             />
-                          )
+                          </div>
                         ))}
                       </div>
                     </div>
                   </div>
 
-                  <div>
-                    <label htmlFor={`material-${variant.id}`} className="block text-sm font-medium text-gray-700">
-                      Material
-                    </label>
-                    <Input
-                      id={`material-${variant.id}`}
-                      value={variant.material || ""}
-                      onChange={(e) => handleVariantChange(variant.id, "material", e.target.value)}
-                      placeholder="e.g. Aluminum, Plastic"
-                      className="mt-1"
-                    />
-                  </div>
-
-                  <div>
-                    <label htmlFor={`dimensions-${variant.id}`} className="block text-sm font-medium text-gray-700">
-                      Dimensions
-                    </label>
-                    <Input
-                      id={`dimensions-${variant.id}`}
-                      value={variant.dimensions || ""}
-                      onChange={(e) => handleVariantChange(variant.id, "dimensions", e.target.value)}
-                      placeholder="e.g. 15 x 10 x 1 inches"
-                      className="mt-1"
-                    />
-                  </div>
-
-                  <div>
-                    <label htmlFor={`weight-${variant.id}`} className="block text-sm font-medium text-gray-700">
-                      Weight
-                    </label>
-                    <Input
-                      id={`weight-${variant.id}`}
-                      value={variant.weight || ""}
-                      onChange={(e) => handleVariantChange(variant.id, "weight", e.target.value)}
-                      placeholder="e.g. 2.5 lbs"
-                      className="mt-1"
-                    />
-                  </div>
-
-                  {product.category === 'Laptops' && (
+                  {/* Variant Fields */}
+                  <div className="grid grid-cols-1 gap-6 md:grid-cols-2">
                     <div>
-                      <label htmlFor={`storage-${variant.id}`} className="block text-sm font-medium text-gray-700">
-                        Storage
+                      <label htmlFor={`name-${variant.id}`} className="block text-sm font-medium text-gray-700">
+                        Variant Name
                       </label>
                       <Input
-                        id={`storage-${variant.id}`}
-                        value={variant.storage}
-                        onChange={(e) => handleVariantChange(variant.id, "storage", e.target.value)}
-                        placeholder="e.g. 256GB SSD"
-                        className="mt-1"
+                        id={`name-${variant.id}`}
+                        value={variant.name}
+                        onChange={(e) => handleVariantChange(variant.id, "name", e.target.value)}
+                        placeholder="e.g. ProBook 450 G8 i7"
                         required
                       />
                     </div>
-                  )}
-
-                  <div>
-                    <label htmlFor={`mrp-${variant.id}`} className="block text-sm font-medium text-gray-700">
-                      MRP
-                    </label>
-                    <Input
-                      id={`mrp-${variant.id}`}
-                      value={variant.mrp}
-                      onChange={(e) => handleVariantChange(variant.id, "mrp", e.target.value)}
-                      placeholder="e.g. ₹2000"
-                      type="number"
-                      step="0.01"
-                      className="mt-1"
-                      required
-                    />
-                  </div>
-
-                  <div>
-                    <label htmlFor={`our-price-${variant.id}`} className="block text-sm font-medium text-gray-700">
-                      Our Price
-                    </label>
-                    <div className="relative mt-1">
-                      <span className="absolute inset-y-0 left-0 flex items-center pl-3 text-gray-500">₹</span>
+                    <div>
+                      <label htmlFor={`sku-${variant.id}`} className="block text-sm font-medium text-gray-700">
+                        SKU
+                      </label>
                       <Input
-                        id={`our-price-${variant.id}`}
-                        value={variant.ourPrice}
-                        onChange={(e) => handleVariantChange(variant.id, "ourPrice", e.target.value)}
-                        placeholder="20000"
+                        id={`sku-${variant.id}`}
+                        value={variant.sku}
+                        onChange={(e) => handleVariantChange(variant.id, "sku", e.target.value)}
+                        placeholder="e.g. PB450-I7-256"
+                        required
+                      />
+                    </div>
+                    <div>
+                      <label htmlFor={`mrp-${variant.id}`} className="block text-sm font-medium text-gray-700">
+                        MRP
+                      </label>
+                      <Input
+                        id={`mrp-${variant.id}`}
+                        value={variant.mrp}
+                        onChange={(e) => handleVariantChange(variant.id, "mrp", e.target.value)}
                         type="number"
                         step="0.01"
-                        className="pl-8 mt-1"
+                        placeholder="e.g. 999.99"
                         required
                       />
                     </div>
+                    <div>
+                      <label htmlFor={`ourPrice-${variant.id}`} className="block text-sm font-medium text-gray-700">
+                        Our Price
+                      </label>
+                      <Input
+                        id={`ourPrice-${variant.id}`}
+                        value={variant.ourPrice}
+                        onChange={(e) => handleVariantChange(variant.id, "ourPrice", e.target.value)}
+                        type="number"
+                        step="0.01"
+                        placeholder="e.g. 899.99"
+                        required
+                      />
+                    </div>
+                    <div>
+                      <label htmlFor={`salePrice-${variant.id}`} className="block text-sm font-medium text-gray-700">
+                        Sale Price
+                      </label>
+                      <Input
+                        id={`salePrice-${variant.id}`}
+                        value={variant.salePrice}
+                        onChange={(e) => handleVariantChange(variant.id, "salePrice", e.target.value)}
+                        type="number"
+                        step="0.01"
+                        placeholder="e.g. 799.99"
+                      />
+                    </div>
+                    <div>
+                      <label htmlFor={`stock-${variant.id}`} className="block text-sm font-medium text-gray-700">
+                        Stock
+                      </label>
+                      <Input
+                        id={`stock-${variant.id}`}
+                        value={variant.stock}
+                        onChange={(e) => handleVariantChange(variant.id, "stock", e.target.value)}
+                        type="number"
+                        min="0"
+                        placeholder="e.g. 50"
+                        required
+                      />
+                    </div>
+                    <div>
+                      <label htmlFor={`lowStockThreshold-${variant.id}`} className="block text-sm font-medium text-gray-700">
+                        Low Stock Threshold
+                      </label>
+                      <Input
+                        id={`lowStockThreshold-${variant.id}`}
+                        value={variant.lowStockThreshold}
+                        onChange={(e) => handleVariantChange(variant.id, "lowStockThreshold", e.target.value)}
+                        type="number"
+                        min="0"
+                        placeholder="e.g. 5"
+                      />
+                    </div>
+                    <div>
+                      <label htmlFor={`weight-${variant.id}`} className="block text-sm font-medium text-gray-700">
+                        Weight
+                      </label>
+                      <Input
+                        id={`weight-${variant.id}`}
+                        value={variant.weight}
+                        onChange={(e) => handleVariantChange(variant.id, "weight", e.target.value)}
+                        type="number"
+                        step="0.01"
+                        placeholder="e.g. 2.5"
+                      />
+                    </div>
+                    <div>
+                      <label htmlFor={`weightUnit-${variant.id}`} className="block text-sm font-medium text-gray-700">
+                        Weight Unit
+                      </label>
+                      <div className="relative dropdown-container">
+                        <button
+                          type="button"
+                          className="flex w-full items-center justify-between rounded-md border border-input bg-background px-3 py-2 text-sm"
+                          onClick={() => toggleDropdown(`weightUnit-${variant.id}`)}
+                        >
+                          <span>{variant.weightUnit || "Select Unit"}</span>
+                          <ChevronDown className="h-4 w-4 opacity-50" />
+                        </button>
+                        {openDropdown === `weightUnit-${variant.id}` && (
+                          <div className="absolute z-10 mt-1 w-full rounded-md border bg-white shadow-lg">
+                            {["kg", "g", "lb", "oz"].map((unit) => (
+                              <div
+                                key={unit}
+                                className="cursor-pointer px-4 py-2 text-sm hover:bg-gray-100"
+                                onClick={() => {
+                                  handleVariantChange(variant.id, "weightUnit", unit);
+                                  setOpenDropdown(null);
+                                }}
+                              >
+                                {unit}
+                              </div>
+                            ))}
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700">Dimensions</label>
+                      <div className="grid grid-cols-4 gap-2">
+                        <Input
+                          placeholder="Length"
+                          type="number"
+                          value={variant.dimensions.length}
+                          onChange={(e) =>
+                            handleVariantChange(variant.id, "dimensions", {
+                              ...variant.dimensions,
+                              length: Number(e.target.value),
+                            })
+                          }
+                        />
+                        <Input
+                          placeholder="Width"
+                          type="number"
+                          value={variant.dimensions.width}
+                          onChange={(e) =>
+                            handleVariantChange(variant.id, "dimensions", {
+                              ...variant.dimensions,
+                              width: Number(e.target.value),
+                            })
+                          }
+                        />
+                        <Input
+                          placeholder="Height"
+                          type="number"
+                          value={variant.dimensions.height}
+                          onChange={(e) =>
+                            handleVariantChange(variant.id, "dimensions", {
+                              ...variant.dimensions,
+                              height: Number(e.target.value),
+                            })
+                          }
+                        />
+                        <div className="relative dropdown-container">
+                          <button
+                            type="button"
+                            className="flex w-full items-center justify-between rounded-md border border-input bg-background px-3 py-2 text-sm"
+                            onClick={() => toggleDropdown(`dimensionUnit-${variant.id}`)}
+                          >
+                            <span>{variant.dimensions.unit || "cm"}</span>
+                            <ChevronDown className="h-4 w-4 opacity-50" />
+                          </button>
+                          {openDropdown === `dimensionUnit-${variant.id}` && (
+                            <div className="absolute z-10 mt-1 w-full rounded-md border bg-white shadow-lg">
+                              {["cm", "in", "mm"].map((unit) => (
+                                <div
+                                  key={unit}
+                                  className="cursor-pointer px-4 py-2 text-sm hover:bg-gray-100"
+                                  onClick={() => {
+                                    handleVariantChange(variant.id, "dimensions", {
+                                      ...variant.dimensions,
+                                      unit,
+                                    });
+                                    setOpenDropdown(null);
+                                  }}
+                                >
+                                  {unit}
+                                </div>
+                              ))}
+                            </div>
+                          )}
+                        </div>
+                      </div>
+                    </div>
                   </div>
 
-                  <div>
-                    <label htmlFor={`stock-${variant.id}`} className="block text-sm font-medium text-gray-700">
-                      Stock
-                    </label>
-                    <Input
-                      id={`stock-${variant.id}`}
-                      value={variant.stock}
-                      onChange={(e) => handleVariantChange(variant.id, "stock", e.target.value)}
-                      placeholder="e.g. 50"
-                      type="number"
-                      min="0"
-                      className="mt-1"
-                      required
-                    />
+                  {/* Variant Attributes */}
+                  <div className="mt-6">
+                    <div className="flex items-center justify-between mb-4">
+                      <h4 className="text-sm font-medium">Attributes</h4>
+                      <Button
+                        type="button"
+                        variant="outline"
+                        size="sm"
+                        onClick={() => addCustomAttribute(variant.id)}
+                      >
+                        <Plus className="mr-1 h-4 w-4" /> Add Custom Attribute
+                      </Button>
+                    </div>
+                    <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
+                      {presetAttributes.map((attr) => (
+                        <div key={attr.name}>
+                          <label className="block text-sm font-medium text-gray-700">
+                            {attr.name.replace(/_/g, " ").replace(/\b\w/g, (c) => c.toUpperCase())}
+                            {attr.isRequired && <span className="text-red-500">*</span>}
+                          </label>
+                          <Input
+                            value={variant.attributes[attr.name] || ""}
+                            onChange={(e) => handleAttributeChange(variant.id, attr.name, e.target.value)}
+                            placeholder={`Enter ${attr.name}`}
+                            required={attr.isRequired}
+                          />
+                          {attr.unit && (
+                            <p className="text-xs text-gray-500 mt-1">Unit: {attr.unit}</p>
+                          )}
+                        </div>
+                      ))}
+                      {customAttributes[variant.id]?.map((attr, index) => (
+                        <div key={index} className="flex items-end gap-2">
+                          <div className="flex-1">
+                            <label className="block text-sm font-medium text-gray-700">Custom Attribute Name</label>
+                            <Input
+                              value={attr.name}
+                              onChange={(e) => updateCustomAttribute(variant.id, index, "name", e.target.value)}
+                              placeholder="Attribute Name"
+                            />
+                          </div>
+                          <div className="flex-1">
+                            <label className="block text-sm font-medium text-gray-700">Value</label>
+                            <Input
+                              value={attr.value as string}
+                              onChange={(e) => updateCustomAttribute(variant.id, index, "value", e.target.value)}
+                              placeholder="Attribute Value"
+                            />
+                          </div>
+                          <Button
+                            type="button"
+                            variant="ghost"
+                            size="sm"
+                            onClick={() => removeCustomAttribute(variant.id, index)}
+                            className="text-red-500 hover:text-red-700"
+                          >
+                            <X className="h-4 w-4" />
+                          </Button>
+                        </div>
+                      ))}
+                    </div>
                   </div>
                 </div>
-              </div>
-            ))}
+              );
+            })}
           </div>
 
           {/* Specifications */}
           <div>
             <div className="mb-4 flex items-center justify-between">
               <h2 className="text-lg font-medium">Product Specifications</h2>
-              <Button type="button" variant="outline" size="sm" onClick={addNewSection} className="flex items-center">
-                <Plus className="mr-1 h-4 w-4" />
-                New Row
+              <Button type="button" variant="outline" size="sm" onClick={addNewSection}>
+                <Plus className="mr-1 h-4 w-4" /> New Section
               </Button>
             </div>
-
             <div className="space-y-6">
               {specSections.map((section, index) => (
                 <DraggableSpecSection
@@ -1236,21 +1503,10 @@ export default function AddProductPage() {
             </div>
           </div>
 
-          {/* Sub Products */}
-          {product.subProductStatus === "active" && (
-            <div>
-              <h2 className="mb-4 text-lg font-medium">Sub Products</h2>
-              <SubProductSelector />
-            </div>
-          )}
-
           <div className="flex justify-center">
-            <button
-              type="submit"
-              className="mt-14 my-5 w-[40%] cursor-pointer rounded-full bg-blue-600 px-8 py-2 text-white hover:bg-blue-700"
-            >
+            <Button type="submit" className="w-[40%] rounded-full">
               Add Product
-            </button>
+            </Button>
           </div>
         </form>
       </div>

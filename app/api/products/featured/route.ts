@@ -1,7 +1,7 @@
 import { products, variants } from "@/db/schema/products/products.schema"
 import { db } from "@/db/drizzle"
 import { NextResponse } from "next/server"
-import { featuredProducts } from "@/db/schema/products/products.schema"
+import { offerZone as  featuredProducts } from "@/db/schema/products/products.schema"
 import { eq, sql } from "drizzle-orm"
 
 

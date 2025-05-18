@@ -8,22 +8,84 @@ import UserButton from './Header/UserButton';
 import CartButton from './Header/CartButton';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
-import { Menu, X, ShoppingBag, Heart, User } from 'lucide-react';
+import { Menu, X, ShoppingBag, Heart, User, ChevronDown } from 'lucide-react';
 import { slugify } from '@/utils/slugify';
 
 interface HeaderProps {
     isCategory?: boolean
 }
 
+interface SubCategory {
+    name: string;
+    slug: string;
+    subSubCategories?: { name: string; slug: string }[];
+}
+
+interface Category {
+    name: string;
+    slug: string;
+    subCategories: SubCategory[];
+}
+
 const Header = ({ isCategory = true }: HeaderProps) => {
     const [isMenuOpen, setIsMenuOpen] = useState(false);
     const [isScrolled, setIsScrolled] = useState(false);
     const [isSearchOpen, setIsSearchOpen] = useState(false);
-    // const searchInputRef = useRef<HTMLInputElement>(null);
+    const [hoveredCategory, setHoveredCategory] = useState<string | null>(null);
     const router = useRouter();
     const menuRef = useRef<HTMLDivElement>(null);
 
-    const categories = ['Laptops', 'Monitors', 'Processor', 'Graphics Card', 'Accessories', 'Storage',  'Cabinets'];
+    // Sample category data structure (you'd typically fetch this from your database)
+    const categories: Category[] = [
+        {
+            name: 'Processor',
+            slug: 'processor',
+            subCategories: [
+                {
+                    name: 'AMD',
+                    slug: 'amd',
+                    subSubCategories: [
+                        { name: 'Ryzen 3', slug: 'ryzen-3' },
+                        { name: 'Ryzen 5', slug: 'ryzen-5' },
+                    ],
+                },
+                {
+                    name: 'Intel',
+                    slug: 'intel',
+                    subSubCategories: [
+                        { name: 'Core i3', slug: 'core-i3' },
+                        { name: 'Core i5', slug: 'core-i5' },
+                    ],
+                },
+            ],
+        },
+        {
+            name: 'Graphics Card',
+            slug: 'graphics-card',
+            subCategories: [
+                {
+                    name: 'AMD GPU',
+                    slug: 'amd-gpu',
+                    subSubCategories: [
+                        { name: 'RX 9000 Series', slug: 'rx-9000-series' },
+                    ],
+                },
+                {
+                    name: 'NVIDIA GPU',
+                    slug: 'nvidia-gpu',
+                    subSubCategories: [
+                        { name: 'RTX 50 Series', slug: 'rtx-50-series' },
+                    ],
+                },
+            ],
+        },
+        // Add other categories as needed
+        { name: 'Laptops', slug: 'laptops', subCategories: [] },
+        { name: 'Monitors', slug: 'monitors', subCategories: [] },
+        { name: 'Accessories', slug: 'accessories', subCategories: [] },
+        { name: 'Storage', slug: 'storage', subCategories: [] },
+        { name: 'Cabinets', slug: 'cabinets', subCategories: [] },
+    ];
 
     useEffect(() => {
         const handleScroll = () => {
@@ -34,7 +96,6 @@ const Header = ({ isCategory = true }: HeaderProps) => {
         return () => window.removeEventListener('scroll', handleScroll);
     }, []);
 
-    // Handle outside clicks to close menu
     useEffect(() => {
         const handleClickOutside = (event: MouseEvent) => {
             if (menuRef.current && !menuRef.current.contains(event.target as Node) && isMenuOpen) {
@@ -47,7 +108,6 @@ const Header = ({ isCategory = true }: HeaderProps) => {
     }, [isMenuOpen]);
 
     const handleSearch = (query: string | number | boolean, category: string | number | boolean) => {
-        console.log(`Search triggered - Query: ${query}, Category: ${category}`);
         router.push(`/search?q=${encodeURIComponent(query)}&category=${encodeURIComponent(category)}`);
         closeMenu();
         setIsSearchOpen(false);
@@ -72,23 +132,12 @@ const Header = ({ isCategory = true }: HeaderProps) => {
         document.body.style.overflow = 'auto';
     };
 
-    // const openSearch = () => {
-    //     setIsSearchOpen(true);
-    //     setTimeout(() => {
-    //         if (searchInputRef.current) {
-    //             searchInputRef.current.focus();
-    //         }
-    //     }, 100);
-    // };
-
     return (
         <>
             <header
-                className={`w-full bg-white pt-3 px-4 md:px-12 fixed top-0 left-0 z-50 transition-all duration-300 ${isScrolled ? 'shadow-md' : ''
-                    }`}
+                className={`w-full bg-white pt-3 px-4 md:px-12 fixed top-0 left-0 z-50 transition-all duration-300 ${isScrolled ? 'shadow-md' : ''}`}
             >
                 <div className="mx-auto flex items-center justify-between gap-2">
-                    {/* Logo and Menu Button */}
                     <div className="flex items-center">
                         <button
                             className="mr-2 lg:hidden focus:outline-none"
@@ -110,7 +159,6 @@ const Header = ({ isCategory = true }: HeaderProps) => {
                         </Link>
                     </div>
 
-                    {/* Desktop Nav Elements */}
                     <div className="hidden lg:flex items-center flex-grow">
                         <LocationPicker />
                         <div className="flex-grow mx-4">
@@ -118,20 +166,17 @@ const Header = ({ isCategory = true }: HeaderProps) => {
                         </div>
                     </div>
 
-                    {/* Desktop Action Buttons */}
                     <div className="hidden lg:flex items-center gap-4">
                         <WishlistButton />
                         <UserButton />
                         <CartButton />
                     </div>
 
-                    {/* Mobile Action Buttons */}
                     <div className="flex items-center gap-2 lg:hidden">
                         <CartButton />
                     </div>
                 </div>
 
-                {/* Mobile Location and Search Bar */}
                 {!isMenuOpen && !isSearchOpen && (
                     <div className="lg:hidden w-full bg-white py-2 border-t border-gray-200">
                         <div className="mb-2">
@@ -141,7 +186,6 @@ const Header = ({ isCategory = true }: HeaderProps) => {
                     </div>
                 )}
 
-                {/* Mobile Full Screen Menu */}
                 {isMenuOpen && (
                     <div
                         className="fixed inset-0 bg-white z-50 lg:hidden overflow-y-auto transition-all duration-300"
@@ -160,7 +204,6 @@ const Header = ({ isCategory = true }: HeaderProps) => {
                                 </button>
                             </div>
 
-                            {/* Account Section */}
                             <div className="py-4 border-b border-gray-200">
                                 <Link href="/account" className="flex items-center py-3" onClick={closeMenu}>
                                     <User size={20} className="mr-3 text-gray-700" />
@@ -176,22 +219,42 @@ const Header = ({ isCategory = true }: HeaderProps) => {
                                 </Link>
                             </div>
 
-                            {/* Categories */}
                             <div className="py-4 border-b border-gray-200">
                                 <h3 className="font-bold text-lg mb-3">Categories</h3>
                                 {categories.map((category) => (
-                                    <Link
-                                        href={`/category/${category.toLowerCase()}`}
-                                        key={category}
-                                        className="block py-2 text-gray-700 hover:text-blue-600"
-                                        onClick={closeMenu}
-                                    >
-                                        {category}
-                                    </Link>
+                                    <div key={category.name}>
+                                        <Link
+                                            href={`/category/${category.slug}`}
+                                            className="block py-2 text-gray-700 hover:text-blue-600"
+                                            onClick={closeMenu}
+                                        >
+                                            {category.name}
+                                        </Link>
+                                        {category.subCategories.map((subCat) => (
+                                            <div key={subCat.name} className="ml-4">
+                                                <Link
+                                                    href={`/category/${category.slug}/${subCat.slug}`}
+                                                    className="block py-1 text-sm text-gray-600 hover:text-blue-600"
+                                                    onClick={closeMenu}
+                                                >
+                                                    {subCat.name}
+                                                </Link>
+                                                {subCat.subSubCategories?.map((subSubCat) => (
+                                                    <Link
+                                                        key={subSubCat.name}
+                                                        href={`/category/${category.slug}/${subCat.slug}/${subSubCat.slug}`}
+                                                        className="block py-1 text-xs text-gray-500 hover:text-blue-600 ml-4"
+                                                        onClick={closeMenu}
+                                                    >
+                                                        {subSubCat.name}
+                                                    </Link>
+                                                ))}
+                                            </div>
+                                        ))}
+                                    </div>
                                 ))}
                             </div>
 
-                            {/* Help & Support */}
                             <div className="py-4 mt-auto">
                                 <h3 className="font-bold text-lg mb-3">Help & Support</h3>
                                 <Link href="/contact" className="block py-2 text-gray-700 hover:text-blue-600" onClick={closeMenu}>
@@ -208,37 +271,62 @@ const Header = ({ isCategory = true }: HeaderProps) => {
                     </div>
                 )}
 
-                {/* Desktop Categories Row - NEW ADDITION */}
-                {
-                    isCategory && <div className="hidden md:block z-40  pb-2">
-                        <div className=" ">
-                            <div className=" w-full flex items-center justify-center">
-                                <ul className="flex justify-between w-full space-x-8 py-2">
-                                    <li>
-                                        <Link href="/category/all" className="text-sm font-medium text-gray-800 hover:text-blue-600 transition-colors">
-                                            All Categories
+                {/* Desktop Categories Row with Hover Dropdown */}
+                {isCategory && (
+                    <div className="hidden md:block z-40 pb-2">
+                        <div className="w-full flex items-center justify-center">
+                            <ul className="flex justify-between w-full space-x-8 py-2 relative">
+                                <li>
+                                    <Link href="/category/all" className="text-sm font-medium text-gray-800 hover:text-blue-600 transition-colors">
+                                        All Categories
+                                    </Link>
+                                </li>
+                                {categories.map((category) => (
+                                    <li
+                                        key={category.name}
+                                        className="relative"
+                                        onMouseEnter={() => setHoveredCategory(category.name)}
+                                        onMouseLeave={() => setHoveredCategory(null)}
+                                    >
+                                        <Link
+                                            href={`/category/${category.slug}`}
+                                            className="text-sm font-medium text-gray-800 hover:text-blue-600 transition-colors flex items-center"
+                                        >
+                                            {category.name}
+                                            {category.subCategories.length > 0 && (
+                                                <ChevronDown size={16} className="ml-1" />
+                                            )}
                                         </Link>
+                                        {hoveredCategory === category.name && category.subCategories.length > 0 && (
+                                            <div className="absolute left-0 mt-2 w-64 bg-white shadow-lg rounded-md z-50">
+                                                {category.subCategories.map((subCat) => (
+                                                    <div key={subCat.name} className="py-1">
+                                                        <Link
+                                                            href={`/category/${category.slug}/${subCat.slug}`}
+                                                            className="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100"
+                                                        >
+                                                            {subCat.name}
+                                                        </Link>
+                                                        {subCat.subSubCategories?.map((subSubCat) => (
+                                                            <Link
+                                                                key={subSubCat.name}
+                                                                href={`/category/${category.slug}/${subCat.slug}/${subSubCat.slug}`}
+                                                                className="block px-6 py-1 text-sm text-gray-600 hover:bg-gray-100"
+                                                            >
+                                                                {subSubCat.name}
+                                                            </Link>
+                                                        ))}
+                                                    </div>
+                                                ))}
+                                            </div>
+                                        )}
                                     </li>
-                                    {categories.map((category) => (
-                                        <li key={category}>
-                                            <Link
-                                                href={`/category/${slugify(category)}`}
-                                                className="text-sm font-medium text-gray-800 hover:text-blue-600 transition-colors"
-                                            >
-                                                {category}
-                                            </Link>
-                                        </li>
-                                    ))}
-                                </ul>
-                            </div>
+                                ))}
+                            </ul>
                         </div>
                     </div>
-                }
-
+                )}
             </header>
-
-
-
         </>
     );
 };
