@@ -4,13 +4,12 @@ import { useState, useRef, useEffect, useMemo } from 'react';
 import { Search, Save, Check, X } from 'lucide-react';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
-import { fetchProducts as fetchAllProducts, fetchFeaturedProducts } from '@/utils/products.util';
-import { Product } from '@/types/product';
+import { fetchProducts as fetchAllProducts, fetchOfferZoneProducts } from '@/utils/products.util';
 import Image from 'next/image';
 
 
 
-export default function FeaturedProductsPage() {
+export default function OfferZonePage() {
   const [searchTerm, setSearchTerm] = useState('');
   const [searchResults, setSearchResults] = useState<any[]>([]);
   const [featuredVariants, setFeaturedVariants] = useState<any[]>([]);
@@ -19,7 +18,7 @@ export default function FeaturedProductsPage() {
   const [isLoading, setIsLoading] = useState(false);
   const searchResultsRef = useRef<HTMLDivElement>(null);
   const searchInputRef = useRef<HTMLInputElement>(null);
-  const [allProducts, setAllProducts] = useState<Product[]>([]);
+  const [allProducts, setAllProducts] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
@@ -27,12 +26,12 @@ export default function FeaturedProductsPage() {
       setLoading(true);
       try {
         const products = await fetchAllProducts();
-        const featured = await fetchFeaturedProducts();
+        const offer_zone = await fetchOfferZoneProducts();
 
         if (products) setAllProducts(products);
-        if (featured) {
+        if (offer_zone) {
           setFeaturedVariants(
-            featured.map(({ productId, variantId, product, variant }:any) => ({
+            offer_zone.map(({ productId, variantId, product, variant }:any) => ({
               productId,
               variantId,
               product,
@@ -59,7 +58,7 @@ export default function FeaturedProductsPage() {
     // Flatten products to variants, excluding already featured ones
     return allProducts
       .flatMap((product) =>
-        product.variants.map((variant) => ({
+        product.variants.map((variant:any) => ({
           productId: product.id,
           variantId: variant.id,
           product,
@@ -120,7 +119,7 @@ export default function FeaturedProductsPage() {
   // Handle variant removal
   const handleRemoveVariant = async (variantId: string) => {
     try {
-      const res = await fetch('/api/products/featured', {
+      const res = await fetch('/api/products/offer-zone', {
         method: 'DELETE',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ variantId }),
@@ -145,7 +144,7 @@ export default function FeaturedProductsPage() {
         variantId,
       }));
 
-      const response = await fetch('/api/products/featured', {
+      const response = await fetch('/api/products/offer-zone', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ variantSelections }),
@@ -182,7 +181,7 @@ export default function FeaturedProductsPage() {
         <div className="mb-4 rounded-md bg-green-50 p-4 text-green-800 flex items-center justify-between">
           <div className="flex items-center">
             <Check className="h-5 w-5 mr-2" />
-            Featured variants have been saved successfully!
+            Offer Zone variants have been saved successfully!
           </div>
           <Button variant="ghost" size="sm" onClick={() => setIsSaved(false)}>
             <X className="h-4 w-4" />
@@ -267,7 +266,7 @@ export default function FeaturedProductsPage() {
                     <div className="mb-4 relative w-full aspect-square border group border-gray-100 rounded-md bg-[#F4F4F4] overflow-hidden">
                       <div className="absolute inset-0 flex items-center justify-center p-6">
                         <Image
-                          src={selection.variant.productImages[0] ?? '/placeholder.png'}
+                          src={selection.variant.productImages[0].url ?? '/placeholder.png'}
                           alt={selection.variant.name}
                           width={250}
                           height={250}
@@ -313,7 +312,7 @@ export default function FeaturedProductsPage() {
       {/* Selected featured variants */}
       <div>
         <h2 className="mb-4 text-lg font-medium">
-          Current Featured Variants ({featuredVariants.length})
+          Current Offer Zone Variants ({featuredVariants.length})
         </h2>
         {featuredVariants.length > 0 ? (
           <div className="grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-3">
@@ -336,7 +335,7 @@ export default function FeaturedProductsPage() {
                   <div className="mb-4 relative w-full aspect-square border group border-gray-100 rounded-md bg-[#F4F4F4] overflow-hidden">
                     <div className="absolute inset-0 flex items-center justify-center p-6">
                       <Image
-                        src={selection.variant.productImages?.[0] ?? '/placeholder.png'}
+                        src={selection.variant.productImages?.[0].url ?? '/placeholder.png'}
                         alt={selection.variant.name}
                         width={250}
                         height={250}
@@ -369,7 +368,7 @@ export default function FeaturedProductsPage() {
           </div>
         ) : (
           <div className="rounded-md border border-dashed border-gray-300 bg-gray-50 p-8 text-center">
-            <p className="text-gray-500">No featured variants selected. Use the search above to add variants.</p>
+            <p className="text-gray-500">No offer zone variants selected. Use the search above to add variants.</p>
           </div>
         )}
       </div>

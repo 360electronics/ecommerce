@@ -13,48 +13,6 @@ import {
 import { sql } from 'drizzle-orm';
 import { users } from '../user/users.schema';
 
-// Products table
-export const categories = pgTable(
-  'categories',
-  {
-    id: uuid('id').primaryKey().default(sql`gen_random_uuid()`),
-    name: varchar('name', { length: 255 }).notNull(),
-    slug: varchar('slug', { length: 255 }).notNull(),
-    description: text('description'),
-    imageUrl: varchar('image_url', { length: 500 }),
-    isActive: boolean('is_active').default(true).notNull(),
-    displayOrder: numeric('display_order', { precision: 5, scale: 0 }).default('0').notNull(),
-    createdAt: timestamp('created_at', { withTimezone: true }).defaultNow().notNull(),
-    updatedAt: timestamp('updated_at', { withTimezone: true }).defaultNow().notNull(),
-  },
-  (table) => [
-    unique('uniq_category_slug').on(table.slug),
-    index('idx_category_name').on(table.name),
-  ]
-);
-
-// Subcategories table - for more specific product types
-export const subcategories = pgTable(
-  'subcategories',
-  {
-    id: uuid('id').primaryKey().default(sql`gen_random_uuid()`),
-    categoryId: uuid('category_id').notNull().references(() => categories.id, { onDelete: 'cascade' }),
-    name: varchar('name', { length: 255 }).notNull(),
-    slug: varchar('slug', { length: 255 }).notNull(),
-    description: text('description'),
-    imageUrl: varchar('image_url', { length: 500 }),
-    isActive: boolean('is_active').default(true).notNull(),
-    displayOrder: numeric('display_order', { precision: 5, scale: 0 }).default('0').notNull(),
-    createdAt: timestamp('created_at', { withTimezone: true }).defaultNow().notNull(),
-    updatedAt: timestamp('updated_at', { withTimezone: true }).defaultNow().notNull(),
-  },
-  (table) => [
-    unique('uniq_subcategory_slug').on(table.slug),
-    index('idx_subcategory_name').on(table.name),
-    index('idx_subcategory_category').on(table.categoryId),
-  ]
-);
-
 // Brands table - for product manufacturers
 export const brands = pgTable(
   'brands',
@@ -74,29 +32,57 @@ export const brands = pgTable(
   ]
 );
 
-// Attribute templates for different product types
-export const attributeTemplates = pgTable(
-  'attribute_templates',
+export const categories = pgTable(
+  'categories',
   {
     id: uuid('id').primaryKey().default(sql`gen_random_uuid()`),
-    categoryId: uuid('category_id').references(() => categories.id),
-    subcategoryId: uuid('subcategory_id').references(() => subcategories.id),
     name: varchar('name', { length: 255 }).notNull(),
-    attributes: jsonb('attributes').$type<{
-      name: string;
-      type: 'text' | 'number' | 'boolean' | 'select';
-      options?: string[];
-      unit?: string;
-      isFilterable: boolean;
-      isRequired: boolean;
-      displayOrder: number;
-    }[]>().notNull().default([]),
+    slug: varchar('slug', { length: 255 }).notNull(),
+    description: text('description'),
+    imageUrl: varchar('image_url', { length: 500 }),
+    isActive: boolean('is_active').default(true).notNull(),
+    displayOrder: numeric('display_order', { precision: 5, scale: 0 }).default('0').notNull(),
+    createdAt: timestamp('created_at', { withTimezone: true }).defaultNow().notNull(),
+    updatedAt: timestamp('updated_at', { withTimezone: true }).defaultNow().notNull(),
+  },
+  (table) => [unique('uniq_category_slug').on(table.slug), index('idx_category_name').on(table.name)]
+);
+
+export const attributeTemplates = pgTable('attribute_templates', {
+  id: uuid('id').primaryKey().default(sql`gen_random_uuid()`),
+  categoryId: uuid('category_id').notNull().references(() => categories.id, { onDelete: 'cascade' }),
+  name: varchar('name', { length: 255 }).notNull(),
+  attributes: jsonb('attributes').notNull().$type<Array<{
+    name: string | null;
+    type: 'text' | 'number' | 'boolean' | 'select' | null;
+    options?: string[] | null;
+    unit?: string | null;
+    isFilterable: boolean | null;
+    isRequired: boolean | null;
+    displayOrder: number | null;
+}>>(),
+  createdAt: timestamp('created_at', { withTimezone: true }).defaultNow().notNull(),
+  updatedAt: timestamp('updated_at', { withTimezone: true }).defaultNow().notNull(),
+});
+
+export const subcategories = pgTable(
+  'subcategories',
+  {
+    id: uuid('id').primaryKey().default(sql`gen_random_uuid()`),
+    categoryId: uuid('category_id').notNull().references(() => categories.id, { onDelete: 'cascade' }),
+    name: varchar('name', { length: 255 }).notNull(),
+    slug: varchar('slug', { length: 255 }).notNull(),
+    description: text('description'),
+    imageUrl: varchar('image_url', { length: 500 }),
+    isActive: boolean('is_active').default(true).notNull(),
+    displayOrder: numeric('display_order', { precision: 5, scale: 0 }).default('0').notNull(),
     createdAt: timestamp('created_at', { withTimezone: true }).defaultNow().notNull(),
     updatedAt: timestamp('updated_at', { withTimezone: true }).defaultNow().notNull(),
   },
   (table) => [
-    index('idx_attribute_template_category').on(table.categoryId),
-    index('idx_attribute_template_subcategory').on(table.subcategoryId),
+    unique('uniq_subcategory_slug').on(table.slug),
+    index('idx_subcategory_name').on(table.name),
+    index('idx_subcategory_category').on(table.categoryId),
   ]
 );
 
@@ -320,6 +306,7 @@ export const promotionRules = pgTable(
     index('idx_promotion_rule_entity').on(table.entityType, table.entityId),
   ]
 );
+
 export const offerZone = pgTable(
   'offer_zone',
   {
@@ -334,9 +321,9 @@ export const offerZone = pgTable(
     updatedAt: timestamp('updated_at', { withTimezone: true }).defaultNow().notNull(),
   },
   (table) => [
-    index('idx_featured_product_id').on(table.productId),
-    index('idx_featured_variant_id').on(table.variantId),
-    unique('uniq_featured_variant_id').on(table.variantId), // Prevent duplicate featured variants
+    index('idx_offer_zone_id').on(table.productId),
+    index('idx_offer_variant_id').on(table.variantId),
+    unique('uniq_offer_variant_id').on(table.variantId),
   ]
 );
 

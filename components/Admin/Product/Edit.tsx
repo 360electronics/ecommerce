@@ -9,12 +9,11 @@ import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { DndProvider, useDrag, useDrop } from 'react-dnd';
 import { HTML5Backend } from 'react-dnd-html5-backend';
-import { decodeUUID } from '@/utils/Encryption';
-import { toast } from 'react-hot-toast';
+import { slugify } from '@/utils/slugify';
 
-// Interfaces (unchanged, included for context)
+// Define interfaces based on the GET route response
 interface Category {
-  id: string;
+  id: number;
   name: string;
   slug: string;
   description: string | null;
@@ -23,7 +22,7 @@ interface Category {
 }
 
 interface Subcategory {
-  id: string;
+  id: number;
   name: string;
   slug: string;
 }
@@ -57,6 +56,7 @@ interface CategoryResponse {
   [slug: string]: CategoryPreset;
 }
 
+// Interface for Brand (based on your brands schema)
 interface Brand {
   id: string;
   name: string;
@@ -78,13 +78,6 @@ interface SpecSection {
   isFixed?: boolean;
 }
 
-interface ProductImage {
-  url: string;
-  alt: string;
-  isFeatured: boolean;
-  displayOrder: number;
-}
-
 interface Variant {
   id: string;
   name: string;
@@ -97,8 +90,7 @@ interface Variant {
   ourPrice: string;
   salePrice: string;
   isOnSale: boolean;
-  imageFiles: File[];
-  existingImages: ProductImage[];
+  imageFiles: File[]; // Store File objects
   weight: string;
   weightUnit: string;
   dimensions: { length: number; width: number; height: number; unit: string };
@@ -111,6 +103,7 @@ interface DragItem {
   type: string;
 }
 
+// Status and delivery mode options
 const statusOptions = [
   { value: 'active', label: 'Active' },
   { value: 'inactive', label: 'Inactive' },
@@ -125,7 +118,7 @@ const deliveryModeOptions = [
   { value: 'pickup', label: 'Pickup' },
 ];
 
-// DraggableSpecSection (unchanged for brevity)
+// DraggableSpecSection component (unchanged)
 const DraggableSpecSection = ({
   section,
   index,
@@ -282,7 +275,6 @@ export default function EditProductPage({ id }: { id: string }) {
       salePrice: '',
       isOnSale: false,
       imageFiles: [],
-      existingImages: [],
       weight: '',
       weightUnit: 'kg',
       dimensions: { length: 0, width: 0, height: 0, unit: 'cm' },
@@ -310,185 +302,34 @@ export default function EditProductPage({ id }: { id: string }) {
   ]);
   const [openDropdown, setOpenDropdown] = useState<string | null>(null);
   const [categoryPresets, setCategoryPresets] = useState<CategoryResponse | null>(null);
-  const [brands, setBrands] = useState<Brand[]>([]);
+  const [brands, setBrands] = useState<Brand[]>([]); // State for brands
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [previewUrls, setPreviewUrls] = useState<{ [variantId: string]: string[] }>({});
   const variantImageInputRefs = useRef<{
     [variantId: string]: { main: React.RefObject<HTMLInputElement | null>; additional: (HTMLInputElement | null)[] };
   }>({});
+  const [previewUrls, setPreviewUrls] = useState<{ [variantId: string]: string[] }>({});
 
-  // Decode ID and handle errors
-  
-
-  // Fetch data
+  // Fetch category presets and brands
   useEffect(() => {
-    if (!id ) return;
-
     async function fetchData() {
       try {
         setIsLoading(true);
-
         // Fetch categories
         const categoryResponse = await fetch('/api/categories');
-        if (!categoryResponse.ok) throw new Error('Failed to fetch categories');
+        if (!categoryResponse.ok) {
+          throw new Error('Failed to fetch categories');
+        }
         const categoryData: CategoryResponse = await categoryResponse.json();
         setCategoryPresets(categoryData);
 
         // Fetch brands
         const brandResponse = await fetch('/api/brands');
-        if (!brandResponse.ok) throw new Error('Failed to fetch brands');
+        if (!brandResponse.ok) {
+          throw new Error('Failed to fetch brands');
+        }
         const brandData: Brand[] = await brandResponse.json();
         setBrands(brandData);
-
-        // Fetch product data
-        const productResponse = await fetch(`/api/products/single/${id}`);
-        if (!productResponse.ok) {
-          if (productResponse.status === 404) throw new Error('Product not found');
-          throw new Error('Failed to fetch product');
-        }
-        const data = await productResponse.json();
-
-        // Set product data
-        setProduct({
-          shortName: data.shortName || '',
-          fullName: data.fullName || '',
-          category: data.category?.slug || '',
-          subcategory: data.subcategory?.slug || '',
-          brand: data.brand?.name || '',
-          description: data.description || '',
-          status: data.status || 'active',
-          isFeatured: data.isFeatured || false,
-          deliveryMode: data.deliveryMode || 'standard',
-          tags: Array.isArray(data.tags) ? data.tags.join(', ') : '',
-          warranty: data.warranty || '',
-          metaTitle: data.metaTitle || '',
-          metaDescription: data.metaDescription || '',
-        });
-
-        // Set variants
-        const fetchedVariants = Array.isArray(data.variants) && data.variants.length > 0
-          ? data.variants.map((variant: any, index: number) => ({
-              id: `variant-${Date.now()}-${index}`,
-              name: variant.name || '',
-              sku: variant.sku || '',
-              attributes: variant.attributes || {},
-              stock: variant.stock?.toString() || '0',
-              lowStockThreshold: variant.lowStockThreshold?.toString() || '5',
-              isBackorderable: variant.isBackorderable || false,
-              mrp: variant.mrp?.toString() || '',
-              ourPrice: variant.ourPrice?.toString() || '',
-              salePrice: variant.salePrice?.toString() || '',
-              isOnSale: variant.isOnSale || false,
-              imageFiles: [],
-              existingImages: Array.isArray(variant.productImages) ? variant.productImages : [],
-              weight: variant.weight?.toString() || '',
-              weightUnit: variant.weightUnit || 'kg',
-              dimensions: variant.dimensions || { length: 0, width: 0, height: 0, unit: 'cm' },
-              isDefault: variant.isDefault || index === 0,
-            }))
-          : [
-              {
-                id: `variant-${Date.now()}`,
-                name: '',
-                sku: '',
-                attributes: {},
-                stock: '0',
-                lowStockThreshold: '5',
-                isBackorderable: false,
-                mrp: '',
-                ourPrice: '',
-                salePrice: '',
-                isOnSale: false,
-                imageFiles: [],
-                existingImages: [],
-                weight: '',
-                weightUnit: 'kg',
-                dimensions: { length: 0, width: 0, height: 0, unit: 'cm' },
-                isDefault: true,
-              },
-            ];
-        setVariants(fetchedVariants);
-
-        // Set preview URLs for existing images
-        const initialPreviewUrls: { [variantId: string]: string[] } = {};
-        fetchedVariants.forEach((variant:any) => {
-          initialPreviewUrls[variant.id] = variant.existingImages.map((img: ProductImage) => img.url);
-        });
-        setPreviewUrls(initialPreviewUrls);
-
-        // Set specifications
-        const initialSpecSections = [
-          {
-            id: 'general',
-            name: 'General',
-            fields: [
-              { id: 'field1', label: 'Brand', value: data.brand?.name || '' },
-              { id: 'field2', label: 'Model', value: '' },
-            ],
-            isRequired: true,
-            isFixed: true,
-          },
-          {
-            id: 'warranty',
-            name: 'Warranty',
-            fields: [{ id: 'field1', label: 'Warranty Period', value: data.warranty || '' }],
-            isFixed: true,
-          },
-        ];
-
-        if (data.specifications && Array.isArray(data.specifications)) {
-          const newSpecSections = [...initialSpecSections];
-          data.specifications.forEach((spec: any, index: number) => {
-            if (!spec.groupName) return;
-            const existingSectionIndex = newSpecSections.findIndex(
-              (section) => section.name.toLowerCase() === spec.groupName.toLowerCase()
-            );
-            const fields = Array.isArray(spec.fields)
-              ? spec.fields.map((field: any, idx: number) => ({
-                  id: `field${idx + 1}-${spec.groupName}-${index}`,
-                  label: field.fieldName || '',
-                  value: field.fieldValue || '',
-                }))
-              : [];
-            if (existingSectionIndex >= 0) {
-              newSpecSections[existingSectionIndex].fields = fields;
-            } else {
-              newSpecSections.push({
-                id: `section-${spec.groupName}-${index}`,
-                name: spec.groupName,
-                fields,
-                isFixed: false,
-              });
-            }
-          });
-          setSpecSections(newSpecSections);
-        } else {
-          setSpecSections(initialSpecSections);
-        }
-
-        // Initialize custom attributes
-        const newCustomAttributes: { [variantId: string]: CustomAttribute[] } = {};
-        fetchedVariants.forEach((variant: Variant) => {
-          newCustomAttributes[variant.id] = [];
-          const presetAttrNames = (data.category?.slug && categoryPresets?.[data.category.slug]?.attributes.map(a => a.name)) || [];
-          Object.entries(variant.attributes || {}).forEach(([key, value], index) => {
-            if (!presetAttrNames.includes(key)) {
-              const stringValue = typeof value === 'string' ? value :
-                                 typeof value === 'number' ? value.toString() :
-                                 typeof value === 'boolean' ? value.toString() : '';
-              newCustomAttributes[variant.id].push({
-                name: key,
-                value: stringValue,
-                type: 'text',
-                isRequired: false,
-                isFilterable: false,
-                displayOrder: index + 1,
-              });
-            }
-          });
-        });
-        setCustomAttributes(newCustomAttributes);
       } catch (err) {
         setError(err instanceof Error ? err.message : 'Unknown error');
       } finally {
@@ -496,26 +337,26 @@ export default function EditProductPage({ id }: { id: string }) {
       }
     }
     fetchData();
-  }, [id]);
+  }, []);
 
-  // Initialize refs (unchanged)
+  // Initialize refs
   useEffect(() => {
     variants.forEach((variant) => {
       if (!variantImageInputRefs.current[variant.id]) {
         variantImageInputRefs.current[variant.id] = {
           main: React.createRef<HTMLInputElement>(),
-          additional: Array(5).fill(null).map(() => null),
+          additional: Array(5).fill(null),
         };
       }
     });
-    Object.keys(variantImageInputRefs.current).forEach((variantId) => {
-      if (!variants.find((v) => v.id === variantId)) {
-        delete variantImageInputRefs.current[variantId];
+    Object.keys(variantImageInputRefs.current).forEach((id) => {
+      if (!variants.find((v) => v.id === id)) {
+        delete variantImageInputRefs.current[id];
       }
     });
   }, [variants]);
 
-  // Sync product fields (unchanged)
+  // Sync product fields and initialize attributes
   useEffect(() => {
     setSpecSections((prev) =>
       prev.map((section) => {
@@ -535,9 +376,33 @@ export default function EditProductPage({ id }: { id: string }) {
         return section;
       })
     );
-  }, [product.brand, product.warranty]);
 
-  // Dropdown handling (unchanged)
+    // Initialize attributes for each variant based on category
+    setVariants((prev) =>
+      prev.map((variant) => {
+        const presetAttributes = (product.category && categoryPresets?.[product.category]?.attributes) || [];
+        const initialAttributes: Record<string, string | number | boolean> = {};
+        presetAttributes.forEach((attr) => {
+          initialAttributes[attr.name] = '';
+        });
+        return {
+          ...variant,
+          attributes: { ...initialAttributes, ...variant.attributes },
+        };
+      })
+    );
+
+    // Initialize custom attributes
+    const newCustomAttributes = { ...customAttributes };
+    variants.forEach((variant) => {
+      if (!newCustomAttributes[variant.id]) {
+        newCustomAttributes[variant.id] = [];
+      }
+    });
+    setCustomAttributes(newCustomAttributes);
+  }, [product.brand, product.warranty, product.category, categoryPresets]);
+
+  // Dropdown handling
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
       if (openDropdown && !(event.target as Element).closest('.dropdown-container')) {
@@ -552,7 +417,7 @@ export default function EditProductPage({ id }: { id: string }) {
     setOpenDropdown(openDropdown === dropdownName ? null : dropdownName);
   };
 
-  // Image handling (unchanged)
+  // Image handling
   const fileToBase64 = (file: File): Promise<string> => {
     return new Promise((resolve, reject) => {
       const reader = new FileReader();
@@ -562,29 +427,32 @@ export default function EditProductPage({ id }: { id: string }) {
     });
   };
 
-  const handleImageUpload = async (variantId: string, index: number, e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleImageUpload = (variantId: string, index: number, e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (file && file.type.startsWith('image/')) {
       setVariants((prev) =>
         prev.map((variant) =>
           variant.id === variantId
             ? {
-                ...variant,
-                imageFiles: [...variant.imageFiles.slice(0, index), file, ...variant.imageFiles.slice(index + 1)],
-                existingImages: [...variant.existingImages.slice(0, index), { url: '', alt: file.name, isFeatured: index === 0, displayOrder: index }, ...variant.existingImages.slice(index + 1)],
-              }
+              ...variant,
+              imageFiles: [...variant.imageFiles.slice(0, index), file, ...variant.imageFiles.slice(index + 1)],
+            }
             : variant
         )
       );
-      const previewUrl = await fileToBase64(file);
-      setPreviewUrls((prev) => ({
-        ...prev,
-        [variantId]: [...(prev[variantId] || []).slice(0, index), previewUrl, ...(prev[variantId] || []).slice(index + 1)],
-      }));
+      // Generate preview URL
+      const reader = new FileReader();
+      reader.onload = () => {
+        setPreviewUrls((prev) => ({
+          ...prev,
+          [variantId]: [...(prev[variantId] || []).slice(0, index), reader.result as string, ...(prev[variantId] || []).slice(index + 1)],
+        }));
+      };
+      reader.readAsDataURL(file);
     }
   };
 
-  const handleImageDrop = async (variantId: string, index: number, e: React.DragEvent) => {
+  const handleImageDrop = (variantId: string, index: number, e: React.DragEvent) => {
     e.preventDefault();
     const file = e.dataTransfer.files?.[0];
     if (file && file.type.startsWith('image/')) {
@@ -592,22 +460,24 @@ export default function EditProductPage({ id }: { id: string }) {
         prev.map((variant) =>
           variant.id === variantId
             ? {
-                ...variant,
-                imageFiles: [...variant.imageFiles.slice(0, index), file, ...variant.imageFiles.slice(index + 1)],
-                existingImages: [...variant.existingImages.slice(0, index), { url: '', alt: file.name, isFeatured: index === 0, displayOrder: index }, ...variant.existingImages.slice(index + 1)],
-              }
+              ...variant,
+              imageFiles: [...variant.imageFiles.slice(0, index), file, ...variant.imageFiles.slice(index + 1)],
+            }
             : variant
         )
       );
-      const previewUrl = await fileToBase64(file);
-      setPreviewUrls((prev) => ({
-        ...prev,
-        [variantId]: [...(prev[variantId] || []).slice(0, index), previewUrl, ...(prev[variantId] || []).slice(index + 1)],
-      }));
+      // Generate preview URL
+      const reader = new FileReader();
+      reader.onload = () => {
+        setPreviewUrls((prev) => ({
+          ...prev,
+          [variantId]: [...(prev[variantId] || []).slice(0, index), reader.result as string, ...(prev[variantId] || []).slice(index + 1)],
+        }));
+      };
+      reader.readAsDataURL(file);
     }
   };
-
-  // Variant handling (unchanged)
+  // Variant handling
   const handleVariantChange = (id: string, field: keyof Variant, value: any) => {
     setVariants((prev) =>
       prev.map((variant) => (variant.id === id ? { ...variant, [field]: value } : variant))
@@ -619,9 +489,9 @@ export default function EditProductPage({ id }: { id: string }) {
       prev.map((variant) =>
         variant.id === variantId
           ? {
-              ...variant,
-              attributes: { ...variant.attributes, [attrName]: value },
-            }
+            ...variant,
+            attributes: { ...variant.attributes, [attrName]: value },
+          }
           : variant
       )
     );
@@ -663,7 +533,7 @@ export default function EditProductPage({ id }: { id: string }) {
     const presetAttributes = (product.category && categoryPresets?.[product.category]?.attributes) || [];
     const initialAttributes: Record<string, string | number | boolean> = {};
     presetAttributes.forEach((attr) => {
-      initialAttributes[attr.name] = attr.type === 'boolean' ? false : attr.type === 'number' ? 0 : '';
+      initialAttributes[attr.name] = '';
     });
     setVariants((prev) => [
       ...prev,
@@ -679,8 +549,7 @@ export default function EditProductPage({ id }: { id: string }) {
         ourPrice: '',
         salePrice: '',
         isOnSale: false,
-        imageFiles: [],
-        existingImages: [],
+        imageFiles: [], // Initialize with empty File array
         weight: '',
         weightUnit: 'kg',
         dimensions: { length: 0, width: 0, height: 0, unit: 'cm' },
@@ -694,10 +563,7 @@ export default function EditProductPage({ id }: { id: string }) {
   };
 
   const removeVariant = (id: string) => {
-    if (variants.length === 1) {
-      toast.error('At least one variant is required');
-      return;
-    }
+    if (variants.length === 1) return;
     setVariants((prev) => prev.filter((variant) => variant.id !== id));
     setCustomAttributes((prev) => {
       const newCustom = { ...prev };
@@ -706,15 +572,15 @@ export default function EditProductPage({ id }: { id: string }) {
     });
   };
 
-  // Specification handling (unchanged)
+  // Specification handling
   const handleSpecFieldChange = (sectionId: string, fieldId: string, type: 'label' | 'value', value: string) => {
     setSpecSections((prev) =>
       prev.map((section) =>
         section.id === sectionId
           ? {
-              ...section,
-              fields: section.fields.map((field) => (field.id === fieldId ? { ...field, [type]: value } : field)),
-            }
+            ...section,
+            fields: section.fields.map((field) => (field.id === fieldId ? { ...field, [type]: value } : field)),
+          }
           : section
       )
     );
@@ -725,12 +591,12 @@ export default function EditProductPage({ id }: { id: string }) {
       prev.map((section) =>
         section.id === sectionId
           ? {
-              ...section,
-              fields: [
-                ...section.fields,
-                { id: `field${section.fields.length + 1}-${Date.now()}`, label: '', value: '' },
-              ],
-            }
+            ...section,
+            fields: [
+              ...section.fields,
+              { id: `field${section.fields.length + 1}-${Date.now()}`, label: '', value: '' },
+            ],
+          }
           : section
       )
     );
@@ -741,9 +607,9 @@ export default function EditProductPage({ id }: { id: string }) {
       prev.map((section) =>
         section.id === sectionId && section.fields.length > 1
           ? {
-              ...section,
-              fields: section.fields.filter((field) => field.id !== fieldId),
-            }
+            ...section,
+            fields: section.fields.filter((field) => field.id !== fieldId),
+          }
           : section
       )
     );
@@ -781,32 +647,152 @@ export default function EditProductPage({ id }: { id: string }) {
     });
   };
 
-  // Form submission (unchanged)
+  const getProductData = async (id: string): Promise<any | null> => {
+    try {
+      const res = await fetch(`/api/products/single/${id}`);
+      if (!res.ok) {
+        console.error("Failed to fetch product data:", res.status);
+        return null;
+      }
+      const data = await res.json();
+      console.log("Fetched product data:", data);
+      return data;
+    } catch (error) {
+      console.error("Error fetching product data:", error);
+      return null;
+    }
+  };
+
+  useEffect(() => {
+    const fetchData = async () => {
+      setIsLoading(true);
+      const data = await getProductData(id);
+
+      console.log("Fetch product data:", data)
+      if (data) {
+        setProduct({
+          shortName: data.product.shortName || '',
+          fullName: data.product.fullName || '',
+          category: data.product.category || '',
+          subcategory: data.product.subcategory || '',
+          brand: data.product.brand || '',
+          description: data.product.description || '',
+          status: data.product.status || 'active',
+          isFeatured: data.product.isFeatured || false,
+          deliveryMode: data.product.deliveryMode || 'standard',
+          tags: data.product.tags || '',
+          warranty: data.product.warranty || '',
+          metaTitle: data.product.metaTitle || '',
+          metaDescription: data.product.metaDescription || '',
+        });
+  
+        // Set variants
+        const fetchedVariants =
+          Array.isArray(data.variants) && data.variants.length > 0
+            ? data.variants.map((variant: any, index: number) => ({
+                id: `variant-${Date.now()}-${index}`,
+                name: variant.name || '',
+                sku: variant.sku || '',
+                attributes: variant.attributes || {},
+                stock: variant.stock?.toString() || '0',
+                lowStockThreshold: variant.lowStockThreshold?.toString() || '5',
+                isBackorderable: variant.isBackorderable || false,
+                mrp: variant.mrp?.toString() || '',
+                ourPrice: variant.ourPrice?.toString() || '',
+                salePrice: variant.salePrice?.toString() || '',
+                isOnSale: variant.isOnSale || false,
+                imageFiles: [], // Images need to be handled separately
+                weight: variant.weight?.toString() || '',
+                weightUnit: variant.weightUnit || 'kg',
+                dimensions: variant.dimensions || { length: 0, width: 0, height: 0, unit: 'cm' },
+                isDefault: variant.isDefault || index === 0,
+              }))
+            : [
+                {
+                  id: `variant-${Date.now()}`,
+                  name: '',
+                  sku: '',
+                  attributes: {},
+                  stock: '0',
+                  lowStockThreshold: '5',
+                  isBackorderable: false,
+                  mrp: '',
+                  ourPrice: '',
+                  salePrice: '',
+                  isOnSale: false,
+                  imageFiles: [],
+                  weight: '',
+                  weightUnit: 'kg',
+                  dimensions: { length: 0, width: 0, height: 0, unit: 'cm' },
+                  isDefault: true,
+                },
+              ];
+        setVariants(fetchedVariants);
+  
+        // Process specifications
+        const initialSpecSections = [
+          {
+            id: 'general',
+            name: 'General',
+            fields: [
+              { id: 'field1', label: 'Brand', value: data.product.brand || '' },
+              { id: 'field2', label: 'Model', value: '' },
+            ],
+            isRequired: true,
+            isFixed: true,
+          },
+          {
+            id: 'warranty',
+            name: 'Warranty',
+            fields: [{ id: 'field1', label: 'Warranty Period', value: data.product.warranty || '' }],
+            isFixed: true,
+          },
+        ];
+  
+        if (data.product.specifications && Array.isArray(data.product.specifications)) {
+          const newSpecSections = [...initialSpecSections];
+          data.product.specifications.forEach((spec: any) => {
+            if (!spec.groupName) return;
+            const existingSectionIndex = newSpecSections.findIndex(
+              (section) => section.name.toLowerCase() === spec.groupName.toLowerCase()
+            );
+            const fields = Array.isArray(spec.fields)
+              ? spec.fields.map((field: any, idx: number) => ({
+                  id: `field${idx + 1}-${Date.now()}`,
+                  label: field.fieldName || '',
+                  value: field.fieldValue || '',
+                }))
+              : [];
+            if (existingSectionIndex >= 0) {
+              newSpecSections[existingSectionIndex].fields = fields;
+            } else {
+              newSpecSections.push({
+                id: `section-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
+                name: spec.groupName,
+                fields,
+                isFixed: false,
+              });
+            }
+          });
+          setSpecSections(newSpecSections);
+        } else {
+          setSpecSections(initialSpecSections);
+        }
+      }
+      setIsLoading(false);
+    };
+    fetchData();
+  }, [id]);
+
+  // Form submission
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
 
-    if (!id) {
-      toast.error('Invalid product ID');
-      return;
-    }
-
     // Validations
-    if (!product.shortName.trim()) {
-      toast.error('Short name is required');
-      return;
-    }
-    if (!product.fullName.trim()) {
-      toast.error('Full name is required');
-      return;
-    }
-    if (!product.category) {
-      toast.error('Category is required');
-      return;
-    }
-    if (!product.brand) {
-      toast.error('Brand is required');
-      return;
-    }
+    if (!product.shortName) return alert('Short name is required');
+    if (!product.fullName) return alert('Full name is required');
+    if (!product.category) return alert('Category is required');
+    if (!product.brand) return alert('Brand is required');
 
     const presetAttributes = (product.category && categoryPresets?.[product.category]?.attributes) || [];
 
@@ -825,25 +811,24 @@ export default function EditProductPage({ id }: { id: string }) {
         Number(v.ourPrice) > 0 &&
         !isNaN(Number(v.stock)) &&
         Number(v.stock) >= 0 &&
-        (v.imageFiles.length > 0 || v.existingImages.length > 0) &&
+        v.imageFiles.length > 0 && // Require at least one image
         requiredAttributesFilled
       );
     });
 
     if (validVariants.length === 0) {
-      toast.error('At least one valid variant with all required fields, attributes, and at least one image is required');
-      return;
+      return alert('At least one valid variant with all required fields, attributes, and at least one image is required');
     }
 
     const generalSection = specSections.find((s) => s.id === 'general');
     if (!generalSection?.fields.some((f) => f.label.trim() && f.value.trim())) {
-      toast.error('General section requires at least one field');
-      return;
+      return alert('General section requires at least one field');
     }
 
     const formData = new FormData();
     formData.append('shortName', product.shortName);
     formData.append('fullName', product.fullName);
+    formData.append('slug', slugify(product.fullName));
     formData.append('category', product.category);
     formData.append('subcategory', product.subcategory || '');
     formData.append('brand', product.brand);
@@ -867,29 +852,27 @@ export default function EditProductPage({ id }: { id: string }) {
       return {
         name: v.name,
         sku: v.sku,
+        slug: slugify(v.name),
         attributes: combinedAttributes,
         isBackorderable: v.isBackorderable,
         mrp: Number(v.mrp).toString(),
         ourPrice: Number(v.ourPrice).toString(),
-        salePrice: v.salePrice && !isNaN(Number(v.salePrice)) ? Number(v.salePrice).toString() : '',
+        stock: Number(v.stock).toString(),
+        lowStockThreshold: Number(v.lowStockThreshold).toString(),
+        weight: v.weight ? Number(v.weight).toString() : undefined,
         isOnSale: v.isOnSale,
-        weight: v.weight && !isNaN(Number(v.weight)) ? Number(v.weight).toString() : '',
         weightUnit: v.weightUnit,
-        dimensions: {
-          length: Number(v.dimensions.length) || 0,
-          width: Number(v.dimensions.width) || 0,
-          height: Number(v.dimensions.height) || 0,
-          unit: v.dimensions.unit || 'cm',
-        },
+        dimensions: v.dimensions,
         isDefault: v.isDefault,
-        existingImages: v.existingImages,
+        // Exclude productImages; server will handle it
       };
     });
     formData.append('variants', JSON.stringify(variantsPayload));
 
+    // Append image files
     validVariants.forEach((v) => {
-      v.imageFiles.forEach((file, index) => {
-        formData.append(`variantImages_${v.sku}_${index}`, file);
+      v.imageFiles.forEach((file) => {
+        formData.append(`variantImages_${v.sku}`, file);
       });
     });
 
@@ -904,57 +887,42 @@ export default function EditProductPage({ id }: { id: string }) {
     formData.append('specifications', JSON.stringify(specificationsPayload));
 
     try {
-      const res = await fetch(`/api/products/single/${id}`, {
-        method: 'PUT',
+      const res = await fetch('/api/products', {
+        method: 'POST',
         body: formData,
       });
 
       if (!res.ok) {
         const error = await res.json();
-        throw new Error(error.message || 'Failed to update product');
+        throw new Error(error.message || 'Failed to create product');
       }
 
-      toast.success('Product updated successfully!');
+      alert('Product added successfully!');
       router.push('/admin/products');
     } catch (error) {
-      toast.error(`Error: ${error instanceof Error ? error.message : 'Unknown error'}`);
+      alert(`Error: ${error instanceof Error ? error.message : 'Unknown error'}`);
     }
   };
- 
-  // if (isLoading) {
-  //   return (
-  //     <div className="flex items-center justify-center p-6">
-  //       <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-gray-900"></div>
-  //       <span className="ml-2">Loading product data...</span>
-  //     </div>
-  //   );
-  // }
+
+  if (isLoading) {
+    return <div>Loading categories and brands...</div>;
+  }
 
   if (error) {
-    return (
-      <div className="text-red-600 p-4 bg-red-50 rounded-md">
-        {error}
-        <button
-          className="ml-4 text-blue-600 underline"
-          onClick={() => router.refresh()}
-        >
-          Retry
-        </button>
-      </div>
-    );
+    return <div>Error: {error}</div>;
   }
 
   if (!categoryPresets) {
-    return <div className="p-4">No categories available</div>;
+    return <div>No categories available</div>;
   }
 
   return (
     <DndProvider backend={HTML5Backend}>
-      <div className="space-y-6 p-6">
+      <div className="space-y-6">
         <div className="flex items-center justify-between">
           <div>
-            <h1 className="text-2xl font-bold">Edit Product</h1>
-            <p className="text-sm text-muted-foreground">Update product details and variants</p>
+            <h1 className="text-2xl font-bold">Add Product</h1>
+            <p className="text-sm text-muted-foreground">Create a new product with variants</p>
           </div>
           <Button variant="outline" onClick={() => router.back()}>
             Cancel
@@ -1041,7 +1009,7 @@ export default function EditProductPage({ id }: { id: string }) {
                         key={subcat.slug}
                         className="cursor-pointer px-4 py-2 text-sm hover:bg-gray-100"
                         onClick={() => {
-                          setProduct({ ...product, subcategory: subcat.slug });
+                          setProduct({ ...product, subcategory: subcat.name });
                           setOpenDropdown(null);
                         }}
                       >
@@ -1073,7 +1041,7 @@ export default function EditProductPage({ id }: { id: string }) {
                   {openDropdown === 'brand' && (
                     <div className="absolute z-10 mt-1 w-full rounded-md border bg-white shadow-lg">
                       {brands
-                        .filter((brand) => brand.isActive)
+                        .filter((brand) => brand.isActive) // Only show active brands
                         .map((brand) => (
                           <div
                             key={brand.id}
@@ -1235,10 +1203,11 @@ export default function EditProductPage({ id }: { id: string }) {
 
             {variants.map((variant, variantIndex) => {
               const presetAttributes = (product.category && categoryPresets?.[product.category]?.attributes) || [];
+              // Initialize refs for this variant if not already done
               if (!variantImageInputRefs.current[variant.id]) {
                 variantImageInputRefs.current[variant.id] = {
                   main: React.createRef<HTMLInputElement>(),
-                  additional: Array(5).fill(null).map(() => null),
+                  additional: [],
                 };
               }
               return (
@@ -1279,17 +1248,13 @@ export default function EditProductPage({ id }: { id: string }) {
                                   setVariants((prev) =>
                                     prev.map((v) =>
                                       v.id === variant.id
-                                        ? {
-                                            ...v,
-                                            imageFiles: [...v.imageFiles.slice(0, 0), ...v.imageFiles.slice(1)],
-                                            existingImages: [...v.existingImages.slice(0, 0), ...v.existingImages.slice(1)],
-                                          }
+                                        ? { ...v, imageFiles: [...v.imageFiles.slice(1)] }
                                         : v
                                     )
                                   );
                                   setPreviewUrls((prev) => ({
                                     ...prev,
-                                    [variant.id]: [...(prev[variant.id] || []).slice(0, 0), ...(prev[variant.id] || []).slice(1)],
+                                    [variant.id]: [...(prev[variant.id] || []).slice(1)],
                                   }));
                                 }}
                                 className="absolute right-2 top-2 rounded-full bg-white p-1 shadow-md"
@@ -1343,16 +1308,21 @@ export default function EditProductPage({ id }: { id: string }) {
                                       prev.map((v) =>
                                         v.id === variant.id
                                           ? {
-                                              ...v,
-                                              imageFiles: [...v.imageFiles.slice(0, index + 1), ...v.imageFiles.slice(index + 2)],
-                                              existingImages: [...v.existingImages.slice(0, index + 1), ...v.existingImages.slice(index + 2)],
-                                            }
+                                            ...v,
+                                            imageFiles: [
+                                              ...v.imageFiles.slice(0, index + 1),
+                                              ...v.imageFiles.slice(index + 2),
+                                            ],
+                                          }
                                           : v
                                       )
                                     );
                                     setPreviewUrls((prev) => ({
                                       ...prev,
-                                      [variant.id]: [...(prev[variant.id] || []).slice(0, index + 1), ...(prev[variant.id] || []).slice(index + 2)],
+                                      [variant.id]: [
+                                        ...(prev[variant.id] || []).slice(0, index + 1),
+                                        ...(prev[variant.id] || []).slice(index + 2),
+                                      ],
                                     }));
                                   }}
                                   className="absolute right-2 top-2 rounded-full bg-white p-1 shadow-md"
@@ -1728,6 +1698,7 @@ export default function EditProductPage({ id }: { id: string }) {
                 </div>
               );
             })}
+
           </div>
 
           {/* Specifications */}
@@ -1757,7 +1728,7 @@ export default function EditProductPage({ id }: { id: string }) {
 
           <div className="flex justify-center">
             <Button type="submit" className="w-[40%] rounded-full">
-              Update Product
+              Add Product
             </Button>
           </div>
         </form>

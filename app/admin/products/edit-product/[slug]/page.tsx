@@ -1,14 +1,16 @@
 import EditProductPage from '@/components/Admin/Product/EditProduct'
+import { encodeUUID } from '@/utils/Encryption';
 
-type Params = Promise<{slug: string}>;
+type Params = Promise<{id: string}>;
 
 const Page = async({ params }: {params: Params}) => {
 
-  const { slug } = await params;
+  const { id } = await params;
+
 
   return (
     <div>
-      <EditProductPage slug={slug} />
+      <EditProductPage id={id} />
     </div>
   )
 }

@@ -6,7 +6,6 @@ import ProductCardwithoutCart from '@/components/Product/ProductCards/ProductCar
 import { ProductCardSkeleton } from '@/components/Reusable/ProductCardSkeleton';
 import PrimaryLinkButton from '@/components/Reusable/PrimaryLinkButton';
 import { useHomeStore } from '@/store/home-store';
-import { Variant } from '@/types/product';
 
 interface Brand {
   name: string;
@@ -73,7 +72,7 @@ const TopTierBrands: React.FC = () => {
   // Flatten products and variants, filter by brand, and sort
   const variantCards = useMemo(() => {
     return brandProducts
-      .filter((product) => product.brand.toLowerCase() === activeBrand)
+      .filter((product) => product.brand === activeBrand)
       .flatMap((product) =>
         product.variants.map((variant: Variant) => ({
           productId: product.id,

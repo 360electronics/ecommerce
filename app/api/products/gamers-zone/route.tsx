@@ -2,7 +2,7 @@
 import { NextResponse } from 'next/server';
 import { db } from '@/db/drizzle';
 import { gamersZone, products, variants } from '@/db/schema/products/products.schema';
-import { eq, sql } from 'drizzle-orm';
+import { eq, inArray, sql } from 'drizzle-orm';
 
 
 export async function GET() {
@@ -14,40 +14,9 @@ export async function GET() {
         variantId: gamersZone.variantId,
         category: gamersZone.category,
         createdAt: gamersZone.createdAt,
-        product: {
-          id: products.id,
-          shortName: products.shortName,
-          brand: products.brand,
-          category: products.category,
-          description: products.description,
-          status: products.status,
-          subProductStatus: products.subProductStatus,
-          deliveryMode: products.deliveryMode,
-          tags: products.tags,
-          totalStocks: products.totalStocks,
-          averageRating: products.averageRating,
-          ratingCount: products.ratingCount,
-          createdAt: products.createdAt,
-          updatedAt: products.updatedAt,
-          specifications: products.specifications,
-        },
-        variant: {
-          id: variants.id,
-          productId: variants.productId,
-          name: variants.name,
-          sku: variants.sku,
-          slug: variants.slug,
-          color: variants.color,
-          material: variants.material,
-          dimensions: variants.dimensions,
-          weight: variants.weight,
-          storage: variants.storage,
-          stock: variants.stock,
-          mrp: variants.mrp,
-          ourPrice: variants.ourPrice,
-          productImages: variants.productImages,
-        },
-      })
+        product: products,
+        variant: variants
+       })
       .from(gamersZone)
       .innerJoin(variants, eq(gamersZone.variantId, variants.id))
       .innerJoin(products, eq(gamersZone.productId, products.id))
@@ -62,18 +31,13 @@ export async function GET() {
         name: variants.name,
         sku: variants.sku,
         slug: variants.slug,
-        color: variants.color,
-        material: variants.material,
-        dimensions: variants.dimensions,
-        weight: variants.weight,
-        storage: variants.storage,
         stock: variants.stock,
         mrp: variants.mrp,
         ourPrice: variants.ourPrice,
         productImages: variants.productImages,
       })
       .from(variants)
-      .where(sql`${variants.productId} IN ${productIds}`);
+      .where(inArray(variants.productId, productIds)); 
 
     // Group entries by category
     const result = gamersZoneEntries.reduce((acc, { productId, variantId, category, product, variant }) => {

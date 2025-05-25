@@ -48,10 +48,16 @@ export interface TableConfiguration<T> {
 
   // Filtering configuration
   filters?: {
-    enabled?: boolean
-    defaultFilter?: string
-    onFilterChange?: (filter: string) => void
-  }
+    enabled?: boolean;
+    defaultFilter?: string;
+    onFilterChange?: (filter: string) => void;
+    customFilters?: Array<{
+      key: string;
+      label: string;
+      type: string;
+      defaultValue: boolean;
+    }>;
+  };
 
   // Pagination configuration
   pagination?: {
@@ -867,15 +873,7 @@ export function EnhancedTable<T extends Record<string, any>>({
                   )
                 })
               ) : (
-                <TableRow>
-                  <TableCell colSpan={columns.filter(col => !col.hidden).length + (selection.enabled ? 1 : 0)} className="h-24 text-center">
-                    {customization.emptyState || (
-                      <div className="flex flex-col items-center justify-center py-6 text-center">
-                        <p className="text-sm text-muted-foreground">No results found</p>
-                      </div>
-                    )}
-                  </TableCell>
-                </TableRow>
+                null
               )}
             </TableBody>
           </Table>

@@ -1,58 +1,30 @@
-import { products, variants } from "@/db/schema/products/products.schema"
-import { db } from "@/db/drizzle"
-import { NextResponse } from "next/server"
-import { offerZone as  featuredProducts } from "@/db/schema/products/products.schema"
-import { eq, sql } from "drizzle-orm"
+import { db } from "@/db/drizzle";
+import { offerZone, products, variants } from "@/db/schema";
+import { eq, inArray, sql } from "drizzle-orm";
+import { NextResponse } from "next/server";
 
 
 export async function GET() {
   try {
-    // Fetch featured products with product and variant details in a single query
-    const featured = await db
+    const offers = await db
       .select({
-        productId: featuredProducts.productId,
-        variantId: featuredProducts.variantId,
-        createdAt: featuredProducts.createdAt,
-        product: {
-          id: products.id,
-          shortName: products.shortName,
-          brand: products.brand,
-          category: products.category,
-          description: products.description,
-          status: products.status,
-          subProductStatus: products.subProductStatus,
-          deliveryMode: products.deliveryMode,
-          tags: products.tags,
-          totalStocks: products.totalStocks,
-          averageRating: products.averageRating,
-          ratingCount: products.ratingCount,
-          createdAt: products.createdAt,
-          updatedAt: products.updatedAt,
-          specifications: products.specifications,
-        },
-        variant: {
-          id: variants.id,
-          productId: variants.productId,
-          name: variants.name,
-          sku: variants.sku,
-          slug: variants.slug,
-          color: variants.color,
-          material: variants.material,
-          dimensions: variants.dimensions,
-          weight: variants.weight,
-          storage: variants.storage,
-          stock: variants.stock,
-          mrp: variants.mrp,
-          ourPrice: variants.ourPrice,
-          productImages: variants.productImages,
-        },
+        productId: offerZone.productId,
+        variantId: offerZone.variantId,
+        createdAt: offerZone.createdAt,
+        product: products,
+        variant: variants,
       })
-      .from(featuredProducts)
-      .innerJoin(variants, eq(featuredProducts.variantId, variants.id))
-      .innerJoin(products, eq(featuredProducts.productId, products.id))
+      .from(offerZone)
+      .innerJoin(variants, eq(offerZone.variantId, variants.id))
+      .innerJoin(products, eq(offerZone.productId, products.id));
+
+    // If no offers, return an empty response
+    if (offers.length === 0) {
+      return NextResponse.json([], { status: 200 });
+    }
 
     // Fetch all variants for each product to include in the response
-    const productIds = [...new Set(featured.map((item) => item.productId))];
+    const productIds = [...new Set(offers.map((item) => item.productId))];
     const allVariants = await db
       .select({
         id: variants.id,
@@ -60,21 +32,16 @@ export async function GET() {
         name: variants.name,
         sku: variants.sku,
         slug: variants.slug,
-        color: variants.color,
-        material: variants.material,
-        dimensions: variants.dimensions,
-        weight: variants.weight,
-        storage: variants.storage,
         stock: variants.stock,
         mrp: variants.mrp,
         ourPrice: variants.ourPrice,
         productImages: variants.productImages,
       })
       .from(variants)
-      .where(sql`${variants.productId} IN ${productIds}`);
+      .where(inArray(variants.productId, productIds)); // Use inArray since productIds is non-empty
 
     // Map results to VariantSelection, including all variants in product
-    const response: any[] = featured.map(({ productId, variantId, product, variant }) => ({
+    const response: any[] = offers.map(({ productId, variantId, product, variant }) => ({
       productId,
       variantId,
       product: {
@@ -94,9 +61,9 @@ export async function GET() {
 
     return NextResponse.json(response, { status: 200 });
   } catch (error) {
-    console.error('[GET_FEATURED_PRODUCTS_ERROR]', error);
+    console.error('[GET_OFFER_ZONE_PRODUCTS_ERROR]', error);
     return NextResponse.json(
-      { message: 'Failed to fetch featured products' },
+      { message: 'Failed to fetch offer zone products' },
       { status: 500 }
     );
   }
@@ -143,8 +110,8 @@ export async function POST(req: Request) {
       }
     }
 
-    // Delete existing featured products
-    await db.delete(featuredProducts);
+    // Delete existing offer zone products
+    await db.delete(offerZone);
 
     // Prepare bulk insert values
     const insertValues = variantSelections.map(({ productId, variantId }) => ({
@@ -155,17 +122,17 @@ export async function POST(req: Request) {
     }));
 
     // Perform bulk insert
-    const result = await db.insert(featuredProducts).values(insertValues);
+    const result = await db.insert(offerZone).values(insertValues);
 
     return NextResponse.json({
-      message: 'Featured products updated successfully',
+      message: 'Offer zone products updated successfully',
       count: insertValues.length,
       result,
     }, { status: 200 });
   } catch (error) {
-    console.error('Error updating featured products:', error);
+    console.error('Error updating offer zone products:', error);
     return NextResponse.json(
-      { message: 'Failed to update featured products' },
+      { message: 'Failed to update offer zone products' },
       { status: 500 }
     );
   }
@@ -186,24 +153,24 @@ export async function DELETE(req: Request) {
     }
 
     const result = await db
-      .delete(featuredProducts)
-      .where(eq(featuredProducts.variantId, variantId));
+      .delete(offerZone)
+      .where(eq(offerZone.variantId, variantId));
 
     if (result.rowCount === 0) {
       return NextResponse.json(
-        { message: 'No featured product found with given variantId' },
+        { message: 'No offer zone product found with given variantId' },
         { status: 404 }
       );
     }
 
     return NextResponse.json(
-      { message: 'Featured product removed successfully' },
+      { message: 'Offer zone product removed successfully' },
       { status: 200 }
     );
   } catch (error) {
-    console.error('Error removing featured product:', error);
+    console.error('Error removing offer zone product:', error);
     return NextResponse.json(
-      { message: 'Failed to remove featured product' },
+      { message: 'Failed to remove offer zone product' },
       { status: 500 }
     );
   }

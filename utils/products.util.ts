@@ -44,9 +44,9 @@ export async function fetchSingleProduct(id: string) {
   }
 }
 
-export async function fetchFeaturedProducts() {
+export async function fetchOfferZoneProducts() {
   try {
-    const res = await fetch(`${API_BASE_URL}/api/products/featured`, {
+    const res = await fetch(`${API_BASE_URL}/api/products/offer-zone`, {
       method: 'GET',
       headers: {
         'Content-Type': 'application/json',

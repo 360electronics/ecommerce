@@ -1,146 +1,98 @@
+// api/products/[id]/route.ts
 import { NextRequest, NextResponse } from "next/server";
 import { db } from "@/db/drizzle";
 import { products, variants } from "@/db/schema/products/products.schema";
 import { eq } from "drizzle-orm";
 
-type Params = Promise<{ id: string }>;
-
-interface SpecificationGroup {
-  groupName: string;
-  fields: { fieldName: string; fieldValue: string }[];
-}
-
-interface Variant {
-  id: string;
-  productId: string;
-  name: string;
-  sku: string;
-  slug: string;
-  color: string;
-  material: string | null;
-  dimensions: string | null;
-  weight: string | null;
-  storage: string | null;
-  stock: string;
-  mrp: string;
-  ourPrice: string;
-  productImages: string[];
-  createdAt: Date;
-  updatedAt: Date;
-}
-
-interface Product {
-  id: string;
-  shortName: string;
-  description: string | null;
-  category: string;
-  brand: string;
-  status: "active" | "inactive";
-  subProductStatus: "active" | "inactive";
-  totalStocks: string;
-  deliveryMode: "standard" | "express";
-  tags: string | null;
-  specifications: SpecificationGroup[];
-  averageRating: string;
-  ratingCount: string;
-  createdAt: Date;
-  updatedAt: Date;
-}
-
-interface ProductResponse {
-  product: Product;
-  variants: Variant[];
-}
-
-interface ErrorResponse {
-  message: string;
-  error: string;
-}
-
-export async function GET(req: NextRequest, { params }: { params: Params }) {
+export async function PUT(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   try {
     const { id } = await params;
 
-    // Validate product ID
-    if (!id || typeof id !== "string" || id.trim() === "") {
-      return NextResponse.json<ErrorResponse>(
-        { message: "Invalid product ID", error: "Product ID is required and must be a non-empty string" },
-        { status: 400 }
-      );
-    }
+    console.log('Product id:', id)
+    const formData = await req.formData();
 
-    // Fetch the product
-    const productResult = await db
-      .select()
-      .from(products)
+    const shortName = formData.get('shortName') as string;
+    const fullName = formData.get('fullName') as string;
+    const slug = formData.get('slug') as string;
+    const category = formData.get('category') as string;
+    const subcategory = formData.get('subcategory') as string;
+    const brand = formData.get('brand') as string;
+    const description = formData.get('description') as string;
+    const status = formData.get('status') as string;
+    const isFeatured = formData.get('isFeatured') === 'true';
+    const deliveryMode = formData.get('deliveryMode') as string;
+    const tags = formData.get('tags') as string;
+    const warranty = formData.get('warranty') as string;
+    const metaTitle = formData.get('metaTitle') as string;
+    const metaDescription = formData.get('metaDescription') as string;
+    const totalStocks = parseInt(formData.get('totalStocks') as string);
+    const variantsData = JSON.parse(formData.get('variants') as string);
+    const specifications = JSON.parse(formData.get('specifications') as string);
+
+    // Update product
+    const updatedProduct = await db
+      .update(products)
+      .set({
+        shortName,
+        fullName,
+        slug,
+        category,
+        subcategory,
+        brand,
+        description,
+        status,
+        isFeatured,
+        deliveryMode,
+        tags: tags ? tags.split(',').map((t) => t.trim()) : [],
+        warranty,
+        metaTitle,
+        metaDescription,
+        totalStocks,
+        specifications,
+        updatedAt: new Date(),
+      })
       .where(eq(products.id, id))
-      .limit(1);
+      .returning();
 
-    if (!productResult || productResult.length === 0) {
-      return NextResponse.json<ErrorResponse>(
-        { message: "Product not found", error: `No product found with ID: ${id}` },
-        { status: 404 }
-      );
+    if (!updatedProduct.length) {
+      return NextResponse.json({ message: 'Product not found' }, { status: 404 });
     }
 
-    const product = productResult[0];
+    // Delete existing variants
+    await db.delete(variants).where(eq(variants.productId, id));
 
-    // Fetch associated variants
-    const variantResult = await db
-      .select()
-      .from(variants)
-      .where(eq(variants.productId, id));
-
-    // Structure the response
-    const responseData: ProductResponse = {
-      product: {
-        id: product.id,
-        shortName: product.shortName,
-        description: product.description || null,
-        category: product.category,
-        brand: product.brand,
-        status: product.status as "active" | "inactive",
-        subProductStatus: product.subProductStatus as "active" | "inactive",
-        totalStocks: product.totalStocks,
-        deliveryMode: product.deliveryMode as "standard" | "express",
-        tags: product.tags || null,
-        specifications: product.specifications || [],
-        averageRating: product.averageRating,
-        ratingCount: product.ratingCount,
-        createdAt: product.createdAt,
-        updatedAt: product.updatedAt,
-      },
-      variants: variantResult.map((variant) => ({
-        id: variant.id,
-        productId: variant.productId,
+    // Insert new variants
+    for (const variant of variantsData) {
+      const variantImages = formData.getAll(`variantImages_${variant.sku}`) as File[];
+      const imageUrls = variant.productImages || []; // Use existing images if provided
+      // Handle new image uploads (simplified; implement your image upload logic)
+      // For example, save images to a storage service and get URLs
+      const newImageUrls = variantImages.length > 0 ? [] : imageUrls; // Replace with actual upload logic
+      await db.insert(variants).values({
+        productId: id,
         name: variant.name,
         sku: variant.sku,
         slug: variant.slug,
-        color: variant.color,
-        material: variant.material || null,
-        dimensions: variant.dimensions || null,
-        weight: variant.weight || null,
-        storage: variant.storage || null,
-        stock: variant.stock,
-        mrp: variant.mrp,
-        ourPrice: variant.ourPrice,
-        productImages: variant.productImages || [],
-        createdAt: variant.createdAt,
-        updatedAt: variant.updatedAt,
-      })),
-    };
+        attributes: variant.attributes,
+        isBackorderable: variant.isBackorderable,
+        mrp: parseFloat(variant.mrp),
+        ourPrice: parseFloat(variant.ourPrice),
+        salePrice: variant.salePrice ? parseFloat(variant.salePrice) : null,
+        stock: parseInt(variant.stock),
+        lowStockThreshold: parseInt(variant.lowStockThreshold),
+        weight: variant.weight ? parseFloat(variant.weight) : null,
+        weightUnit: variant.weightUnit,
+        dimensions: variant.dimensions,
+        isDefault: variant.isDefault,
+        productImages: newImageUrls,
+      });
+    }
 
-    console.log(`Fetched product ID: ${id} with ${variantResult.length} variants`);
-
-    console.log(responseData)
-    return NextResponse.json(responseData, { status: 200 });
+    return NextResponse.json({ message: 'Product updated successfully' }, { status: 200 });
   } catch (error) {
-    console.error("[PRODUCT_GET_BY_ID_ERROR]", error);
-    return NextResponse.json<ErrorResponse>(
-      {
-        message: "Failed to fetch product",
-        error: error instanceof Error ? error.message : String(error),
-      },
+    console.error('[PRODUCT_PUT_ERROR]', error);
+    return NextResponse.json(
+      { message: 'Failed to update product', error: error instanceof Error ? error.message : String(error) },
       { status: 500 }
     );
   }

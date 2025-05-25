@@ -4,38 +4,30 @@ import { products, variants, categories, subcategories, brands } from '@/db/sche
 import { eq, and, isNull, inArray } from 'drizzle-orm';
 import { z } from 'zod';
 import { uploadProductImageToR2, extractKeyFromR2Url, deleteFromR2 } from '@/lib/r2';
-import formidable from 'formidable';
-import { IncomingMessage } from 'http';
-import { Buffer } from 'buffer';
-import fs from 'fs/promises';
 
-// Configure formidable for parsing multipart/form-data
-const form = formidable({ multiples: true, maxFileSize: 10 * 1024 * 1024 }); // 10MB limit
-
-// Parse FormData with formidable
-const parseForm = (req: NextRequest): Promise<{ fields: formidable.Fields; files: formidable.Files }> => {
-  return new Promise((resolve, reject) => {
-    form.parse(req as unknown as IncomingMessage, (err, fields, files) => {
-      if (err) reject(err);
-      else resolve({ fields, files });
-    });
-  });
-};
 
 // Utility to convert numeric fields to strings for Drizzle ORM
 const toNumericString = (value: number | undefined | null, defaultValue?: string): string | undefined =>
   value != null ? value.toString() : defaultValue;
 
-// Utility to parse JSON fields safely, avoiding JSX ambiguity
-const parseJSONField = (field: string | string[] | undefined, defaultValue: any = {}): any => {
+// Utility to parse JSON fields safely
+const parseJSONField = <T extends unknown>(
+  field: string | null | undefined,
+  defaultValue: T,
+  isTags: boolean = false
+): T => {
+  if (!field) return defaultValue;
+  if (isTags) {
+    return field.split(',').map((tag) => tag.trim()).filter(Boolean) as T;
+  }
   try {
-    const value = Array.isArray(field) ? field[0] : field || JSON.stringify(defaultValue);
-    return JSON.parse(value);
+    return JSON.parse(field) as T;
   } catch (error) {
-    console.warn('Failed to parse JSON field:', error);
+    console.warn('Failed to parse JSON field:', { field, error });
     return defaultValue;
   }
 };
+
 
 // Input validation schema for POST
 const createProductSchema = z.object({
@@ -65,41 +57,43 @@ const createProductSchema = z.object({
   ratingCount: z.number().int().min(0).default(0).optional(),
   metaTitle: z.string().max(255).optional(),
   metaDescription: z.string().optional(),
-  variant: z.object({
-    name: z.string().min(1).max(255),
-    sku: z.string().min(1).max(100),
-    slug: z.string().min(1).max(255),
-    attributes: z.record(z.string(), z.union([z.string(), z.number(), z.boolean()])).default({}),
-    stock: z.number().int().min(0).default(0),
-    lowStockThreshold: z.number().int().min(0).default(5),
-    isBackorderable: z.boolean().default(false),
-    mrp: z.number().positive(),
-    ourPrice: z.number().positive(),
-    salePrice: z.number().positive().optional(),
-    isOnSale: z.boolean().default(false),
-    productImages: z
-      .array(
-        z.object({
-          fileName: z.string().regex(/^[a-zA-Z0-9_-]+\.(jpg|jpeg|png|webp)$/i, 'Invalid file name'),
-          mimeType: z.enum(['image/jpeg', 'image/png', 'image/webp']),
-          alt: z.string().max(255),
-          isFeatured: z.boolean(),
-          displayOrder: z.number().int().min(0),
+  variants: z.array(
+    z.object({
+      id: z.string().uuid().optional(),
+      name: z.string().min(1).max(255),
+      sku: z.string().min(1).max(100),
+      slug: z.string().min(1).max(255),
+      attributes: z.record(z.string(), z.union([z.string(), z.number(), z.boolean()])).default({}),
+      stock: z.coerce.number().int().min(0).default(0),
+      lowStockThreshold: z.coerce.number().int().min(0).default(5),
+      isBackorderable: z.boolean().default(false),
+      mrp: z.coerce.number().positive(),
+      ourPrice: z.coerce.number().positive(),
+      salePrice: z.coerce.number().positive().optional(),
+      isOnSale: z.boolean().default(false),
+      productImages: z
+        .array(
+          z.object({
+            url: z.string().url(),
+            alt: z.string(),
+            isFeatured: z.boolean(),
+            displayOrder: z.number().int().min(0),
+          })
+        )
+        .default([]),
+      weight: z.coerce.number().positive().optional(),
+      weightUnit: z.string().max(10).default('kg'),
+      dimensions: z
+        .object({
+          length: z.number().positive(),
+          width: z.number().positive(),
+          height: z.number().positive(),
+          unit: z.string(),
         })
-      )
-      .default([]),
-    weight: z.number().positive().optional(),
-    weightUnit: z.string().max(10).default('kg'),
-    dimensions: z
-      .object({
-        length: z.number().positive(),
-        width: z.number().positive(),
-        height: z.number().positive(),
-        unit: z.string(),
-      })
-      .optional(),
-    isDefault: z.boolean().default(true),
-  }),
+        .optional(),
+      isDefault: z.boolean().default(true),
+    })
+  ).min(1),
 });
 
 // Input validation schema for PATCH (bulk update)
@@ -107,6 +101,7 @@ const bulkUpdateProductSchema = z.object({
   status: z.enum(['inactive', 'discontinued']).optional(),
   delete: z.boolean().default(false),
 });
+
 
 // GET: Fetch all products with related data
 export async function GET() {
@@ -143,6 +138,8 @@ export async function GET() {
       return acc;
     }, {} as Record<string, any>);
 
+    // console.log(groupedProducts)
+
     return NextResponse.json(Object.values(groupedProducts));
   } catch (error) {
     console.error('Error fetching products:', error);
@@ -153,80 +150,74 @@ export async function GET() {
 // POST: Add a new product with its variant and upload images to R2
 export async function POST(req: NextRequest) {
   try {
-    // Parse multipart/form-data
-    const { fields, files } = await parseForm(req);
+    // Parse FormData
+    const formData = await req.formData();
 
-    // Convert fields to appropriate types
-    const parseField = (field: string | string[] | undefined): string =>
-      Array.isArray(field) ? field[0] : field || '';
+    // Fetch category, subcategory, and brand IDs
+    const categorySlug = formData.get('category') as string;
+    const subcategoryName = formData.get('subcategory') as string;
+    const brandName = formData.get('brand') as string;
 
-    // Construct product data
+    // Query category ID by slug
+    const category = await db
+      .select({ id: categories.id })
+      .from(categories)
+      .where(eq(categories.slug, categorySlug))
+      .limit(1);
+    if (!category.length) {
+      return NextResponse.json({ error: `Category with slug '${categorySlug}' not found` }, { status: 400 });
+    }
+    const categoryId = category[0].id;
+
+    // Query subcategory ID by name (if provided)
+    let subcategoryId: string | undefined;
+    if (subcategoryName) {
+      const subcategory = await db
+        .select({ id: subcategories.id })
+        .from(subcategories)
+        .where(and(eq(subcategories.name, subcategoryName), eq(subcategories.categoryId, categoryId)))
+        .limit(1);
+      if (!subcategory.length) {
+        return NextResponse.json(
+          { error: `Subcategory '${subcategoryName}' not found for category '${categorySlug}'` },
+          { status: 400 }
+        );
+      }
+      subcategoryId = subcategory[0].id;
+    }
+
+    // Query brand ID by name
+    const brand = await db
+      .select({ id: brands.id })
+      .from(brands)
+      .where(eq(brands.name, brandName))
+      .limit(1);
+    if (!brand.length) {
+      return NextResponse.json({ error: `Brand '${brandName}' not found` }, { status: 400 });
+    }
+    const brandId = brand[0].id;
+
+    // Convert FormData to a structured object with resolved IDs
     const productData = {
-      shortName: parseField(fields.shortName),
-      fullName: parseField(fields.fullName),
-      slug: parseField(fields.slug),
-      description: fields.description ? parseField(fields.description) : undefined,
-      categoryId: parseField(fields.categoryId),
-      subcategoryId: fields.subcategoryId ? parseField(fields.subcategoryId) : undefined,
-      brandId: parseField(fields.brandId),
-      status: parseField(fields.status || 'active') as
-        | 'active'
-        | 'inactive'
-        | 'coming_soon'
-        | 'discontinued',
-      isFeatured: parseField(fields.isFeatured || 'false') === 'true',
-      totalStocks: parseInt(parseField(fields.totalStocks || '0')),
-      deliveryMode: parseField(fields.deliveryMode || 'standard') as
-        | 'standard'
-        | 'express'
-        | 'same_day'
-        | 'pickup',
-      tags: parseJSONField(fields.tags, []) as string[],
-      attributes: parseJSONField(fields.attributes, {}) as Record<string, string | number | boolean>,
-      specifications: parseJSONField(fields.specifications, []) as {
-        groupName: string;
-        fields: { fieldName: string; fieldValue: string }[];
-      }[],
-      warranty: fields.warranty ? parseField(fields.warranty) : undefined,
-      averageRating: fields.averageRating
-        ? parseFloat(parseField(fields.averageRating))
-        : undefined,
-      ratingCount: fields.ratingCount ? parseInt(parseField(fields.ratingCount)) : undefined,
-      metaTitle: fields.metaTitle ? parseField(fields.metaTitle) : undefined,
-      metaDescription: fields.metaDescription ? parseField(fields.metaDescription) : undefined,
-      variant: {
-        name: parseField(fields['variant.name']),
-        sku: parseField(fields['variant.sku']),
-        slug: parseField(fields['variant.slug']),
-        attributes: parseJSONField(fields['variant.attributes'], {}) as Record<
-          string,
-          string | number | boolean
-        >,
-        stock: parseInt(parseField(fields['variant.stock'] || '0')),
-        lowStockThreshold: parseInt(parseField(fields['variant.lowStockThreshold'] || '5')),
-        isBackorderable: parseField(fields['variant.isBackorderable'] || 'false') === 'true',
-        mrp: parseFloat(parseField(fields['variant.mrp'])),
-        ourPrice: parseFloat(parseField(fields['variant.ourPrice'])),
-        salePrice: fields['variant.salePrice']
-          ? parseFloat(parseField(fields['variant.salePrice']))
-          : undefined,
-        isOnSale: parseField(fields['variant.isOnSale'] || 'false') === 'true',
-        productImages: parseJSONField(fields['variant.productImages'], []) as {
-          fileName: string;
-          mimeType: string;
-          alt: string;
-          isFeatured: boolean;
-          displayOrder: number;
-        }[],
-        weight: fields['variant.weight']
-          ? parseFloat(parseField(fields['variant.weight']))
-          : undefined,
-        weightUnit: parseField(fields['variant.weightUnit'] || 'kg'),
-        dimensions: parseJSONField(fields['variant.dimensions'], undefined) as
-          | { length: number; width: number; height: number; unit: string }
-          | undefined,
-        isDefault: parseField(fields['variant.isDefault'] || 'true') === 'true',
-      },
+      shortName: formData.get('shortName') as string,
+      fullName: formData.get('fullName') as string,
+      slug: formData.get('slug') as string,
+      description: formData.get('description') as string,
+      categoryId, // Use resolved UUID
+      subcategoryId, // Use resolved UUID or undefined
+      brandId, // Use resolved UUID
+      status: (formData.get('status') as string) || 'active',
+      isFeatured: formData.get('isFeatured') === 'true',
+      totalStocks: parseInt(formData.get('totalStocks') as string || '0'),
+      deliveryMode: (formData.get('deliveryMode') as string) || 'standard',
+      tags: parseJSONField<string[]>(formData.get('tags') as string, [], true),
+      warranty: formData.get('warranty') as string,
+      averageRating: parseFloat(formData.get('averageRating') as string || '0'),
+      ratingCount: parseInt(formData.get('ratingCount') as string || '0'),
+      metaTitle: formData.get('metaTitle') as string,
+      metaDescription: formData.get('metaDescription') as string,
+      specifications: parseJSONField(formData.get('specifications') as string, []),
+      variants: parseJSONField(formData.get('variants') as string, []),
     };
 
     // Validate the parsed data
@@ -242,107 +233,112 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: 'Product slug already exists' }, { status: 400 });
     }
 
-    // Upload images to R2 and track for potential cleanup
-    const tempVariantId = 'temp-' + Date.now().toString();
-    const uploadedImages: { url: string; alt: string; isFeatured: boolean; displayOrder: number }[] = [];
+    // Insert product
+    const [newProduct] = await db
+      .insert(products)
+      .values({
+        shortName: validatedData.shortName,
+        fullName: validatedData.fullName,
+        slug: validatedData.slug,
+        description: validatedData.description,
+        categoryId: validatedData.categoryId,
+        subcategoryId: validatedData.subcategoryId,
+        brandId: validatedData.brandId,
+        status: validatedData.status,
+        isFeatured: validatedData.isFeatured,
+        totalStocks: toNumericString(validatedData.totalStocks, '0'),
+        deliveryMode: validatedData.deliveryMode,
+        tags: validatedData.tags,
+        attributes: validatedData.attributes || {},
+        specifications: validatedData.specifications,
+        warranty: validatedData.warranty,
+        averageRating: toNumericString(validatedData.averageRating, '0.0'),
+        ratingCount: toNumericString(validatedData.ratingCount, '0'),
+        metaTitle: validatedData.metaTitle,
+        metaDescription: validatedData.metaDescription,
+      })
+      .returning();
 
-    try {
-      for (const [index, image] of validatedData.variant.productImages.entries()) {
-        const file = files[`variant.productImages[${index}].file`];
-        if (!file) {
-          throw new Error(`No file provided for image at index ${index}`);
+    // Insert all variants and handle image uploads
+    const newVariants = [];
+    for (const variantData of validatedData.variants) {
+      // Handle image uploads for this variant
+      const uploadedImages = [];
+      const imageFiles = formData.getAll(`variantImages_${variantData.sku}`) as File[];
+      for (const [index, imageFile] of imageFiles.entries()) {
+        if (imageFile && imageFile.size > 0) {
+          const buffer = Buffer.from(await imageFile.arrayBuffer());
+          const fileName = `${variantData.sku}-${index}-${imageFile.name}`;
+          const mimeType = imageFile.type;
+
+          // Upload image to R2
+          const imageUrl = await uploadProductImageToR2(
+            validatedData.shortName,
+            variantData.sku,
+            buffer,
+            mimeType,
+            fileName
+          );
+
+          // Add to uploaded images array
+          uploadedImages.push({
+            url: imageUrl,
+            alt: `Image for ${variantData.name} ${index + 1}`,
+            isFeatured: index === 0,
+            displayOrder: index,
+          });
         }
-        const fileData = Array.isArray(file) ? file[0] : file;
-        const buffer = await fs.readFile(fileData.filepath);
-
-        const url = await uploadProductImageToR2(
-          validatedData.shortName,
-          tempVariantId,
-          buffer,
-          image.mimeType,
-          image.fileName
-        );
-
-        uploadedImages.push({
-          url,
-          alt: image.alt,
-          isFeatured: image.isFeatured,
-          displayOrder: image.displayOrder,
-        });
       }
 
-      // Insert product
-      const [newProduct] = await db
-        .insert(products)
-        .values({
-          shortName: validatedData.shortName,
-          fullName: validatedData.fullName,
-          slug: validatedData.slug,
-          description: validatedData.description,
-          categoryId: validatedData.categoryId,
-          subcategoryId: validatedData.subcategoryId,
-          brandId: validatedData.brandId,
-          status: validatedData.status,
-          isFeatured: validatedData.isFeatured,
-          totalStocks: toNumericString(validatedData.totalStocks, '0'),
-          deliveryMode: validatedData.deliveryMode,
-          tags: validatedData.tags,
-          attributes: validatedData.attributes,
-          specifications: validatedData.specifications,
-          warranty: validatedData.warranty,
-          averageRating: toNumericString(validatedData.averageRating, '0.0'),
-          ratingCount: toNumericString(validatedData.ratingCount, '0'),
-          metaTitle: validatedData.metaTitle,
-          metaDescription: validatedData.metaDescription,
-        })
-        .returning();
+      // Use only uploaded images
+      const finalProductImages = uploadedImages;
 
-      // Insert variant - using the newly created product's ID
+      // Insert variant with updated productImages
       const [newVariant] = await db
         .insert(variants)
         .values({
-          productId: newProduct.id, // Use the ID from the newly created product
-          name: validatedData.variant.name,
-          sku: validatedData.variant.sku,
-          slug: validatedData.variant.slug,
-          attributes: validatedData.variant.attributes,
-          stock: toNumericString(validatedData.variant.stock, '0') || '0',
-          lowStockThreshold: toNumericString(validatedData.variant.lowStockThreshold, '5') || '5',
-          isBackorderable: validatedData.variant.isBackorderable,
-          mrp: toNumericString(validatedData.variant.mrp, '0') || '0',
-          ourPrice: toNumericString(validatedData.variant.ourPrice, '0') || '0',
-          salePrice: toNumericString(validatedData.variant.salePrice),
-          isOnSale: validatedData.variant.isOnSale,
-          productImages: uploadedImages,
-          weight: toNumericString(validatedData.variant.weight),
-          weightUnit: validatedData.variant.weightUnit,
-          dimensions: validatedData.variant.dimensions,
-          isDefault: validatedData.variant.isDefault,
+          productId: newProduct.id,
+          name: variantData.name,
+          sku: variantData.sku,
+          slug: variantData.slug,
+          attributes: variantData.attributes,
+          stock: toNumericString(variantData.stock, '0') || '0',
+          lowStockThreshold: toNumericString(variantData.lowStockThreshold, '5') || '5',
+          isBackorderable: variantData.isBackorderable,
+          mrp: toNumericString(variantData.mrp, '0') || '0',
+          ourPrice: toNumericString(variantData.ourPrice, '0') || '0',
+          salePrice: toNumericString(variantData.salePrice),
+          isOnSale: variantData.isOnSale,
+          productImages: finalProductImages,
+          weight: toNumericString(variantData.weight),
+          weightUnit: variantData.weightUnit,
+          dimensions: variantData.dimensions,
+          isDefault: variantData.isDefault,
         })
         .returning();
 
-      return NextResponse.json({ product: newProduct, variant: newVariant }, { status: 201 });
-    } catch (error) {
-      // Clean up uploaded images on failure
-      for (const image of uploadedImages) {
-        const key = extractKeyFromR2Url(image.url);
-        if (key) {
-          await deleteFromR2(key).catch((err) =>
-            console.warn(`Failed to delete R2 image ${key} during cleanup:`, err)
-          );
-        }
-      }
-      throw error;
+      newVariants.push(newVariant);
     }
+    return NextResponse.json(
+      {
+        product: newProduct,
+        variants: newVariants,
+      },
+      { status: 201 }
+    );
   } catch (error) {
     if (error instanceof z.ZodError) {
+      console.error('Validation error:', error.errors);
       return NextResponse.json({ error: error.errors }, { status: 400 });
     }
-    if (error instanceof Error && error.message.includes('No file provided')) {
-      return NextResponse.json({ error: error.message }, { status: 400 });
-    }
     console.error('Error creating product:', error);
-    return NextResponse.json({ error: 'Internal Server Error' }, { status: 500 });
+    return NextResponse.json(
+      {
+        error: 'Internal Server Error',
+        details: error instanceof Error ? error.message : 'Unknown error',
+      },
+      { status: 500 }
+    );
   }
 }
 

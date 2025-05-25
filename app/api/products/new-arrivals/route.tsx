@@ -1,53 +1,27 @@
-import { newArrivals, products, variants } from "@/db/schema/products/products.schema"
-import { db } from "@/db/drizzle"
-import { NextResponse } from "next/server"
-import { eq, sql } from "drizzle-orm"
+import { db } from "@/db/drizzle";
+import { newArrivals, products, variants } from "@/db/schema";
+import { eq, inArray, sql } from "drizzle-orm";
+import { NextResponse } from "next/server";
+
 
 export async function GET() {
   try {
     const newArrival = await db
-    .select({
-      productId: newArrivals.productId,
-      variantId: newArrivals.variantId,
-      createdAt: newArrivals.createdAt,
-      product: {
-        id: products.id,
-        shortName: products.shortName,
-        brand: products.brand,
-        category: products.category,
-        description: products.description,
-        status: products.status,
-        subProductStatus: products.subProductStatus,
-        deliveryMode: products.deliveryMode,
-        tags: products.tags,
-        totalStocks: products.totalStocks,
-        averageRating: products.averageRating,
-        ratingCount: products.ratingCount,
-        createdAt: products.createdAt,
-        updatedAt: products.updatedAt,
-        specifications: products.specifications,
-      },
-      variant: {
-        id: variants.id,
-        productId: variants.productId,
-        name: variants.name,
-        sku: variants.sku,
-        slug: variants.slug,
-        color: variants.color,
-        material: variants.material,
-        dimensions: variants.dimensions,
-        weight: variants.weight,
-        storage: variants.storage,
-        stock: variants.stock,
-        mrp: variants.mrp,
-        ourPrice: variants.ourPrice,
-        productImages: variants.productImages,
-      },
-    })
-    .from(newArrivals)
-    .innerJoin(variants, eq(newArrivals.variantId, variants.id))
-    .innerJoin(products, eq(newArrivals.productId, products.id))
+      .select({
+        productId: newArrivals.productId,
+        variantId: newArrivals.variantId,
+        createdAt: newArrivals.createdAt,
+        product: products,
+        variant: variants,
+      })
+      .from(newArrivals)
+      .innerJoin(variants, eq(newArrivals.variantId, variants.id))
+      .innerJoin(products, eq(newArrivals.productId, products.id));
 
+    // If no offers, return an empty response
+    if (newArrival.length === 0) {
+      return NextResponse.json([], { status: 200 });
+    }
 
     // Fetch all variants for each product to include in the response
     const productIds = [...new Set(newArrival.map((item) => item.productId))];
@@ -58,18 +32,13 @@ export async function GET() {
         name: variants.name,
         sku: variants.sku,
         slug: variants.slug,
-        color: variants.color,
-        material: variants.material,
-        dimensions: variants.dimensions,
-        weight: variants.weight,
-        storage: variants.storage,
         stock: variants.stock,
         mrp: variants.mrp,
         ourPrice: variants.ourPrice,
         productImages: variants.productImages,
       })
       .from(variants)
-      .where(sql`${variants.productId} IN ${productIds}`);
+      .where(inArray(variants.productId, productIds)); // Use inArray since productIds is non-empty
 
     // Map results to VariantSelection, including all variants in product
     const response: any[] = newArrival.map(({ productId, variantId, product, variant }) => ({
@@ -92,7 +61,7 @@ export async function GET() {
 
     return NextResponse.json(response, { status: 200 });
   } catch (error) {
-    console.error('[GET_NEW_ARRIVALS_ERROR]', error);
+    console.error('[GET_NEW_ARRIVALS_PRODUCTS_ERROR]', error);
     return NextResponse.json(
       { message: 'Failed to fetch new arrivals products' },
       { status: 500 }
@@ -141,7 +110,7 @@ export async function POST(req: Request) {
       }
     }
 
-    // Delete existing featured products
+    // Delete existing offer zone products
     await db.delete(newArrivals);
 
     // Prepare bulk insert values
@@ -156,14 +125,14 @@ export async function POST(req: Request) {
     const result = await db.insert(newArrivals).values(insertValues);
 
     return NextResponse.json({
-      message: 'Featured products updated successfully',
+      message: 'New Arrivals products updated successfully',
       count: insertValues.length,
       result,
     }, { status: 200 });
   } catch (error) {
-    console.error('Error updating featured products:', error);
+    console.error('Error updating New Arrivals products:', error);
     return NextResponse.json(
-      { message: 'Failed to update featured products' },
+      { message: 'Failed to update New Arrivals products' },
       { status: 500 }
     );
   }
@@ -189,19 +158,19 @@ export async function DELETE(req: Request) {
 
     if (result.rowCount === 0) {
       return NextResponse.json(
-        { message: 'No featured product found with given variantId' },
+        { message: 'No New Arrivals product found with given variantId' },
         { status: 404 }
       );
     }
 
     return NextResponse.json(
-      { message: 'Featured product removed successfully' },
+      { message: 'New Arrivals product removed successfully' },
       { status: 200 }
     );
   } catch (error) {
-    console.error('Error removing featured product:', error);
+    console.error('Error removing New Arrivals product:', error);
     return NextResponse.json(
-      { message: 'Failed to remove featured product' },
+      { message: 'Failed to remove New Arrivals product' },
       { status: 500 }
     );
   }

@@ -2,8 +2,8 @@
 
 import { create } from 'zustand';
 import toast from 'react-hot-toast';
-import { Product } from '@/types/product';
 import { Banner } from '@/types/banner';
+import { Product } from './types';
 
 interface HomeState {
   banners: Banner[];
@@ -46,7 +46,7 @@ export const useHomeStore = create<HomeState>()((set, get) => ({
       set({ isLoading: true, error: null });
       const [bannersRes, featuredRes, newArrivalsRes, gamersZoneRes, brandProductsRes] = await Promise.all([
         fetch('/api/banner', { cache: 'no-store' }),
-        fetch('/api/products/featured', { cache: 'no-store' }),
+        fetch('/api/products/offer-zone', { cache: 'no-store' }),
         fetch('/api/products/new-arrivals', { cache: 'no-store' }),
         fetch('/api/products/gamers-zone', { cache: 'no-store' }),
         fetch('/api/products', { cache: 'no-store' }),
