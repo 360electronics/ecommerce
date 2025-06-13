@@ -1,60 +1,92 @@
-"use client"
+'use client';
 
-import { useState, useRef, useEffect, useMemo } from "react"
-import { Search, Save, Check, X } from "lucide-react"
-import { Input } from "@/components/ui/input"
-import { Button } from "@/components/ui/button"
-import { fetchProducts as fetchAllProducts, fetchNewArrivalsProducts } from "@/utils/products.util"
-import { Product } from "@/types/product"
-import Image from "next/image"
+import { useState, useRef, useEffect, useMemo, useCallback } from 'react';
+import { Search, Save, Check, X, AlertCircle } from 'lucide-react';
+import { Input } from '@/components/ui/input';
+import { Button } from '@/components/ui/button';
+import { fetchProducts as fetchAllProducts, fetchNewArrivalsProducts } from '@/utils/products.util';
+import Image from 'next/image';
+import { cn } from '@/lib/utils';
+
+// Types
+interface Product {
+  id: string;
+  shortName: string;
+  fullName: string;
+  description: string | null;
+  slug: string;
+  variants: Variant[];
+}
+
+interface Variant {
+  id: string;
+  name: string;
+  productImages: { url: string; alt: string; isFeatured: boolean; displayOrder: number }[];
+  ourPrice: string;
+  mrp: string;
+  sku: string;
+}
+
+interface NewArrivalsSelection {
+  productId: string;
+  variantId: string;
+  product: Product;
+  variant: Variant;
+  displayName: string; // Combined product + variant name
+}
 
 export default function NewArrivalsPage() {
-  const [searchTerm, setSearchTerm] = useState("")
-  const [searchResults, setSearchResults] = useState<any[]>([])
-  const [newArrivalsVariants, setNewArrivalsVariants] = useState<any[]>([])
-  const [showResults, setShowResults] = useState(false)
-  const [isSaved, setIsSaved] = useState(false)
-  const [isLoading, setIsLoading] = useState(false)
-  const searchResultsRef = useRef<HTMLDivElement>(null)
-  const searchInputRef = useRef<HTMLInputElement>(null)
-  const [allProducts, setAllProducts] = useState<Product[]>([])
-  const [loading, setLoading] = useState(true)
+  const [searchTerm, setSearchTerm] = useState('');
+  const [searchResults, setSearchResults] = useState<NewArrivalsSelection[]>([]);
+  const [newArrivalsVariants, setNewArrivalsVariants] = useState<NewArrivalsSelection[]>([]);
+  const [showResults, setShowResults] = useState(false);
+  const [isSaved, setIsSaved] = useState(false);
+  const [isLoading, setIsLoading] = useState(false);
+  const [isFetching, setIsFetching] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+  const searchResultsRef = useRef<HTMLDivElement>(null);
+  const searchInputRef = useRef<HTMLInputElement>(null);
+  const [allProducts, setAllProducts] = useState<Product[]>([]);
 
+  // Fetch initial data
   useEffect(() => {
     const fetchData = async () => {
-      setLoading(true)
+      setIsFetching(true);
+      setError(null);
       try {
-        const products = await fetchAllProducts()
-        const newArrivals = await fetchNewArrivalsProducts()
+        const [products, newArrivals] = await Promise.all([
+          fetchAllProducts(),
+          fetchNewArrivalsProducts(),
+        ]);
 
-        if (products) setAllProducts(products)
-        if (newArrivals) {
-          setNewArrivalsVariants(
-            newArrivals.map(({ productId, variantId, product, variant }: any) => ({
-              productId,
-              variantId,
-              product,
-              variant,
-            }))
-          );
-        }
+        setAllProducts(products || []);
+        setNewArrivalsVariants(
+          newArrivals?.map(({ productId, variantId, product, variant }: any) => ({
+            productId,
+            variantId,
+            product,
+            variant,
+            displayName: `${product.shortName} - ${variant.name}`,
+          })) || []
+        );
       } catch (error) {
-        console.error("Error fetching products:", error)
+        console.error('Error fetching data:', error);
+        setError('Failed to load products. Please try again.');
+        alert('Failed to load products. Please try again.');
       } finally {
-        setLoading(false)
+        setIsFetching(false);
       }
-    }
+    };
 
-    fetchData()
-  }, [])
+    fetchData();
+  }, []);
 
-  // Filter available products based on search term
+  // Filter available variants
   const filteredVariants = useMemo(() => {
-    if (!searchTerm.trim()) return []
+    if (!searchTerm.trim()) return [];
 
-    const newArrivalsVariantIds = newArrivalsVariants.map(p => p.id)
+    const newArrivalsVariantIds = new Set(newArrivalsVariants.map((v) => v.variantId));
 
-    // Flatten products to variants, excluding already featured ones
     return allProducts
       .flatMap((product) =>
         product.variants.map((variant) => ({
@@ -62,22 +94,29 @@ export default function NewArrivalsPage() {
           variantId: variant.id,
           product,
           variant,
+          displayName: `${product.fullName} - ${variant.name}`,
         }))
       )
-      .filter((selection) => !newArrivalsVariantIds.includes(selection.variantId))
-      .filter(
-        (selection) =>
-          selection.variant.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-          selection.product.shortName.toLowerCase().includes(searchTerm.toLowerCase()) ||
-          selection.variant.id.includes(searchTerm)
+      .filter((selection) => !newArrivalsVariantIds.has(selection.variantId))
+      .filter((selection) =>
+        [
+          selection.displayName,
+          selection.product.shortName,
+          selection.product.fullName,
+          selection.variant.name,
+          selection.variant.id,
+          selection.variant.sku,
+          selection.product.description || '',
+        ].some((field) => field.toLowerCase().includes(searchTerm.toLowerCase()))
       );
   }, [allProducts, newArrivalsVariants, searchTerm]);
-  // Update search results when filtered products change
-  useEffect(() => {
-    setSearchResults(filteredVariants)
-  }, [filteredVariants])
 
-  // Close search results when clicking outside
+  // Update search results
+  useEffect(() => {
+    setSearchResults(filteredVariants);
+  }, [filteredVariants]);
+
+  // Handle click outside
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
       if (
@@ -86,41 +125,42 @@ export default function NewArrivalsPage() {
         searchInputRef.current &&
         !searchInputRef.current.contains(event.target as Node)
       ) {
-        setShowResults(false)
+        setShowResults(false);
       }
-    }
+    };
 
-    document.addEventListener("mousedown", handleClickOutside)
-    return () => {
-      document.removeEventListener("mousedown", handleClickOutside)
-    }
-  }, [])
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, []);
 
-  // Handle search with debounce
-  const handleSearch = (value: string) => {
-    setSearchTerm(value)
-    setIsLoading(true)
-    setShowResults(true)
+  // Handle search
+  const handleSearch = useCallback((value: string) => {
+    setSearchTerm(value);
+    setIsLoading(true);
+    setShowResults(true);
 
-    // Simple debounce
-    setTimeout(() => {
-      setIsLoading(false)
-    }, 300)
-  }
+    const timeout = setTimeout(() => setIsLoading(false), 300);
+    return () => clearTimeout(timeout);
+  }, []);
 
   // Handle variant selection
-  const handleSelectVariant = (selection: any) => {
-    setNewArrivalsVariants((prev) => [...prev, selection]);
-    setSearchResults((prev) => prev.filter((v) => v.variantId !== selection.variantId));
-    setIsSaved(false);
-    setSearchTerm('');
-    setShowResults(false);
-  };
+  const handleSelectVariant = useCallback(async (selection: NewArrivalsSelection) => {
+    try {
+      setNewArrivalsVariants((prev) => [...prev, selection]);
+      setSearchResults((prev) => prev.filter((v) => v.variantId !== selection.variantId));
+      setIsSaved(false);
+      setSearchTerm('');
+      setShowResults(false);
+      alert('Variant added to New Arrivals');
+    } catch (error) {
+      console.error('Error selecting variant:', error);
+      alert('Failed to add variant');
+    }
+  }, []);
 
-
-  // Handle product removal
   // Handle variant removal
-  const handleRemoveVariant = async (variantId: string) => {
+  const handleRemoveVariant = useCallback(async (variantId: string) => {
+    setIsLoading(true);
     try {
       const res = await fetch('/api/products/new-arrivals', {
         method: 'DELETE',
@@ -132,14 +172,17 @@ export default function NewArrivalsPage() {
 
       setNewArrivalsVariants((prev) => prev.filter((v) => v.variantId !== variantId));
       setIsSaved(false);
+      alert('Variant removed from New Arrivals');
     } catch (error) {
       console.error('Remove variant error:', error);
-      alert('Failed to remove featured variant');
+      alert('Failed to remove variant');
+    } finally {
+      setIsLoading(false);
     }
-  };
+  }, []);
 
   // Handle save
-  const handleSave = async () => {
+  const handleSave = useCallback(async () => {
     setIsLoading(true);
     try {
       const variantSelections = newArrivalsVariants.map(({ productId, variantId }) => ({
@@ -155,37 +198,57 @@ export default function NewArrivalsPage() {
 
       if (!response.ok) {
         const errorData = await response.json();
-        throw new Error(errorData.message || 'Failed to save featured variants');
+        throw new Error(errorData.message || 'Failed to save new arrivals variants');
       }
 
       setIsSaved(true);
+      alert('New Arrivals variants saved successfully');
       setTimeout(() => setIsSaved(false), 3000);
     } catch (error) {
-      console.error('Error saving featured variants:', error);
-      alert(error instanceof Error ? error.message : 'Failed to save featured variants');
+      console.error('Error saving new arrivals variants:', error);
+      alert(error instanceof Error ? error.message : 'Failed to save new arrivals variants');
     } finally {
       setIsLoading(false);
     }
-  };
-
+  }, [newArrivalsVariants]);
 
   // Clear search
-  const clearSearch = () => {
-    setSearchTerm("")
-    setShowResults(false)
+  const clearSearch = useCallback(() => {
+    setSearchTerm('');
+    setShowResults(false);
+  }, []);
+
+  if (isFetching) {
+    return (
+      <div className="flex items-center justify-center h-[50vh]">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600 mx-auto mb-2"></div>
+          <p>Loading products...</p>
+        </div>
+      </div>
+    );
   }
 
-  if (loading) {
-    return <div className="p-8 text-center">Loading...</div>
+  if (error) {
+    return (
+      <div className="flex items-center justify-center h-[50vh]">
+        <div className="text-center space-y-4">
+          <AlertCircle className="h-12 w-12 text-red-500 mx-auto" />
+          <p className="text-red-600">{error}</p>
+          <Button onClick={() => window.location.reload()}>Retry</Button>
+        </div>
+      </div>
+    );
   }
 
   return (
     <div className="container mx-auto py-8">
+      {/* Success message */}
       {isSaved && (
-        <div className="mb-4 rounded-md bg-green-50 p-4 text-green-800 flex items-center justify-between">
+        <div className="mb-6 rounded-md bg-green-50 p-4 text-green-800 flex items-center justify-between">
           <div className="flex items-center">
             <Check className="h-5 w-5 mr-2" />
-            New Arrivals products have been saved successfully!
+            New Arrivals variants saved successfully!
           </div>
           <Button variant="ghost" size="sm" onClick={() => setIsSaved(false)}>
             <X className="h-4 w-4" />
@@ -193,25 +256,27 @@ export default function NewArrivalsPage() {
         </div>
       )}
 
-      {/* Search and add products */}
-      <div className="mb-8">
-        <div className="relative flex flex-row items-center justify-between">
-          <div className="relative w-full mr-4">
+      {/* Search and save controls */}
+      <div className="mb-8 space-y-4">
+        <div className="flex flex-col sm:flex-row gap-4">
+          <div className="relative flex-1">
             <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
             <Input
               ref={searchInputRef}
-              placeholder="Search variants by name or ID"
+              placeholder="Search variants by name, SKU, ID, or product details"
               value={searchTerm}
               onChange={(e) => handleSearch(e.target.value)}
               onFocus={() => {
                 if (searchTerm.trim()) setShowResults(true);
               }}
-              className="pl-10 py-4 w-full pr-10"
+              className="pl-10 pr-10 py-6"
+              aria-label="Search variants"
             />
             {searchTerm && (
               <button
                 onClick={clearSearch}
                 className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600"
+                aria-label="Clear search"
               >
                 <X className="h-4 w-4" />
               </button>
@@ -219,168 +284,150 @@ export default function NewArrivalsPage() {
           </div>
           <Button
             onClick={handleSave}
-            className="flex items-center gap-2 bg-blue-600 hover:bg-blue-700 text-white"
             disabled={newArrivalsVariants.length === 0 || isLoading}
+            className="flex items-center gap-2 bg-blue-600 hover:bg-blue-700"
+            aria-label="Save new arrivals variants"
           >
             <Save className="h-4 w-4" />
-            Save
+            {isLoading ? 'Saving...' : 'Save'}
           </Button>
         </div>
       </div>
 
-      {/* Search results as product cards */}
+      {/* Search results */}
       {showResults && (
         <div ref={searchResultsRef} className="mb-8">
           <div className="flex justify-between items-center mb-4">
-            <h3 className="text-lg font-medium">
-              Search Results {searchResults.length > 0 ? `(${searchResults.length})` : ""}
+            <h3 className="text-lg font-semibold">
+              Search Results {searchResults.length > 0 ? `(${searchResults.length})` : ''}
             </h3>
-            {searchResults.length > 0 && (
-              <Button variant="ghost" size="sm" onClick={() => setShowResults(false)}>
-                Close
-              </Button>
-            )}
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={() => setShowResults(false)}
+              aria-label="Close search results"
+            >
+              Close
+            </Button>
           </div>
-
           {isLoading ? (
             <div className="rounded-md border border-dashed border-gray-300 bg-gray-50 p-8 text-center">
-              <p className="text-gray-500">Searching products...</p>
+              <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-blue-600 mx-auto mb-2"></div>
+              <p className="text-gray-500">Searching variants...</p>
             </div>
           ) : searchResults.length > 0 ? (
-            <div className="grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-3">
+            <div className="grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-3">
               {searchResults.map((selection) => (
-                <div
+                <VariantCard
                   key={selection.variantId}
-                  className="relative cursor-pointer transition-transform hover:scale-105"
-                  onClick={() => handleSelectVariant(selection)}
-                >
-                  <div className="absolute right-3 top-3 z-20">
-                    <Button
-                      size="sm"
-                      variant="secondary"
-                      className="bg-blue-500 hover:bg-blue-600 text-white"
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        handleSelectVariant(selection);
-                      }}
-                    >
-                      Add
-                    </Button>
-                  </div>
-                  <div>
-                    <div className="mb-4 relative w-full aspect-square border group border-gray-100 rounded-md bg-[#F4F4F4] overflow-hidden">
-                      <div className="absolute inset-0 flex items-center justify-center p-6">
-                        <Image
-                          src={selection.variant.productImages[0] ?? '/placeholder.png'}
-                          alt={selection.variant.name}
-                          width={250}
-                          height={250}
-                          className="max-h-full max-w-full object-contain group-hover:scale-105 duration-200"
-                        />
-                      </div>
-                    </div>
-                    <div className="space-y-2">
-                      <h3 className="text-base font-medium text-gray-900 line-clamp-2">
-                        {selection.variant.name}
-                      </h3>
-                      <p className="text-sm text-gray-500">{selection.product.shortName}</p>
-                      <div className="flex items-center flex-wrap gap-2">
-                        {selection.variant.ourPrice && (
-                          <span className="text-lg font-bold">
-                            ₹{Number(selection.variant.ourPrice).toLocaleString()}
-                          </span>
-                        )}
-                        {selection.variant.mrp &&
-                          Number(selection.variant.mrp) > Number(selection.variant.ourPrice) && (
-                            <span className="text-sm text-gray-500 line-through">
-                              MRP {Number(selection.variant.mrp).toLocaleString()}
-                            </span>
-                          )}
-                      </div>
-                    </div>
-                  </div>
-                </div>
+                  selection={selection}
+                  onSelect={(sel) => handleSelectVariant(sel as NewArrivalsSelection)}
+                  actionLabel="Add"
+                  actionVariant="secondary"
+                />
               ))}
             </div>
           ) : (
             <div className="rounded-md border border-dashed border-gray-300 bg-gray-50 p-8 text-center">
               <p className="text-gray-500">
-                {searchTerm.trim() !== ""
-                  ? "No products found or all matching products are already newarrivals."
-                  : "Type to search for products to add to newarrivals list."}
+                {searchTerm.trim()
+                  ? 'No variants found or all matching variants are already in New Arrivals.'
+                  : 'Type to search for variants to add to New Arrivals.'}
               </p>
             </div>
           )}
         </div>
       )}
 
-      {/* Selected newarrivals products */}
+      {/* Current New Arrivals variants */}
       <div>
-        <h2 className="mb-4 text-lg font-medium">Current NewArrivals Products ({newArrivalsVariants.length})</h2>
+        <h2 className="mb-4 text-lg font-semibold">
+          Current New Arrivals Variants ({newArrivalsVariants.length})
+        </h2>
         {newArrivalsVariants.length > 0 ? (
-          <div className="grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-3">
+          <div className="grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-3">
             {newArrivalsVariants.map((selection) => (
-              <div key={selection.variant.id} className="relative group">
-                <div className="absolute right-3 top-3 z-20 opacity-0 group-hover:opacity-100 transition-opacity">
-                  <Button
-                    size="sm"
-                    variant="destructive"
-                    className="bg-red-500 hover:bg-red-600 text-white"
-                    onClick={(e) => {
-                      e.stopPropagation()
-                      handleRemoveVariant(selection.variant.id!)
-                    }}
-                  >
-                    Remove
-                  </Button>
-                </div>
-
-                <div>
-
-                  <div className="mb-4 relative w-full aspect-square border group border-gray-100 rounded-md bg-[#F4F4F4] overflow-hidden">
-                    <div className="absolute inset-0 flex items-center justify-center p-6">
-                      <Image
-                        src={selection.variant.productImages?.[0] ?? '/placeholder.png'}
-                        alt={selection.variant.name}
-                        width={250}
-                        height={250}
-                        className="max-h-full max-w-full object-contain group-hover:scale-105 duration-200"
-                      />
-                    </div>
-                  </div>
-
-                  <div className="space-y-2">
-                    <h3 className="text-base font-medium text-gray-900 line-clamp-2">{selection.variant.name}</h3>
-
-
-
-                    {/* Price */}
-                    <div className="flex items-center flex-wrap gap-2">
-                      {selection.variant.ourPrice !== null && selection.variant.ourPrice !== undefined && (
-                        <span className="text-lg font-bold">₹{selection.variant.ourPrice}</span>
-                      )}
-                      {selection.variant.mrp &&
-                        Number(selection.variant.mrp) > 0 &&
-                        selection.variant.ourPrice &&
-                        Number(selection.variant.mrp) > Number(selection.variant.ourPrice) && (
-                          <span className="text-sm text-gray-500 line-through">
-                            MRP {Number(selection.variant.mrp)}
-                          </span>
-                        )}
-                    </div>
-
-
-                  </div>
-                </div>
-              </div>
+              <VariantCard
+                key={selection.variantId}
+                selection={selection}
+                onSelect={(sel) => handleSelectVariant(sel as NewArrivalsSelection)}
+                actionLabel="Remove"
+                actionVariant="destructive"
+              />
             ))}
           </div>
         ) : (
           <div className="rounded-md border border-dashed border-gray-300 bg-gray-50 p-8 text-center">
-            <p className="text-gray-500">No newarrivals products selected. Use the search above to add products.</p>
+            <p className="text-gray-500">
+              No variants in New Arrivals. Use the search above to add variants.
+            </p>
           </div>
         )}
       </div>
     </div>
-  )
+  );
+}
+
+// Variant Card Component
+interface VariantCardProps {
+  selection: NewArrivalsSelection;
+  onSelect: (selection: NewArrivalsSelection | string) => void;
+  actionLabel: string;
+  actionVariant: 'secondary' | 'destructive';
+}
+
+function VariantCard({ selection, onSelect, actionLabel, actionVariant }: VariantCardProps) {
+  return (
+    <div className="relative group transition-transform hover:scale-[1.02]">
+      <div
+        className={cn(
+          'absolute right-3 top-3 z-20 transition-opacity',
+          actionVariant === 'destructive' ? 'opacity-0 group-hover:opacity-100' : 'opacity-100'
+        )}
+      >
+        <Button
+          size="sm"
+          variant={actionVariant}
+          onClick={(e) => {
+            e.stopPropagation();
+            onSelect(actionVariant === 'destructive' ? selection.variantId : selection);
+          }}
+          className={cn(
+            actionVariant === 'secondary' && 'bg-blue-500 hover:bg-blue-600 text-white',
+            actionVariant === 'destructive' && 'bg-red-500 hover:bg-red-600 text-white'
+          )}
+        >
+          {actionLabel}
+        </Button>
+      </div>
+      <div className="border rounded-lg bg-white shadow-sm overflow-hidden">
+        <div className="relative w-full aspect-square bg-[#F4F4F4]">
+          <Image
+            src={selection.variant.productImages?.[0]?.url ?? '/placeholder.png'}
+            alt={selection.displayName}
+            fill
+            className="object-contain p-6 group-hover:scale-105 transition-transform duration-200"
+            sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 33vw"
+          />
+        </div>
+        <div className="p-4 space-y-2">
+          <h3 className="text-base font-medium line-clamp-2">{selection.displayName}</h3>
+          <p className="text-sm text-gray-500 line-clamp-2">{selection.product.description || 'No description available'}</p>
+          <div className="flex items-center gap-2">
+            {selection.variant.ourPrice && (
+              <span className="text-lg font-bold">
+                ₹{Number(selection.variant.ourPrice).toLocaleString()}
+              </span>
+            )}
+            {selection.variant.mrp &&
+              Number(selection.variant.mrp) > Number(selection.variant.ourPrice) && (
+                <span className="text-sm text-gray-500 line-through">
+                  MRP {Number(selection.variant.mrp).toLocaleString()}
+                </span>
+              )}
+          </div>
+        </div>
+      </div>
+    </div>
+  );
 }

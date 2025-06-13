@@ -47,34 +47,71 @@ export const uploadProductImageToR2 = async (
 
 export const uploadBannerImageToR2 = async (
   type: string,
-  file: Buffer | Uint8Array | Blob | string,
+  files: {
+    default: Buffer | Uint8Array | Blob | string;
+    sm?: Buffer | Uint8Array | Blob | string;
+    lg?: Buffer | Uint8Array | Blob | string;
+  },
   mimeType: string,
   fileName: string
-) => {
+): Promise<{ default: string; sm?: string; lg?: string }> => {
   try {
+    const urls: { default: string; sm?: string; lg?: string } = { default: '' };
 
-    const key = `promotional-banners/${type}/${fileName}`;
-    
-    const command = new PutObjectCommand({
+    // Convert input file to Buffer
+    const toBuffer = async (file: Buffer | Uint8Array | Blob | string): Promise<Buffer> => {
+      if (typeof file === 'string') return Buffer.from(file);
+      if (file instanceof Blob) return Buffer.from(await file.arrayBuffer());
+      if (file instanceof Uint8Array) return Buffer.from(file);
+      return file as Buffer;
+    };
+
+    // Upload default image
+    const defaultKey = `promotional-banners/${type}/default/${Date.now()}-${fileName}`;
+    const defaultCommand = new PutObjectCommand({
       Bucket: process.env.R2_BUCKET_NAME!,
-      Key: key,
-      Body: file,
+      Key: defaultKey,
+      Body: await toBuffer(files.default),
       ContentType: mimeType,
+      ACL: 'public-read',
     });
-    
-    await r2Client.send(command);
-    
-    // Return the URL from your R2 public bucket or custom domain
-    // If using public bucket access via Cloudflare R2
-    return `${process.env.R2_PUBLIC_URL}/${key}`;
-    
-    // If using Cloudflare Workers or custom domain for R2
-    // return `${process.env.CLOUDFLARE_WORKER_URL}/${key}`;
+    await r2Client.send(defaultCommand);
+    urls.default = `${process.env.R2_PUBLIC_URL}/${defaultKey}`;
+
+    // Upload sm image if provided
+    if (files.sm) {
+      const smKey = `promotional-banners/${type}/sm/${Date.now()}-${fileName}`;
+      const smCommand = new PutObjectCommand({
+        Bucket: process.env.R2_BUCKET_NAME!,
+        Key: smKey,
+        Body: await toBuffer(files.sm),
+        ContentType: mimeType,
+        ACL: 'public-read',
+      });
+      await r2Client.send(smCommand);
+      urls.sm = `${process.env.R2_PUBLIC_URL}/${smKey}`;
+    }
+
+    // Upload lg image if provided
+    if (files.lg) {
+      const lgKey = `promotional-banners/${type}/lg/${Date.now()}-${fileName}`;
+      const lgCommand = new PutObjectCommand({
+        Bucket: process.env.R2_BUCKET_NAME!,
+        Key: lgKey,
+        Body: await toBuffer(files.lg),
+        ContentType: mimeType,
+        ACL: 'public-read',
+      });
+      await r2Client.send(lgCommand);
+      urls.lg = `${process.env.R2_PUBLIC_URL}/${lgKey}`;
+    }
+
+    return urls;
   } catch (error) {
-    console.error("Error uploading to R2:", error);
-    throw new Error("Failed to upload file to R2.");
+    console.error('Error uploading to R2:', error);
+    throw new Error('Failed to upload file(s) to R2.');
   }
-}
+};
 
 export const uploadCartOffProductImageToR2 = async (
   type: string,

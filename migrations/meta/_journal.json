@@ -5,15 +5,8 @@
     {
       "idx": 0,
       "version": "7",
-      "when": 1747519725279,
-      "tag": "0000_chief_silverclaw",
-      "breakpoints": true
-    },
-    {
-      "idx": 1,
-      "version": "7",
-      "when": 1747551427149,
-      "tag": "0001_colossal_wrecking_crew",
+      "when": 1748796428290,
+      "tag": "0000_high_wallop",
       "breakpoints": true
     }
   ]

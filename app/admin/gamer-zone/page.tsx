@@ -1,16 +1,41 @@
-// components/Admin/GamerZonePage.tsx
 'use client';
-
-import { useState, useRef, useEffect, useMemo } from 'react';
-import { Search, Save, Check, X } from 'lucide-react';
+import { useState, useRef, useEffect, useMemo, useCallback } from 'react';
+import { Search, Save, Check, X, AlertCircle } from 'lucide-react';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
-import { fetchGamersZoneProducts, fetchProducts } from '@/utils/products.util';
-import { Product as ProductType } from '@/types/product';
+import { fetchProducts, fetchGamersZoneProducts } from '@/utils/products.util';
 import Image from 'next/image';
-import toast from 'react-hot-toast';
+import { cn } from '@/lib/utils';
 
-type CategorizedVariants = Record<string, any[]>;
+// Types
+interface Product {
+  id: string;
+  shortName: string;
+  fullName: string;
+  description: string | null;
+  slug: string;
+  variants: Variant[];
+}
+
+interface Variant {
+  id: string;
+  name: string;
+  productImages: { url: string; alt: string; isFeatured: boolean; displayOrder: number }[];
+  ourPrice: string;
+  mrp: string;
+  sku: string;
+}
+
+interface GamerZoneSelection {
+  productId: string;
+  variantId: string;
+  product: Product;
+  variant: Variant;
+  displayName: string; // Combined product + variant name
+  category: string;
+}
+
+type CategorizedVariants = Record<string, GamerZoneSelection[]>;
 
 const CATEGORIES: Record<string, string> = {
   consoles: 'Consoles',
@@ -20,7 +45,7 @@ const CATEGORIES: Record<string, string> = {
 };
 
 export default function GamerZonePage() {
-  const [allProducts, setAllProducts] = useState<ProductType[]>([]);
+  const [allProducts, setAllProducts] = useState<Product[]>([]);
   const [categorizedVariants, setCategorizedVariants] = useState<CategorizedVariants>({
     consoles: [],
     accessories: [],
@@ -30,24 +55,47 @@ export default function GamerZonePage() {
   const [activeCategory, setActiveCategory] = useState<string | null>(null);
   const [searchTerm, setSearchTerm] = useState('');
   const [showSearchResults, setShowSearchResults] = useState(false);
-  const searchResultsRef = useRef<HTMLDivElement | null>(null);
   const [isSaved, setIsSaved] = useState(false);
-  const [loading, setLoading] = useState(false);
+  const [isLoading, setIsLoading] = useState(false);
+  const [isFetching, setIsFetching] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const searchResultsRef = useRef<HTMLDivElement>(null);
+  const searchInputRef = useRef<HTMLInputElement>(null);
 
+  // Fetch initial data
   useEffect(() => {
     const abortController = new AbortController();
     const signal = abortController.signal;
 
     const fetchAllData = async () => {
-      setLoading(true);
+      setIsFetching(true);
+      setError(null);
       try {
-        const productsData = await fetchProducts();
-        if (productsData) setAllProducts(productsData);
+        const [productsData, gamersZoneData] = await Promise.all([
+          fetchProducts(),
+          fetchGamersZoneProducts(),
+        ]);
 
-        const gamersZoneData = await fetchGamersZoneProducts();
+        setAllProducts(productsData || []);
+
         if (gamersZoneData) {
-          setCategorizedVariants(gamersZoneData);
+          const updatedVariants: CategorizedVariants = {
+            consoles: [],
+            accessories: [],
+            laptops: [],
+            'steering-chairs': [],
+          };
+          (Object.keys(gamersZoneData) as Array<keyof typeof gamersZoneData>).forEach((category) => {
+            updatedVariants[category] = gamersZoneData[category]?.map((item: any) => ({
+              productId: item.productId,
+              variantId: item.variantId,
+              product: item.product,
+              variant: item.variant,
+              displayName: `${item.product.fullName} - ${item.variant.name}`,
+              category,
+            })) || [];
+          });
+          setCategorizedVariants(updatedVariants);
 
           if (!activeCategory) {
             const categoryKeys = Object.keys(gamersZoneData) as Array<keyof typeof gamersZoneData>;
@@ -59,10 +107,10 @@ export default function GamerZonePage() {
         if (!signal.aborted) {
           console.error('[FETCH_GAMERS_ZONE_ERROR]', err);
           setError('Failed to load data. Please try again.');
-          toast.error('Failed to load data');
+          alert('Failed to load data. Please try again.');
         }
       } finally {
-        if (!signal.aborted) setLoading(false);
+        if (!signal.aborted) setIsFetching(false);
       }
     };
 
@@ -70,27 +118,35 @@ export default function GamerZonePage() {
     return () => abortController.abort();
   }, []);
 
+  // Filter available variants
   const searchResults = useMemo(() => {
     if (!activeCategory || !searchTerm.trim()) return [];
 
-    const selectedVariantIds = new Set(
-      categorizedVariants[activeCategory]?.map((v) => v.variantId) || []
-    );
+    const selectedVariantIds = new Set(categorizedVariants[activeCategory]?.map((v) => v.variantId) || []);
 
     return allProducts
       .flatMap((product) =>
         product.variants.map((variant) => ({
-          product,
-          variant,
           productId: product.id,
           variantId: variant.id,
+          product,
+          variant,
+          displayName: `${product.fullName} - ${variant.name}`,
+          category: activeCategory,
         }))
       )
       .filter(
-        ({ variant, product }) =>
-          !selectedVariantIds.has(variant.id) &&
-          (variant.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-            product.shortName.toLowerCase().includes(searchTerm.toLowerCase()))
+        (selection) =>
+          !selectedVariantIds.has(selection.variantId) &&
+          [
+            selection.displayName,
+            selection.product.shortName,
+            selection.product.fullName,
+            selection.variant.name,
+            selection.variant.id,
+            selection.variant.sku,
+            selection.product.description || '',
+          ].some((field) => field.toLowerCase().includes(searchTerm.toLowerCase()))
       )
       .slice(0, 12);
   }, [activeCategory, categorizedVariants, searchTerm, allProducts]);
@@ -99,9 +155,15 @@ export default function GamerZonePage() {
     return activeCategory ? categorizedVariants[activeCategory] || [] : [];
   }, [activeCategory, categorizedVariants]);
 
+  // Handle click outside
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
-      if (searchResultsRef.current && !searchResultsRef.current.contains(event.target as Node)) {
+      if (
+        searchResultsRef.current &&
+        !searchResultsRef.current.contains(event.target as Node) &&
+        searchInputRef.current &&
+        !searchInputRef.current.contains(event.target as Node)
+      ) {
         setShowSearchResults(false);
       }
     };
@@ -110,38 +172,75 @@ export default function GamerZonePage() {
     return () => document.removeEventListener('mousedown', handleClickOutside);
   }, []);
 
-  const handleSelectVariant = (selection: any) => {
-    if (!activeCategory) return;
+  // Handle search
+  const handleSearch = useCallback((value: string) => {
+    setSearchTerm(value);
+    setIsLoading(true);
+    setShowSearchResults(true);
 
-    setCategorizedVariants((prev) => ({
-      ...prev,
-      [activeCategory]: [...prev[activeCategory], selection],
-    }));
-    setSearchTerm('');
-    setShowSearchResults(false);
-  };
+    const timeout = setTimeout(() => setIsLoading(false), 300);
+    return () => clearTimeout(timeout);
+  }, []);
 
-  const handleRemoveVariant = (variantId: string) => {
-    if (!activeCategory) return;
+  // Handle variant selection
+  const handleSelectVariant = useCallback(
+    async (selection: GamerZoneSelection) => {
+      if (!activeCategory) return;
 
-    setCategorizedVariants((prev) => ({
-      ...prev,
-      [activeCategory]: prev[activeCategory].filter((v) => v.variantId !== variantId),
-    }));
+      try {
+        setCategorizedVariants((prev) => ({
+          ...prev,
+          [activeCategory]: [...prev[activeCategory], selection],
+        }));
+        setSearchTerm('');
+        setShowSearchResults(false);
+        setIsSaved(false);
+        alert(`Variant added to ${CATEGORIES[activeCategory]} in Gamer Zone`);
+      } catch (error) {
+        console.error('[SELECT_GAMER_ZONE_VARIANT_ERROR]', error);
+        alert('Failed to add variant');
+      }
+    },
+    [activeCategory]
+  );
 
-    // Send DELETE request
-    fetch('/api/products/gamers-zone', {
-      method: 'DELETE',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ variantId, category: activeCategory }),
-    }).catch((err) => {
-      console.error('[DELETE_GAMERS_ZONE_ERROR]', err);
-      toast.error('Failed to remove variant');
-    });
-  };
+  // Handle variant removal
+  const handleRemoveVariant = useCallback(
+    async (variantId: string) => {
+      if (!activeCategory) return;
 
-  const handleSave = async () => {
-    setLoading(true);
+      setIsLoading(true);
+      try {
+        const res = await fetch('/api/products/gamers-zone', {
+          method: 'DELETE',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ variantId, category: activeCategory }),
+        });
+
+        if (!res.ok) {
+          const errorData = await res.json();
+          throw new Error(errorData.message || 'Failed to remove variant');
+        }
+
+        setCategorizedVariants((prev) => ({
+          ...prev,
+          [activeCategory]: prev[activeCategory].filter((v) => v.variantId !== variantId),
+        }));
+        setIsSaved(false);
+        alert(`Variant removed from ${CATEGORIES[activeCategory]} in Gamer Zone`);
+      } catch (error: any) {
+        console.error('[DELETE_GAMER_ZONE_VARIANT_ERROR]', error);
+        alert(error.message || 'Failed to remove variant');
+      } finally {
+        setIsLoading(false);
+      }
+    },
+    [activeCategory]
+  );
+
+  // Handle save
+  const handleSave = useCallback(async () => {
+    setIsLoading(true);
     try {
       const payload = {
         categories: {} as Record<string, { productId: string; variantId: string }[]>,
@@ -156,84 +255,111 @@ export default function GamerZonePage() {
 
       const response = await fetch('/api/products/gamers-zone', {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
+        headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(payload),
       });
 
       if (!response.ok) {
         const errorData = await response.json();
-        throw new Error(errorData.message || 'Failed to update gamers zone');
+        throw new Error(errorData.message || 'Failed to save Gamer Zone variants');
       }
 
       setIsSaved(true);
-      toast.success('Gamers Zone updated successfully');
+      alert('Gamer Zone variants saved successfully');
       setTimeout(() => setIsSaved(false), 3000);
-    } catch (err: any) {
-      console.error('[SAVE_GAMERS_ZONE_ERROR]', err);
-      setError(err.message || 'Failed to save changes');
-      toast.error(err.message || 'Failed to save changes');
+    } catch (error: any) {
+      console.error('[SAVE_GAMERS_ZONE_ERROR]', error);
+      setError(error.message || 'Failed to save changes');
+      alert(error.message || 'Failed to save Gamer Zone variants');
       setTimeout(() => setError(null), 5000);
     } finally {
-      setLoading(false);
+      setIsLoading(false);
     }
-  };
+  }, [categorizedVariants]);
+
+  // Clear search
+  const clearSearch = useCallback(() => {
+    setSearchTerm('');
+    setShowSearchResults(false);
+  }, []);
+
+  if (isFetching) {
+    return (
+      <div className="flex items-center justify-center h-[50vh]">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600 mx-auto mb-2"></div>
+          <p>Loading products...</p>
+        </div>
+      </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <div className="flex items-center justify-center h-[50vh]">
+        <div className="text-center space-y-4">
+          <AlertCircle className="h-12 w-12 text-red-500 mx-auto" />
+          <p className="text-red-600">{error}</p>
+          <Button onClick={() => window.location.reload()}>Retry</Button>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="container mx-auto py-8">
-      {/* Loading indicator */}
-      {loading && (
-        <div className="mb-4 rounded-md bg-blue-50 p-4 text-blue-800">
-          Loading, please wait...
-        </div>
-      )}
-
-      {/* Error message */}
-      {error && (
-        <div className="mb-4 rounded-md bg-red-50 p-4 text-red-800">{error}</div>
-      )}
-
       {/* Success message */}
       {isSaved && (
-        <div className="mb-4 rounded-md bg-green-50 p-4 text-green-800">
-          Gamer Zone settings have been saved successfully!
+        <div className="mb-6 rounded-md bg-green-50 p-4 text-green-800 flex items-center justify-between">
+          <div className="flex items-center">
+            <Check className="h-5 w-5 mr-2" />
+            Gamer Zone variants saved successfully!
+          </div>
+          <Button variant="ghost" size="sm" onClick={() => setIsSaved(false)}>
+            <X className="h-4 w-4" />
+          </Button>
         </div>
       )}
 
       {/* Search bar and save button */}
-      <div className="mb-6">
-        <div className="flex flex-row items-center justify-between gap-4">
+      <div className="mb-6 space-y-4">
+        <div className="flex flex-col sm:flex-row items-center justify-between gap-4">
           <div className="relative flex-1 max-w-md">
-            <Search className="absolute left-3 top-1/2 h-5 w-5 -translate-y-1/2 text-muted-foreground" />
+            <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
             <Input
+              ref={searchInputRef}
               placeholder={
                 activeCategory
-                  ? `Search ${CATEGORIES[activeCategory] || activeCategory} variants...`
+                  ? `Search ${CATEGORIES[activeCategory] || activeCategory} by name, SKU, ID, or product details`
                   : 'Select a category first'
               }
               value={searchTerm}
-              onChange={(e) => {
-                setSearchTerm(e.target.value);
-                setShowSearchResults(e.target.value.trim() !== '');
-              }}
+              onChange={(e) => handleSearch(e.target.value)}
               onFocus={() => {
-                if (searchTerm.trim() !== '') {
-                  setShowSearchResults(true);
-                }
+                if (searchTerm.trim() && activeCategory) setShowSearchResults(true);
               }}
-              className="pl-10 py-4 text-lg"
+              className="pl-10 pr-10 py-6"
               disabled={!activeCategory}
+              aria-label="Search variants"
             />
+            {searchTerm && (
+              <button
+                onClick={clearSearch}
+                className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600"
+                aria-label="Clear search"
+              >
+                <X className="h-4 w-4" />
+              </button>
+            )}
           </div>
-
           <Button
             onClick={handleSave}
-            className="flex items-center gap-2 bg-blue-600 hover:bg-blue-700 text-white"
-            disabled={loading}
+            disabled={isLoading}
+            className="flex items-center gap-2 bg-blue-600 hover:bg-blue-700"
+            aria-label="Save Gamer Zone variants"
           >
             <Save className="h-4 w-4" />
-            Save Changes
+            {isLoading ? 'Saving...' : 'Save Changes'}
           </Button>
         </div>
       </div>
@@ -254,7 +380,6 @@ export default function GamerZonePage() {
           >
             All
           </Button>
-
           {Object.entries(CATEGORIES).map(([apiKey, displayName]) => (
             <Button
               key={apiKey}
@@ -263,79 +388,39 @@ export default function GamerZonePage() {
                 activeCategory === apiKey ? 'bg-blue-600 text-white hover:bg-blue-700' : ''
               }`}
               onClick={() => {
-                setActiveCategory(activeCategory === apiKey ? null : apiKey);
+                setActiveCategory(apiKey);
                 setSearchTerm('');
                 setShowSearchResults(false);
               }}
             >
-              {displayName} {categorizedVariants[apiKey]?.length > 0 && `(${categorizedVariants[apiKey].length})`}
+              {displayName} ({categorizedVariants[apiKey]?.length || 0})
             </Button>
           ))}
         </div>
       </div>
 
       {/* Search results */}
-      {activeCategory && showSearchResults && searchTerm.trim() !== '' && (
+      {activeCategory && showSearchResults && searchTerm.trim() && (
         <div ref={searchResultsRef} className="mb-8">
-          <h3 className="text-lg font-medium mb-4">Search Results</h3>
-
+          <h3 className="text-lg font-semibold mb-4">
+            Search Results ({searchResults.length})
+          </h3>
           {searchResults.length > 0 ? (
             <div className="grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
-              {searchResults.map(({ product, variant, productId, variantId }) => (
-                <div
-                  key={`${productId}-${variantId}`}
-                  className="relative cursor-pointer group"
-                  onClick={() =>
-                    handleSelectVariant({
-                      productId,
-                      variantId,
-                      product: { ...product, variants: [] }, // Avoid duplicating variants
-                      variant,
-                      category: activeCategory,
-                    })
-                  }
-                >
-                  {/* Selection indicator */}
-                  <div className="absolute left-3 top-3 z-20">
-                    <div className="flex h-6 w-6 items-center justify-center rounded-md bg-white border border-gray-300 group-hover:bg-blue-500 group-hover:border-blue-500 group-hover:text-white">
-                      <Check className="h-4 w-4 opacity-0 group-hover:opacity-100 text-white" />
-                    </div>
-                  </div>
-
-                  <div>
-                    <div className="mb-4 relative w-full aspect-square border group border-gray-100 rounded-md bg-[#F4F4F4] overflow-hidden">
-                      <div className="absolute inset-0 flex items-center justify-center p-6">
-                        <Image
-                          src={variant.productImages?.[0] ?? '/placeholder.png'}
-                          alt={variant.name}
-                          width={250}
-                          height={250}
-                          className="max-h-full max-w-full object-contain group-hover:scale-105 duration-200"
-                        />
-                      </div>
-                    </div>
-
-                    <div className="space-y-2">
-                      <h3 className="text-base font-medium text-gray-900 line-clamp-2">{variant.name}</h3>
-                      <div className="flex items-center flex-wrap gap-2">
-                        {variant.ourPrice && (
-                          <span className="text-lg font-bold">₹{Number(variant.ourPrice).toLocaleString()}</span>
-                        )}
-                        {variant.mrp && Number(variant.mrp) > Number(variant.ourPrice) && (
-                          <span className="text-sm text-gray-500 line-through">
-                            MRP {Number(variant.mrp).toLocaleString()}
-                          </span>
-                        )}
-                      </div>
-                    </div>
-                  </div>
-                </div>
+              {searchResults.map((selection) => (
+                <VariantCard
+                  key={`${selection.productId}-${selection.variantId}`}
+                  selection={selection}
+                  onSelect={(sel) => handleSelectVariant(sel as GamerZoneSelection)}
+                  actionLabel="Add"
+                  actionVariant="secondary"
+                />
               ))}
             </div>
           ) : (
             <div className="rounded-md border border-dashed border-gray-300 bg-gray-50 p-8 text-center">
               <p className="text-gray-500">
-                No more variants available for this category or all matching variants are already selected.
+                No more variants available for {CATEGORIES[activeCategory]} or all matching variants are already selected.
               </p>
             </div>
           )}
@@ -348,46 +433,16 @@ export default function GamerZonePage() {
           <h2 className="text-xl font-semibold mb-6">
             {CATEGORIES[activeCategory]} Variants ({selectedVariants.length})
           </h2>
-
           {selectedVariants.length > 0 ? (
             <div className="grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
-              {selectedVariants.map(({ productId, variantId, variant }) => (
-                <div key={`${productId}-${variantId}`}>
-                  <div className="relative">
-                    <div
-                      onClick={() => handleRemoveVariant(variantId)}
-                      className="absolute cursor-pointer z-50 top-2 right-2 bg-white p-2 rounded-full"
-                    >
-                      <X size={16} className="text-offer" />
-                    </div>
-
-                    <div className="mb-4 relative w-full aspect-square border group border-gray-100 rounded-md bg-[#F4F4F4] overflow-hidden">
-                      <div className="absolute inset-0 flex items-center justify-center p-6">
-                        <Image
-                          src={variant.productImages?.[0] ?? '/placeholder.png'}
-                          alt={variant.name}
-                          width={250}
-                          height={250}
-                          className="max-h-full max-w-full object-contain group-hover:scale-105 duration-200"
-                        />
-                      </div>
-                    </div>
-
-                    <div className="space-y-2">
-                      <h3 className="text-base font-medium text-gray-900 line-clamp-2">{variant.name}</h3>
-                      <div className="flex items-center flex-wrap gap-2">
-                        {variant.ourPrice && (
-                          <span className="text-lg font-bold">₹{Number(variant.ourPrice).toLocaleString()}</span>
-                        )}
-                        {variant.mrp && Number(variant.mrp) > Number(variant.ourPrice) && (
-                          <span className="text-sm text-gray-500 line-through">
-                            MRP {Number(variant.mrp).toLocaleString()}
-                          </span>
-                        )}
-                      </div>
-                    </div>
-                  </div>
-                </div>
+              {selectedVariants.map((selection) => (
+                <VariantCard
+                  key={`${selection.productId}-${selection.variantId}`}
+                  selection={selection}
+                  onSelect={(sel) => handleSelectVariant(sel as GamerZoneSelection)}
+                  actionLabel="Remove"
+                  actionVariant="destructive"
+                />
               ))}
             </div>
           ) : (
@@ -400,57 +455,31 @@ export default function GamerZonePage() {
         </div>
       )}
 
-      {/* All categories overview when no specific category is selected */}
+      {/* All categories overview */}
       {!activeCategory && (
         <div>
           <h2 className="text-xl font-semibold mb-6">All Categories</h2>
-
           <div className="space-y-8">
             {Object.entries(CATEGORIES).map(([apiKey, displayName]) => (
               <div key={apiKey}>
                 <div className="flex items-center justify-between mb-4">
-                  <h3 className="text-lg font-medium">
+                  <h3 className="text-lg font-semibold">
                     {displayName} ({categorizedVariants[apiKey]?.length || 0})
                   </h3>
                   <Button variant="outline" onClick={() => setActiveCategory(apiKey)}>
                     Manage Variants
                   </Button>
                 </div>
-
                 {categorizedVariants[apiKey]?.length > 0 ? (
                   <div className="grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
-                    {categorizedVariants[apiKey].slice(0, 4).map(({ productId, variantId, variant }) => (
-                      <div key={`${productId}-${variantId}`}>
-                        <div>
-                          <div className="mb-4 relative w-full aspect-square border group border-gray-100 rounded-md bg-[#F4F4F4] overflow-hidden">
-                            <div className="absolute inset-0 flex items-center justify-center p-6">
-                              <Image
-                                src={variant.productImages?.[0] ?? '/placeholder.png'}
-                                alt={variant.name}
-                                width={250}
-                                height={250}
-                                className="max-h-full max-w-full object-contain group-hover:scale-105 duration-200"
-                              />
-                            </div>
-                          </div>
-
-                          <div className="space-y-2">
-                            <h3 className="text-base font-medium text-gray-900 line-clamp-2">{variant.name}</h3>
-                            <div className="flex items-center flex-wrap gap-2">
-                              {variant.ourPrice && (
-                                <span className="text-lg font-bold">
-                                  ₹{Number(variant.ourPrice).toLocaleString()}
-                                </span>
-                              )}
-                              {variant.mrp && Number(variant.mrp) > Number(variant.ourPrice) && (
-                                <span className="text-sm text-gray-500 line-through">
-                                  MRP {Number(variant.mrp).toLocaleString()}
-                                </span>
-                              )}
-                            </div>
-                          </div>
-                        </div>
-                      </div>
+                    {categorizedVariants[apiKey].slice(0, 4).map((selection) => (
+                      <VariantCard
+                        key={`${selection.productId}-${selection.variantId}`}
+                        selection={selection}
+                        onSelect={(sel) => handleSelectVariant(sel as GamerZoneSelection)}
+                        actionLabel="Remove"
+                        actionVariant="destructive"
+                      />
                     ))}
                     {categorizedVariants[apiKey].length > 4 && (
                       <div className="flex items-center justify-center">
@@ -474,6 +503,70 @@ export default function GamerZonePage() {
           </div>
         </div>
       )}
+    </div>
+  );
+}
+
+// Variant Card Component
+interface VariantCardProps {
+  selection: GamerZoneSelection;
+  onSelect: (selection: GamerZoneSelection | string) => void;
+  actionLabel: string;
+  actionVariant: 'secondary' | 'destructive';
+}
+
+function VariantCard({ selection, onSelect, actionLabel, actionVariant }: VariantCardProps) {
+  return (
+    <div className="relative group transition-transform hover:scale-[1.02]">
+      <div
+        className={cn(
+          'absolute right-3 top-3 z-20 transition-opacity',
+          actionVariant === 'destructive' ? 'opacity-0 group-hover:opacity-100' : 'opacity-100'
+        )}
+      >
+        <Button
+          size="sm"
+          variant={actionVariant}
+          onClick={(e) => {
+            e.stopPropagation();
+            onSelect(actionVariant === 'destructive' ? selection.variantId : selection);
+          }}
+          className={cn(
+            actionVariant === 'secondary' && 'bg-blue-500 hover:bg-blue-600 text-white',
+            actionVariant === 'destructive' && 'bg-red-500 hover:bg-red-600 text-white'
+          )}
+        >
+          {actionLabel}
+        </Button>
+      </div>
+      <div className="border rounded-lg bg-white shadow-sm overflow-hidden">
+        <div className="relative w-full aspect-square bg-[#F4F4F4]">
+          <Image
+            src={selection.variant.productImages?.[0]?.url ?? '/placeholder.png'}
+            alt={selection.displayName}
+            fill
+            className="object-contain p-6 group-hover:scale-105 transition-transform duration-200"
+            sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 33vw"
+          />
+        </div>
+        <div className="p-4 space-y-2">
+          <h3 className="text-base font-medium line-clamp-2">{selection.displayName}</h3>
+          <p className="text-sm text-gray-500 line-clamp-2">{selection.product.description || 'No description available'}</p>
+          <div className="flex items-center gap-2">
+            {selection.variant.ourPrice && (
+              <span className="text-lg font-bold">
+                ₹{Number(selection.variant.ourPrice).toLocaleString()}
+              </span>
+            )}
+            {selection.variant.mrp &&
+              Number(selection.variant.mrp) > Number(selection.variant.ourPrice) && (
+                <span className="text-sm text-gray-500 line-through">
+                  MRP {Number(selection.variant.mrp).toLocaleString()}
+                </span>
+              )}
+          </div>
+        </div>
+      </div>
     </div>
   );
 }

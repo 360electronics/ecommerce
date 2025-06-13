@@ -45,11 +45,11 @@ export const useHomeStore = create<HomeState>()((set, get) => ({
     try {
       set({ isLoading: true, error: null });
       const [bannersRes, featuredRes, newArrivalsRes, gamersZoneRes, brandProductsRes] = await Promise.all([
-        fetch('/api/banner', { cache: 'no-store' }),
-        fetch('/api/products/offer-zone', { cache: 'no-store' }),
-        fetch('/api/products/new-arrivals', { cache: 'no-store' }),
-        fetch('/api/products/gamers-zone', { cache: 'no-store' }),
-        fetch('/api/products', { cache: 'no-store' }),
+        fetch('/api/banner'),
+        fetch('/api/products/offer-zone'),
+        fetch('/api/products/new-arrivals'),
+        fetch('/api/products/gamers-zone'),
+        fetch('/api/products'),
       ]);
 
       if (!bannersRes.ok) throw new Error('Failed to fetch banners');

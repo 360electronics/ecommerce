@@ -1,5 +1,5 @@
 {
-  "id": "a4213ded-aeb7-4ac9-806e-799d18fab363",
+  "id": "68333b3d-afd7-4009-98b8-d0489d765887",
   "prevId": "00000000-0000-0000-0000-000000000000",
   "version": "7",
   "dialect": "postgresql",
@@ -365,13 +365,7 @@
           "name": "category_id",
           "type": "uuid",
           "primaryKey": false,
-          "notNull": false
-        },
-        "subcategory_id": {
-          "name": "subcategory_id",
-          "type": "uuid",
-          "primaryKey": false,
-          "notNull": false
+          "notNull": true
         },
         "name": {
           "name": "name",
@@ -383,8 +377,7 @@
           "name": "attributes",
           "type": "jsonb",
           "primaryKey": false,
-          "notNull": true,
-          "default": "'[]'::jsonb"
+          "notNull": true
         },
         "created_at": {
           "name": "created_at",
@@ -401,38 +394,7 @@
           "default": "now()"
         }
       },
-      "indexes": {
-        "idx_attribute_template_category": {
-          "name": "idx_attribute_template_category",
-          "columns": [
-            {
-              "expression": "category_id",
-              "isExpression": false,
-              "asc": true,
-              "nulls": "last"
-            }
-          ],
-          "isUnique": false,
-          "concurrently": false,
-          "method": "btree",
-          "with": {}
-        },
-        "idx_attribute_template_subcategory": {
-          "name": "idx_attribute_template_subcategory",
-          "columns": [
-            {
-              "expression": "subcategory_id",
-              "isExpression": false,
-              "asc": true,
-              "nulls": "last"
-            }
-          ],
-          "isUnique": false,
-          "concurrently": false,
-          "method": "btree",
-          "with": {}
-        }
-      },
+      "indexes": {},
       "foreignKeys": {
         "attribute_templates_category_id_categories_id_fk": {
           "name": "attribute_templates_category_id_categories_id_fk",
@@ -444,20 +406,7 @@
           "columnsTo": [
             "id"
           ],
-          "onDelete": "no action",
-          "onUpdate": "no action"
-        },
-        "attribute_templates_subcategory_id_subcategories_id_fk": {
-          "name": "attribute_templates_subcategory_id_subcategories_id_fk",
-          "tableFrom": "attribute_templates",
-          "tableTo": "subcategories",
-          "columnsFrom": [
-            "subcategory_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
-          "onDelete": "no action",
+          "onDelete": "cascade",
           "onUpdate": "no action"
         }
       },
@@ -1048,8 +997,8 @@
         }
       },
       "indexes": {
-        "idx_featured_product_id": {
-          "name": "idx_featured_product_id",
+        "idx_offer_zone_id": {
+          "name": "idx_offer_zone_id",
           "columns": [
             {
               "expression": "product_id",
@@ -1063,8 +1012,8 @@
           "method": "btree",
           "with": {}
         },
-        "idx_featured_variant_id": {
-          "name": "idx_featured_variant_id",
+        "idx_offer_variant_id": {
+          "name": "idx_offer_variant_id",
           "columns": [
             {
               "expression": "variant_id",
@@ -1109,8 +1058,8 @@
       },
       "compositePrimaryKeys": {},
       "uniqueConstraints": {
-        "uniq_featured_variant_id": {
-          "name": "uniq_featured_variant_id",
+        "uniq_offer_variant_id": {
+          "name": "uniq_offer_variant_id",
           "nullsNotDistinct": false,
           "columns": [
             "variant_id"
@@ -2405,56 +2354,54 @@
           "name": "id",
           "type": "uuid",
           "primaryKey": true,
-          "notNull": true,
-          "default": "gen_random_uuid()"
+          "notNull": true
         },
         "title": {
           "name": "title",
-          "type": "varchar(255)",
-          "primaryKey": false,
-          "notNull": true
-        },
-        "imageUrl": {
-          "name": "imageUrl",
-          "type": "varchar(255)",
+          "type": "text",
           "primaryKey": false,
           "notNull": true
         },
         "type": {
           "name": "type",
-          "type": "varchar(255)",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "image_urls": {
+          "name": "image_urls",
+          "type": "jsonb",
           "primaryKey": false,
           "notNull": true
         },
         "start_date": {
           "name": "start_date",
-          "type": "date",
+          "type": "text",
           "primaryKey": false,
           "notNull": false
         },
         "end_date": {
           "name": "end_date",
-          "type": "date",
+          "type": "text",
           "primaryKey": false,
           "notNull": false
         },
         "status": {
           "name": "status",
-          "type": "varchar",
+          "type": "text",
           "primaryKey": false,
-          "notNull": true,
-          "default": "'active'"
+          "notNull": true
         },
         "created_at": {
           "name": "created_at",
-          "type": "timestamp with time zone",
+          "type": "timestamp",
           "primaryKey": false,
           "notNull": true,
           "default": "now()"
         },
         "updated_at": {
           "name": "updated_at",
-          "type": "timestamp with time zone",
+          "type": "timestamp",
           "primaryKey": false,
           "notNull": true,
           "default": "now()"

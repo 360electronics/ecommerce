@@ -51,10 +51,9 @@ CREATE TABLE "otp_tokens" (
 --> statement-breakpoint
 CREATE TABLE "attribute_templates" (
 	"id" uuid PRIMARY KEY DEFAULT gen_random_uuid() NOT NULL,
-	"category_id" uuid,
-	"subcategory_id" uuid,
+	"category_id" uuid NOT NULL,
 	"name" varchar(255) NOT NULL,
-	"attributes" jsonb DEFAULT '[]'::jsonb NOT NULL,
+	"attributes" jsonb NOT NULL,
 	"created_at" timestamp with time zone DEFAULT now() NOT NULL,
 	"updated_at" timestamp with time zone DEFAULT now() NOT NULL
 );
@@ -118,7 +117,7 @@ CREATE TABLE "offer_zone" (
 	"variant_id" uuid NOT NULL,
 	"created_at" timestamp with time zone DEFAULT now() NOT NULL,
 	"updated_at" timestamp with time zone DEFAULT now() NOT NULL,
-	CONSTRAINT "uniq_featured_variant_id" UNIQUE("variant_id")
+	CONSTRAINT "uniq_offer_variant_id" UNIQUE("variant_id")
 );
 --> statement-breakpoint
 CREATE TABLE "product_compatibility" (
@@ -247,15 +246,15 @@ CREATE TABLE "variants" (
 );
 --> statement-breakpoint
 CREATE TABLE "banners" (
-	"id" uuid PRIMARY KEY DEFAULT gen_random_uuid() NOT NULL,
-	"title" varchar(255) NOT NULL,
-	"imageUrl" varchar(255) NOT NULL,
-	"type" varchar(255) NOT NULL,
-	"start_date" date,
-	"end_date" date,
-	"status" varchar DEFAULT 'active' NOT NULL,
-	"created_at" timestamp with time zone DEFAULT now() NOT NULL,
-	"updated_at" timestamp with time zone DEFAULT now() NOT NULL
+	"id" uuid PRIMARY KEY NOT NULL,
+	"title" text NOT NULL,
+	"type" text NOT NULL,
+	"image_urls" jsonb NOT NULL,
+	"start_date" text,
+	"end_date" text,
+	"status" text NOT NULL,
+	"created_at" timestamp DEFAULT now() NOT NULL,
+	"updated_at" timestamp DEFAULT now() NOT NULL
 );
 --> statement-breakpoint
 CREATE TABLE "order_items" (
@@ -393,8 +392,7 @@ CREATE TABLE "special_coupons" (
 ALTER TABLE "saved_addresses" ADD CONSTRAINT "saved_addresses_user_id_users_id_fk" FOREIGN KEY ("user_id") REFERENCES "public"."users"("id") ON DELETE cascade ON UPDATE no action;--> statement-breakpoint
 ALTER TABLE "auth_tokens" ADD CONSTRAINT "auth_tokens_user_id_users_id_fk" FOREIGN KEY ("user_id") REFERENCES "public"."users"("id") ON DELETE cascade ON UPDATE no action;--> statement-breakpoint
 ALTER TABLE "otp_tokens" ADD CONSTRAINT "otp_tokens_user_id_users_id_fk" FOREIGN KEY ("user_id") REFERENCES "public"."users"("id") ON DELETE cascade ON UPDATE no action;--> statement-breakpoint
-ALTER TABLE "attribute_templates" ADD CONSTRAINT "attribute_templates_category_id_categories_id_fk" FOREIGN KEY ("category_id") REFERENCES "public"."categories"("id") ON DELETE no action ON UPDATE no action;--> statement-breakpoint
-ALTER TABLE "attribute_templates" ADD CONSTRAINT "attribute_templates_subcategory_id_subcategories_id_fk" FOREIGN KEY ("subcategory_id") REFERENCES "public"."subcategories"("id") ON DELETE no action ON UPDATE no action;--> statement-breakpoint
+ALTER TABLE "attribute_templates" ADD CONSTRAINT "attribute_templates_category_id_categories_id_fk" FOREIGN KEY ("category_id") REFERENCES "public"."categories"("id") ON DELETE cascade ON UPDATE no action;--> statement-breakpoint
 ALTER TABLE "filter_configs" ADD CONSTRAINT "filter_configs_category_id_categories_id_fk" FOREIGN KEY ("category_id") REFERENCES "public"."categories"("id") ON DELETE no action ON UPDATE no action;--> statement-breakpoint
 ALTER TABLE "filter_configs" ADD CONSTRAINT "filter_configs_subcategory_id_subcategories_id_fk" FOREIGN KEY ("subcategory_id") REFERENCES "public"."subcategories"("id") ON DELETE no action ON UPDATE no action;--> statement-breakpoint
 ALTER TABLE "gamers_zone" ADD CONSTRAINT "gamers_zone_product_id_products_id_fk" FOREIGN KEY ("product_id") REFERENCES "public"."products"("id") ON DELETE cascade ON UPDATE no action;--> statement-breakpoint
@@ -438,8 +436,6 @@ ALTER TABLE "coupons" ADD CONSTRAINT "coupons_user_id_users_id_fk" FOREIGN KEY (
 ALTER TABLE "coupons" ADD CONSTRAINT "coupons_referral_id_referrals_id_fk" FOREIGN KEY ("referral_id") REFERENCES "public"."referrals"("id") ON DELETE set null ON UPDATE no action;--> statement-breakpoint
 ALTER TABLE "special_coupon_usage" ADD CONSTRAINT "special_coupon_usage_user_id_users_id_fk" FOREIGN KEY ("user_id") REFERENCES "public"."users"("id") ON DELETE cascade ON UPDATE no action;--> statement-breakpoint
 ALTER TABLE "special_coupon_usage" ADD CONSTRAINT "special_coupon_usage_coupon_id_special_coupons_id_fk" FOREIGN KEY ("coupon_id") REFERENCES "public"."special_coupons"("id") ON DELETE cascade ON UPDATE no action;--> statement-breakpoint
-CREATE INDEX "idx_attribute_template_category" ON "attribute_templates" USING btree ("category_id");--> statement-breakpoint
-CREATE INDEX "idx_attribute_template_subcategory" ON "attribute_templates" USING btree ("subcategory_id");--> statement-breakpoint
 CREATE INDEX "idx_brand_name" ON "brands" USING btree ("name");--> statement-breakpoint
 CREATE INDEX "idx_category_name" ON "categories" USING btree ("name");--> statement-breakpoint
 CREATE INDEX "idx_filter_category" ON "filter_configs" USING btree ("category_id");--> statement-breakpoint
@@ -449,8 +445,8 @@ CREATE INDEX "idx_gamers_zone_variant_id" ON "gamers_zone" USING btree ("variant
 CREATE INDEX "idx_gamers_zone_category" ON "gamers_zone" USING btree ("category");--> statement-breakpoint
 CREATE INDEX "idx_new_arrivals_product_id" ON "new_arrivals" USING btree ("product_id");--> statement-breakpoint
 CREATE INDEX "idx_new_arrivals_variant_id" ON "new_arrivals" USING btree ("variant_id");--> statement-breakpoint
-CREATE INDEX "idx_featured_product_id" ON "offer_zone" USING btree ("product_id");--> statement-breakpoint
-CREATE INDEX "idx_featured_variant_id" ON "offer_zone" USING btree ("variant_id");--> statement-breakpoint
+CREATE INDEX "idx_offer_zone_id" ON "offer_zone" USING btree ("product_id");--> statement-breakpoint
+CREATE INDEX "idx_offer_variant_id" ON "offer_zone" USING btree ("variant_id");--> statement-breakpoint
 CREATE INDEX "idx_compatibility_product_id" ON "product_compatibility" USING btree ("product_id");--> statement-breakpoint
 CREATE INDEX "idx_compatibility_with_id" ON "product_compatibility" USING btree ("compatible_with_id");--> statement-breakpoint
 CREATE INDEX "idx_product_category" ON "products" USING btree ("category_id");--> statement-breakpoint

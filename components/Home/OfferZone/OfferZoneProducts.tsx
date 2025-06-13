@@ -1,49 +1,61 @@
 'use client';
-import { useState, memo, useMemo } from 'react';
+
+import { useState, useMemo, useCallback, memo } from 'react';
+import { Search, AlertCircle, X } from 'lucide-react';
 import ProductCardwithoutCart from '@/components/Product/ProductCards/ProductCardwithoutCart';
 import PrimaryLinkButton from '@/components/Reusable/PrimaryLinkButton';
 import { ProductCardSkeleton } from '@/components/Reusable/ProductCardSkeleton';
 import { useHomeStore } from '@/store/home-store';
+import { Input } from '@/components/ui/input';
+import { CompleteProduct, ProductVariant } from '@/types/product';
 
-interface VariantCard {
+// Types
+interface FeaturedSelection {
   productId: string;
   variantId: string;
-  variant: {
-    name: string;
-    slug: string;
-    mrp: number;
-    ourPrice: number;
-    productImages: string[];
-  };
-  averageRating: number;
-  createdAt: string;
+  product: CompleteProduct;
+  variant: ProductVariant;
+  displayName: string; // Combined product + variant name
 }
 
 const FeaturedProducts: React.FC = () => {
-  const { featuredProducts } = useHomeStore();
-  const [loading] = useState(false);
+  const { featuredProducts, isLoading, error } = useHomeStore();
+  const [searchTerm, setSearchTerm] = useState('');
 
-  const variantCards: VariantCard[] = useMemo(() => {
-    return featuredProducts
+  // Memoized filtered and sorted variant cards
+  const variantCards = useMemo(() => {
+    const selections: FeaturedSelection[] = featuredProducts
       .map(({ productId, variantId, product, variant }: any) => ({
         productId,
         variantId,
-        variant,
-        averageRating: product?.averageRating ?? 0,
-        createdAt: product?.createdAt ?? '',
+        product: product as CompleteProduct,
+        variant: variant as ProductVariant,
+        displayName: `${product.shortName} - ${variant.name}`,
       }))
-      .sort((a, b) =>
-        new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
+      .filter((selection) =>
+        searchTerm.trim()
+          ? [
+              selection.displayName,
+              selection.product.shortName,
+              selection.product.fullName,
+              selection.variant.name,
+              selection.variant.sku,
+              selection.product.description || '',
+            ].some((field) => field.toLowerCase().includes(searchTerm.toLowerCase()))
+          : true
       )
+      .sort((a, b) => new Date(b.product.createdAt).getTime() - new Date(a.product.createdAt).getTime())
       .slice(0, 10);
-  }, [featuredProducts]);
 
-  const calculateDiscount = (mrp: number, ourPrice: number): number => {
+    return selections;
+  }, [featuredProducts, searchTerm]);
+
+  const calculateDiscount = useCallback((mrp: number, ourPrice: number): number => {
     if (mrp <= 0 || ourPrice >= mrp) return 0;
     return Math.round(((mrp - ourPrice) / mrp) * 100);
-  };
+  }, []);
 
-  const renderSkeletons = () => {
+  const renderSkeletons = useCallback(() => {
     return Array(5)
       .fill(0)
       .map((_, index) => (
@@ -51,24 +63,52 @@ const FeaturedProducts: React.FC = () => {
           <ProductCardSkeleton />
         </div>
       ));
-  };
+  }, []);
+
+
+  if (isLoading) {
+    return (
+      <div className="py-12">
+        <div className="mx-auto">
+          <div className="mb-8 text-start md:text-center">
+            <h2 className="text-3xl md:text-4xl font-bold mb-2 nohemi-bold">
+              Offers <span className="text-primary">Zone</span>
+            </h2>
+          </div>
+          <div className="flex gap-6 pl-1 overflow-x-auto snap-x snap-mandatory minimal-scrollbar">
+            {renderSkeletons()}
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <div className="py-12 flex items-center justify-center h-[50vh]">
+        <div className="text-center space-y-4">
+          <AlertCircle className="h-12 w-12 text-red-500 mx-auto" />
+          <p className="text-red-600">{error}</p>
+          <PrimaryLinkButton href="/category/all">Browse All Products</PrimaryLinkButton>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="py-12">
       <div className="mx-auto">
         <div className="mb-8 text-start md:text-center">
           <h2 className="text-3xl md:text-4xl font-bold mb-2 nohemi-bold">
-            Featured <span className="text-primary">Products</span>
+            Offers <span className="text-primary">Zone</span>
           </h2>
         </div>
 
         <div className="relative">
           <div className="flex overflow-x-auto pb-10 snap-x snap-mandatory minimal-scrollbar">
-            {loading ? (
-              <div className="flex gap-6 pl-1">{renderSkeletons()}</div>
-            ) : variantCards.length > 0 ? (
+            {variantCards.length > 0 ? (
               <div className="flex gap-6 pl-1">
-                {variantCards.map(({ productId, variantId, variant, averageRating }) => {
+                {variantCards.map(({ productId, variantId, product, variant, displayName }) => {
                   const mrp = Number(variant.mrp);
                   const ourPrice = Number(variant.ourPrice);
                   const discount = calculateDiscount(mrp, ourPrice);
@@ -87,12 +127,14 @@ const FeaturedProducts: React.FC = () => {
                         variantId={variantId}
                         slug={variant.slug}
                         className="w-full h-full"
-                        image={variant.productImages?.[0] ?? '/placeholder.svg'}
-                        name={variant.name}
-                        rating={Number(averageRating)}
+                        image={variant.productImages?.[0]?.url ?? '/placeholder.png'}
+                        name={displayName}
+                        rating={Number(product.averageRating)}
                         ourPrice={ourPrice}
                         mrp={mrp}
                         discount={discount}
+                        isHeartNeed={true}
+                        showViewDetails={true}
                       />
                     </div>
                   );
@@ -107,6 +149,7 @@ const FeaturedProducts: React.FC = () => {
                     fill="none"
                     viewBox="0 0 24 24"
                     stroke="currentColor"
+                    aria-hidden="true"
                   >
                     <path
                       strokeLinecap="round"
@@ -118,7 +161,9 @@ const FeaturedProducts: React.FC = () => {
                 </div>
                 <h3 className="text-2xl font-semibold text-gray-700 nohemi-bold">No Products Found</h3>
                 <p className="text-sm text-gray-500 mt-2 max-w-sm">
-                  No featured products are available. Please check back later or explore other categories.
+                  {searchTerm.trim()
+                    ? 'No featured products match your search. Try different keywords or browse all products.'
+                    : 'No featured products are available. Please check back later or explore other categories.'}
                 </p>
                 <PrimaryLinkButton href="/category/all" className="mt-6">
                   Browse All Products

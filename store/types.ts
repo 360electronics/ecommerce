@@ -263,6 +263,8 @@ export interface OrderItem {
 }
 
 export interface Product {
+  [x: string]: any;
+  variants: any;
   id: string;
   name: string;
   slug: string;

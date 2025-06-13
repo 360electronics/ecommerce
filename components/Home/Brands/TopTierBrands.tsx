@@ -1,12 +1,17 @@
-// components/Home/Brands/TopTierBrands.tsx
 'use client';
-import React, { useState, useCallback, memo, useMemo } from 'react';
+
+import { useState, useMemo, useCallback, memo } from 'react';
+import { Search, X, AlertCircle } from 'lucide-react';
 import Image from 'next/image';
 import ProductCardwithoutCart from '@/components/Product/ProductCards/ProductCardwithoutCart';
 import { ProductCardSkeleton } from '@/components/Reusable/ProductCardSkeleton';
 import PrimaryLinkButton from '@/components/Reusable/PrimaryLinkButton';
 import { useHomeStore } from '@/store/home-store';
+import { Input } from '@/components/ui/input';
+import { CompleteProduct, ProductVariant, ProductImage } from '@/types/product';
+import { cn } from '@/lib/utils';
 
+// Types
 interface Brand {
   name: string;
   logoSrc: string;
@@ -15,6 +20,14 @@ interface Brand {
 interface BrandLogoProps extends Brand {
   isActive: boolean;
   onClick: () => void;
+}
+
+interface BrandSelection {
+  productId: string;
+  variantId: string;
+  product: CompleteProduct;
+  variant: ProductVariant;
+  displayName: string;
 }
 
 const BRANDS: Brand[] = [
@@ -29,7 +42,10 @@ const BrandLogo: React.FC<BrandLogoProps> = memo(({ name, logoSrc, isActive, onC
   return (
     <button
       type="button"
-      className={`flex flex-col items-center p-2 sm:p-3 md:p-4 rounded-full bg-slate-100 cursor-pointer transition-all duration-200 hover:bg-slate-200 ${isActive ? 'border-2 border-dashed border-primary' : 'border-2 border-transparent'}`}
+      className={cn(
+        'flex flex-col items-center p-2 sm:p-3 md:p-4 rounded-full bg-slate-100 cursor-pointer transition-all duration-200 hover:bg-slate-200',
+        isActive ? 'border-2 border-dashed border-primary' : 'border-2 border-transparent'
+      )}
       onClick={onClick}
       aria-label={`Select ${name} brand`}
       aria-pressed={isActive}
@@ -38,11 +54,14 @@ const BrandLogo: React.FC<BrandLogoProps> = memo(({ name, logoSrc, isActive, onC
         <Image
           src={logoSrc}
           alt={`${name} logo`}
-          width={64}
-          height={64}
+          fill
           className="object-contain w-full h-full"
           priority={name === 'apple'}
           loading={name === 'apple' ? 'eager' : 'lazy'}
+          onError={(e) => {
+            console.warn(`[BRAND_LOGO_ERROR] Failed to load logo for ${name}: ${logoSrc}`);
+            e.currentTarget.src = '/placeholder.png';
+          }}
         />
       </div>
     </button>
@@ -52,58 +71,117 @@ const BrandLogo: React.FC<BrandLogoProps> = memo(({ name, logoSrc, isActive, onC
 BrandLogo.displayName = 'BrandLogo';
 
 const TopTierBrands: React.FC = () => {
-  const { brandProducts } = useHomeStore();
+  const { brandProducts, isLoading, error } = useHomeStore();
   const [activeBrand, setActiveBrand] = useState('apple');
-  const [loading] = useState(false); 
-
+  const [searchTerm, setSearchTerm] = useState('');
 
   const handleBrandClick = useCallback((brandName: string) => {
     setActiveBrand(brandName);
+    setSearchTerm('');
+  }, []);
+
+  // Memoized filtered and sorted variant cards
+  const variantCards = useMemo(() => {
+    if (!brandProducts || !Array.isArray(brandProducts)) {
+      console.warn('[BRAND_PRODUCTS_ERROR] brandProducts is invalid:', brandProducts);
+      return [];
+    }
+    const filteredProducts = brandProducts.filter((product) => {
+      const brandName = typeof product?.brand === 'string' 
+        ? product.brand.toLowerCase() 
+        : (product?.brand as { name: string })?.name?.toLowerCase() || '';
+      const matches = brandName === activeBrand.toLowerCase();
+      if (!matches && product?.brand) {
+        console.debug(`[BRAND_FILTER] Skipping product ${product.id}: brand ${brandName} does not match ${activeBrand}`);
+      }
+      return matches;
+    });
+
+    return filteredProducts
+      .flatMap((product) =>
+        (product.variants || []).map((variant:any) => ({
+          productId: product.id,
+          variantId: variant.id,
+          product: product as unknown as CompleteProduct,
+          variant: variant as ProductVariant,
+          displayName: `${product.shortName || 'Product'} - ${variant.name || 'Variant'}`,
+        }))
+      )
+      .filter((selection) =>
+        searchTerm.trim()
+          ? [
+              selection.displayName || '',
+              selection.product.shortName || '',
+              selection.product.fullName || '',
+              selection.variant.name || '',
+              selection.variant.sku || '',
+              selection.product.description || '',
+            ].some((field) => field.toLowerCase().includes(searchTerm.toLowerCase()))
+          : true
+      )
+      .sort((a, b) => {
+        const aDate = a.product.createdAt ? new Date(a.product.createdAt).getTime() : 0;
+        const bDate = b.product.createdAt ? new Date(b.product.createdAt).getTime() : 0;
+        return bDate - aDate || a.productId.localeCompare(b.productId);
+      })
+      .slice(0, 10);
+  }, [brandProducts, activeBrand, searchTerm]);
+
+  const calculateDiscount = useCallback((mrp: number, ourPrice: number): number => {
+    if (mrp <= 0 || ourPrice >= mrp) return 0;
+    return Math.round(((mrp - ourPrice) / mrp) * 100);
   }, []);
 
 
+  const renderSkeletonCards = useCallback(() => {
+    return Array(4)
+      .fill(null)
+      .map((_, index) => (
+        <div
+          key={`skeleton-${index}`}
+          className="snap-start flex-shrink-0"
+          style={{ width: 'calc(80vw - 32px)', maxWidth: '22rem' }}
+        >
+          <ProductCardSkeleton />
+        </div>
+      ));
+  }, []);
 
-  // Calculate discount for a variant
-  const calculateDiscount = (mrp: number, ourPrice: number): number => {
-    if (mrp <= 0 || ourPrice >= mrp) return 0;
-    return Math.round(((mrp - ourPrice) / mrp) * 100);
-  };
-
-  // Flatten products and variants, filter by brand, and sort
-  const variantCards = useMemo(() => {
-    return brandProducts
-      .filter((product) => product.brand === activeBrand)
-      .flatMap((product) =>
-        product.variants.map((variant: Variant) => ({
-          productId: product.id,
-          variant,
-          averageRating: product.averageRating,
-          createdAt: product.createdAt,
-        }))
-      )
-      .sort((a, b) => {
-        if (a.createdAt && b.createdAt) {
-          return new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime();
-        }
-        return Number(b.productId) - Number(a.productId);
-      })
-      .slice(0, 10);
-  }, [brandProducts, activeBrand]);
-
-  const skeletonCards = Array(4)
-    .fill(null)
-    .map((_, index) => (
-      <div
-        key={`skeleton-${index}`}
-        className="snap-start flex-shrink-0"
-        style={{ width: 'calc(80vw - 32px)', maxWidth: '22rem' }}
-      >
-        <ProductCardSkeleton />
+  if (isLoading) {
+    return (
+      <div className="py-6 sm:py-8 md:py-12 mx-auto container px-4">
+        <header className="text-center mb-6 sm:mb-8 md:mb-10">
+          <h2 className="text-2xl sm:text-3xl md:text-4xl font-bold mb-2 sm:mb-4 nohemi-bold">
+            Explore Top-Tier <span className="text-primary">Brands</span>
+          </h2>
+          <p className="text-sm sm:text-base text-gray-600 max-w-2xl mx-auto">
+            Discover top-tier laptops from trusted brands — performance, power, and precision at Computer Garage.
+          </p>
+        </header>
+        <div className="flex overflow-x-auto pb-6 sm:pb-8 snap-x snap-mandatory minimal-scrollbar scrollbar-hide">
+          <div className="flex gap-3 sm:gap-4 md:gap-6 pl-1">
+            {renderSkeletonCards()}
+            <div className="flex-shrink-0 w-4"></div>
+          </div>
+        </div>
       </div>
-    ));
+    );
+  }
+
+  if (error) {
+    return (
+      <div className="py-6 sm:py-8 md:py-12 flex items-center justify-center h-[50vh]">
+        <div className="text-center space-y-4">
+          <AlertCircle className="h-12 w-12 text-red-500 mx-auto" />
+          <p className="text-red-600">{error || 'Failed to load brand products'}</p>
+          <PrimaryLinkButton href="/category/all">Browse All Products</PrimaryLinkButton>
+        </div>
+      </div>
+    );
+  }
 
   return (
-    <div className="py-6 sm:py-8 md:py-12 mx-auto">
+    <div className="py-6 sm:py-8 md:py-12 mx-auto container px-4">
       <header className="text-center mb-6 sm:mb-8 md:mb-10">
         <h2 className="text-2xl sm:text-3xl md:text-4xl font-bold mb-2 sm:mb-4 nohemi-bold">
           Explore Top-Tier <span className="text-primary">Brands</span>
@@ -129,38 +207,33 @@ const TopTierBrands: React.FC = () => {
         ))}
       </div>
 
-      {loading ? (
+      {variantCards.length > 0 ? (
         <div className="flex overflow-x-auto pb-6 sm:pb-8 snap-x snap-mandatory minimal-scrollbar scrollbar-hide">
           <div className="flex gap-3 sm:gap-4 md:gap-6 pl-1">
-            {skeletonCards}
-            <div className="flex-shrink-0 w-4"></div>
-          </div>
-        </div>
-      ) : variantCards.length > 0 ? (
-        <div className="flex overflow-x-auto pb-6 sm:pb-8 snap-x snap-mandatory minimal-scrollbar scrollbar-hide">
-          <div className="flex gap-3 sm:gap-4 md:gap-6 pl-1">
-            {variantCards.map(({ productId, variant, averageRating }) => {
-              const mrp = Number(variant.mrp);
-              const ourPrice = Number(variant.ourPrice);
+            {variantCards.map(({ productId, variantId, product, variant, displayName }) => {
+              const mrp = Number(variant.mrp) || 0;
+              const ourPrice = Number(variant.ourPrice) || 0;
               const discount = calculateDiscount(mrp, ourPrice);
 
               return (
                 <div
-                  key={`${productId}-${variant.id}`}
+                  key={`${productId}-${variantId}`}
                   className="snap-start flex-shrink-0"
                   style={{ width: 'calc(80vw - 32px)', maxWidth: '22rem' }}
                 >
                   <ProductCardwithoutCart
                     productId={productId}
-                    variantId={variant.id}
-                    slug={variant.slug}
+                    variantId={variantId}
+                    slug={variant.slug || product.slug || 'product'}
                     className="w-full h-full"
-                    image={variant.productImages[0] ?? '/placeholder.svg'}
-                    name={variant.name}
-                    rating={Number(averageRating)}
+                    image={variant.productImages?.[0]?.url ?? '/placeholder.png'}
+                    name={displayName}
+                    rating={Number(product.averageRating) || 0}
                     ourPrice={ourPrice}
                     mrp={mrp}
                     discount={discount}
+                    isHeartNeed={true}
+                    showViewDetails={true}
                   />
                 </div>
               );
@@ -178,6 +251,7 @@ const TopTierBrands: React.FC = () => {
                 fill="none"
                 viewBox="0 0 24 24"
                 stroke="currentColor"
+                aria-hidden="true"
               >
                 <path
                   strokeLinecap="round"
@@ -196,7 +270,7 @@ const TopTierBrands: React.FC = () => {
               products.
             </p>
             <p className="text-sm text-gray-600 mt-1">
-              Please check back later or explore other brands.
+              {searchTerm.trim() ? 'Try different keywords or ' : 'Please check back later or '}explore other brands.
             </p>
             <PrimaryLinkButton href="/category/all" className="mt-6">
               Browse All Products

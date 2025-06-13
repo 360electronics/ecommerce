@@ -3,7 +3,7 @@
 import { useEffect } from 'react';
 import TopTierBrands from '@/components/Home/Brands/TopTierBrands';
 import OfferZoneCTA from '@/components/Home/CTA/OfferZoneCTA';
-import FeaturedProducts from '@/components/Home/FeatureProducts/FeaturedProducts';
+import FeaturedProducts from '@/components/Home/OfferZone/OfferZoneProducts';
 import GamersZone from '@/components/Home/GamersZone/GamersZone';
 import HeroBanner from '@/components/Home/Hero/HeroBanner';
 import NewArrivals from '@/components/Home/NewArrivals/NewArrivals';
