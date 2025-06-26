@@ -75,7 +75,7 @@ const bannerTypeConfig: Record<BannerType, BannerTypeConfig> = {
     },
     dimensions: {
       default: { width: 1200, height: 400 },
-      sm: { width: 640, height: 200 },
+      sm: { width: 480, height: 640 },
       lg: { width: 1920, height: 600 },
     },
     supportsVideo: false,

@@ -9,7 +9,7 @@ import SkeletonLoader from '../Reusable/SkeletonLoader';
 
 export default function Orders() {
   const { user, isLoading: authLoading } = useAuthStore();
-  const { orders, isLoading, isRefetching, errors } = useProfileStore();
+  const { orders, loadingStates, isRefetching, errors } = useProfileStore();
 
   const formatDate = (dateString: string) => {
     try {
@@ -59,14 +59,13 @@ export default function Orders() {
     }
   };
 
-  if (authLoading || isLoading || isRefetching) {
+  if (authLoading || loadingStates.orders) {
     return (
       <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8 py-8">
         <SkeletonLoader count={3} className="space-y-6" />
       </div>
     );
   }
-
 
   if (!user) {
     return (
@@ -116,7 +115,7 @@ export default function Orders() {
                     <h3 className="text-lg font-medium text-gray-900">
                       Order #{order.id.substring(0, 8)}
                     </h3>
-                    <p className="text-sm text-gray-500 mt-1">{formatDate(order.createdAt)}</p>
+                    <p className="text-sm text-gray-500 mt-1">{formatDate(order.orderDate)}</p>
                   </div>
                   <div className="flex space-x-2">
                     <span
@@ -142,7 +141,7 @@ export default function Orders() {
                     <div className="space-y-4">
                       {order.items.map((item) => (
                         <div
-                          key={item.id}
+                          key={`${item.productId}-${item.variantId}`}
                           className="flex items-center space-x-4 border-b border-gray-100 pb-4 last:border-b-0"
                         >
                           <div className="flex-shrink-0">
@@ -169,7 +168,7 @@ export default function Orders() {
                             <p className="text-sm text-gray-500">
                               Unit Price: ₹{Number(item.unitPrice).toLocaleString('en-IN')}
                             </p>
-                            {item.product && (
+                            {item.variant && (
                               <p className="text-sm text-gray-500">SKU: {item.variant.sku}</p>
                             )}
                           </div>

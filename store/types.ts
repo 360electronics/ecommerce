@@ -1,5 +1,7 @@
 //user-auth
 
+import { ProductImage, ProductVariant } from "@/types/product";
+
 export interface User {
   id: string;
   firstName: string | null;
@@ -117,7 +119,7 @@ export interface WishlistItem {
     stock: string;
     mrp: string;
     ourPrice: string;
-    productImages: string[];
+    productImages: string;
   };
   product: {
     id: string;
@@ -160,7 +162,7 @@ export interface FlattenedProduct {
   description: string | null;
   dimensions: string;
   material: string;
-  productImages: string[];
+  productImages: any,
   productParent: {
     averageRating: string;
     brand: string;
@@ -179,15 +181,7 @@ export interface FlattenedProduct {
     tags: string[];
     totalStocks: string;
     updatedAt: string;
-    variants: Array<{
-      id: string;
-      color: string;
-      storage: string;
-      slug: string;
-      mrp: number;
-      ourPrice: number;
-      stock: string;
-    }>;
+    variants: ProductVariant;
   };
   sku: string;
   slug: string;

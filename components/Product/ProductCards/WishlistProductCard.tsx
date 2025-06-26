@@ -1,19 +1,32 @@
-"use client"
+'use client';
 
-import type React from "react"
-import { Heart, ShoppingCart } from "lucide-react";
-import Image from "next/image"
-import Link from "next/link"
-import { ProductCardProps } from "@/types/product"
-import { addToWishlist, removeFromWishlist } from "@/utils/wishlist.utils"; 
-import toast, { Toaster } from "react-hot-toast";
-import { useEffect, useState } from "react";
-import { encodeUUID } from "@/utils/Encryption";
-import { useAuthStore } from "@/store/auth-store";
-import { useWishlistStore } from "@/store/wishlist-store";
-import { useProfileStore } from "@/store/profile-store";
-import { useCartStore } from "@/store/cart-store";
+import { useState, useCallback, useEffect, JSX } from 'react';
+import { Heart, ShoppingCart, X } from 'lucide-react';
+import Image from 'next/image';
+import Link from 'next/link';
+import { useRouter } from 'next/navigation';
+import { cn } from '@/lib/utils';
+import { useAuthStore } from '@/store/auth-store';
+import { useWishlistStore, useWishlistAuthSync } from '@/store/wishlist-store';
+import { useProfileStore } from '@/store/profile-store';
+import { useCartStore } from '@/store/cart-store';
+import toast from 'react-hot-toast';
 
+interface ProductCardProps {
+  image?: string; // Primary image URL (first from productImages)
+  name: string; // Product name
+  rating?: number; // Optional rating (0-5)
+  ourPrice?: number; // Current price
+  mrp?: number; // Manufacturer's retail price
+  discount?: number; // Optional pre-calculated discount percentage
+  showViewDetails?: boolean; // Show "View full details" link
+  className?: string; // Additional CSS classes
+  slug: string; // Product slug for routing
+  onRemove?: () => void; // Optional callback for remove action
+  isHeartNeed?: boolean; // Show wishlist heart button
+  productId: string; // Product ID
+  variantId: string; // Variant ID
+}
 
 const WishlistProductCard: React.FC<ProductCardProps> = ({
   image,
@@ -23,108 +36,114 @@ const WishlistProductCard: React.FC<ProductCardProps> = ({
   mrp,
   discount: providedDiscount,
   showViewDetails = true,
-  className = "",
+  className = '',
   slug,
-  onAddToCart,
+  onRemove,
   isHeartNeed = true,
   productId,
-  variantId
+  variantId,
 }) => {
-  const { user } = useAuthStore();
-  const { fetchWishlist } = useWishlistStore();
-  const profileContext = useProfileStore();
-  const [isAdding, setIsAdding] = useState(false);
-  const [isInWishlist, setIsInWishlist] = useState(false);
-  const userId = user?.id;
-
+  useWishlistAuthSync(); // Sync wishlist with auth state
+  const { isInWishlist, addToWishlist, removeFromWishlist, isLoading } = useWishlistStore();
+  const { isLoggedIn, fetchAuthStatus } = useAuthStore();
+  const { refetch: refetchProfile } = useProfileStore();
   const { addToCart } = useCartStore();
+  const [isAdding, setIsAdding] = useState(false);
+  const router = useRouter();
 
-  // Check if product is in wishlist
+  const isInWishlistStatus = productId && variantId ? isInWishlist(productId, variantId) : false;
+
+  // Fetch auth status on mount if not logged in
   useEffect(() => {
-    const checkWishlistStatus = async () => {
-      if (!userId || !productId) {
-        setIsInWishlist(false);
+    if (!isLoggedIn) {
+      fetchAuthStatus();
+    }
+  }, [isLoggedIn, fetchAuthStatus]);
+
+  const handleWishlistClick = useCallback(
+    async (e: React.MouseEvent) => {
+      e.preventDefault();
+      e.stopPropagation();
+
+      if (!isLoggedIn) {
+        toast.error('Please login to manage wishlist.');
+        router.push('/login');
         return;
       }
 
-      // Use wishlistItems from ProfileContext if available
-      if (profileContext?.wishlistItems) {
-        setIsInWishlist(
-          profileContext.wishlistItems.some((item) => item.productId === productId)
-        );
+      if (!productId || !variantId || productId === '' || variantId === '') {
+        console.error('Invalid product or variant:', { productId, variantId });
+        toast.error('Invalid product or variant.');
         return;
       }
 
+      setIsAdding(true);
       try {
-        const res = await fetch(`/api/users/wishlist?userId=${userId}`);
-        if (res.ok) {
-          const wishlistData = await res.json();
-          setIsInWishlist(
-            Array.isArray(wishlistData) &&
-            wishlistData.some((item: { productId: string }) => item.productId === productId)
-          );
-        } else {
-          setIsInWishlist(false);
+        const success = isInWishlistStatus
+          ? await removeFromWishlist(productId, variantId, () => refetchProfile('profile', ''))
+          : await addToWishlist(productId, variantId, { product: { id: productId }, variant: { id: variantId } }, () => refetchProfile('profile', ''));
+
+        if (success) {
+          toast.success(isInWishlistStatus ? 'Removed from wishlist!' : 'Added to wishlist!');
         }
       } catch (error) {
-        console.error("Error checking wishlist status:", error);
-        setIsInWishlist(false);
+        console.error('[WISHLIST_ERROR]', { productId, variantId, error });
+      } finally {
+        setIsAdding(false);
       }
-    };
+    },
+    [isLoggedIn, isInWishlistStatus, productId, variantId, addToWishlist, removeFromWishlist, refetchProfile, router]
+  );
 
-    checkWishlistStatus();
-  }, [userId, productId, profileContext?.wishlistItems]);
+  const handleCartClick = useCallback(
+    async (e: React.MouseEvent) => {
+      e.preventDefault();
+      e.stopPropagation();
 
-  const handleWishlistClick = async (e: React.MouseEvent) => {
-    e.preventDefault();
-    e.stopPropagation();
-
-    if (!userId || !productId || !variantId) {
-      toast.error("Please login or provide valid product.");
-      return;
-    }
-
-    setIsAdding(true);
-    let result;
-    if (isInWishlist) {
-      // Remove from wishlist
-      result = await removeFromWishlist(userId, productId, variantId); // Implement removeFromWishlist
-    } else {
-      // Add to wishlist
-      result = await addToWishlist(userId, productId, variantId);
-    }
-    setIsAdding(false);
-
-    if (result.success) {
-      toast.success(isInWishlist ? "Removed from wishlist!" : "Added to wishlist!");
-      setIsInWishlist(!isInWishlist);
-      fetchWishlist();
-      if (profileContext?.refetch) {
-        profileContext.refetch('wishlist', userId, true); 
+      if (!isLoggedIn) {
+        toast.error('Please login to add to cart.');
+        router.push('/login');
+        return;
       }
-    } else {
-      toast.error(result.message || `Failed to ${isInWishlist ? "remove from" : "add to"} wishlist`);
-    }
-  };
 
-  const calculateDiscount = () => {
-    if (mrp && ourPrice && mrp > ourPrice) {
+      if (!productId || !variantId || productId === '' || variantId === '') {
+        console.error('Invalid product or variant:', { productId, variantId });
+        toast.error('Invalid product or variant.');
+        return;
+      }
+
+      setIsAdding(true);
+      try {
+        await addToCart(productId, variantId, 1);
+        toast.success('Added to cart!');
+      } catch (error) {
+        console.error('[CART_ERROR]', { productId, variantId, error });
+        toast.error('Failed to add to cart.');
+      } finally {
+        setIsAdding(false);
+      }
+    },
+    [isLoggedIn, productId, variantId, addToCart, router]
+  );
+
+  const calculateDiscount = useCallback((): number | null => {
+    if (mrp && ourPrice && mrp > ourPrice && mrp > 0) {
       return Math.round(((mrp - ourPrice) / mrp) * 100);
     }
     return null;
-  };
+  }, [mrp, ourPrice]);
 
-  const discount = providedDiscount || calculateDiscount();
+  const discount = providedDiscount ?? calculateDiscount();
 
-  const renderRating = () => {
-    if (typeof rating !== "number" || isNaN(rating)) return null;
+  const renderRating = useCallback((): JSX.Element | null => {
+    if (typeof rating !== 'number' || isNaN(rating) || rating < 0 || rating > 5) return null;
 
     const stars = Array(5)
       .fill(0)
       .map((_, index) => (
         <span
           key={index}
-          className={`text-lg ${index < Math.floor(rating) ? "text-yellow-500" : "text-gray-300"}`}
+          className={cn('text-lg', index < Math.floor(rating) ? 'text-yellow-500' : 'text-gray-300')}
         >
           ★
         </span>
@@ -136,88 +155,107 @@ const WishlistProductCard: React.FC<ProductCardProps> = ({
         <div className="flex">{stars}</div>
       </div>
     );
-  };
-
-  const encodedProductId = productId ? encodeUUID(productId) : '';
-
+  }, [rating]);
 
   return (
-    <Link href={`/product/${encodedProductId}/${slug}`} className={`w-full rounded-lg cursor-pointer ${className}`}>
-      <Toaster />
+    <Link
+      href={`/product/${slug}`}
+      className={cn('w-full rounded-lg cursor-pointer focus:outline-none focus:ring-2 focus:ring-blue-500', className)}
+      aria-label={`View details for ${name}`}
+    >
       <div className="relative">
         {/* Wishlist button */}
         {isHeartNeed && (
           <button
             onClick={handleWishlistClick}
-            className={`absolute cursor-pointer right-12 bottom-0 z-10 p-2 rounded-full 
-              ${isInWishlist ? "text-red-500 bg-red-200" : "text-gray-400"} 
-              bg-gray-300 hover:text-gray-700 disabled:opacity-50`}
-            disabled={isAdding}
-            aria-label={isInWishlist ? "Remove from wishlist" : "Add to wishlist"}
+            className={cn(
+              'absolute right-12 bottom-0 z-10 p-2 rounded-full transition-colors',
+              isInWishlistStatus ? 'text-red-500 bg-red-100 hover:bg-red-200' : 'text-gray-500 bg-gray-100 hover:bg-gray-200',
+              (isAdding || isLoading) && 'opacity-50 cursor-not-allowed'
+            )}
+            disabled={isAdding || isLoading}
+            aria-label={isInWishlistStatus ? 'Remove from wishlist' : 'Add to wishlist'}
           >
             <Heart
               size={18}
-              fill={isInWishlist ? "red" : "none"}
-              className={isInWishlist ? "text-red-500" : "text-gray-400"}
+              fill={isInWishlistStatus ? 'red' : 'none'}
+              className={cn(isInWishlistStatus ? 'text-red-500' : 'text-gray-500')}
             />
-          </button>
-        )}
-        {/* Remove button (only shown when onRemove is provided) */}
-        {onAddToCart && (
-          <button
-            onClick={() => addToCart(productId, variantId, 1)}
-            className="absolute right-2 bottom-0 z-10 rounded-full bg-black p-2 text-white shadow-md hover:text-white cursor-pointer"
-          >
-            <ShoppingCart size={18} />
           </button>
         )}
 
-        {/* Product image with transparent background support */}
+        {/* Cart button */}
+        <button
+          onClick={handleCartClick}
+          className={cn(
+            'absolute right-2 bottom-0 z-10 p-2 rounded-full transition-colors bg-black text-white hover:bg-gray-800',
+            (isAdding || isLoading) && 'opacity-50 cursor-not-allowed'
+          )}
+          disabled={isAdding || isLoading}
+          aria-label="Add to cart"
+        >
+          <ShoppingCart size={18} />
+        </button>
+
+        {/* Remove button */}
+        {onRemove && (
+          <button
+            onClick={(e) => {
+              e.preventDefault();
+              e.stopPropagation();
+              onRemove();
+            }}
+            className="absolute right-5 top-5 z-10 rounded-full bg-white p-1 text-red-500 shadow-md hover:bg-red-500 hover:text-white focus:outline-none focus:ring-2 focus:ring-red-500"
+            aria-label="Remove product"
+          >
+            <X size={16} />
+          </button>
+        )}
+
+        {/* Product Image */}
         <div className="mb-4 relative w-full aspect-square border group border-gray-100 rounded-md bg-[#F4F4F4] overflow-hidden">
-          <div className="absolute inset-0 flex items-center justify-center p-6 mix-blend-multiply">
-            <Image
-              src={image || "/placeholder.svg"}
-              alt={name || "Product"}
-              width={250}
-              height={250}
-              className="max-h-full max-w-full object-contain group-hover:scale-105 duration-200"
-              style={{ objectFit: "contain", mixBlendMode: "multiply" }}
-            />
-          </div>
+          <Image
+            src={image || '/placeholder.png'}
+            alt={name || 'Product'}
+            fill
+            className="max-h-full max-w-full object-contain p-6 group-hover:scale-105 duration-200 mix-blend-multiply"
+            sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 33vw"
+            style={{ objectFit: 'contain' }}
+          />
         </div>
 
-        {/* Product info */}
+        {/* Product Info */}
         <div className="space-y-2">
           <h3 className="text-base font-medium text-gray-900 line-clamp-2">{name}</h3>
 
-          {/* Rating - only shown if rating exists */}
+          {/* Rating */}
           {renderRating()}
 
-          {/* Price */}
+          {/* Price Info */}
           <div className="flex items-center flex-wrap gap-2">
-            {ourPrice !== null && ourPrice !== undefined && (
-              <span className="text-lg font-bold">₹{typeof ourPrice === 'number' ? ourPrice.toLocaleString() : ourPrice}</span>
+            {ourPrice !== undefined && ourPrice !== null && ourPrice >= 0 && (
+              <span className="text-lg font-bold">₹{Number(ourPrice).toLocaleString()}</span>
             )}
-            {mrp && mrp > 0 && ourPrice && (
-              <span className="text-sm text-gray-500 line-through">MRP {typeof mrp === 'number' ? mrp.toLocaleString() : mrp}</span>
+            {mrp && mrp > 0 && ourPrice !== undefined && ourPrice !== null && mrp > ourPrice && (
+              <span className="text-sm text-gray-500 line-through">MRP ₹{Number(mrp).toLocaleString()}</span>
             )}
             {discount && discount > 0 && (
-              <span className="rounded-full bg-offer px-2 py-1 text-xs font-medium text-white">{discount}% Off</span>
+              <span className="rounded-full bg-red-600 px-2 py-1 text-xs font-medium text-white">
+                {discount}% Off
+              </span>
             )}
           </div>
 
-          {/* View details link */}
+          {/* View Details */}
           {showViewDetails && (
             <div className="pt-2">
-              <div className="text-sm text-gray-500 hover:text-gray-700">
-                View full details
-              </div>
+              <div className="text-sm text-gray-500 hover:text-gray-700">View full details</div>
             </div>
           )}
         </div>
       </div>
     </Link>
-  )
-}
+  );
+};
 
-export default WishlistProductCard
+export default WishlistProductCard;

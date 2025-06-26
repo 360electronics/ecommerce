@@ -21,7 +21,7 @@ interface Address {
 
 export default function ProfileInfo() {
   const { user, isLoggedIn, isLoading: authLoading, setAuth } = useAuthStore();
-  const { profileData, isLoading, isRefetching, errors, refetch } = useProfileStore();
+  const { profileData, loadingStates, errors, refetch } = useProfileStore();
   const [isProfileModalOpen, setIsProfileModalOpen] = useState(false);
   const [isAddressModalOpen, setIsAddressModalOpen] = useState(false);
   const [editingAddress, setEditingAddress] = useState<Address | null>(null);
@@ -150,7 +150,7 @@ export default function ProfileInfo() {
     });
   };
 
-  if (authLoading || isLoading) {
+  if (authLoading || loadingStates.profile) {
     return (
       <div className="flex items-center justify-center py-12">
         <Loader2 className="h-8 w-8 animate-spin text-gray-500" />

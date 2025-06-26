@@ -1,9 +1,16 @@
-'use client';
-
 import { create } from 'zustand';
-import { persist, createJSONStorage } from 'zustand/middleware';
-import toast from 'react-hot-toast';
-import { AuthState } from './types';
+import { persist } from 'zustand/middleware';
+import { User } from './types';
+
+export interface AuthState {
+  isLoggedIn: boolean;
+  user: User | null;
+  isLoading: boolean;
+  error: string | null;
+  fetchAuthStatus: () => Promise<void>;
+  setAuth: (isLoggedIn: boolean, user: User | null) => void;
+}
+
 
 export const useAuthStore = create<AuthState>()(
   persist(
@@ -36,26 +43,14 @@ export const useAuthStore = create<AuthState>()(
             isLoading: false,
             error: error instanceof Error ? error.message : 'Failed to fetch auth status',
           });
-          
         }
       },
-      setAuth: (isLoggedIn, user) => set({ isLoggedIn, user, isLoading: false, error: null }),
+      setAuth: (isLoggedIn, user) =>
+        set({ isLoggedIn, user, isLoading: false, error: null }),
     }),
     {
-      name: 'user-status',
-      storage: createJSONStorage(() => localStorage),
-      partialize: (state) => ({
-        isLoggedIn: state.isLoggedIn,
-        user: state.user
-          ? {
-              id: state.user.id,
-              email: state.user.email,
-              firstName: state.user.firstName,
-              lastName: state.user.lastName,
-              role: state.user.role,
-            }
-          : null,
-      }),
+      name: 'g36-auth-status', 
+      partialize: (state) => ({ isLoggedIn: state.isLoggedIn }),
     }
   )
 );

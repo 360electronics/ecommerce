@@ -46,11 +46,11 @@ const HeroBanner: React.FC = () => {
       type: banner.type || '',
       imageUrls: banner.imageUrls && typeof banner.imageUrls === 'object'
         ? {
-            default: banner.imageUrls.default || '/placeholder.png',
+            default: banner.imageUrls.default || '/placeholder.svg',
             sm: banner.imageUrls.sm,
             lg: banner.imageUrls.lg,
           }
-        : { default: '/placeholder.png' },
+        : { default: '/placeholder.svg' },
       start_date: banner.start_date,
       end_date: banner.end_date,
       status: banner.status === 'active' || banner.status === 'inactive' ? banner.status : 'inactive',
@@ -147,9 +147,9 @@ const HeroBanner: React.FC = () => {
   }, [mainBanners]);
 
   const getResponsiveImageUrl = useCallback((imageUrls: ImageUrls | undefined): string => {
-    if (!imageUrls) return '/placeholder.png';
+    if (!imageUrls) return '/placeholder_banner.png';
     const width = typeof window !== 'undefined' ? window.innerWidth : 0;
-    return (width >= 1024 && imageUrls.default) || (width >= 640 && imageUrls.sm) || imageUrls.default;
+    return (width >= 1024 && imageUrls.default) || (width <= 640 && imageUrls.sm) || imageUrls.default;
   }, []);
 
   if (isLoading) {
@@ -196,7 +196,7 @@ const HeroBanner: React.FC = () => {
                 />
               ) : (
                 <Image
-                  src={getResponsiveImageUrl(mainBanners[currentImageIndex]?.imageUrls) || '/placeholder.png'}
+                  src={getResponsiveImageUrl(mainBanners[currentImageIndex]?.imageUrls) || '/placeholder.svg'}
                   alt={mainBanners[currentImageIndex]?.title || `Banner ${currentImageIndex + 1}`}
                   fill
                   className="object-cover object-left-top transition-opacity duration-500 ease-in-out"
@@ -204,7 +204,7 @@ const HeroBanner: React.FC = () => {
                   quality={85}
                   onError={(e) => {
                     console.error('[MAIN_IMAGE_ERROR] Failed to load image:', mainBanners[currentImageIndex]?.imageUrls);
-                    e.currentTarget.src = '/placeholder.png';
+                    e.currentTarget.src = '/placeholder.svg';
                   }}
                 />
               )}
@@ -279,7 +279,7 @@ const HeroBanner: React.FC = () => {
                 />
               ) : (
                 <Image
-                  src={getResponsiveImageUrl(secondaryBanner?.imageUrls) || '/placeholder.png'}
+                  src={getResponsiveImageUrl(secondaryBanner?.imageUrls) || '/placeholder.svg'}
                   alt={secondaryBanner?.title || 'Secondary banner'}
                   fill
                   className="object-cover"
@@ -287,7 +287,7 @@ const HeroBanner: React.FC = () => {
                   loading="lazy"
                   onError={(e) => {
                     console.error('[SECONDARY_IMAGE_ERROR] Failed to load image:', secondaryBanner?.imageUrls);
-                    e.currentTarget.src = '/placeholder.png';
+                    e.currentTarget.src = '/placeholder.svg';
                   }}
                 />
               )}
@@ -323,7 +323,7 @@ const HeroBanner: React.FC = () => {
                 loading="lazy"
                 onError={(e) => {
                   console.error('[CUSTOMISE_IMAGE_ERROR] Failed to load image:', customisePC.imageUrls);
-                  e.currentTarget.src = '/placeholder.png';
+                  e.currentTarget.src = '/placeholder.svg';
                 }}
               />
             ) : (

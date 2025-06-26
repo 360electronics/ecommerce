@@ -1,164 +1,197 @@
+// app/store/product-store.ts
 'use client';
+
 import { create } from 'zustand';
-import { persist, createJSONStorage } from 'zustand/middleware';
 import toast from 'react-hot-toast';
-import { useRouter } from 'next/navigation';
 import { useAuthStore } from './auth-store';
-import { useCartStore } from './cart-store'; // Hypothetical Zustand store
+import { useCartStore } from './cart-store';
 import { useCheckoutStore } from './checkout-store';
-import { FlattenedProduct } from './types';
+import { FlattenedProduct } from '@/types/product';
 
 interface ProductState {
   product: FlattenedProduct | null;
-  selectedColor: string;
-  selectedStorage: string;
+  selectedAttributes: Record<string, string | number | boolean>;
   quantity: number;
   selectedImageIndex: number;
   lensPosition: { x: number; y: number };
   isLoading: boolean;
   error: string | null;
   setProduct: (product: FlattenedProduct) => void;
-  setSelectedColor: (color: string) => void;
-  setSelectedStorage: (storage: string) => void;
+  setSelectedAttributes: (attributes: Record<string, string | number | boolean>) => void;
   setQuantity: (quantity: number) => void;
   setSelectedImageIndex: (index: number) => void;
   setLensPosition: (position: { x: number; y: number }) => void;
   setIsLoading: (isLoading: boolean) => void;
   setError: (error: string | null) => void;
-  handleAddToCart: () => Promise<void>;
-  handleBuyNow: () => Promise<void>;
+  handleAddToCart: (userId: string) => Promise<boolean>;
+  handleBuyNow: (userId: string) => Promise<boolean>;
   reset: () => void;
 }
 
-export const useProductStore = create<ProductState>()(
-  persist(
-    (set, get) => ({
-      product: null,
-      selectedColor: '',
-      selectedStorage: '',
+export const useProductStore = create<ProductState>((set, get) => ({
+  product: null,
+  selectedAttributes: {},
+  quantity: 1,
+  selectedImageIndex: 0,
+  lensPosition: { x: 0, y: 0 },
+  isLoading: false,
+  error: null,
+  setProduct: (product) => {
+    if (!product || !product.productParent || !product.productParent.variants.length) {
+      set({
+        product,
+        selectedAttributes: {},
+        quantity: 1,
+        selectedImageIndex: 0,
+        lensPosition: { x: 0, y: 0 },
+        isLoading: false,
+        error: null,
+      });
+      return;
+    }
+
+    const currentVariant = product.productParent.variants.find((v) => v.id === product.id) || product.productParent.variants[0];
+    const initialAttributes = currentVariant
+      ? Object.keys(currentVariant.attributes).reduce((acc, key) => {
+          acc[key] = currentVariant.attributes[key];
+          return acc;
+        }, {} as Record<string, string | number | boolean>)
+      : {};
+
+    set({
+      product,
+      selectedAttributes: initialAttributes,
       quantity: 1,
       selectedImageIndex: 0,
       lensPosition: { x: 0, y: 0 },
       isLoading: false,
       error: null,
-      setProduct: (product) =>
-        set({
-          product,
-          selectedColor: product.color || '',
-          selectedStorage: product.storage || '',
-          quantity: 1,
-          selectedImageIndex: 0,
-          lensPosition: { x: 0, y: 0 },
-          isLoading: false,
-          error: null,
-        }),
-      setSelectedColor: (color) => set({ selectedColor: color }),
-      setSelectedStorage: (storage) => set({ selectedStorage: storage }),
-      setQuantity: (quantity) => set({ quantity: Math.max(1, quantity) }), // Prevent negative quantities
-      setSelectedImageIndex: (index) => set({ selectedImageIndex: index }),
-      setLensPosition: (position) => set({ lensPosition: position }),
-      setIsLoading: (isLoading) => set({ isLoading }),
-      setError: (error) => set({ error }),
-      handleAddToCart: async () => {
-        const { product, selectedColor, selectedStorage, quantity } = get();
-        if (!product) {
-          toast.error('No product selected');
-          return;
-        }
-
-        const { addToCart } = useCartStore.getState();
-        const { isLoggedIn, user } = useAuthStore.getState();
-        const router = useRouter();
-
-        if (!isLoggedIn || !user?.id) {
-          toast.error('Please log in to add items to cart');
-          router.push('/login');
-          return;
-        }
-
-        const variant = product.productParent.variants.find(
-          (v: { color: string; storage: string; }) => v.color === selectedColor && v.storage === selectedStorage
-        );
-
-        if (!variant) {
-          toast.error('Selected variant is not available');
-          return;
-        }
-
-        try {
-          await addToCart(product.productId, variant.id, quantity);
-          toast.success(`${product.name} (${selectedColor}, ${selectedStorage}) added to cart!`);
-        } catch (err) {
-          toast.error('An unexpected error occurred');
-        }
-      },
-      handleBuyNow: async () => {
-        const { product, selectedColor, selectedStorage } = get();
-        if (!product) {
-          toast.error('No product selected');
-          return;
-        }
-
-        const { addToCheckout, error: checkoutError } = useCheckoutStore.getState();
-        const { isLoggedIn, user } = useAuthStore.getState();
-        const router = useRouter();
-
-        if (!isLoggedIn || !user?.id) {
-          toast.error('Please log in to proceed with purchase');
-          router.push('/login');
-          return;
-        }
-
-        const variant = product.productParent.variants.find(
-          (v: { color: string; storage: string; }) => v.color === selectedColor && v.storage === selectedStorage
-        );
-
-        if (!variant) {
-          toast.error('Selected variant is not available');
-          return;
-        }
-
-        const item = {
-          userId: user.id,
-          productId: product.productId,
-          variantId: variant.id,
-          totalPrice: variant.ourPrice, // Use variant price for accuracy
-          quantity: 1,
-        };
-
-        try {
-          await addToCheckout(item);
-          if (!checkoutError) {
-            router.push('/checkout');
-          } else {
-            toast.error(checkoutError || 'Failed to proceed to checkout');
-          }
-        } catch (err) {
-          toast.error('An unexpected error occurred');
-        }
-      },
-      reset: () =>
-        set({
-          product: null,
-          selectedColor: '',
-          selectedStorage: '',
-          quantity: 1,
-          selectedImageIndex: 0,
-          lensPosition: { x: 0, y: 0 },
-          isLoading: false,
-          error: null,
-        }),
-    }),
-    {
-      name: 'product-store',
-      storage: createJSONStorage(() => localStorage),
-      partialize: (state) => ({
-        selectedColor: state.selectedColor,
-        selectedStorage: state.selectedStorage,
-        quantity: state.quantity,
-        selectedImageIndex: state.selectedImageIndex,
-        lensPosition: state.lensPosition,
-      }),
+    });
+  },
+  setSelectedAttributes: (attributes) => set({ selectedAttributes: attributes }),
+  setQuantity: (quantity) => {
+    const { product, selectedAttributes } = get();
+    if (!product || !product.productParent || !product.productParent.variants.length) {
+      set({ quantity: Math.max(1, quantity) });
+      return;
     }
-  )
-);
+
+    const activeVariant = product.productParent.variants.find((v) =>
+      Object.entries(selectedAttributes).every(([key, value]) => v.attributes[key] === value)
+    );
+
+    if (!activeVariant) {
+      set({ quantity: 1 });
+      return;
+    }
+
+    const maxQuantity = activeVariant.isBackorderable ? Infinity : Number(activeVariant.stock);
+    set({ quantity: Math.max(1, Math.min(quantity, maxQuantity)) });
+  },
+  setSelectedImageIndex: (index) => set({ selectedImageIndex: index }),
+  setLensPosition: (position) => set({ lensPosition: position }),
+  setIsLoading: (isLoading) => set({ isLoading }),
+  setError: (error) => set({ error }),
+  handleAddToCart: async (userId: string) => {
+    const { product, selectedAttributes, quantity } = get();
+    if (!product || !product.productParent || !product.productParent.variants.length) {
+      toast.error('No product selected');
+      return false;
+    }
+
+    const { addToCart } = useCartStore.getState();
+
+    const variant = product.productParent.variants.find((v) =>
+      Object.entries(selectedAttributes).every(([key, value]) => v.attributes[key] === value)
+    );
+
+    if (!variant) {
+      toast.error('Selected variant is not available');
+      return false;
+    }
+
+    if (variant.stock <= 0) {
+      toast.error('Selected variant is out of stock');
+      return false;
+    }
+
+    if (Number(variant.stock) < quantity && !variant.isBackorderable) {
+      toast.error(`Only ${variant.stock} items available in stock`);
+      return false;
+    }
+
+    try {
+      set({ isLoading: true });
+      await addToCart(product.productId, variant.id, quantity);
+      toast.success(`${product.name} added to cart!`);
+      return true;
+    } catch (err: any) {
+      toast.error(err.message || 'Failed to add item to cart');
+      return false;
+    } finally {
+      set({ isLoading: false });
+    }
+  },
+  handleBuyNow: async (userId: string) => {
+    const { product, selectedAttributes, quantity } = get();
+    if (!product || !product.productParent || !product.productParent.variants.length) {
+      toast.error('No product selected');
+      return false;
+    }
+
+    const { addToCheckout, error: checkoutError } = useCheckoutStore.getState();
+
+    const variant = product.productParent.variants.find((v) =>
+      Object.entries(selectedAttributes).every(([key, value]) => v.attributes[key] === value)
+    );
+
+    if (!variant) {
+      toast.error('Selected variant is not available');
+      return false;
+    }
+
+    if (variant.stock <= 0) {
+      toast.error('Selected variant is out of stock');
+      return false;
+    }
+
+    if (Number(variant.stock) < quantity && !variant.isBackorderable) {
+      toast.error(`Only ${variant.stock} items available in stock`);
+      return false;
+    }
+
+    const item = {
+      userId,
+      productId: product.productId,
+      variantId: variant.id,
+      totalPrice: variant.ourPrice * quantity,
+      quantity,
+    };
+
+    try {
+      set({ isLoading: true });
+      await addToCheckout(item);
+      if (!checkoutError) {
+        return true;
+      } else {
+        toast.error(checkoutError || 'Failed to proceed to checkout');
+        return false;
+      }
+    } catch (err: any) {
+      toast.error(err.message || 'Failed to proceed to checkout');
+      return false;
+    } finally {
+      set({ isLoading: false });
+    }
+  },
+  reset: () =>
+    set({
+      product: null,
+      selectedAttributes: {},
+      quantity: 1,
+      selectedImageIndex: 0,
+      lensPosition: { x: 0, y: 0 },
+      isLoading: false,
+      error: null,
+    }),
+}));

@@ -1,5 +1,6 @@
 // Core Entity Types
 export type Category = {
+  attributes: any;
   id: string;
   name: string;
   slug: string;
@@ -10,6 +11,16 @@ export type Category = {
   createdAt: Date;
   updatedAt: Date;
 };
+
+export interface Attribute {
+  name: string | null;
+  type: 'text' | 'number' | 'boolean' | 'select' | null;
+  options?: string[] | null;
+  unit?: string | null;
+  isFilterable: boolean | null;
+  isRequired: boolean | null;
+  displayOrder: number | null;
+}
 
 export type Subcategory = {
   id: string;
@@ -37,6 +48,7 @@ export type Brand = {
 
 // Product Image Type
 export type ProductImage = {
+  length: number;
   url: string;
   alt: string;
   isFeatured: boolean;
@@ -103,11 +115,8 @@ export type ProductVariant = {
   isDefault: boolean;
   createdAt: Date;
   updatedAt: Date;
-  // Derived fields
-  inStock: boolean;
   discountPercentage: number | null;
   isLowStock: boolean;
-  availabilityStatus: 'in_stock' | 'low_stock' | 'out_of_stock' | 'backorder';
 };
 
 // Promotion Type
@@ -151,6 +160,7 @@ export type RelatedProductSummary = {
 
 // Main Combined Product Type
 export type CompleteProduct = {
+  productImages: never[];
   // Basic product information
   id: string;
   shortName: string;
@@ -227,3 +237,31 @@ export type CompleteProduct = {
   isDiscontinued: boolean;
   isComingSoon: boolean;
 };
+
+
+export interface FlattenedProduct {
+  attributes: any;
+  id: string;
+  productId: string;
+  name: string;
+  mrp: string;
+  ourPrice: string;
+  color?: string;
+  storage?: string;
+  stock: string;
+  slug: string;
+  productImages?: ProductImage;
+  sku: string;
+  dimensions?: string;
+  material?: string;
+  weight?: string;
+  createdAt: string | Date;
+  updatedAt: string | Date;
+  category: string;
+  brand?: { id: string; name: string; slug: string };
+  averageRating: string;
+  totalStocks: string;
+  tags: string[];
+  description?: string | null;
+  productParent?: CompleteProduct;
+}

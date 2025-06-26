@@ -8,14 +8,14 @@ import { useWishlistStore } from '@/store/wishlist-store';
 const WishlistButton = () => {
   const { wishlistCount } = useWishlistStore(); 
 
-  console.log(wishlistCount)
+  // console.log(wishlistCount)
 
  
 
   return (
     <div className="relative">
       <Link
-        href="/profile?tab=wishlist"
+        href="/profile/wishlist"
         className="flex items-center bg-slate-200 rounded-full p-2"
         aria-label="View wishlist"
       >

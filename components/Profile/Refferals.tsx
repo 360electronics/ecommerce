@@ -9,7 +9,7 @@ import SkeletonLoader from '../Reusable/SkeletonLoader';
 
 export default function Referrals() {
   const { user, isLoading: authLoading } = useAuthStore();
-  const { referrals, isLoading, isRefetching, errors, shareCurrentPage } = useProfileStore();
+  const { referrals, loadingStates, isRefetching, errors, shareCurrentPage } = useProfileStore();
   const [copied, setCopied] = useState(false);
 
   const handleCopyLink = () => {
@@ -58,7 +58,7 @@ export default function Referrals() {
     }
   };
 
-  if (authLoading || isLoading || isRefetching) {
+  if (authLoading || loadingStates.referrals) {
     return (
       <div className="mx-auto px-4 sm:px-6 lg:px-8 py-8">
         <SkeletonLoader count={4} className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-8" />
@@ -235,7 +235,7 @@ export default function Referrals() {
                           />
                           <span className="font-medium">{coupon.code}</span>
                         </div>
-                        <p className="text-sm text-gray-600 mt-1">₹{coupon.amount} discount</p>
+                        <p className="text-sm text-gray-600 mt-1">₹{coupon.discount} discount</p>
                         <p className="text-xs text-gray-500 mt-1">
                           {coupon.isUsed
                             ? 'Used on ' + formatDate(coupon.createdAt)
@@ -308,10 +308,10 @@ export default function Referrals() {
                       {referrals.referrals.map((referral) => (
                         <tr key={referral.id}>
                           <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                            {referral.referredEmail}
+                            {referral.referredUserId}
                           </td>
                           <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                            {formatDate(referral.signupDate)}
+                            {formatDate(referral.createdAt)}
                           </td>
                           <td className="px-6 py-4 whitespace-nowrap">
                             <span

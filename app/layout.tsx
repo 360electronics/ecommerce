@@ -1,8 +1,7 @@
 import type { Metadata } from "next";
 import "./globals.css";
 import { gotham } from "./fonts";
-import { Providers } from "./providers";
-
+import { Toaster } from "react-hot-toast";
 
 export const metadata: Metadata = {
   title: "360 Electronics",
@@ -19,10 +18,8 @@ export default function RootLayout({
       <body
         className={`antialiased`}
       >
-        <Providers>
-
-          {children}
-        </Providers>
+        <Toaster />
+        {children}
       </body>
     </html>
   );

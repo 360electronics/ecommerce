@@ -1,25 +1,32 @@
+// ProductImageGallery.tsx
 'use client';
-
 import Image from 'next/image';
 import { cn } from '@/lib/utils';
-import { useState, useRef } from 'react';
+import { useState, useRef, useEffect } from 'react';
 import { useProductStore } from '@/store/product-store';
+import { ProductImage } from '@/types/product';
 
-export default function ProductImageGallery() {
-  const { product, selectedImageIndex, setSelectedImageIndex, setLensPosition } = useProductStore();
+interface ProductImageGalleryProps {
+  activeVariant: any;
+}
+
+export default function ProductImageGallery({ activeVariant }: ProductImageGalleryProps) {
+  const { selectedImageIndex, setSelectedImageIndex, setLensPosition } = useProductStore();
   const [isHovered, setIsHovered] = useState(false);
   const imageContainerRef = useRef<HTMLDivElement>(null);
 
+  useEffect(() => {
+    // Reset selectedImageIndex when activeVariant changes
+    setSelectedImageIndex(0);
+  }, [activeVariant.id, setSelectedImageIndex]);
+
   const handleMouseMove = (e: React.MouseEvent<HTMLDivElement>) => {
-    if (!imageContainerRef.current || !product) return;
+    if (!imageContainerRef.current) return;
 
     const rect = imageContainerRef.current.getBoundingClientRect();
+    const x = Math.max(0, Math.min(100, ((e.clientX - rect.left) / rect.width) * 100));
+    const y = Math.max(0, Math.min(100, ((e.clientY - rect.top) / rect.height) * 100));
 
-    // Calculate position as percentage of the container dimensions (0-100%)
-    const x = ((e.clientX - rect.left) / rect.width) * 100;
-    const y = ((e.clientY - rect.top) / rect.height) * 100;
-
-    // Set lens position as percentages for responsive behavior
     setLensPosition({ x, y });
   };
 
@@ -28,13 +35,12 @@ export default function ProductImageGallery() {
   };
 
   const handleMouseLeave = () => {
-    console.log(isHovered)
     setIsHovered(false);
     setLensPosition({ x: 0, y: 0 });
   };
 
-  // Render a placeholder if product is null
-  if (!product) {
+  // Render a placeholder if no images
+  if (!activeVariant.productImages || activeVariant.productImages.length === 0) {
     return (
       <div className="flex flex-col gap-4">
         <div className="relative w-full aspect-square border rounded-lg overflow-hidden bg-gray-100">
@@ -49,11 +55,11 @@ export default function ProductImageGallery() {
           />
         </div>
         <div className="flex gap-2 overflow-x-auto">
-          {/* Optional: Show placeholder thumbnails */}
           {Array.from({ length: 3 }).map((_, index) => (
             <div
               key={index}
               className="relative w-16 h-16 border rounded-md overflow-hidden flex-shrink-0 bg-gray-100"
+              aria-label={`Placeholder thumbnail ${index + 1}`}
             />
           ))}
         </div>
@@ -61,8 +67,11 @@ export default function ProductImageGallery() {
     );
   }
 
+  const validIndex = Math.max(0, Math.min(selectedImageIndex, activeVariant.productImages.length - 1));
+  const currentImage = activeVariant.productImages[validIndex];
+
   return (
-    <div className="flex flex-col gap-4">
+    <div className="flex flex-row-reverse gap-4">
       {/* Main Image */}
       <div
         ref={imageContainerRef}
@@ -72,39 +81,43 @@ export default function ProductImageGallery() {
         onMouseLeave={handleMouseLeave}
       >
         <Image
-          src={product.productImages[selectedImageIndex] || '/placeholder.svg'}
-          alt={product.name}
+          src={currentImage.url || '/placeholder.svg'}
+          alt={currentImage.alt || activeVariant.name || 'Product image'}
           fill
-          sizes="(max-width: 768px) 100vw, 40vw"
-          className="object-contain"
-          priority={selectedImageIndex === 0}
+          sizes="(max-width: 768px) 100vw, (max-width: 1024px) 50vw, 40vw"
+          className="object-contain mix-blend-multiply p-10"
+          priority={validIndex === 0}
           placeholder="blur"
           blurDataURL="/placeholder.svg"
           onError={(e) => {
+            e.currentTarget.srcset = '';
             e.currentTarget.src = '/placeholder.svg';
           }}
         />
       </div>
 
-      {/* Toenails */}
-      <div className="flex gap-2 overflow-x-auto">
-        {product.productImages.map((image, index) => (
+      {/* Thumbnails */}
+      <div className="flex flex-col">
+        {activeVariant.productImages.map((image: ProductImage, index: number) => (
           <button
-            key={index}
+            key={image.url + index}
             className={cn(
-              'relative w-16 h-16 border rounded-md overflow-hidden flex-shrink-0',
-              selectedImageIndex === index ? 'border-blue-500' : 'border-gray-200'
+              'relative w-16 h-16 border rounded-md overflow-hidden flex-shrink-0 transition-colors',
+              selectedImageIndex === index ? 'border-blue-500' : 'border-gray-200 hover:border-blue-300'
             )}
             onClick={() => setSelectedImageIndex(index)}
-            aria-label={`Select image ${index + 1}`}
+            aria-label={`Select ${activeVariant.name} image ${image.alt || index + 1}`}
           >
             <Image
-              src={image || '/placeholder.svg'}
-              alt={`${product.name} thumbnail ${index + 1}`}
+              src={image.url || '/placeholder.svg'}
+              alt={`${activeVariant.name} thumbnail ${image.alt || index + 1}`}
               fill
               sizes="64px"
-              className="object-cover"
+              className="object-cover p-2"
+              placeholder="blur"
+              blurDataURL="/placeholder.svg"
               onError={(e) => {
+                e.currentTarget.srcset = '';
                 e.currentTarget.src = '/placeholder.svg';
               }}
             />

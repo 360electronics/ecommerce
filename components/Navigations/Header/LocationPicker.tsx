@@ -17,30 +17,30 @@ const LocationPicker: React.FC<LocationPickerProps> = ({ isMobile = false }) => 
     const inputRef = useRef<HTMLInputElement>(null);
 
     useEffect(() => {
-        const savedLocation = localStorage.getItem('userLocation');
-        const savedDistrict = localStorage.getItem('userDistrict');
-        const savedPincode = localStorage.getItem('userPincode');
-        
-        if (savedLocation && savedDistrict) {
-            setLocation(savedLocation);
-            setDistrict(savedDistrict);
-            setPincode(savedPincode || '');
+        const saved = localStorage.getItem('g36-location');
+      
+        if (saved) {
+          const { location, district, pincode } = JSON.parse(saved);
+          setLocation(location || '');
+          setDistrict(district || '');
+          setPincode(pincode || '');
         } else if (navigator.geolocation) {
-            setLoading(true);
-            navigator.geolocation.getCurrentPosition(
-                (position) => {
-                    fetchLocationFromCoordinates(position.coords.latitude, position.coords.longitude);
-                },
-                (err) => {
-                    console.error("Error getting location:", err);
-                    setLocation('Select Location');
-                    setLoading(false);
-                }
-            );
+          setLoading(true);
+          navigator.geolocation.getCurrentPosition(
+            (position) => {
+              fetchLocationFromCoordinates(position.coords.latitude, position.coords.longitude);
+            },
+            (err) => {
+              console.error("Error getting location:", err);
+              setLocation('Select Location');
+              setLoading(false);
+            }
+          );
         } else {
-            setLocation('Select Location');
+          setLocation('Select Location');
         }
-    }, []);
+      }, []);
+      
 
     useEffect(() => {
         const handleClickOutside = (event: MouseEvent) => {
@@ -86,33 +86,44 @@ const LocationPicker: React.FC<LocationPickerProps> = ({ isMobile = false }) => 
     const fetchPincodeDetails = async (pincode: string) => {
         setLoading(true);
         setError('');
-        
+      
         try {
-            const response = await fetch(`https://api.postalpincode.in/pincode/${pincode}`);
-            const data = await response.json();
-            
-            if (data && data[0] && data[0].Status === "Success" && data[0].PostOffice && data[0].PostOffice.length > 0) {
-                const postOfficeData = data[0].PostOffice[0];
-                const districtName = postOfficeData.District;
-                const locationText = `${districtName}`;
-                
-                setLocation(locationText);
-                setDistrict(districtName);
-                setPincode(pincode);
-                
-                // localStorage.setItem('userLocation', locationText);
-                // localStorage.setItem('userDistrict', districtName);
-                // localStorage.setItem('userPincode', pincode);
-            } else {
-                setError('Invalid pincode or location not found');
-            }
+          const response = await fetch(`https://api.postalpincode.in/pincode/${pincode}`);
+          const data = await response.json();
+      
+          if (
+            data &&
+            data[0] &&
+            data[0].Status === "Success" &&
+            data[0].PostOffice &&
+            data[0].PostOffice.length > 0
+          ) {
+            const postOfficeData = data[0].PostOffice[0];
+            const districtName = postOfficeData.District;
+            const locationText = `${districtName}`;
+      
+            setLocation(locationText);
+            setDistrict(districtName);
+            setPincode(pincode);
+      
+            // ✅ Store everything in one key
+            const payload = {
+              location: locationText,
+              district: districtName,
+              pincode: pincode,
+            };
+            localStorage.setItem('g36-location', JSON.stringify(payload));
+          } else {
+            setError('Invalid pincode or location not found');
+          }
         } catch (error) {
-            console.error("Error fetching pincode details:", error);
-            setError('Failed to fetch location details');
+          console.error("Error fetching pincode details:", error);
+          setError('Failed to fetch location details');
         } finally {
-            setLoading(false);
+          setLoading(false);
         }
-    };
+      };
+      
 
     const handlePincodeSubmit = (e: React.FormEvent) => {
         e.preventDefault();
@@ -147,6 +158,14 @@ const LocationPicker: React.FC<LocationPickerProps> = ({ isMobile = false }) => 
             setError('Geolocation is not supported by your browser');
         }
     };
+
+    const clearLocation = () => {
+        localStorage.removeItem('g36-location');
+        setLocation('');
+        setDistrict('');
+        setPincode('');
+      };
+      
 
     if (isMobile && isOpen) {
         return (

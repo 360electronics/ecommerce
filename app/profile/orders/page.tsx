@@ -2,7 +2,6 @@ import UserLayout from '@/components/Layouts/UserLayout';
 import Sidebar from '@/components/Profile/Sidebar';
 import Breadcrumbs from '@/components/Reusable/BreadScrumb';
 import Orders from '@/components/Profile/MyOrders';
-import { useProfileInitializer } from '@/store/profile-store';
 
 export default function OrdersPage() {
 

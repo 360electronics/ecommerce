@@ -3,7 +3,6 @@
 import React from 'react';
 import { ShoppingCart } from 'lucide-react';
 import Link from 'next/link';
-import { useCart } from '@/context/cart-context';
 import { useCartStore } from '@/store/cart-store';
 
 const CartButton = () => {
@@ -24,7 +23,7 @@ const CartButton = () => {
     <div className="relative">
       <Link href="/cart" className="flex items-center gap-2">
         <div className="relative">
-          <ShoppingCart size={28} className=" text-primary hover:text-primary-hover transition-colors" />
+          <ShoppingCart size={28} className=" size-[22px] md:size-[28px] text-primary hover:text-primary-hover transition-colors" />
           {cartItems > 0 && (
             <span className="absolute -top-2 -right-2 bg-red-500 text-white text-xs font-medium rounded-full h-5 w-5 flex items-center justify-center">
               {cartItems}
@@ -32,7 +31,7 @@ const CartButton = () => {
           )}
         </div>
 
-        <span className=" text-sm font-medium text-gray-900">
+        <span className=" text-xs md:text-sm font-medium text-gray-900">
           {formatCartTotal(cartTotal)}
         </span>
 

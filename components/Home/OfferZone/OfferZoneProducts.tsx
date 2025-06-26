@@ -1,12 +1,11 @@
 'use client';
 
 import { useState, useMemo, useCallback, memo } from 'react';
-import { Search, AlertCircle, X } from 'lucide-react';
+import { AlertCircle } from 'lucide-react';
 import ProductCardwithoutCart from '@/components/Product/ProductCards/ProductCardwithoutCart';
 import PrimaryLinkButton from '@/components/Reusable/PrimaryLinkButton';
 import { ProductCardSkeleton } from '@/components/Reusable/ProductCardSkeleton';
 import { useHomeStore } from '@/store/home-store';
-import { Input } from '@/components/ui/input';
 import { CompleteProduct, ProductVariant } from '@/types/product';
 
 // Types
@@ -31,6 +30,7 @@ const FeaturedProducts: React.FC = () => {
         product: product as CompleteProduct,
         variant: variant as ProductVariant,
         displayName: `${product.shortName} - ${variant.name}`,
+        slug: `${product.slug}-${variant.slug}`
       }))
       .filter((selection) =>
         searchTerm.trim()

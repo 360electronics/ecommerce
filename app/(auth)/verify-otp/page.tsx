@@ -179,6 +179,7 @@ function VerifyOTPContent() {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ userId, otp: otp.join(""), type }),
+        credentials: "include" 
       });
 
       const data: VerifyOTPResponse = await response.json();
@@ -187,8 +188,8 @@ function VerifyOTPContent() {
         throw new Error(data.error || "Failed to verify OTP");
       }
 
-      localStorage.setItem("authToken", data.token);
-      Cookies.set("authToken", data.token, { expires: 0.5 });
+      // localStorage.setItem("authToken", data.token);
+      // Cookies.set("authToken", data.token, { expires: 0.5 });
 
       const roleValue =
         typeof data.user.role === "string"

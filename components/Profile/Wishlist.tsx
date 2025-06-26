@@ -1,4 +1,3 @@
-// pages/Wishlist.tsx
 'use client';
 
 import { useEffect, useState } from 'react';
@@ -15,18 +14,20 @@ export default function Wishlist() {
   const { wishlist: wishlistItems, wishlistCount, isLoading, isRefetching, errors, fetchWishlist } = useWishlistStore();
   const [isRemoving, setIsRemoving] = useState<string | null>(null);
 
-  // Fetch wishlist on mount if user is authenticated
+  // Fetch wishlist only if empty and user is authenticated
   useEffect(() => {
-    if (!authLoading && user?.id) {
-      fetchWishlist(true); // Force fetch on mount
+    if (!authLoading && user?.id && !isLoading && wishlistItems.length === 0) {
+      fetchWishlist(true); // Force fetch if no items
     }
-  }, [authLoading, user?.id, fetchWishlist]);
+  }, [authLoading, user?.id, wishlistItems.length, isLoading, fetchWishlist]);
 
   const handleRemoveFromWishlist = async (productId: string, variantId: string) => {
-    setIsRemoving(`${productId}-${variantId}`);
+    const key = `${productId}-${variantId}`;
+    setIsRemoving(key);
     try {
       await useWishlistStore.getState().removeFromWishlist(productId, variantId);
-      fetchWishlist()
+      await fetchWishlist(true); // Refetch to update UI
+      toast.success('Item removed from wishlist');
     } catch (error) {
       toast.error('Failed to remove item from wishlist');
     } finally {
@@ -88,15 +89,15 @@ export default function Wishlist() {
       {wishlistItems.length > 0 ? (
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
           {wishlistItems.map((item) => (
-            <div key={item.id}>
+            <div key={`${item.productId}-${item.variantId}`}>
               <WishlistProductCard
                 productId={item.productId}
                 variantId={item.variantId}
-                name={item.variant.name}
-                mrp={Number(item.variant.mrp)}
-                ourPrice={Number(item.variant.ourPrice)}
-                slug={item.variant.slug}
-                image={item.variant.productImages[0]}
+                name={item.variant?.name || 'Unknown Product'}
+                mrp={Number(item.variant?.mrp || 0)}
+                ourPrice={Number(item.variant?.ourPrice || 0)}
+                slug={item.variant?.slug || '#'}
+                image={item.variant?.productImages?.[0]?.url || '/placeholder-image.png'}
                 onRemove={() => handleRemoveFromWishlist(item.productId, item.variantId)}
               />
             </div>

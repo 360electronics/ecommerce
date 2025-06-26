@@ -4,53 +4,7 @@ import React, { useState, useEffect, useMemo } from 'react';
 import { ChevronDown, ChevronUp, X } from 'lucide-react';
 import { useSearchParams } from 'next/navigation';
 import { Range } from 'react-range';
-
-interface ProductVariant {
-  id: string;
-  productId: string;
-  name: string;
-  mrp: string;
-  ourPrice: string;
-  color?: string;
-  storage?: string;
-  stock: string;
-  slug: string;
-  productImages?: string[];
-  sku: string;
-  dimensions?: string;
-  material?: string;
-  weight?: string;
-  createdAt: string;
-  updatedAt: string;
-}
-
-interface ProductType {
-  id: string;
-  averageRating: string;
-  brand?: string;
-  category: string;
-  description?: string | null;
-  shortName?: string;
-  status: string;
-  subProductStatus?: string;
-  tags?: string | string[];
-  totalStocks: string;
-  ratingCount?: string;
-  specifications?: any[];
-  createdAt: string;
-  updatedAt: string;
-  variants?: ProductVariant[];
-}
-
-interface FlattenedProduct extends ProductVariant {
-  category: string;
-  brand?: string;
-  averageRating: string;
-  totalStocks: string;
-  tags: string[];
-  description?: string | null;
-  productParent?: ProductType;
-}
+import { FlattenedProduct } from '@/types/product';
 
 interface FilterSection {
   id: string;
@@ -72,29 +26,27 @@ interface FilterOptions {
     min: number;
     max: number;
   };
+  attributes: { [key: string]: string[] };
 }
 
 interface FilterProps {
   category?: string;
   products: FlattenedProduct[];
   onFilterChange: (filters: FilterValues) => void;
-  filterOptions: FilterOptions; // Add filterOptions to props
+  filterOptions: FilterOptions;
 }
 
 interface FilterValues {
   [key: string]: string[] | boolean | { min: number; max: number };
 }
 
-// Filter configuration with storage added
 const filterConfig = [
   { id: 'price', title: 'Price', type: 'range', step: 10, enabled: true },
-  { id: 'color', title: 'Color', type: 'checkbox', enabled: true },
-  { id: 'storage', title: 'Storage', type: 'checkbox', enabled: true }, // Added storage
-  { id: 'size', title: 'Size', type: 'checkbox', enabled: true },
-  { id: 'brand', title: 'Brands', type: 'checkbox', enabled: true },
   { id: 'category', title: 'Categories', type: 'checkbox', enabled: true },
-  { id: 'material', title: 'Material', type: 'checkbox', enabled: true },
   { id: 'rating', title: 'Rating', type: 'checkbox', enabled: true },
+  { id: 'color', title: 'Color', type: 'checkbox', enabled: true },
+  { id: 'storage', title: 'Storage', type: 'checkbox', enabled: true },
+  { id: 'brand', title: 'Brands', type: 'checkbox', enabled: true },
 ] as const;
 
 const DynamicFilter: React.FC<FilterProps> = ({ category, products, onFilterChange, filterOptions }) => {
@@ -105,12 +57,17 @@ const DynamicFilter: React.FC<FilterProps> = ({ category, products, onFilterChan
   const [visibleOptions, setVisibleOptions] = useState<{ [key: string]: number }>({});
   const searchParams = useSearchParams();
 
-  // Generate options for non-precomputed fields (material, category)
-  const generateOptions = (products: FlattenedProduct[], key: keyof FlattenedProduct) => {
+  const generateOptions = (products: FlattenedProduct[], key: keyof FlattenedProduct | string) => {
     const uniqueValues = new Set<string>();
 
     products.forEach((product) => {
-      const value = product[key];
+      let value: any;
+      if (key in product && key !== 'attributes') {
+        value = product[key as keyof FlattenedProduct];
+      } else if (product.attributes && key in product.attributes) {
+        value = product.attributes[key];
+      }
+
       if (value && typeof value === 'string') {
         uniqueValues.add(value);
       } else if (Array.isArray(value)) {
@@ -127,8 +84,6 @@ const DynamicFilter: React.FC<FilterProps> = ({ category, products, onFilterChan
       }));
   };
 
-  
-  // Generate rating options
   const generateRatingOptions = (products: FlattenedProduct[]) => {
     const ratings = products
       .map((product) => Math.floor(Number(product.averageRating) || 0))
@@ -142,18 +97,16 @@ const DynamicFilter: React.FC<FilterProps> = ({ category, products, onFilterChan
     }));
   };
 
-  // Generate filter sections using filterOptions
   const generatedSections = useMemo(() => {
+    if (products.length === 0) return [];
+
     const sections: FilterSection[] = [];
 
     const optionsMap: { [key: string]: any[] } = {
       color: filterOptions.colors.map((value) => ({ id: value, label: value, checked: false })),
       brand: filterOptions.brands.map((value) => ({ id: value, label: value, checked: false })),
-      storage: filterOptions.storageOptions.map((value) => ({ id: value, label: value, checked: false })), // Use storageOptions
-      category: category
-        ? []
-        : generateOptions(products, 'category'),
-      material: generateOptions(products, 'material'),
+      storage: filterOptions.storageOptions.map((value) => ({ id: value, label: value, checked: false })),
+      category: category ? [] : generateOptions(products, 'category'),
       rating: generateRatingOptions(products),
     };
 
@@ -181,11 +134,22 @@ const DynamicFilter: React.FC<FilterProps> = ({ category, products, onFilterChan
       }
     });
 
+    Object.keys(filterOptions.attributes).forEach((attrKey) => {
+      if (filterConfig.some((config) => config.id === attrKey)) return;
+
+      const values = filterOptions.attributes[attrKey];
+      if (values.length > 0) {
+        sections.push({
+          id: attrKey,
+          title: attrKey.charAt(0).toUpperCase() + attrKey.slice(1).replace(/([A-Z])/g, ' $1'),
+          type: 'checkbox',
+          options: values.map((value) => ({ id: value, label: value, checked: false })),
+        });
+      }
+    });
+
     return sections;
   }, [products, category, filterOptions]);
-
-
-
 
   useEffect(() => {
     if (generatedSections.length === 0) return;
@@ -202,7 +166,6 @@ const DynamicFilter: React.FC<FilterProps> = ({ category, products, onFilterChan
     setVisibleOptions(initialVisibleOptions);
   }, [generatedSections]);
 
-  // Handle URL params
   useEffect(() => {
     if (filterSections.length === 0) return;
 
@@ -352,7 +315,18 @@ const DynamicFilter: React.FC<FilterProps> = ({ category, products, onFilterChan
   const updateUrlParams = (filters: FilterValues) => {
     const params = new URLSearchParams(searchParams.toString());
 
-    const possibleFilterKeys = ['minPrice', 'maxPrice', 'price', 'color', 'brand', 'category', 'material', 'rating', 'inStock', 'storage']; // Added storage
+    const possibleFilterKeys = [
+      'minPrice',
+      'maxPrice',
+      'price',
+      'color',
+      'brand',
+      'category',
+      'rating',
+      'inStock',
+      'storage',
+      ...Object.keys(filterOptions.attributes),
+    ];
     possibleFilterKeys.forEach((key) => params.delete(key));
 
     let hasChanges = false;
@@ -451,6 +425,7 @@ const DynamicFilter: React.FC<FilterProps> = ({ category, products, onFilterChan
         <button
           onClick={() => setMobileFiltersOpen(true)}
           className="flex items-center text-sm font-medium text-gray-900"
+          aria-label={`Open filters${getAppliedFilterCount() > 0 ? `, ${getAppliedFilterCount()} applied` : ''}`}
         >
           Filters
           {getAppliedFilterCount() > 0 && (
@@ -526,8 +501,9 @@ const DynamicFilter: React.FC<FilterProps> = ({ category, products, onFilterChan
           <div key={section.id} className="border-b border-gray-200">
             <button
               type="button"
-              className="w-full p-4 flex items-center justify-between text-left"
+              className="w-full p-4 flex items-center justify-between text-left focus:outline-none focus:ring-2 focus:ring-blue-500"
               onClick={() => toggleSection(section.id)}
+              onKeyDown={(e) => e.key === 'Enter' && toggleSection(section.id)}
               aria-expanded={expanded[section.id]}
               aria-controls={`filter-section-${section.id}`}
             >
@@ -631,6 +607,7 @@ const DynamicFilter: React.FC<FilterProps> = ({ category, products, onFilterChan
                           className="h-4 w-4 rounded border-gray-300 text-blue-600 focus:ring-blue-500"
                           checked={option.checked}
                           onChange={() => handleCheckboxChange(section.id, option.id)}
+                          onKeyDown={(e) => e.key === 'Enter' && handleCheckboxChange(section.id, option.id)}
                           aria-label={`${section.title}: ${option.label}`}
                         />
                         <label
@@ -648,6 +625,7 @@ const DynamicFilter: React.FC<FilterProps> = ({ category, products, onFilterChan
                   <button
                     type="button"
                     onClick={() => handleViewMore(section.id)}
+                    onKeyDown={(e) => e.key === 'Enter' && handleViewMore(section.id)}
                     className="text-xs text-gray-600 hover:text-blue-600 mt-2"
                     aria-label={
                       visibleOptions[section.id] === 5

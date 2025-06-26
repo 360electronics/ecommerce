@@ -1,3 +1,4 @@
+// app/store/home-store.ts
 'use client';
 
 import { create } from 'zustand';
@@ -22,7 +23,7 @@ interface HomeState {
   fetchHomeData: () => Promise<void>;
 }
 
-export const useHomeStore = create<HomeState>()((set, get) => ({
+export const useHomeStore = create<HomeState>((set, get) => ({
   banners: [],
   featuredProducts: [],
   newArrivals: [],
@@ -37,7 +38,6 @@ export const useHomeStore = create<HomeState>()((set, get) => ({
   error: null,
   hasLoadedOnce: false,
   fetchHomeData: async () => {
-    // If we've already loaded data once during this session, do nothing
     if (get().hasLoadedOnce) {
       return;
     }
@@ -66,7 +66,6 @@ export const useHomeStore = create<HomeState>()((set, get) => ({
         brandProductsRes.json(),
       ]);
 
-      // Validate responses
       const safeBanners = Array.isArray(banners?.data) ? banners.data : [];
       const safeFeaturedProducts = Array.isArray(featuredProducts) ? featuredProducts : [];
       const safeNewArrivals = Array.isArray(newArrivals) ? newArrivals : [];

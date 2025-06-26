@@ -1,10 +1,8 @@
 'use client';
-
 import { Heart, Minus, Plus, Share2 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useRouter } from 'next/navigation';
-import { useEffect, useMemo, useState } from 'react';
-import { encodeUUID } from '@/utils/Encryption';
+import { useEffect, useMemo, useState, useCallback } from 'react';
 import toast, { Toaster } from 'react-hot-toast';
 import { addToWishlist, removeFromWishlist } from '@/utils/wishlist.utils';
 import { useProfileStore } from '@/store/profile-store';
@@ -12,18 +10,18 @@ import { useWishlistStore } from '@/store/wishlist-store';
 import { useProductStore } from '@/store/product-store';
 import { useCartStore } from '@/store/cart-store';
 import { useAuthStore } from '@/store/auth-store';
+import { ProductVariant, FlattenedProduct } from '@/types/product';
 
 interface ProductDetailsContentProps {
   className?: string;
+  activeVariant: ProductVariant;
 }
 
-export default function ProductDetailsContent({ className }: ProductDetailsContentProps) {
+export default function ProductDetailsContent({ className, activeVariant }: ProductDetailsContentProps) {
   const {
     product,
-    selectedColor,
-    setSelectedColor,
-    selectedStorage,
-    setSelectedStorage,
+    selectedAttributes,
+    setSelectedAttributes,
     quantity,
     setQuantity,
     handleBuyNow,
@@ -32,28 +30,59 @@ export default function ProductDetailsContent({ className }: ProductDetailsConte
   const { user } = useAuthStore();
   const { isInWishlist, fetchWishlist } = useWishlistStore();
   const { refetch: refetchProfile } = useProfileStore();
-  const { addToCart, error: cartError } = useCartStore();
-  const [isAdding, setIsAdding] = useState(false);
+  const { addToCart } = useCartStore();
+  const [isAddingToCart, setIsAddingToCart] = useState(false);
+  const [isAddingToWishlist, setIsAddingToWishlist] = useState(false);
+  const [isNavigating, setIsNavigating] = useState(false);
   const userId = user?.id;
 
-  // Render placeholder UI if product is null
-  if (!product) {
+  const handleShare = useCallback(() => {
+    if (typeof window === 'undefined' || !product) {
+      toast.error('Sharing is not available');
+      return;
+    }
+
+    const shareData = {
+      title: product.name,
+      text: `Check out ${product.name} - ₹${activeVariant.ourPrice.toLocaleString()}${
+        discount > 0 ? ` (${discount}% OFF)` : ''
+      }`,
+      url: window.location.href,
+    };
+
+    if (navigator.share) {
+      navigator
+        .share(shareData)
+        .then(() => toast.success('Shared successfully!'))
+        .catch(() => {
+          navigator.clipboard
+            .writeText(shareData.url)
+            .then(() => toast.success('Link copied to clipboard!'))
+            .catch(() => toast.error('Failed to share product'));
+        });
+    } else {
+      navigator.clipboard
+        .writeText(shareData.url)
+        .then(() => toast.success('Link copied to clipboard!'))
+        .catch(() => toast.error('Failed to copy link'));
+    }
+  }, [product, activeVariant.ourPrice]);
+
+  if (!product || !product.productParent || product.productParent.variants.length === 0) {
     return (
-      <div className={cn(`md:ml-14`, className)}>
+      <div className={cn('p-4', className)}>
         <Toaster />
-        <div className="hidden md:flex flex-row items-center gap-2 justify-end mb-5 my-2 cursor-pointer text-xs md:text-base">
-          <Share2 className="md:w-5 md:h-5 w-4 h-4" />
-          <p>Share</p>
+        <div className="flex items-center gap-2 justify-end mb-4 cursor-pointer text-sm" onClick={handleShare}>
+          <Share2 className="w-5 h-5" />
+          <span>Share</span>
         </div>
-        <h1 className="md:text-xl text-sm md:font-medium md:mb-6 md:border-b md:pb-4 mt-5 mb-2 md:my-0">
-          Loading product...
-        </h1>
+        <h1 className="text-xl font-semibold mb-4">Loading product...</h1>
         <p className="text-gray-500">Product details are not available.</p>
       </div>
     );
   }
 
-  const isInWishlistStatus = isInWishlist(product.productId, product.id);
+  const isInWishlistStatus = isInWishlist(product.productId, activeVariant.id);
 
   const handleWishlistClick = async (e: React.MouseEvent) => {
     e.preventDefault();
@@ -65,23 +94,23 @@ export default function ProductDetailsContent({ className }: ProductDetailsConte
       return;
     }
 
-    setIsAdding(true);
-    let result;
-    if (isInWishlistStatus) {
-      result = await removeFromWishlist(userId, product.productId, product.id);
-    } else {
-      result = await addToWishlist(userId, product.productId, product.id);
-    }
-    setIsAdding(false);
+    setIsAddingToWishlist(true);
+    try {
+      const result = isInWishlistStatus
+        ? await removeFromWishlist(userId, product.productId, activeVariant.id)
+        : await addToWishlist(userId, product.productId, activeVariant.id);
 
-    if (result.success) {
-      toast.success(isInWishlistStatus ? 'Removed from wishlist!' : 'Added to wishlist!');
-      fetchWishlist();
-      if (refetchProfile) {
-        refetchProfile();
+      if (result.success) {
+        toast.success(isInWishlistStatus ? 'Removed from wishlist!' : 'Added to wishlist!');
+        fetchWishlist();
+        refetchProfile?.('profile', userId, true);
+      } else {
+        toast.error(result.message || `Failed to ${isInWishlistStatus ? 'remove from' : 'add to'} wishlist`);
       }
-    } else {
-      toast.error(result.message || `Failed to ${isInWishlistStatus ? 'remove from' : 'add to'} wishlist`);
+    } catch (error) {
+      toast.error('Network error. Please try again.');
+    } finally {
+      setIsAddingToWishlist(false);
     }
   };
 
@@ -95,72 +124,186 @@ export default function ProductDetailsContent({ className }: ProductDetailsConte
       return;
     }
 
-    setIsAdding(true);
-    await addToCart(product.productId, product.id, quantity);
-    setIsAdding(false);
-
-    if (cartError) {
-      toast.error(cartError || 'Failed to add item to cart');
-    } else {
-      toast.success(`${product.name} added to cart!`);
-    }
-  };
-
-  // Find the active variant based on selectedColor and selectedStorage
-  const activeVariant = useMemo(() => {
-    return (
-      product.productParent.variants.find(
-        (v) => v.color === selectedColor && v.storage === selectedStorage
-      ) || product.productParent.variants[0] // Fallback to first variant
-    );
-  }, [selectedColor, selectedStorage, product.productParent.variants]);
-
-  // Get unique color options
-  const colorOptions = useMemo(() => {
-    const options = product.productParent.variants
-      .map((variant) => ({
-        value: variant.color,
-        name: variant.color,
-        isValid: true, // Simplified: assume all colors are valid
-        variantId: variant.id,
-        slug: variant.slug,
-      }))
-      .filter((option, index, self) => index === self.findIndex((t) => t.value === option.value));
-    return options;
-  }, [product.productParent.variants]);
-
-  // Get storage options filtered by selected color
-  const storageOptions = useMemo(() => {
-    const options = product.productParent.variants
-      .filter((variant) => variant.color === selectedColor)
-      .map((variant) => ({
-        value: variant.storage,
-        label: variant.storage,
-        variantId: variant.id,
-        slug: variant.slug,
-      }))
-      .filter((option, index, self) => index === self.findIndex((t) => t.value === option.value));
-    return options;
-  }, [selectedColor, product.productParent.variants]);
-
-  // Update route and ensure valid selection when variant changes
-  useEffect(() => {
     if (!activeVariant) {
-      // Reset to first available variant if current selection is invalid
-      const firstVariant = product.productParent.variants[0];
-      setSelectedColor(firstVariant.color);
-      setSelectedStorage(firstVariant.storage);
+      toast.error('Selected variant is not available');
       return;
     }
 
-    if (activeVariant.id !== product.id) {
-      const encodedProductId = encodeUUID(product.productId);
-      router.push(`/product/${encodedProductId}/${activeVariant.slug}`);
+
+    if (activeVariant.stock < quantity && !activeVariant.isBackorderable) {
+      toast.error(`Only ${activeVariant.stock} items available in stock`);
+      return;
     }
-  }, [activeVariant, product, router, setSelectedColor, setSelectedStorage]);
+
+    setIsAddingToCart(true);
+    try {
+      await addToCart(activeVariant.productId, activeVariant.id, quantity);
+      toast.success(`${product.name} added to cart!`);
+    } catch (error) {
+      toast.error('Network error. Please try again.');
+    } finally {
+      setIsAddingToCart(false);
+    }
+  };
+
+  const handleBuyNowClick = async (e: React.MouseEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+
+    if (!userId) {
+      toast.error('Please login to proceed with purchase.');
+      router.push('/login');
+      return;
+    }
+
+    if (!activeVariant) {
+      toast.error('Selected variant is not available');
+      return;
+    }
+
+    if (activeVariant.stock < quantity && !activeVariant.isBackorderable) {
+      toast.error(`Only ${activeVariant.stock} items available in stock`);
+      return;
+    }
+
+    setIsAddingToCart(true);
+    try {
+      const success = await handleBuyNow(userId);
+      if (success) {
+        router.push('/checkout');
+      } else {
+        toast.error('Failed to proceed to checkout');
+      }
+    } catch (error) {
+      toast.error('Network error. Please try again.');
+    } finally {
+      setIsAddingToCart(false);
+    }
+  };
+
+  const attributeKeys = useMemo(() => {
+    const keys = new Set<string>();
+    const valueCounts = new Map<string, Set<string>>();
+
+    product.productParent?.variants.forEach((variant) => {
+      Object.entries(variant.attributes).forEach(([key, value]) => {
+        keys.add(key);
+        if (!valueCounts.has(key)) {
+          valueCounts.set(key, new Set<string>());
+        }
+        valueCounts.get(key)!.add(String(value));
+      });
+    });
+
+    return Array.from(keys).filter((key) => valueCounts.get(key)!.size > 1);
+  }, [product.productParent.variants]);
+
+  const attributeOptions = useMemo(() => {
+    return attributeKeys.reduce((acc, key) => {
+      const options = Array.from(
+        new Set(
+          product.productParent?.variants
+            ?.map((variant) => String(variant.attributes[key]))
+            .filter((value): value is string => !!value) ?? []
+        )
+      ).map((value) => ({
+        value,
+        label: value,
+        variantIds: product.productParent?.variants
+          ?.filter((v) => String(v.attributes[key]) === value)
+          .map((v) => v.id) ?? [],
+      }));
+      acc[key] = options;
+      return acc;
+    }, {} as Record<string, Array<{ value: string; label: string; variantIds: string[] }>>);
+  }, [attributeKeys, product.productParent.variants]);
+
+  const findValidVariant = useCallback(
+    (key: string, value: string | number | boolean) => {
+      return product?.productParent?.variants.find((variant) =>
+        String(variant.attributes[key]) === String(value)
+      );
+    }, [product.productParent.variants]);
+
+  const isValidAttributeCombination = useCallback(
+    (key: string, value: string | number | boolean) => {
+      return product.productParent?.variants.some((variant) =>
+        String(variant.attributes[key]) === String(value)
+      ) ?? false;
+    },
+    [product.productParent?.variants]
+  );
+
+  const handleAttributeSelection = useCallback(
+    (key: string, value: string | number | boolean) => {
+      const validVariant = findValidVariant(key, value);
+      if (!validVariant) return;
+
+      const newAttributes = { [key]: value };
+      attributeKeys.forEach((k) => {
+        if (k !== key) {
+          newAttributes[k] = validVariant.attributes[k] ?? selectedAttributes[k] ?? '';
+        }
+      });
+
+      setSelectedAttributes(newAttributes);
+    },
+    [attributeKeys, findValidVariant, setSelectedAttributes, selectedAttributes]
+  );
+
+  useEffect(() => {
+    if (!product || !product.productParent) return;
+
+    const currentVariant = product.productParent.variants.find((v) => v.id === product.id);
+    if (!currentVariant) return;
+
+    const isValidSelection = Object.keys(selectedAttributes).length > 0 &&
+      product.productParent.variants.some((v) =>
+        Object.entries(selectedAttributes).every(([key, value]) => String(v.attributes[key]) === String(value))
+      );
+
+    if (!isValidSelection) {
+      const newAttributes = attributeKeys.reduce((acc, key) => {
+        acc[key] = String(currentVariant.attributes[key] || '');
+        return acc;
+      }, {} as Record<string, string | number | boolean>);
+      setSelectedAttributes(newAttributes);
+    }
+  }, [product, attributeKeys, setSelectedAttributes]);
+
+  const handleVariantNavigation = useCallback(() => {
+    if (!activeVariant || activeVariant.id === product.id || isNavigating) return;
+
+    setIsNavigating(true);
+    const fetchNewProduct = async () => {
+      try {
+        const res = await fetch(`/api/products/${activeVariant.slug}`);
+        if (!res.ok) {
+          toast.error('Failed to load variant data');
+          setIsNavigating(false);
+          return;
+        }
+        const newProduct: FlattenedProduct = await res.json();
+        useProductStore.getState().setProduct(newProduct);
+        router.push(`/product/${activeVariant.slug}`, { scroll: false });
+      } catch (error) {
+        toast.error('Network error while loading variant');
+      } finally {
+        setIsNavigating(false);
+      }
+    };
+
+    fetchNewProduct();
+  }, [activeVariant, product.id, router, isNavigating]);
+
+  useEffect(() => {
+    handleVariantNavigation();
+  }, [handleVariantNavigation]);
 
   const increaseQuantity = () => {
-    setQuantity(quantity + 1);
+    if (activeVariant.stock >= quantity + 1 || activeVariant.isBackorderable) {
+      setQuantity(quantity + 1);
+    }
   };
 
   const decreaseQuantity = () => {
@@ -169,265 +312,243 @@ export default function ProductDetailsContent({ className }: ProductDetailsConte
     }
   };
 
-  // Calculate discount based on active variant
-  const discount =
-    activeVariant.mrp && activeVariant.ourPrice && activeVariant.mrp > activeVariant.ourPrice
-      ? Math.round(((activeVariant.mrp - activeVariant.ourPrice) / activeVariant.mrp) * 100)
-      : product.discount || 0;
+  const discount = useMemo(
+    () =>
+      activeVariant.mrp && activeVariant.mrp > activeVariant.ourPrice
+        ? Math.round(((activeVariant.mrp - activeVariant.ourPrice) / activeVariant.mrp) * 100)
+        : 0,
+    [activeVariant]
+  );
+
+  const formatAttributeLabel = (key: string) => {
+    return key
+      .replace(/([A-Z])/g, ' $1')
+      .replace(/^./, (str) => str.toUpperCase())
+      .replace(/_/g, ' ')
+      .trim();
+  };
+
+  const nonVaryingAttributes = useMemo(() => {
+    const allKeys = new Set<string>();
+    product?.productParent?.variants.forEach((variant) => {
+      Object.keys(variant.attributes).forEach((key) => allKeys.add(key));
+    });
+
+    return Array.from(allKeys)
+      .filter((key) => !attributeKeys.includes(key))
+      .map((key) => {
+        const values = new Set(
+          product?.productParent?.variants.map((v) => String(v.attributes[key])).filter((v): v is string => !!v)
+        );
+        if (values.size === 1) {
+          return { key, value: values.values().next().value };
+        }
+        return null;
+      })
+      .filter((item): item is { key: string; value: string } => item !== null);
+  }, [attributeKeys, product.productParent.variants]);
+
+  const Pricing = () => (
+    <div className="flex flex-col gap-4">
+      <div className="flex items-center gap-4">
+        <span className="text-3xl font-bold text-gray-900">
+          ₹{activeVariant.ourPrice.toLocaleString()}
+        </span>
+        {activeVariant.mrp && activeVariant.mrp > activeVariant.ourPrice && (
+          <div className="flex items-center gap-1 text-lg text-gray-500">
+            <span>MRP</span>
+            <div className="relative inline-block">
+              <span>₹{activeVariant.mrp.toLocaleString()}</span>
+              <span className="absolute left-0 top-1/2 w-full h-[1px] bg-gray-500 transform rotate-[5deg]" />
+            </div>
+          </div>
+        )}
+        {discount > 0 && (
+          <span className="bg-red-600 text-white text-xs font-medium px-3 py-1 rounded-full">
+            {discount}% OFF
+          </span>
+        )}
+      </div>
+      {activeVariant.stock > (activeVariant.lowStockThreshold ?? 0) ? (
+        <span className="text-green-600 text-sm font-medium">
+          {activeVariant.stock} left in stock
+        </span>
+      ) : activeVariant.isBackorderable ? (
+        <span className="text-yellow-600 text-sm font-medium">Available for backorder</span>
+      ) : (
+        <span className="text-red-600 text-sm font-medium">Out of Stock</span>
+      )}
+    </div>
+  );
+
+  const QuantityAndWishlist = () => (
+    <div className="flex items-center gap-4">
+      <div className="flex items-center border border-gray-300 rounded-full px-3 py-1">
+        <span className="mr-3 text-gray-700 text-sm">Qty</span>
+        <button
+          onClick={decreaseQuantity}
+          className="p-1 rounded-full hover:bg-gray-100 disabled:opacity-50"
+          aria-label="Decrease quantity"
+          disabled={quantity <= 1}
+        >
+          <Minus className="h-4 w-4" />
+        </button>
+        <span className="px-4 text-sm">{quantity}</span>
+        <button
+          onClick={increaseQuantity}
+          className="p-1 rounded-full hover:bg-gray-100 disabled:opacity-50"
+          aria-label="Increase quantity"
+          disabled={activeVariant.stock < quantity + 1 && !activeVariant.isBackorderable}
+        >
+          <Plus className="h-4 w-4" />
+        </button>
+      </div>
+      <button
+        onClick={handleWishlistClick}
+        className={cn(
+          'p-2 rounded-full transition-colors',
+          isInWishlistStatus ? 'text-red-500 bg-red-100' : 'text-gray-500 bg-gray-100',
+          'hover:bg-gray-200 disabled:opacity-50'
+        )}
+        disabled={isAddingToWishlist}
+        aria-label={isInWishlistStatus ? 'Remove from wishlist' : 'Add to wishlist'}
+      >
+        <Heart
+          size={20}
+          fill={isInWishlistStatus ? 'red' : 'none'}
+          className={isInWishlistStatus ? 'text-red-500' : 'text-gray-500'}
+        />
+      </button>
+    </div>
+  );
+
+  const Actions = () => (
+    <div className="grid grid-cols-2 gap-4 w-full md:w-3/4">
+      <button
+        onClick={handleCartClick}
+        className={cn(
+          'flex items-center justify-center gap-2 py-3 px-6 rounded-full border border-gray-300 hover:border-gray-400 text-sm font-medium transition-colors',
+          isAddingToCart || (activeVariant.stock <= 0 && !activeVariant.isBackorderable)
+            ? 'opacity-50 cursor-not-allowed'
+            : 'cursor-pointer'
+        )}
+        disabled={isAddingToCart || (activeVariant.stock <= 0 && !activeVariant.isBackorderable)}
+      >
+        {isAddingToCart ? 'Adding...' : 'Add to Cart'}
+        <svg width="20" height="20" viewBox="0 0 20 20" fill="none" xmlns="http://www.w3.org/2000/svg">
+          <path d="M5 5H17.5L16 12H6.5L5 5Z" stroke="currentColor" strokeWidth="1.5" strokeLinejoin="round" />
+          <path
+            d="M5 5L4.5 3H2.5"
+            stroke="currentColor"
+            strokeWidth="1.5"
+            strokeLinecap="round"
+            strokeLinejoin="round"
+          />
+          <path
+            d="M6.5 12L6 14H16.5"
+            stroke="currentColor"
+            strokeWidth="1.5"
+            strokeLinecap="round"
+            strokeLinejoin="round"
+          />
+          <circle cx="7.5" cy="17" r="1" stroke="currentColor" strokeWidth="1.5" />
+          <circle cx="15.5" cy="17" r="1" stroke="currentColor" strokeWidth="1.5" />
+        </svg>
+      </button>
+      <button
+        onClick={handleBuyNowClick}
+        className={cn(
+          'flex items-center justify-center gap-2 py-3 px-6 rounded-full bg-blue-600 hover:bg-blue-700 text-white text-sm font-medium transition-colors',
+          isAddingToCart || (!activeVariant.stock && !activeVariant.isBackorderable)
+            ? 'opacity-50 cursor-not-allowed'
+            : 'cursor-pointer'
+        )}
+        disabled={isAddingToCart || (!activeVariant.stock && !activeVariant.isBackorderable)}
+      >
+        Buy Now
+        <svg width="20" height="20" viewBox="0 0 20 20" fill="none" xmlns="http://www.w3.org/2000/svg">
+          <path d="M3.75 10H16.25" stroke="white" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
+          <path
+            d="M11.25 5L16.25 10L11.25 15"
+            stroke="white"
+            strokeWidth="1.5"
+            strokeLinecap="round"
+            strokeLinejoin="round"
+          />
+        </svg>
+      </button>
+    </div>
+  );
 
   return (
-    <div className={cn(`md:ml-14`, className)}>
+    <div className={cn('space-y-6 p-4 h-[90dvh] overflow-auto', className)}>
       <Toaster />
-      <div className="hidden md:flex flex-row items-center gap-2 justify-end mb-5 my-2 cursor-pointer text-xs md:text-base">
-        <Share2 className="md:w-5 md:h-5 w-4 h-4" />
-        <p>Share</p>
+      <div className="flex items-center justify-end mb-4">
+        <button
+          onClick={handleShare}
+          className="flex items-center gap-2 text-sm text-gray-600 hover:text-gray-800 transition-colors"
+        >
+          <Share2 className="w-5 h-5" />
+          <span>Share</span>
+        </button>
       </div>
 
-      {/* Product Name */}
-      <h1 className="md:text-xl text-sm md:font-medium md:mb-6 md:border-b md:pb-4 mt-5 mb-2 md:my-0">
-        {product.name} ({selectedColor}, {selectedStorage})
-      </h1>
+      <h1 className="text-xl md:text-2xl font-semibold text-gray-900">{product.name}</h1>
 
-      {/* Mobile - Pricing */}
-      <div className="md:hidden flex flex-row items-center justify-between">
-        <div className="flex items-center gap-3 md:mb-6 mb-5">
-          {activeVariant.mrp && activeVariant.mrp > activeVariant.ourPrice && (
-            <div className="md:hidden items-center gap-1 text-base text-gray-400">
-              <span>MRP</span>
-              <div className="relative inline-block">
-                <span>₹{activeVariant.mrp.toLocaleString()}</span>
-                <span className="absolute left-0 top-1/2 w-full h-[1.5px] bg-gray-400 transform rotate-[5deg] origin-center" />
+      <Pricing />
+
+      <div className="space-y-4">
+        {attributeKeys.map((key) => {
+          const options = attributeOptions[key] || [];
+          if (options.length === 0) return null;
+
+          return (
+            <div key={key} className="space-y-2">
+              <h3 className="text-sm font-medium text-gray-900">{formatAttributeLabel(key)}</h3>
+              <div className="flex gap-2 flex-wrap">
+                {options.map((option) => {
+                  const isSelected = String(selectedAttributes[key]) === option.value;
+                  const isValid = isValidAttributeCombination(key, option.value);
+
+                  return (
+                    <button
+                      key={option.value}
+                      onClick={() => handleAttributeSelection(key, option.value)}
+                      className={cn(
+                        'px-4 py-2 rounded-full text-sm border transition-colors',
+                        isSelected
+                          ? 'bg-blue-500 text-white border-blue-500'
+                          : 'bg-white text-gray-900 border-gray-300 hover:border-blue-400 hover:bg-blue-50',
+                        !isValid && 'opacity-50 cursor-not-allowed'
+                      )}
+                      disabled={!isValid}
+                      aria-label={option.label}
+                    >
+                      {option.label}
+                    </button>
+                  );
+                })}
               </div>
             </div>
-          )}
-
-          <span className="text-lg font-bold nohemi-bold">₹{activeVariant.ourPrice.toLocaleString()}</span>
-
-          {discount > 0 && (
-            <span className="bg-red-600 text-white text-xs font-lighter px-2 py-1 rounded-full">
-              {discount}% OFF
-            </span>
-          )}
-        </div>
+          );
+        })}
       </div>
 
-      {/* Mobile - QTY & Stocks */}
-      <div className="md:hidden w-full">
-        <div className="flex items-center mb-4 w-full">
-          <div className="flex flex-col items-start w-full">
-            <div className="flex flex-row items-center justify-between w-full">
-              <div className="flex items-center border border-gray-300 rounded-full px-2 p-1 text-xs md:text-base">
-                <span className="mr-3 text-gray-700">Qty</span>
-                <button
-                  onClick={decreaseQuantity}
-                  className="px-2 cursor-pointer py-1 rounded-l-full"
-                  aria-label="Decrease quantity"
-                >
-                  <Minus className="h-4 w-4 border rounded-full" />
-                </button>
-                <span className="px-3 py-1">{quantity}</span>
-                <button
-                  onClick={increaseQuantity}
-                  className="px-2 cursor-pointer py-1 rounded-r-full"
-                  aria-label="Increase quantity"
-                >
-                  <Plus className="h-4 w-4 border rounded-full" />
-                </button>
-              </div>
+      <QuantityAndWishlist />
+      <Actions />
 
-              {Number(activeVariant.stock) > 0 && (
-                <button className="text-green-600 text-xs font-medium border border-green-600 bg-green-100 rounded-full px-2 p-1">
-                  In Stock
-                </button>
-              )}
-            </div>
+      {nonVaryingAttributes.length > 0 && (
+        <div className="mt-2 p-6 bg-white rounded-lg">
+          <h2 className="text-lg font-semibold mb-4">Product Features</h2>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            {nonVaryingAttributes.map((item) => (
+              <p key={item.key} className="text-sm text-gray-600">
+                <span className="font-medium">{formatAttributeLabel(item.key)}:</span> {item.value}
+              </p>
+            ))}
           </div>
         </div>
-      </div>
-
-      {/* Product Options */}
-      <div className="space-y-6 mt-5 md:mt-0">
-        {/* Storage Options */}
-        {storageOptions.length > 0 && (
-          <div className="flex md:flex-row flex-col md:items-center justify-between">
-            <h3 className="md:text-base text-sm font-medium mb-3">RAM / Internal Storage</h3>
-            <div className="flex gap-3">
-              {storageOptions.map((option) => (
-                <button
-                  key={option.value}
-                  onClick={() => setSelectedStorage(option.value)}
-                  className={cn(
-                    'px-4 py-1.5 rounded-full md:text-sm text-xs border',
-                    selectedStorage === option.value
-                      ? 'bg-black text-white border-black'
-                      : 'bg-white text-black border-gray-300 hover:border-gray-400'
-                  )}
-                >
-                  {option.label}
-                </button>
-              ))}
-            </div>
-          </div>
-        )}
-
-        {/* Color Options */}
-        {colorOptions.length > 0 && (
-          <div className="mt-6 hidden md:flex flex-row items-center justify-between">
-            <div className="mb-2">
-              <h3 className="text-base font-medium mb-3">Color</h3>
-              <span className="text-gray-700">
-                {colorOptions.find((c) => c.value === selectedColor)?.name || 'Default'}
-              </span>
-            </div>
-            <div className="flex gap-3">
-              {colorOptions.map((color) => (
-                <button
-                  key={color.value}
-                  onClick={() => {
-                    setSelectedColor(color.value);
-                    // Set storage to first available for this color
-                    const validStorage = product.productParent.variants.find(
-                      (v) => v.color === color.value
-                    )?.storage;
-                    if (validStorage) setSelectedStorage(validStorage);
-                  }}
-                  className={cn(
-                    'w-10 h-10 rounded-full border',
-                    selectedColor === color.value
-                      ? 'p-1 outline-2 border border-white'
-                      : 'border-gray-300',
-                    !color.isValid && 'opacity-50 cursor-not-allowed'
-                  )}
-                  style={{ backgroundColor: color.value }}
-                  aria-label={`Select ${color.name} color`}
-                />
-              ))}
-            </div>
-          </div>
-        )}
-        <hr className="bg-gray-400 md:block hidden" />
-      </div>
-
-      {/* Desktop - Product Pricing */}
-      <div className="hidden md:flex flex-col gap-2">
-        <div className="flex flex-row items-center justify-between">
-          <div className="flex items-center gap-3 mb-6 mt-6">
-            <span className="text-3xl font-bold nohemi-bold">₹{activeVariant.ourPrice.toLocaleString()}</span>
-
-            {activeVariant.mrp && activeVariant.mrp > activeVariant.ourPrice && (
-              <div className="flex items-center gap-1 text-lg text-gray-400">
-                <span>MRP</span>
-                <div className="relative inline-block">
-                  <span>₹{activeVariant.mrp.toLocaleString()}</span>
-                  <span className="absolute left-0 top-1/2 w-full h-[1.5px] bg-gray-400 transform rotate-[5deg] origin-center" />
-                </div>
-              </div>
-            )}
-
-            {discount > 0 && (
-              <span className="bg-red-600 text-white text-xs font-lighter px-2 py-1 rounded-full">
-                {discount}% OFF
-              </span>
-            )}
-          </div>
-
-          {Number(activeVariant.stock) > 0 && (
-            <button className="text-green-600 text-sm font-medium border border-green-600 bg-green-100 rounded-full px-2 p-1">
-              In Stock
-            </button>
-          )}
-        </div>
-
-        <div className="flex items-center mb-4">
-          <div className="flex items-center">
-            <div className="flex items-center border border-gray-300 rounded-full px-2 p-1">
-              <span className="mr-3 text-gray-700">Qty</span>
-              <button
-                onClick={decreaseQuantity}
-                className="px-2 cursor-pointer py-1 rounded-l-full"
-                aria-label="Decrease quantity"
-              >
-                <Minus className="h-4 w-4 border rounded-full" />
-              </button>
-              <span className="px-3 py-1">{quantity}</span>
-              <button
-                onClick={increaseQuantity}
-                className="px-2 cursor-pointer py-1 rounded-r-full"
-                aria-label="Increase quantity"
-              >
-                <Plus className="h-4 w-4 border rounded-full" />
-              </button>
-            </div>
-
-            <button
-              onClick={handleWishlistClick}
-              className={cn(
-                'cursor-pointer ml-2 z-0 p-2 rounded-full',
-                isInWishlistStatus ? 'text-red-500 bg-red-200' : 'text-gray-400 bg-gray-300',
-                'hover:text-gray-700 disabled:opacity-50'
-              )}
-              disabled={isAdding}
-              aria-label={isInWishlistStatus ? 'Remove from wishlist' : 'Add to wishlist'}
-            >
-              <Heart
-                size={20}
-                fill={isInWishlistStatus ? 'red' : 'none'}
-                className={isInWishlistStatus ? 'text-red-500' : 'text-gray-400'}
-              />
-            </button>
-          </div>
-        </div>
-      </div>
-
-      {/* Desktop - Product Actions */}
-      <div className="hidden md:block mt-2">
-        <div className="grid grid-cols-2 gap-4 md:w-[60%]">
-          <button
-            onClick={handleCartClick}
-            className="flex-1 py-3 px-4 rounded-full cursor-pointer border border-gray-300 hover:border-gray-400 flex items-center justify-center gap-2 font-medium disabled:opacity-50"
-            disabled={isAdding}
-          >
-            {isAdding ? 'Adding...' : 'Add to cart'}
-            <svg width="20" height="20" viewBox="0 0 20 20" fill="none" xmlns="http://www.w3.org/2000/svg">
-              <path d="M5 5H17.5L16 12H6.5L5 5Z" stroke="currentColor" strokeWidth="1.5" strokeLinejoin="round" />
-              <path
-                d="M5 5L4.5 3H2.5"
-                stroke="currentColor"
-                strokeWidth="1.5"
-                strokeLinecap="round"
-                strokeLinejoin="round"
-              />
-              <path
-                d="M6.5 12L6 14H16.5"
-                stroke="currentColor"
-                strokeWidth="1.5"
-                strokeLinecap="round"
-                strokeLinejoin="round"
-              />
-              <circle cx="7.5" cy="17" r="1" stroke="currentColor" strokeWidth="1.5" />
-              <circle cx="15.5" cy="17" r="1" stroke="currentColor" strokeWidth="1.5" />
-            </svg>
-          </button>
-          <button
-            onClick={() =>
-              handleBuyNow()
-            }
-            className="flex-1 py-3 px-4 rounded-full cursor-pointer bg-blue-500 hover:bg-blue-600 text-white flex items-center justify-center gap-2 font-medium"
-          >
-            Buy Now
-            <svg width="20" height="20" viewBox="0 0 20 20" fill="none" xmlns="http://www.w3.org/2000/svg">
-              <path d="M3.75 10H16.25" stroke="white" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
-              <path
-                d="M11.25 5L16.25 10L11.25 15"
-                stroke="white"
-                strokeWidth="1.5"
-                strokeLinecap="round"
-                strokeLinejoin="round"
-              />
-            </svg>
-          </button>
-        </div>
-      </div>
+      )}
     </div>
   );
 }
