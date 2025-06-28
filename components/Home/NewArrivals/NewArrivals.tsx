@@ -147,7 +147,8 @@ const NewArrivals: React.FC = () => {
                   <div
                     key={`${productId}-${variantId}`}
                     className="snap-start flex-shrink-0"
-                    style={{ width: 'calc(70vw - 24px)', maxWidth: '22rem' }}
+                    style={{ width: 'calc(60vw - 32px)', maxWidth: '20rem' }}
+
                   >
                     <ProductCardwithoutCart
                       productId={productId}
@@ -201,26 +202,8 @@ const NewArrivals: React.FC = () => {
         </div>
       </div>
 
-      <div className="container mx-auto px-4 mt-6 md:hidden flex justify-center">
-        <PrimaryLinkButton href="/category/all" className="w-full max-w-xs">
-          View All
-        </PrimaryLinkButton>
-      </div>
-
-      {!isLoading && variantCards.length > 0 && (
-        <div className="flex justify-center mt-4 md:hidden">
-          <div className="flex space-x-2">
-            {Array(Math.min(5, variantCards.length))
-              .fill(0)
-              .map((_, index) => (
-                <div
-                  key={index}
-                  className={cn('h-2 w-2 rounded-full', index === 0 ? 'bg-primary' : 'bg-gray-300')}
-                />
-              ))}
-          </div>
-        </div>
-      )}
+      
+      
     </div>
   );
 };

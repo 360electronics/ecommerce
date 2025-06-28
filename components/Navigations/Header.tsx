@@ -228,7 +228,7 @@ const Header = ({ isCategory = true }: HeaderProps) => {
   return (
     <>
       <header
-        className={`w-full bg-white pt-3 px-4 md:px-12 fixed top-0 left-0 z-50 transition-all duration-300 ${isScrolled ? 'shadow-md' : ''
+        className={`w-full bg-white pt-2 px-4 md:px-12 fixed top-0 left-0 z-50 transition-all duration-300 ${isScrolled ? 'shadow-md' : ''
           }`}
       >
         <div className="mx-auto flex items-center justify-between gap-2">
@@ -246,7 +246,7 @@ const Header = ({ isCategory = true }: HeaderProps) => {
                 alt="Computer 360 Logo"
                 width={150}
                 height={150}
-                className="h-auto w-[100px] md:w-[120px]"
+                className="h-auto w-[120px]"
                 priority
               />
             </Link>
@@ -272,10 +272,10 @@ const Header = ({ isCategory = true }: HeaderProps) => {
 
         {!isMenuOpen && !isSearchOpen && (
           <div className="lg:hidden w-full bg-white py-2 border-t border-gray-200">
-            <div className="mb-2">
+            <SearchBar onSearch={handleSearch} />
+            <div className="mt-2">
               <LocationPicker isMobile={true} />
             </div>
-            <SearchBar onSearch={handleSearch} />
           </div>
         )}
 
@@ -414,7 +414,7 @@ const Header = ({ isCategory = true }: HeaderProps) => {
 
         {/* Desktop Categories Row with Full-Screen Hover Dropdown */}
         {isCategory && (
-          <div className="hidden md:block z-40 pb-2 bg-white">
+          <div className="hidden md:block z-40  bg-white">
             <div className="w-full flex items-center justify-center">
               <ul className="flex justify-between w-full space-x-8 py-2 relative">
                 <li>
@@ -453,7 +453,7 @@ const Header = ({ isCategory = true }: HeaderProps) => {
             {/* Full-Screen Dropdown */}
             {hoveredCategory && (
               <div
-                className="fixed left-0 right-0 top-30 bg-black/30 shadow-lg z-40 "
+                className="fixed left-0 right-0 top-26 bg-black/30 shadow-lg z-[100] "
 
               >
                 <div onMouseEnter={() => {

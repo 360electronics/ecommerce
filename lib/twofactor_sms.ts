@@ -1,18 +1,19 @@
-import axios from 'axios';
+import axios from 'axios'
 
 export async function sendSmsOTP(phoneNumber: string, otp: string) {
-  const twoFactorApiKey = process.env.TWO_FACTOR_API_KEY;
+  const twoFactorApiKey = process.env.TWO_FACTOR_API_KEY; // Your 2Factor API Key
 
   try {
-    // This is specific to 2Factor's API format
-    const response = await axios.get(`https://2factor.in/API/V1/${twoFactorApiKey}/SMS/${phoneNumber}/${otp}/REDELE`);
-    
+    const url = `https://2factor.in/API/R1/?module=TRANS_SMS&apikey=${twoFactorApiKey}&to=${phoneNumber}&from=ELGRGE&templatename=redex360&var1=${otp}`;
+
+    const response = await axios.get(url);
+
     if (response.data.Status === 'Success') {
       return true;
     }
     return false;
   } catch (error) {
-    console.error('Error sending SMS:', error);
+    console.error('Error sending transactional SMS:', error);
     return false;
   }
 }

@@ -106,16 +106,17 @@ export async function GET(request: Request) {
 
     const user = userRecord[0];
 
-    // Validate non-null fields
+    // Validate user data: require role and at least one verified contact method
     if (
-      user.email === null ||
       user.role === null ||
-      user.emailVerified === null ||
-      user.phoneVerified === null
+      (user.email === null && user.phoneNumber === null) || // Must have at least email or phone
+      (user.email !== null && user.emailVerified === null) || // Email must have verification status
+      (user.phoneNumber !== null && user.phoneVerified === null) // Phone must have verification status
     ) {
       console.error("Invalid user data:", {
         userId,
         email: user.email,
+        phoneNumber: user.phoneNumber,
         role: user.role,
         emailVerified: user.emailVerified,
         phoneVerified: user.phoneVerified,
@@ -126,17 +127,35 @@ export async function GET(request: Request) {
       );
     }
 
+    // Ensure guest users are marked as verified for their login method
+    if (user.role === "guest") {
+      if (
+        (user.email !== null && !user.emailVerified) ||
+        (user.phoneNumber !== null && !user.phoneVerified)
+      ) {
+        console.error("Guest user not verified:", {
+          userId,
+          emailVerified: user.emailVerified,
+          phoneVerified: user.phoneVerified,
+        });
+        return NextResponse.json<AuthStatusResponse>(
+          { isAuthenticated: false, user: null, error: "User not verified" },
+          { status: 401 }
+        );
+      }
+    }
+
     return NextResponse.json<AuthStatusResponse>({
       isAuthenticated: true,
       user: {
         id: user.id,
-        firstName: user.firstName,
-        lastName: user.lastName,
-        email: user.email,
-        phoneNumber: user.phoneNumber,
-        role: user.role,
-        emailVerified: user.emailVerified,
-        phoneVerified: user.phoneVerified,
+        firstName: user.firstName ?? "",
+        lastName: user.lastName ?? "",
+        email: user.email ?? "",
+        phoneNumber: user.phoneNumber ?? "",
+        role: user.role ?? "guest",
+        emailVerified: user.emailVerified ?? false,
+        phoneVerified: user.phoneVerified ?? false,
       },
     });
   } catch (error) {

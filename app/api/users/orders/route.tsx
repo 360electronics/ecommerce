@@ -43,40 +43,8 @@ export async function GET(req: NextRequest) {
           quantity: orderItems.quantity,
           unitPrice: orderItems.unitPrice,
         },
-        product: {
-          id: products.id,
-          shortName: products.shortName,
-          description: products.description,
-          category: products.category,
-          brand: products.brand,
-          status: products.status,
-          subProductStatus: products.subProductStatus,
-          totalStocks: products.totalStocks,
-          deliveryMode: products.deliveryMode,
-          tags: products.tags,
-          averageRating: products.averageRating,
-          ratingCount: products.ratingCount,
-          createdAt: products.createdAt,
-          updatedAt: products.updatedAt,
-        },
-        variant: {
-          id: variants.id,
-          productId: variants.productId,
-          name: variants.name,
-          sku: variants.sku,
-          slug: variants.slug,
-          color: variants.color,
-          material: variants.material,
-          dimensions: variants.dimensions,
-          weight: variants.weight,
-          storage: variants.storage,
-          stock: variants.stock,
-          mrp: variants.mrp,
-          ourPrice: variants.ourPrice,
-          productImages: variants.productImages,
-          createdAt: variants.createdAt,
-          updatedAt: variants.updatedAt,
-        },
+        product: products,
+        variant: variants,
       })
       .from(orders)
       .leftJoin(orderItems, eq(orders.id, orderItems.orderId))
@@ -103,57 +71,45 @@ export async function GET(req: NextRequest) {
               quantity: orderItem.quantity,
               unitPrice: orderItem.unitPrice,
               product: product
-                ? {
-                    id: product.id,
-                    shortName: product.shortName,
-                    description: product.description,
-                    category: product.category,
-                    brand: product.brand,
-                    status: product.status,
-                    subProductStatus: product.subProductStatus,
-                    totalStocks: product.totalStocks,
-                    deliveryMode: product.deliveryMode,
-                    tags: product.tags,
-                    averageRating: product.averageRating,
-                    ratingCount: product.ratingCount,
-                    createdAt: product.createdAt,
-                    updatedAt: product.updatedAt,
-                  }
+                ? products
                 : null,
               variant: variant
-                ? {
-                    id: variant.id,
-                    productId: variant.productId,
-                    name: variant.name,
-                    sku: variant.sku,
-                    slug: variant.slug,
-                    color: variant.color,
-                    material: variant.material,
-                    dimensions: variant.dimensions,
-                    weight: variant.weight,
-                    storage: variant.storage,
-                    stock: variant.stock,
-                    mrp: variant.mrp,
-                    ourPrice: variant.ourPrice,
-                    productImages: variant.productImages,
-                    createdAt: variant.createdAt,
-                    updatedAt: variant.updatedAt,
-                  }
+                ? variants
                 : null,
             }
           : null;
 
         if (existingOrder) {
           if (item) {
-            existingOrder.items.push(item);
+            existingOrder.items.push({
+              ...item,
+              product: product
+                ? (product as Omit<typeof products.$inferSelect, "specifications">)
+                : null,
+              variant: variant
+                ? (variant as typeof variants.$inferSelect)
+                : null,
+            });
           }
         } else {
           acc.push({
             ...order,
-            items: item ? [item] : [],
+            items: item
+              ? [
+                  {
+                    ...item,
+                    product: product
+                      ? (product as Omit<typeof products.$inferSelect, "specifications">)
+                      : null,
+                    variant: variant
+                      ? (variant as typeof variants.$inferSelect)
+                      : null,
+                  },
+                ]
+              : [],
             couponCode: null,
             discountAmount: "",
-            couponId: null
+            couponId: null,
           });
         }
         return acc;

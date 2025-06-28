@@ -25,7 +25,7 @@ export default function ProfileInfo() {
   const [isProfileModalOpen, setIsProfileModalOpen] = useState(false);
   const [isAddressModalOpen, setIsAddressModalOpen] = useState(false);
   const [editingAddress, setEditingAddress] = useState<Address | null>(null);
-  const [name, setName] = useState(profileData.name);
+  const [name, setName] = useState(profileData.firstName);
   const [email, setEmail] = useState(profileData.email);
   const [phoneNumber, setPhoneNumber] = useState(profileData.phoneNumber);
   const [newAddress, setNewAddress] = useState({
@@ -44,7 +44,7 @@ export default function ProfileInfo() {
   const [success, setSuccess] = useState<string | null>(null);
 
   useEffect(() => {
-    setName(profileData.name);
+    setName(profileData.firstName);
     setEmail(profileData.email);
     setPhoneNumber(profileData.phoneNumber);
   }, [profileData]);
@@ -53,7 +53,7 @@ export default function ProfileInfo() {
     setError(null);
     setSuccess(null);
 
-    if (!name.trim() || !email.trim()) {
+    if (!name?.trim() || !email?.trim()) {
       setError('Name and email are required.');
       toast.error('Name and email are required.');
       return;
@@ -200,11 +200,15 @@ export default function ProfileInfo() {
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
           <div>
             <p className="text-sm text-gray-500">Name</p>
-            <p className="text-lg font-medium text-gray-900">{profileData.name || 'N/A'}</p>
+            <p className="text-lg font-medium text-gray-900">
+              {(profileData.firstName || profileData.lastName)
+                ? `${profileData.firstName ?? ''} ${profileData.lastName ?? ''}`.trim()
+                : 'N/A'}
+            </p>
           </div>
           <div>
             <p className="text-sm text-gray-500">Email</p>
-            <p className="text-lg font-medium text-gray-900">{profileData.email || 'N/A'}</p>
+            <p className="text-lg font-medium text-gray-900">{profileData.email ?? 'N/A'}</p>
           </div>
           <div>
             <p className="text-sm text-gray-500">Phone</p>
@@ -224,11 +228,11 @@ export default function ProfileInfo() {
             <Pencil size={20} className="text-primary" /> Manage Addresses
           </button>
         </div>
-        {profileData.addresses.length === 0 ? (
+        {profileData.addresses?.length === 0 ? (
           <p className="text-gray-500 text-center py-4">No saved addresses.</p>
         ) : (
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            {profileData.addresses.map((addr) => (
+            {profileData.addresses?.map((addr) => (
               <div
                 key={addr.id}
                 className="border border-gray-200 rounded-lg p-4 hover:bg-gray-50 transition-colors"
@@ -277,7 +281,7 @@ export default function ProfileInfo() {
                 <input
                   type="text"
                   className="mt-1 w-full border border-gray-300 rounded-md p-2 focus:ring-blue-500 focus:border-blue-500"
-                  value={name}
+                  value={name ?? ""}
                   onChange={(e) => setName(e.target.value)}
                   disabled={isSaving}
                   aria-label="Name"
@@ -288,7 +292,7 @@ export default function ProfileInfo() {
                 <input
                   type="email"
                   className="mt-1 w-full border border-gray-300 rounded-md p-2 focus:ring-blue-500 focus:border-blue-500"
-                  value={email}
+                  value={email ?? ''}
                   onChange={(e) => setEmail(e.target.value)}
                   disabled={isSaving}
                   aria-label="Email"
@@ -299,7 +303,7 @@ export default function ProfileInfo() {
                 <input
                   type="text"
                   className="mt-1 w-full border border-gray-300 rounded-md p-2 focus:ring-blue-500 focus:border-blue-500"
-                  value={phoneNumber}
+                  value={phoneNumber ?? ""}
                   onChange={(e) => setPhoneNumber(e.target.value)}
                   disabled={isSaving}
                   aria-label="Phone number"

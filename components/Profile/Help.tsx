@@ -29,7 +29,7 @@ interface Reply {
 
 export default function Help() {
   const { user } = useAuthStore();
-  const { tickets, isLoading, isRefetching, refetch } = useProfileStore();
+  const { tickets, isRefetching, refetch } = useProfileStore();
   const [issueType, setIssueType] = useState('');
   const [description, setDescription] = useState('');
   const [selectedTicket, setSelectedTicket] = useState<Ticket | null>(null);
@@ -102,7 +102,7 @@ export default function Help() {
       setError(null);
 
       try {
-        const res = await fetch('/api/ticket-replies', {
+        const res = await fetch('/api/tickets/reply', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
@@ -242,10 +242,10 @@ export default function Help() {
               onClick={() => refetch('tickets', user?.id!, true)}
               variant="outline"
               className="flex items-center justify-center gap-2 px-4 py-2 border border-gray-300 rounded-md hover:bg-gray-50 transition w-full sm:w-auto"
-              disabled={isLoading || isRefetching}
+              disabled={isRefetching}
               aria-label="Refresh tickets"
             >
-              {isLoading || isRefetching ? (
+              {isRefetching ? (
                 <FaSpinner className="animate-spin" size={16} />
               ) : (
                 <MdRefresh size={16} />
@@ -263,11 +263,7 @@ export default function Help() {
                 <h2 className="text-lg font-medium text-gray-900">Your Tickets</h2>
               </div>
 
-              {isLoading ? (
-                <div className="flex items-center justify-center p-10 text-gray-500">
-                  <FaSpinner className="animate-spin mr-2" /> Loading tickets...
-                </div>
-              ) : filteredTickets.length === 0 ? (
+            {filteredTickets.length === 0 ? (
                 <div className="p-6 text-center text-gray-500">
                   {filterStatus === 'all'
                     ? 'No tickets found. Create a new ticket to get started.'
@@ -280,9 +276,8 @@ export default function Help() {
                       <button
                         key={ticket.id}
                         onClick={() => handleTicketSelect(ticket)}
-                        className={`w-full p-4 text-left cursor-pointer hover:bg-gray-50 transition ${
-                          selectedTicket?.id === ticket.id ? 'bg-blue-50 border-l-4 border-blue-500' : ''
-                        }`}
+                        className={`w-full p-4 text-left cursor-pointer hover:bg-gray-50 transition ${selectedTicket?.id === ticket.id ? 'bg-blue-50 border-l-4 border-blue-500' : ''
+                          }`}
                         aria-label={`Select ticket: ${getTicketTypeLabel(ticket.type)}`}
                       >
                         <div className="flex items-start justify-between">
@@ -341,11 +336,10 @@ export default function Help() {
                           className={`flex ${reply.sender === 'user' ? 'justify-end' : 'justify-start'}`}
                         >
                           <div
-                            className={`max-w-[80%] p-3 rounded-lg ${
-                              reply.sender === 'user'
+                            className={`max-w-[80%] p-3 rounded-lg ${reply.sender === 'user'
                                 ? 'bg-blue-600 text-white rounded-tr-none'
                                 : 'bg-white text-gray-800 rounded-tl-none'
-                            }`}
+                              }`}
                           >
                             <p className="whitespace-pre-wrap">{reply.message}</p>
                             <div className="flex justify-end mt-1">

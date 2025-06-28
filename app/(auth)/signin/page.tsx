@@ -7,10 +7,18 @@ import { toast } from "react-hot-toast";
 import Link from "next/link";
 import { cn } from "@/lib/utils";
 
+// Types (aligned with banners schema)
+interface ImageUrls {
+  default: string;
+  sm?: string;
+  lg?: string;
+}
+
+
 interface Banner {
   id: string;
   title: string;
-  imageUrl: string;
+  imageUrls: ImageUrls;
   type: string;
   active: boolean;
   startDate: string;
@@ -48,7 +56,7 @@ export default function LoginPage() {
         ? responseData.data.map((item: any) => ({
             id: item.id,
             title: item.title,
-            imageUrl: item.imageUrl,
+            imageUrls: item.imageUrls,
             type: item.type,
             active: item.status === "active",
             startDate: item.start_date || "",
@@ -131,7 +139,7 @@ export default function LoginPage() {
         ) : banner ? (
           <Link href={banner.link || "#"} className="block w-full h-full">
             <Image
-              src={banner.imageUrl || "/default-banner.jpg"}
+              src={banner.imageUrls.default || "/default-banner.jpg"}
               alt={banner.title || "Promotional Banner"}
               fill
               sizes="40vw"

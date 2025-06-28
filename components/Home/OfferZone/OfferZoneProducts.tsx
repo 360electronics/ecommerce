@@ -117,11 +117,11 @@ const FeaturedProducts: React.FC = () => {
                     <div
                       key={`${productId}-${variantId}`}
                       className="snap-start flex-shrink-0 relative"
-                      style={{ width: 'calc(80vw - 32px)', maxWidth: '22rem' }}
+                      style={{ width: 'calc(60vw - 32px)', maxWidth: '20rem' }}
                     >
-                      <span className="absolute top-2 left-2 bg-yellow-500 text-white text-xs px-2 py-1 rounded">
+                      {/* <span className="absolute top-2 left-2 bg-yellow-500 text-white text-xs px-2 py-1 rounded">
                         Featured
-                      </span>
+                      </span> */}
                       <ProductCardwithoutCart
                         productId={productId}
                         variantId={variantId}

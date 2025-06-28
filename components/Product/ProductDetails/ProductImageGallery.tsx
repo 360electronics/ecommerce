@@ -71,11 +71,11 @@ export default function ProductImageGallery({ activeVariant }: ProductImageGalle
   const currentImage = activeVariant.productImages[validIndex];
 
   return (
-    <div className="flex flex-row-reverse gap-4">
+    <div className="flex flex-col md:flex-row-reverse gap-4">
       {/* Main Image */}
       <div
         ref={imageContainerRef}
-        className="relative w-full aspect-square border rounded-lg overflow-hidden bg-gray-100 cursor-crosshair"
+        className="relative   md:h-[70dvh] aspect-square border rounded-lg overflow-hidden bg-gray-100 cursor-crosshair"
         onMouseMove={handleMouseMove}
         onMouseEnter={handleMouseEnter}
         onMouseLeave={handleMouseLeave}

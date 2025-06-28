@@ -1,15 +1,11 @@
-// app/store/cart-store.ts
 'use client';
 
 import { create } from 'zustand';
-import toast from 'react-hot-toast';
+import { produce } from 'immer';
+import { fetchWithRetry, logError, debounce, AppError } from './store-utils';
 import { useAuthStore } from './auth-store';
 import { ProductVariant } from '@/types/product';
 
-// Utility function for quantity sanitization
-const sanitizeQuantity = (quantity: number | string): number => Math.max(1, Math.floor(Number(quantity)));
-
-// Define CartItem interface
 interface CartItem {
   id: string;
   userId: string;
@@ -19,13 +15,21 @@ interface CartItem {
   variant: ProductVariant;
 }
 
-// Define CartState interface
+interface Coupon {
+  code: string;
+  type: 'amount' | 'percentage';
+  value: number;
+  couponId: string;
+  couponType: 'individual' | 'special';
+}
+
 interface CartState {
   cartItems: CartItem[];
-  error: string | null;
-  reset: () => void;
-  coupon: { code: string; type: 'amount' | 'percentage'; value: number; couponId: string; couponType: 'individual' | 'special' } | null;
+  coupon: Coupon | null;
   couponStatus: 'none' | 'applied' | 'expired' | 'used' | 'invalid';
+  error: AppError | null;
+  lastFetched: number | null;
+  reset: () => void;
   fetchCart: () => Promise<void>;
   addToCart: (productId: string, variantId: string, quantity?: number) => Promise<void>;
   updateQuantity: (cartItemId: string, quantity: number | string) => Promise<void>;
@@ -41,205 +45,207 @@ interface CartState {
   getSavings: () => number;
 }
 
+const sanitizeQuantity = (quantity: number | string): number => Math.max(1, Math.floor(Number(quantity)));
+
 export const useCartStore = create<CartState>((set, get) => ({
   cartItems: [],
   coupon: null,
   couponStatus: 'none',
   error: null,
+  lastFetched: null,
+  reset: () => set({ cartItems: [], coupon: null, couponStatus: 'none', error: null, lastFetched: null }),
   fetchCart: async () => {
     const { user, isLoggedIn } = useAuthStore.getState();
     if (!isLoggedIn || !user?.id) {
-      set({ cartItems: [] });
+      set({ cartItems: [], lastFetched: Date.now() });
       return;
     }
 
+    const cacheDuration = 10 * 60 * 1000; // 10 minutes
+    const lastFetched = get().lastFetched;
+    if (lastFetched && Date.now() - lastFetched < cacheDuration) return;
+
     try {
-      const response = await fetch(`/api/cart?userId=${user.id}`);
-      if (!response.ok) {
-        throw new Error(`Failed to fetch cart (Status: ${response.status})`);
-      }
-      const data = await response.json();
-      const sanitizedItems = data.map((item: CartItem) => ({
-        ...item,
-        quantity: sanitizeQuantity(item.quantity),
-      }));
-      set({ cartItems: sanitizedItems });
+      const data = await fetchWithRetry<CartItem[]>(() => fetch(`/api/cart?userId=${user.id}`));
+      const sanitizedItems = Array.isArray(data)
+        ? data.map((item) => ({ ...item, quantity: sanitizeQuantity(item.quantity) }))
+        : [];
+      set({ cartItems: sanitizedItems, lastFetched: Date.now(), error: null });
     } catch (error) {
-      console.error('fetchCart error:', error);
-      toast.error(error instanceof Error ? error.message : 'Failed to load cart');
+      logError('fetchCart', error);
+      set({ error: error as AppError });
     }
   },
-  reset: () => set({ cartItems: [], coupon: null, couponStatus: 'none' }),
   addToCart: async (productId, variantId, quantity = 1) => {
     const { user, isLoggedIn } = useAuthStore.getState();
     if (!isLoggedIn || !user?.id) {
-      toast.error('Please log in to add items to cart');
+      logError('addToCart', new Error('User not logged in'));
       return;
     }
 
     try {
-      const response = await fetch('/api/cart', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ userId: user.id, productId, variantId, quantity: sanitizeQuantity(quantity) }),
-      });
-      if (!response.ok) {
-        throw new Error(`Failed to add to cart (Status: ${response.status})`);
-      }
+      await fetchWithRetry(() =>
+        fetch('/api/cart', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ userId: user.id, productId, variantId, quantity: sanitizeQuantity(quantity) }),
+        })
+      );
       await get().fetchCart();
-      toast.success('Item added to cart');
     } catch (error) {
-      console.error('addToCart error:', error);
-      toast.error(error instanceof Error ? error.message : 'Failed to add item to cart');
+      logError('addToCart', error);
+      set({ error: error as AppError });
     }
   },
-  updateQuantity: async (cartItemId, quantity) => {
+  updateQuantity: debounce(async (cartItemId: string, quantity: number | string) => {
     const { user } = useAuthStore.getState();
-    const sanitizedQuantity = sanitizeQuantity(quantity);
-    try {
-      const response = await fetch('/api/cart', {
-        method: 'PUT',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ userId: user?.id, cartItemId, quantity: sanitizedQuantity }),
-      });
-      if (!response.ok) {
-        throw new Error(`Failed to update quantity (Status: ${response.status})`);
-      }
-      const updatedItem = await response.json();
-      set((state) => ({
-        cartItems: state.cartItems.map((item) =>
-          item.id === cartItemId ? { ...item, quantity: updatedItem.quantity } : item
-        ),
-      }));
-      toast.success('Quantity updated');
-    } catch (error) {
-      console.error('updateQuantity error:', error);
-      toast.error(error instanceof Error ? error.message : 'Failed to update quantity');
+    if (!user?.id) {
+      logError('updateQuantity', new Error('User not logged in'));
+      return;
     }
-  },
+
+    const sanitizedQuantity = sanitizeQuantity(quantity);
+    const currentItem = get().cartItems.find((item) => item.id === cartItemId);
+    if (!currentItem) return;
+
+    set(
+      produce((state: CartState) => {
+        const item = state.cartItems.find((i) => i.id === cartItemId);
+        if (item) item.quantity = sanitizedQuantity;
+      })
+    );
+
+    try {
+      const updatedItem = await fetchWithRetry<{ quantity: number }>(() =>
+        fetch('/api/cart', {
+          method: 'PUT',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ userId: user.id, cartItemId, quantity: sanitizedQuantity }),
+        })
+      );
+      set(
+        produce((state: CartState) => {
+          const item = state.cartItems.find((i) => i.id === cartItemId);
+          if (item) item.quantity = updatedItem.quantity;
+        })
+      );
+    } catch (error) {
+      logError('updateQuantity', error);
+      set(
+        produce((state: CartState) => {
+          const item = state.cartItems.find((i) => i.id === cartItemId);
+          if (item) item.quantity = currentItem.quantity;
+        })
+      );
+      set({ error: error as AppError });
+    }
+  }, 300),
   removeFromCart: async (productId, variantId) => {
     const { user, isLoggedIn } = useAuthStore.getState();
     if (!isLoggedIn || !user?.id) {
-      toast.error('Please log in to remove items from cart');
+      logError('removeFromCart', new Error('User not logged in'));
       return;
     }
 
-    try {
-      const response = await fetch('/api/cart', {
-        method: 'DELETE',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ userId: user.id, productId, variantId }),
-      });
-      if (!response.ok) {
-        throw new Error(`Failed to remove item (Status: ${response.status})`);
-      }
-      set((state) => ({
-        cartItems: state.cartItems.filter(
+    const currentItems = get().cartItems;
+    set(
+      produce((state: CartState) => {
+        state.cartItems = state.cartItems.filter(
           (item) => !(item.productId === productId && item.variantId === variantId)
-        ),
-      }));
-      toast.success('Item removed from cart');
+        );
+      })
+    );
+
+    try {
+      await fetchWithRetry(() =>
+        fetch('/api/cart', {
+          method: 'DELETE',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ userId: user.id, productId, variantId }),
+        })
+      );
     } catch (error) {
-      console.error('removeFromCart error:', error);
-      toast.error(error instanceof Error ? error.message : 'Failed to remove item from cart');
+      logError('removeFromCart', error);
+      set({ cartItems: currentItems, error: error as AppError });
     }
   },
   clearCart: async () => {
     const { user, isLoggedIn } = useAuthStore.getState();
     if (!isLoggedIn || !user?.id) {
-      toast.error('Please log in to clear cart');
+      logError('clearCart', new Error('User not logged in'));
       return;
     }
 
     try {
-      const response = await fetch('/api/cart/clear', {
-        method: 'DELETE',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ userId: user.id }),
-      });
-      if (!response.ok) {
-        throw new Error(`Failed to clear cart (Status: ${response.status})`);
-      }
-      set({ cartItems: [] });
-      toast.success('Cart cleared');
+      await fetchWithRetry(() =>
+        fetch('/api/cart/clear', {
+          method: 'DELETE',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ userId: user.id }),
+        })
+      );
+      set({ cartItems: [], lastFetched: Date.now(), error: null });
     } catch (error) {
-      console.error('clearCart error:', error);
-      toast.error(error instanceof Error ? error.message : 'Failed to clear cart');
+      logError('clearCart', error);
+      set({ error: error as AppError });
     }
   },
   applyCoupon: async (code) => {
     const { user, isLoggedIn } = useAuthStore.getState();
-    if (!code) {
-      toast.error('Please enter a coupon code');
-      set({ couponStatus: 'none' });
-      return;
-    }
-    if (!isLoggedIn || !user?.id) {
-      toast.error('Please log in to apply a coupon');
-      set({ couponStatus: 'none' });
+    if (!isLoggedIn || !user?.id || !code) {
+      logError('applyCoupon', new Error('Invalid user or coupon code'));
+      set({ couponStatus: 'none', error: new Error('Invalid user or coupon code') });
       return;
     }
 
-    const upperCode = code.toUpperCase();
     try {
-      const response = await fetch(`/api/discount/coupons?code=${upperCode}&userId=${user.id}`);
-      if (response.ok) {
-        const { amount, id } = await response.json();
-        set({
-          coupon: { code: upperCode, type: 'amount', value: amount, couponId: id, couponType: 'individual' },
-          couponStatus: 'applied',
-        });
-        toast.success(`Coupon ${upperCode} applied! ₹${amount} off`);
-      } else {
-        const errorData = await response.json();
-        if (errorData.error.includes('expired')) {
-          set({ couponStatus: 'expired' });
-          toast.error('Coupon has expired');
-        } else if (errorData.error.includes('used')) {
-          set({ couponStatus: 'used' });
-          toast.error('Coupon has already been used');
-        } else {
-          set({ couponStatus: 'invalid' });
-          toast.error('Invalid coupon code');
-        }
-      }
+      const data = await fetchWithRetry<{ amount: number; id: string }>(() =>
+        fetch(`/api/discount/coupons?code=${code.toUpperCase()}&userId=${user.id}`)
+      );
+      set({
+        coupon: {
+          code: code.toUpperCase(),
+          type: 'amount',
+          value: data.amount,
+          couponId: data.id,
+          couponType: 'individual',
+        },
+        couponStatus: 'applied',
+        error: null,
+      });
     } catch (error) {
-      console.error('applyCoupon error:', error);
-      set({ couponStatus: 'invalid' });
-      toast.error(error instanceof Error ? error.message : 'Failed to apply coupon');
+      logError('applyCoupon', error);
+      const appError = error as AppError;
+      const status = appError.status || 500;
+      set({
+        couponStatus: status === 410 ? 'expired' : status === 409 ? 'used' : 'invalid',
+        error: appError,
+      });
     }
   },
-  removeCoupon: () => {
-    set({ coupon: null, couponStatus: 'none' });
-    toast.success('Coupon removed');
-  },
+  removeCoupon: () => set({ coupon: null, couponStatus: 'none', error: null }),
   markCouponUsed: async (code) => {
     const { user } = useAuthStore.getState();
+    if (!user?.id) return;
+
     try {
       const endpoint = get().coupon?.couponType === 'individual' ? '/api/discount/coupons/use' : '/api/discount/special-coupons/use';
-      const response = await fetch(endpoint, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ code, userId: user?.id }),
-      });
-      if (!response.ok) {
-        throw new Error(`Failed to mark coupon as used (Status: ${response.status})`);
-      }
-      set({ couponStatus: 'used' });
+      await fetchWithRetry(() =>
+        fetch(endpoint, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ code, userId: user.id }),
+        })
+      );
+      set({ couponStatus: 'used', error: null });
     } catch (error) {
-      console.error('markCouponUsed error:', error);
-      toast.error(error instanceof Error ? error.message : 'Failed to mark coupon as used');
+      logError('markCouponUsed', error);
+      set({ error: error as AppError });
     }
   },
-  clearCoupon: () => {
-    set({ coupon: null, couponStatus: 'none' });
-  },
-  getCartSubtotal: () => {
-    return get().cartItems.reduce(
-      (total, item) => total + Number(item.variant.ourPrice) * item.quantity,
-      0
-    );
-  },
+  clearCoupon: () => set({ coupon: null, couponStatus: 'none', error: null }),
+  getCartSubtotal: () =>
+    get().cartItems.reduce((total, item) => total + Number(item.variant.ourPrice) * item.quantity, 0),
   getCartTotal: () => {
     const subtotal = get().getCartSubtotal();
     const coupon = get().coupon;
@@ -247,15 +253,11 @@ export const useCartStore = create<CartState>((set, get) => ({
     const discount = coupon.type === 'amount' ? coupon.value : (subtotal * coupon.value) / 100;
     return Math.max(0, subtotal - discount);
   },
-  getItemCount: () => {
-    return get().cartItems.reduce((count, item) => count + item.quantity, 0);
-  },
-  getSavings: () => {
-    return get().cartItems.reduce(
+  getItemCount: () => get().cartItems.reduce((count, item) => count + item.quantity, 0),
+  getSavings: () =>
+    get().cartItems.reduce(
       (total, item) =>
-        total +
-        (Number(item.variant.mrp || item.variant.ourPrice) - Number(item.variant.ourPrice)) * item.quantity,
+        total + (Number(item.variant.mrp || item.variant.ourPrice) - Number(item.variant.ourPrice)) * item.quantity,
       0
-    );
-  },
+    ),
 }));

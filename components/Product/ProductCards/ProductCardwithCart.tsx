@@ -163,7 +163,7 @@ const ProductCardwithCart: React.FC<ProductCardProps> = ({
       className={cn('w-full rounded-lg cursor-pointer focus:outline-none focus:ring-2 focus:ring-blue-500', className)}
       aria-label={`View details for ${name}`}
     >
-      <div className="relative">
+      <div className="relative w-full md:w-full sm:max-w-[75%] md:max-w-[90%]">
         {/* Wishlist button */}
         {isHeartNeed && (
           <button
@@ -226,7 +226,7 @@ const ProductCardwithCart: React.FC<ProductCardProps> = ({
 
         {/* Product Info */}
         <div className="space-y-2">
-          <h3 className="text-base font-medium text-gray-900 line-clamp-2">{name}</h3>
+          <h3 className=" text-xs md:text-base font-medium text-gray-900 line-clamp-2">{name}</h3>
 
           {/* Rating */}
           {renderRating()}
@@ -234,13 +234,13 @@ const ProductCardwithCart: React.FC<ProductCardProps> = ({
           {/* Price Info */}
           <div className="flex items-center flex-wrap gap-2">
             {ourPrice !== undefined && ourPrice !== null && ourPrice >= 0 && (
-              <span className="text-lg font-bold">₹{Number(ourPrice).toLocaleString()}</span>
+              <span className="text-sm sm:text-base font-bold">₹{Number(ourPrice).toLocaleString()}</span>
             )}
             {mrp && mrp > 0 && ourPrice !== undefined && ourPrice !== null && mrp > ourPrice && (
-              <span className="text-sm text-gray-500 line-through">MRP ₹{Number(mrp).toLocaleString()}</span>
+              <span className="text-[10px] sm:text-xs text-gray-500 line-through">MRP ₹{Number(mrp).toLocaleString()}</span>
             )}
             {discount && discount > 0 && (
-              <span className="rounded-full bg-red-600 px-2 py-1 text-xs font-medium text-white">
+              <span className="rounded-full bg-red-600 px-1 sm:px-1.5 py-0.5 sm:py-1 text-[8px] sm:text-[10px] md:text-xs font-medium text-white">
                 {discount}% Off
               </span>
             )}
@@ -249,7 +249,7 @@ const ProductCardwithCart: React.FC<ProductCardProps> = ({
           {/* View Details */}
           {showViewDetails && (
             <div className="pt-2">
-              <div className="text-sm text-gray-500 hover:text-gray-700">View full details</div>
+              <div className="text-[10px] sm:text-[12px] md:text-sm text-gray-500 hover:text-gray-700">View full details</div>
             </div>
           )}
         </div>

@@ -403,29 +403,45 @@ const ProductListing = ({ category, searchQuery }: { category?: string; searchQu
     };
 
     return (
-        <div className="container mx-auto py-8" role="main">
+        <div className=" mx-auto " role="main">
             <div className="flex flex-col md:flex-row gap-6">
                 {!loading && filteredProducts.length > 0 && (
-                    <aside className="w-full md:w-1/4">
+                    <aside className="w-full md:w-1/4 flex">
                         <DynamicFilter
                             products={filteredProducts}
                             category={category}
                             onFilterChange={handleFilterChange}
                             filterOptions={filterOptions}
                         />
+                        <div className=" items-center flex md:hidden justify-center text-center w-full ">
+                            
+                            <select
+                                id="sort"
+                                className="text-sm border-y border-l w-full border-gray-300 text-center flex items-center justify-center  p-4 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                                value={sortOption}
+                                onChange={handleSortChange}
+                                aria-label="Sort products"
+                            >
+                                <option value="featured">Featured</option>
+                                <option value="ourprice-low-high">Price: Low to High</option>
+                                <option value="ourprice-high-low">Price: High to Low</option>
+                                <option value="rating">Best Rating</option>
+                                <option value="newest">Newest</option>
+                            </select>
+                        </div>
                     </aside>
                 )}
 
                 <main className={`w-full ${filteredProducts.length > 0 ? 'md:w-3/4' : 'md:w-full'}`}>
                     <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-6 pb-4 border-b border-gray-200">
-                        <div className="text-lg font-medium text-gray-800 mb-4 sm:mb-0">
+                        <div className=" text-sm md:text-lg font-medium text-gray-800 mb-4 sm:mb-0">
                             {filteredProducts.length} {filteredProducts.length === 1 ? 'Product' : 'Products'}
                             {category ? ` in ${DOMPurify.sanitize(category)}` : ''}
                             {searchQuery ? ` for "${DOMPurify.sanitize(searchQuery)}"` : ''}
                         </div>
 
-                        <div className="flex items-center">
-                            <label htmlFor="sort" className="text-sm text-gray-600 mr-2">
+                        <div className=" items-center hidden md:flex">
+                            <label htmlFor="sort" className="  text-sm text-gray-600 mr-2">
                                 Sort by:
                             </label>
                             <select
@@ -475,7 +491,7 @@ const ProductListing = ({ category, searchQuery }: { category?: string; searchQu
                         </div>
                     ) : (
                         <>
-                            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
+                            <div className="grid grid-cols-2 lg:grid-cols-3 gap-6">
                                 {displayedProducts.map((product) => (
                                     <MemoizedProductCard
                                         productId={product.productId}
@@ -514,7 +530,7 @@ const ProductListing = ({ category, searchQuery }: { category?: string; searchQu
                                         className="px-3 py-1 mx-1 rounded bg-gray-200 disabled:opacity-50 hover:bg-gray-300"
                                         aria-label="Previous page"
                                     >
-                                       prev
+                                        prev
                                     </button>
 
                                     {renderPaginationButtons()}

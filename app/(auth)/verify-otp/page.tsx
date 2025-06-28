@@ -1,13 +1,14 @@
 "use client";
 
 import { useState, useEffect, useCallback, useRef, Suspense } from "react";
-import { useRouter, useSearchParams } from "next/navigation"; 
+import { useRouter, useSearchParams } from "next/navigation";
 import Image from "next/image";
 import { toast } from "react-hot-toast";
 import Link from "next/link";
-import Cookies from "js-cookie";
 import { cn } from "@/lib/utils";
 import { useAuthStore } from "@/store/auth-store";
+import { useWishlistStore } from "@/store/wishlist-store";
+import { useCartStore } from "@/store/cart-store";
 
 interface Banner {
   id: string;
@@ -50,7 +51,8 @@ function VerifyOTPContent() {
   const router = useRouter();
   const searchParams = useSearchParams(); // Use useSearchParams
   const inputRefs = useRef<(HTMLInputElement | null)[]>(Array(6).fill(null));
-  const { setAuth, fetchAuthStatus } = useAuthStore();
+  const { setAuth } = useAuthStore();
+  
 
   // Extract params from URL
   useEffect(() => {
@@ -84,15 +86,15 @@ function VerifyOTPContent() {
       const responseData = await response.json();
       const transformedBanners: Banner[] = Array.isArray(responseData.data)
         ? responseData.data.map((item: any) => ({
-            id: item.id,
-            title: item.title,
-            imageUrl: item.imageUrl,
-            type: item.type,
-            active: item.status === "active",
-            startDate: item.start_date || "",
-            endDate: item.end_date || "",
-            link: item.link || "",
-          }))
+          id: item.id,
+          title: item.title,
+          imageUrl: item.imageUrl,
+          type: item.type,
+          active: item.status === "active",
+          startDate: item.start_date || "",
+          endDate: item.end_date || "",
+          link: item.link || "",
+        }))
         : [];
       const activeRegisterBanner = transformedBanners.find(
         (banner) => banner.type === "register" && banner.active
@@ -179,7 +181,7 @@ function VerifyOTPContent() {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ userId, otp: otp.join(""), type }),
-        credentials: "include" 
+        credentials: "include"
       });
 
       const data: VerifyOTPResponse = await response.json();
@@ -195,7 +197,7 @@ function VerifyOTPContent() {
         typeof data.user.role === "string"
           ? data.user.role
           : data.user.role || "unknown";
-    
+
 
       toast.success("OTP verified successfully!");
 
@@ -206,6 +208,8 @@ function VerifyOTPContent() {
       }
 
       setAuth(true, data.user);
+      // fetchWishlist(true);
+      // fetchCart()
     } catch (err: unknown) {
       const errorMessage = err instanceof Error ? err.message : "Failed to verify OTP";
       setError(errorMessage);

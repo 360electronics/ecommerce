@@ -143,7 +143,7 @@ const GamersZone: React.FC = () => {
 
   return (
     <section className="py-8 md:py-12">
-      <div className="mx-auto container px-4">
+      <div className="mx-auto container md:px-4">
         <div className="mb-6 text-start md:text-center">
           <h2 className="text-3xl md:text-4xl font-bold nohemi-bold text-primary">
             Gamers <span className="text-black">Zone</span>
@@ -210,7 +210,7 @@ const GamersZone: React.FC = () => {
                   <div
                     key={`${productId}-${variantId}`}
                     className="snap-start flex-shrink-0 relative"
-                    style={{ width: 'calc(80vw - 32px)', maxWidth: '22rem' }}
+                    style={{ width: 'calc(60vw - 32px)', maxWidth: '20rem' }}
                   >
                     <span className="absolute top-2 left-2 bg-yellow-500 text-white text-xs px-2 py-1 rounded">
                       Featured

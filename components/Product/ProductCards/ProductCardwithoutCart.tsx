@@ -1,4 +1,3 @@
-// components/ProductCardwithoutCart.tsx
 'use client';
 
 import { useState, useCallback, useEffect, JSX } from 'react';
@@ -14,19 +13,19 @@ import toast from 'react-hot-toast';
 import { showFancyToast } from '@/components/Reusable/ShowCustomToast';
 
 interface ProductCardProps {
-  image?: string; // Primary image URL (first from productImages)
-  name: string; // Product name
-  rating?: number; // Optional rating (0-5)
-  ourPrice?: number; // Current price
-  mrp?: number; // Manufacturer's retail price
-  discount?: number; // Optional pre-calculated discount percentage
-  showViewDetails?: boolean; // Show "View full details" link
-  className?: string; // Additional CSS classes
-  slug: string; // Product slug for routing
-  onRemove?: () => void; // Optional callback for remove action
-  isHeartNeed?: boolean; // Show wishlist heart button
-  productId: string; // Product ID
-  variantId: string; // Variant ID
+  image?: string;
+  name: string;
+  rating?: number;
+  ourPrice?: number;
+  mrp?: number;
+  discount?: number;
+  showViewDetails?: boolean;
+  className?: string;
+  slug: string;
+  onRemove?: () => void;
+  isHeartNeed?: boolean;
+  productId: string;
+  variantId: string;
 }
 
 const ProductCardwithoutCart: React.FC<ProductCardProps> = ({
@@ -44,7 +43,7 @@ const ProductCardwithoutCart: React.FC<ProductCardProps> = ({
   productId,
   variantId,
 }) => {
-  useWishlistAuthSync(); // Sync wishlist with auth state
+  useWishlistAuthSync();
   const { isInWishlist, addToWishlist, removeFromWishlist, isLoading } = useWishlistStore();
   const { isLoggedIn, fetchAuthStatus } = useAuthStore();
   const { refetch: refetchProfile } = useProfileStore();
@@ -53,7 +52,6 @@ const ProductCardwithoutCart: React.FC<ProductCardProps> = ({
 
   const isInWishlistStatus = productId && variantId ? isInWishlist(productId, variantId) : false;
 
-  // Fetch auth status on mount if not logged in
   useEffect(() => {
     if (!isLoggedIn) {
       fetchAuthStatus();
@@ -72,10 +70,6 @@ const ProductCardwithoutCart: React.FC<ProductCardProps> = ({
           type: 'error',
         });
         router.push('/signin');
-        
-        router.push('/signin');
-        
-        router.push('/signin');
         return;
       }
 
@@ -85,7 +79,7 @@ const ProductCardwithoutCart: React.FC<ProductCardProps> = ({
           title: 'Invalid Selection',
           message: 'Product or variant details are missing or incorrect.',
           type: 'error',
-        });        
+        });
         return;
       }
 
@@ -93,7 +87,9 @@ const ProductCardwithoutCart: React.FC<ProductCardProps> = ({
       try {
         const success = isInWishlistStatus
           ? await removeFromWishlist(productId, variantId, () => refetchProfile('profile', ''))
-          : await addToWishlist(productId, variantId, { product: { id: productId }, variant: { id: variantId } }, () => refetchProfile('profile', ''));
+          : await addToWishlist(productId, variantId, { product: { id: productId }, variant: { id: variantId } }, () =>
+              refetchProfile('profile', '')
+            );
 
         if (success) {
           showFancyToast({
@@ -103,7 +99,6 @@ const ProductCardwithoutCart: React.FC<ProductCardProps> = ({
               : 'The item has been added to your wishlist.',
             type: 'success',
           });
-          
         }
       } catch (error) {
         console.error('[WISHLIST_ERROR]', { productId, variantId, error });
@@ -131,7 +126,7 @@ const ProductCardwithoutCart: React.FC<ProductCardProps> = ({
       .map((_, index) => (
         <span
           key={index}
-          className={cn('text-lg', index < Math.floor(rating) ? 'text-yellow-500' : 'text-gray-300')}
+          className={cn('text-[10px] sm:text-sm', index < Math.floor(rating) ? 'text-yellow-500' : 'text-gray-300')}
         >
           ★
         </span>
@@ -139,7 +134,7 @@ const ProductCardwithoutCart: React.FC<ProductCardProps> = ({
 
     return (
       <div className="flex items-center">
-        <span className="mr-1 font-medium">{rating.toFixed(1)}</span>
+        <span className="mr-1 font-medium text-[10px] sm:text-sm">{rating.toFixed(1)}</span>
         <div className="flex">{stars}</div>
       </div>
     );
@@ -148,7 +143,10 @@ const ProductCardwithoutCart: React.FC<ProductCardProps> = ({
   return (
     <Link
       href={`/product/${slug}`}
-      className={cn('w-full rounded-lg cursor-pointer focus:outline-none focus:ring-2 focus:ring-blue-500', className)}
+      className={cn(
+        ' rounded-lg cursor-pointer focus:outline-none focus:ring-2 focus:ring-blue-500',
+        className
+      )}
       aria-label={`View details for ${name}`}
     >
       <div className="relative">
@@ -157,7 +155,7 @@ const ProductCardwithoutCart: React.FC<ProductCardProps> = ({
           <button
             onClick={handleWishlistClick}
             className={cn(
-              'absolute right-2 bottom-0 z-10 p-2 rounded-full transition-colors',
+              'absolute right-1 sm:right-2 bottom-0 z-10 p-1.5 sm:p-2 rounded-full transition-colors',
               isInWishlistStatus ? 'text-red-500 bg-red-100 hover:bg-red-200' : 'text-gray-500 bg-gray-100 hover:bg-gray-200',
               (isAdding || isLoading) && 'opacity-50 cursor-not-allowed'
             )}
@@ -165,7 +163,7 @@ const ProductCardwithoutCart: React.FC<ProductCardProps> = ({
             aria-label={isInWishlistStatus ? 'Remove from wishlist' : 'Add to wishlist'}
           >
             <Heart
-              size={18}
+              size={14}
               fill={isInWishlistStatus ? 'red' : 'none'}
               className={cn(isInWishlistStatus ? 'text-red-500' : 'text-gray-500')}
             />
@@ -180,42 +178,46 @@ const ProductCardwithoutCart: React.FC<ProductCardProps> = ({
               e.stopPropagation();
               onRemove();
             }}
-            className="absolute right-5 top-5 z-10 rounded-full bg-white p-1 text-red-500 shadow-md hover:bg-red-500 hover:text-white focus:outline-none focus:ring-2 focus:ring-red-500"
+            className="absolute right-3 sm:right-5 top-3 sm:top-5 z-10 rounded-full bg-white p-1 text-red-500 shadow-md hover:bg-red-500 hover:text-white focus:outline-none focus:ring-2 focus:ring-red-500"
             aria-label="Remove product"
           >
-            <X size={16} />
+            <X size={12} />
           </button>
         )}
 
         {/* Product Image */}
-        <div className="mb-4 relative w-full aspect-square border group border-gray-100 rounded-md bg-[#F4F4F4] overflow-hidden">
+        <div className="mb-2 sm:mb-4 relative w-full aspect-square border border-gray-100 rounded-md bg-[#F4F4F4] overflow-hidden">
           <Image
             src={image || '/placeholder.png'}
             alt={name || 'Product'}
             fill
-            className="max-h-full max-w-full object-contain p-6 group-hover:scale-105 duration-200 mix-blend-multiply"
-            sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 33vw"
+            className="max-h-full max-w-full object-contain p-3 sm:p-6 group-hover:scale-105 duration-200 mix-blend-multiply"
+            sizes="(max-width: 640px) 50vw, (max-width: 768px) 33vw, (max-width: 1200px) 25vw, 20vw"
             style={{ objectFit: 'contain' }}
+            priority={false}
+            quality={75}
           />
         </div>
 
         {/* Product Info */}
-        <div className="space-y-2">
-          <h3 className="text-base font-medium text-gray-900 line-clamp-2">{name}</h3>
+        <div className="space-y-1 sm:space-y-2">
+          <h3 className="text-[10px] sm:text-xs md:text-base font-medium text-gray-900 line-clamp-2">{name}</h3>
 
           {/* Rating */}
           {renderRating()}
 
           {/* Price Info */}
-          <div className="flex items-center flex-wrap gap-2">
+          <div className="flex items-center flex-wrap gap-1 sm:gap-2">
             {ourPrice !== undefined && ourPrice !== null && ourPrice >= 0 && (
-              <span className="text-lg font-bold">₹{Number(ourPrice).toLocaleString()}</span>
+              <span className="text-sm sm:text-base md:text-lg font-bold">₹{Number(ourPrice).toLocaleString()}</span>
             )}
             {mrp && mrp > 0 && ourPrice !== undefined && ourPrice !== null && mrp > ourPrice && (
-              <span className="text-sm text-gray-500 line-through">MRP ₹{Number(mrp).toLocaleString()}</span>
+              <span className="text-[10px] sm:text-xs md:text-sm text-gray-500 line-through">
+                MRP ₹{Number(mrp).toLocaleString()}
+              </span>
             )}
             {discount && discount > 0 && (
-              <span className="rounded-full bg-red-600 px-2 py-1 text-xs font-medium text-white">
+              <span className="rounded-full bg-red-600 px-1 sm:px-1.5 py-0.5 sm:py-1 text-[8px] sm:text-[10px] md:text-xs font-medium text-white">
                 {discount}% Off
               </span>
             )}
@@ -223,8 +225,10 @@ const ProductCardwithoutCart: React.FC<ProductCardProps> = ({
 
           {/* View Details */}
           {showViewDetails && (
-            <div className="pt-2">
-              <div className="text-sm text-gray-500 hover:text-gray-700">View full details</div>
+            <div className="pt-1 sm:pt-2">
+              <div className="text-[10px] sm:text-[12px] md:text-sm text-gray-500 hover:text-gray-700">
+                View full details
+              </div>
             </div>
           )}
         </div>

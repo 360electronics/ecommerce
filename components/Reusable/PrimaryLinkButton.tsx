@@ -26,7 +26,7 @@ const PrimaryLinkButton: React.FC<PrimaryLinkButtonProps> = ({
       href={href}
       target={target}
       className={`
-        inline-flex items-center justify-center gap-2
+        inline-flex items-center text-xs md:text-base justify-center gap-2
         px-4 py-2 rounded-md
         bg-[var(--color-primary)]
         text-white font-medium

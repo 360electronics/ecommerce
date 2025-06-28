@@ -1,13 +1,11 @@
-// app/store/wishlist-store.ts
 'use client';
 
 import { create } from 'zustand';
 import { produce } from 'immer';
-import { toast } from 'react-hot-toast';
-import { useAuthStore } from './auth-store';
 import { useEffect } from 'react';
+import { useAuthStore } from './auth-store';
+import { fetchWithRetry, logError, AppError } from './store-utils';
 
-// Define types
 interface Dimensions {
   length?: number;
   width?: number;
@@ -49,8 +47,8 @@ interface WishlistState {
   wishlistCount: number;
   isLoading: boolean;
   isRefetching: boolean;
-  errors: Partial<Record<'fetch' | 'add' | 'remove', string>>;
-  lastFetched: number | undefined;
+  errors: Partial<Record<'fetch' | 'add' | 'remove', AppError>>;
+  lastFetched: number | null;
   isInWishlist: (productId: string, variantId: string) => boolean;
   fetchWishlist: (force?: boolean) => Promise<void>;
   reset: () => void;
@@ -70,7 +68,7 @@ const INITIAL_STATE: WishlistState = {
   isLoading: false,
   isRefetching: false,
   errors: {},
-  lastFetched: undefined,
+  lastFetched: null,
   isInWishlist: () => false,
   fetchWishlist: async () => {},
   reset: () => {},
@@ -79,119 +77,55 @@ const INITIAL_STATE: WishlistState = {
   refreshWishlist: async () => {},
 };
 
-// Simple retry logic for API calls
-const fetchWithRetry = async <T>(fn: () => Promise<T>, maxRetries = 3, delay = 1000): Promise<T> => {
-  let lastError: Error | null = null;
-  for (let i = 0; i < maxRetries; i++) {
-    try {
-      return await fn();
-    } catch (error) {
-      lastError = error instanceof Error ? error : new Error('Unknown error');
-      if (i < maxRetries - 1) {
-        await new Promise((resolve) => setTimeout(resolve, delay * Math.pow(2, i)));
-      }
-    }
-  }
-  throw lastError;
-};
-
 export const useWishlistStore = create<WishlistState>((set, get) => ({
   ...INITIAL_STATE,
-
-  isInWishlist: (productId: string, variantId: string): boolean =>
+  isInWishlist: (productId: string, variantId: string) =>
     get().wishlist.some((item) => item.productId === productId && item.variantId === variantId),
-
-  fetchWishlist: async (force = false): Promise<void> => {
+  fetchWishlist: async (force = false) => {
     const { user, isLoggedIn } = useAuthStore.getState();
     if (!isLoggedIn || !user?.id) {
-      set({
-        wishlist: [],
-        wishlistCount: 0,
-        errors: {},
-        isLoading: false,
-        isRefetching: false,
-        lastFetched: undefined,
-      });
+      set({ wishlist: [], wishlistCount: 0, lastFetched: Date.now() });
       return;
     }
 
-    const { lastFetched } = get();
-    const now = Date.now();
-    const cacheDuration = 5 * 60 * 1000; // 5 minutes cache duration
-    if (!force && lastFetched && now - lastFetched < cacheDuration) {
-      return; // Use cached data
-    }
+    const cacheDuration = 10 * 60 * 1000;
+    const lastFetched = get().lastFetched;
+    if (!force && lastFetched && Date.now() - lastFetched < cacheDuration) return;
 
     try {
+      set({ isLoading: true, isRefetching: force, errors: { ...get().errors, fetch: undefined } });
+      const data = await fetchWithRetry<WishlistItem[]>(() => fetch(`/api/users/wishlist?userId=${user.id}`));
+      const validatedData = Array.isArray(data) ? data : [];
       set({
-        isLoading: true,
-        isRefetching: force,
-        errors: { ...get().errors, fetch: undefined },
-      });
-      const response = await fetchWithRetry(() =>
-        fetch(`/api/users/wishlist?userId=${user.id}`, { credentials: 'include' })
-      );
-      if (!response.ok) {
-        if (response.status === 404) {
-          set({
-            wishlist: [],
-            wishlistCount: 0,
-            isLoading: false,
-            isRefetching: false,
-            lastFetched: now,
-            errors: { ...get().errors, fetch: undefined },
-          });
-          return;
-        }
-        const errorData = await response.json();
-        throw new Error(errorData.error || `Failed to fetch wishlist (Status: ${response.status})`);
-      }
-      const data: WishlistItem[] = await response.json();
-      set({
-        wishlist: Array.isArray(data) ? data : [],
-        wishlistCount: Array.isArray(data) ? data.length : 0,
+        wishlist: validatedData,
+        wishlistCount: validatedData.length,
         isLoading: false,
         isRefetching: false,
-        lastFetched: now,
-        errors: { ...get().errors, fetch: undefined },
+        lastFetched: Date.now(),
       });
     } catch (error) {
-      console.error('Fetch wishlist error:', error);
-      const message = error instanceof Error ? error.message : 'Failed to load wishlist';
+      logError('fetchWishlist', error);
       set({
-        errors: { ...get().errors, fetch: message },
+        errors: { ...get().errors, fetch: error as AppError },
         isLoading: false,
         isRefetching: false,
       });
-      toast.error(message);
     }
   },
-
-  addToWishlist: async (
-    productId: string,
-    variantId: string,
-    tempData?: { product: Partial<Product>; variant: Partial<Variant> },
-    onSuccess?: () => void
-  ): Promise<boolean> => {
+  addToWishlist: async (productId, variantId, tempData, onSuccess) => {
     const { user, isLoggedIn } = useAuthStore.getState();
     if (!isLoggedIn || !user?.id) {
-      toast.error('Please log in to add to wishlist');
-      set({ errors: { ...get().errors, add: 'Please log in to add to wishlist' } });
+      logError('addToWishlist', new Error('User not logged in'));
       return false;
     }
 
     if (!productId || !variantId) {
-      toast.error('Invalid product or variant');
-      set({ errors: { ...get().errors, add: 'Invalid product or variant' } });
+      logError('addToWishlist', new Error('Invalid product or variant'));
       return false;
     }
 
-    const { wishlist } = get();
-    if (wishlist.some((item) => item.productId === productId && item.variantId === variantId)) {
-      return true; // Item already in wishlist
-    }
+    if (get().isInWishlist(productId, variantId)) return true;
 
-    // Optimistic update
     const optimisticItem: WishlistItem = {
       productId,
       variantId,
@@ -218,17 +152,19 @@ export const useWishlistStore = create<WishlistState>((set, get) => ({
       },
     };
 
+    // Apply optimistic update
     set(
       produce((state: WishlistState) => {
         state.wishlist.push(optimisticItem);
         state.wishlistCount += 1;
         state.isLoading = true;
         state.errors.add = undefined;
+        state.lastFetched = Date.now(); // Prevent redundant fetches
       })
     );
 
     try {
-      const response = await fetchWithRetry(() =>
+      const { item } = await fetchWithRetry<{ item: WishlistItem }>(() =>
         fetch('/api/users/wishlist', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
@@ -236,140 +172,101 @@ export const useWishlistStore = create<WishlistState>((set, get) => ({
           body: JSON.stringify({ userId: user.id, productId, variantId }),
         })
       );
-      if (!response.ok) {
-        const errorData = await response.json();
-        throw new Error(errorData.error || `Failed to add to wishlist (Status: ${response.status})`);
-      }
-      const { item }: { item: WishlistItem } = await response.json();
       set(
         produce((state: WishlistState) => {
-          const index = state.wishlist.findIndex(
-            (i) => i.productId === productId && i.variantId === variantId
-          );
-          if (index !== -1) state.wishlist[index] = item;
+          const index = state.wishlist.findIndex((i) => i.productId === productId && i.variantId === variantId);
+          if (index !== -1) {
+            state.wishlist[index] = item; // Replace optimistic item with server response
+          } else {
+            state.wishlist.push(item); // Fallback: add if not found
+          }
           state.wishlistCount = state.wishlist.length;
           state.isLoading = false;
-          state.errors.add = undefined;
-          state.lastFetched = Date.now(); // Update cache timestamp
         })
       );
       onSuccess?.();
       return true;
     } catch (error) {
-      console.error('Add to wishlist error:', error);
+      logError('addToWishlist', error);
       set(
         produce((state: WishlistState) => {
-          state.wishlist = state.wishlist.filter(
-            (i) => !(i.productId === productId && i.variantId === variantId)
-          );
+          state.wishlist = state.wishlist.filter((i) => !(i.productId === productId && i.variantId === variantId));
           state.wishlistCount = state.wishlist.length;
-          state.errors.add = error instanceof Error ? error.message : 'Failed to add to wishlist';
+          state.errors.add = error as AppError;
           state.isLoading = false;
         })
       );
-      toast.error(error instanceof Error ? error.message : 'Failed to add to wishlist');
       return false;
     }
   },
-
-  removeFromWishlist: async (productId: string, variantId: string, onSuccess?: () => void): Promise<boolean> => {
+  removeFromWishlist: async (productId, variantId, onSuccess) => {
     const { user, isLoggedIn } = useAuthStore.getState();
-    if (!isLoggedIn || !user?.id || user.id === '') {
-      toast.error('Please log in to remove from wishlist');
-      set({ errors: { ...get().errors, remove: 'Please log in to remove from wishlist' } });
+    if (!isLoggedIn || !user?.id) {
+      logError('removeFromWishlist', new Error('User not logged in'));
       return false;
     }
 
-    if (!productId || !variantId || productId === '' || variantId === '') {
-      console.error('Invalid product or variant in removeFromWishlist:', { productId, variantId });
-      toast.error('Invalid product or variant');
-      set({ errors: { ...get().errors, remove: 'Invalid product or variant' } });
-      return false;
-    }
+    const itemToRemove = get().wishlist.find((item) => item.productId === productId && item.variantId === variantId);
+    if (!itemToRemove) return true;
 
-    const { wishlist } = get();
-    const itemToRemove = wishlist.find(
-      (item) => item.productId === productId && item.variantId === variantId
-    );
-    if (!itemToRemove) {
-      return true; // Item not in wishlist
-    }
-
-    // Optimistic update
     set(
       produce((state: WishlistState) => {
-        state.wishlist = state.wishlist.filter(
-          (i) => !(i.productId === productId && i.variantId === variantId)
-        );
+        state.wishlist = state.wishlist.filter((i) => !(i.productId === productId && i.variantId === variantId));
         state.wishlistCount = state.wishlist.length;
         state.isLoading = true;
         state.errors.remove = undefined;
+        state.lastFetched = Date.now(); // Prevent redundant fetches
       })
     );
 
     try {
-      const response = await fetchWithRetry(() =>
+      await fetchWithRetry(() =>
         fetch(`/api/users/wishlist?userId=${user.id}&productId=${productId}&variantId=${variantId}`, {
           method: 'DELETE',
           credentials: 'include',
         })
       );
-      if (!response.ok) {
-        const errorData = await response.json();
-        throw new Error(errorData.error || `Failed to remove from wishlist (Status: ${response.status})`);
-      }
-      await response.json(); // Parse response to confirm success
       set(
         produce((state: WishlistState) => {
           state.isLoading = false;
-          state.errors.remove = undefined;
-          state.lastFetched = Date.now(); // Update cache timestamp
         })
       );
       onSuccess?.();
       return true;
     } catch (error) {
-      console.error('Remove from wishlist error:', error);
+      logError('removeFromWishlist', error);
       set(
         produce((state: WishlistState) => {
-          state.wishlist = [...state.wishlist, itemToRemove].sort((a, b) =>
-            new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
+          state.wishlist = [...state.wishlist, itemToRemove].sort(
+            (a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
           );
           state.wishlistCount = state.wishlist.length;
-          state.errors.remove = error instanceof Error ? error.message : 'Failed to remove from wishlist';
+          state.errors.remove = error as AppError;
           state.isLoading = false;
         })
       );
-      toast.error(error instanceof Error ? error.message : 'Failed to remove from wishlist');
       return false;
     }
   },
-
-  refreshWishlist: async (): Promise<void> => {
+  refreshWishlist: async () => {
     set({ isRefetching: true });
     await get().fetchWishlist(true);
   },
-
-  reset: (): void => {
-    set(INITIAL_STATE);
-  },
+  reset: () => set(INITIAL_STATE),
 }));
 
-// Sync wishlist with auth state
-export const useWishlistAuthSync = (): void => {
+export const useWishlistAuthSync = () => {
   useEffect(() => {
     const unsubscribe = useAuthStore.subscribe((state) => {
       if (!state.isLoggedIn) {
         useWishlistStore.getState().reset();
       } else {
-        // Fetch wishlist when user logs in
         useWishlistStore.getState().fetchWishlist(true);
       }
     });
     return () => unsubscribe();
   }, []);
 
-  // Initial fetch when component mounts
   useEffect(() => {
     const { isLoggedIn } = useAuthStore.getState();
     if (isLoggedIn) {

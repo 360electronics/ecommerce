@@ -41,21 +41,19 @@ export default function ProductDetailPage({ product }: ProductDetailPageProps) {
         stock: Number(product.stock) || 0,
         lowStockThreshold: null,
         isBackorderable: false,
-        mrp: product.mrp,
-        ourPrice: product.ourPrice,
+        mrp: Number(product.mrp) || 0,
+        ourPrice: Number(product.ourPrice) || 0,
         salePrice: null,
         isOnSale: false,
-        productImages: product.productImages || [],
+        productImages: Array.isArray(product.productImages) ? product.productImages : (product.productImages ? [product.productImages] : []),
         weight: Number(product.weight) || null,
         weightUnit: null,
         dimensions: null,
         isDefault: true,
-        createdAt: product.createdAt,
-        updatedAt: product.updatedAt,
-        inStock: Number(product.stock) > 0,
-        discountPercentage: product.discount || null,
+        createdAt: typeof product.createdAt === 'string' ? new Date(product.createdAt) : product.createdAt,
+        updatedAt: typeof product.updatedAt === 'string' ? new Date(product.updatedAt) : product.updatedAt,
+        discountPercentage: (product as any).discount || null,
         isLowStock: false,
-        availabilityStatus: Number(product.stock) > 0 ? 'in_stock' : 'out_of_stock',
       };
     }
     const matchedVariant = product.productParent.variants.find((v) =>
@@ -102,17 +100,17 @@ export default function ProductDetailPage({ product }: ProductDetailPageProps) {
   }
 
   return (
-    <div className="mx-auto px-4 pb-16">
+    <div className="mx-auto  pb-16 w-full">
       <Breadcrumbs breadcrumbs={breadcrumbItems} className="my-6 hidden md:block" />
       <div
-        className="grid grid-cols-1 lg:grid-cols-2 gap-8 mb-12 relative"
+        className="flex flex-col md:flex-row  w-full relative space-x-10"
         role="region"
         aria-label="Product details"
       >
-        <div className="w-full relative">
+        <div className="w-full md:w-auto relative">
           <ProductImageGallery activeVariant={activeVariant} />
         </div>
-        <div className="w-full relative">
+        <div className=" relative">
           <ProductZoomOverlay activeVariant={activeVariant} className="hidden lg:block" />
           <ProductDetailsContent activeVariant={activeVariant} />
         </div>

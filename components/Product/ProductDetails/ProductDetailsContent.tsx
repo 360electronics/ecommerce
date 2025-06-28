@@ -481,7 +481,7 @@ export default function ProductDetailsContent({ className, activeVariant }: Prod
   );
 
   return (
-    <div className={cn('space-y-6 p-4 h-[90dvh] overflow-auto', className)}>
+    <div className={cn('space-y-6 w-full  md:h-[90dvh] md:overflow-auto', className)}>
       <Toaster />
       <div className="flex items-center justify-end mb-4">
         <button
@@ -493,11 +493,11 @@ export default function ProductDetailsContent({ className, activeVariant }: Prod
         </button>
       </div>
 
-      <h1 className="text-xl md:text-2xl font-semibold text-gray-900">{product.name}</h1>
+      <h1 className="text-base md:text-2xl font-semibold text-gray-900">{product.name}</h1>
 
       <Pricing />
 
-      <div className="space-y-4">
+      <div className="space-y-4 flex flex-wrap gap-4">
         {attributeKeys.map((key) => {
           const options = attributeOptions[key] || [];
           if (options.length === 0) return null;
@@ -538,11 +538,11 @@ export default function ProductDetailsContent({ className, activeVariant }: Prod
       <Actions />
 
       {nonVaryingAttributes.length > 0 && (
-        <div className="mt-2 p-6 bg-white rounded-lg">
-          <h2 className="text-lg font-semibold mb-4">Product Features</h2>
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+        <div className="mt-2 py-6 bg-white rounded-lg">
+          <h2 className="text-lg font-semibold mb-4">Product Highlights</h2>
+          <div className="grid grid-cols-1 md:grid-cols-2 px-4">
             {nonVaryingAttributes.map((item) => (
-              <p key={item.key} className="text-sm text-gray-600">
+              <p key={item.key} className=" text-sm md:text-base text-gray-600 list-item">
                 <span className="font-medium">{formatAttributeLabel(item.key)}:</span> {item.value}
               </p>
             ))}

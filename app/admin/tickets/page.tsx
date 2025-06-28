@@ -1,140 +1,141 @@
-"use client"
+'use client';
 
-import { useCallback, useState, useEffect } from "react"
-import { Search } from "lucide-react"
-import { Input } from "@/components/ui/input"
-import { TicketCard } from "@/components/Admin/Tickets/TicketCard"
-import { TicketModal } from "@/components/Admin/Tickets/ActionModel"
-import type { Ticket } from "@/types/ticket"
+import { useCallback, useState, useEffect } from 'react';
+import { Search } from 'lucide-react';
+import { Input } from '@/components/ui/input';
+import { Button } from '@/components/ui/button';
+import { TicketCard } from '@/components/Admin/Tickets/TicketCard';
+import { TicketModal } from '@/components/Admin/Tickets/ActionModel';
+import toast from 'react-hot-toast';
 
-// Sample ticket data
-const ticketData: Ticket[] = [
-  {
-    id: "76XXXXXXXX",
-    type: "Product Issue",
-    description:
-      "Lorem Ipsum is simply dummy text of the printing and typesetting industry. Lorem Ipsum has been the industry's standard dummy text ever since the 1500s, when an unknown printer took a galley of type and scrambled it to make a type specimen book. It has survived not only five centuries, but also the leap into electronic typesetting, remaining essentially unchanged.",
-    status: "open",
-    createdAt: "25/09/2025",
-    customer: {
-      name: "Leo Das",
-      email: "santhos01ac@gmail.com",
-      phone: "88XXX88XXXX",
-      avatar: "/diverse-group-city.png",
-    },
-  },
-  {
-    id: "75XXXXXXXX",
-    type: "Delivery Issue",
-    description:
-      "The package was delivered to the wrong address. I've been waiting for 3 days now and still haven't received my order.",
-    status: "pending",
-    createdAt: "18/09/2025",
-    customer: {
-      name: "Sarah Johnson",
-      email: "sarah.j@example.com",
-      phone: "77XXX77XXXX",
-      avatar: "/diverse-group-city.png",
-    },
-  },
-  {
-    id: "74XXXXXXXX",
-    type: "Refund Request",
-    description:
-      "I would like to request a refund for my recent purchase as the product doesn't match the description on the website.",
-    status: "closed",
-    createdAt: "12/05/2025",
-    customer: {
-      name: "Michael Chen",
-      email: "m.chen@example.com",
-      phone: "66XXX66XXXX",
-      avatar: "/diverse-group-city.png",
-    },
-  },
-  {
-    id: "73XXXXXXXX",
-    type: "Technical Support",
-    description: "My gaming PC keeps shutting down randomly during gameplay. I've already tried updating all drivers.",
-    status: "open",
-    createdAt: "05/09/2025",
-    customer: {
-      name: "Alex Rivera",
-      email: "alex.r@example.com",
-      phone: "55XXX55XXXX",
-      avatar: "/diverse-group-city.png",
-    },
-  },
-  {
-    id: "72XXXXXXXX",
-    type: "Payment Related",
-    description: "I need to cancel my order #ORD-2025-7890 as I accidentally ordered the wrong item.",
-    status: "closed",
-    createdAt: "28/08/2025",
-    customer: {
-      name: "Antony Das",
-      email: "antony.d@example.com",
-      phone: "44XXX44XXXX",
-      avatar: "/diverse-group-city.png",
-    },
-  },
-]
+interface Ticket {
+  id: string;
+  user_id: string;
+  type: string;
+  issueDesc: string;
+  status: 'active' | 'inactive' |'closed';
+  createdAt: string;
+  customer: {
+    id: string;
+    name: string;
+    email: string;
+    phoneNumber: string;
+    role: 'user' | 'admin' | 'guest';
+  };
+  addresses: Array<{
+    id: string;
+    fullName: string;
+    phoneNumber: string;
+    addressLine1: string;
+    addressLine2: string | null;
+    city: string;
+    state: string;
+    postalCode: string;
+    country: string;
+    addressType: 'home' | 'work' | 'other';
+    isDefault: boolean;
+  }>;
+  replies: Array<{
+    id: string;
+    sender: 'user' | 'support';
+    message: string;
+    createdAt: string;
+  }>;
+}
 
 export default function TicketsPage() {
-  const [selectedTicket, setSelectedTicket] = useState<Ticket | null>(null)
-  const [isModalOpen, setIsModalOpen] = useState(false)
-  const [tickets, setTickets] = useState<Ticket[]>(ticketData)
-  const [filter, setFilter] = useState<string>("all")
-  const [searchQuery, setSearchQuery] = useState("")
-  const [isMounted, setIsMounted] = useState(false)
+  const [tickets, setTickets] = useState<Ticket[]>([]);
+  const [selectedTicket, setSelectedTicket] = useState<Ticket | null>(null);
+  const [isModalOpen, setIsModalOpen] = useState(false);
+  const [filter, setFilter] = useState<string>('all');
+  const [searchQuery, setSearchQuery] = useState('');
+  const [isMounted, setIsMounted] = useState(false);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
-  // Handle client-side mounting
+  const fetchTickets = useCallback(async () => {
+    setLoading(true);
+    setError(null);
+    try {
+      const response = await fetch('/api/tickets', {
+        method: 'GET',
+        headers: { 'Content-Type': 'application/json' },
+      });
+      const data = await response.json();
+      if (!response.ok) throw new Error(data.error || 'Failed to fetch tickets');
+      setTickets(data);
+    } catch (err) {
+      const message = err instanceof Error ? err.message : 'Failed to fetch tickets';
+      setError(message);
+      toast.error(message);
+    } finally {
+      setLoading(false);
+    }
+  }, []);
+
   useEffect(() => {
-    setIsMounted(true)
-  }, [])
+    setIsMounted(true);
+    fetchTickets();
+  }, [fetchTickets]);
 
   const handleOpenTicket = useCallback((ticket: Ticket) => {
-    setSelectedTicket(ticket)
-    // Use setTimeout to ensure state updates don't conflict
+    setSelectedTicket(ticket);
     setTimeout(() => {
-      setIsModalOpen(true)
-    }, 0)
-  }, [])
+      setIsModalOpen(true);
+    }, 0);
+  }, []);
 
   const handleCloseModal = useCallback(() => {
-    setIsModalOpen(false)
-    // Give time for animation to complete before removing the ticket
+    setIsModalOpen(false);
     setTimeout(() => {
-      setSelectedTicket(null)
-    }, 300)
-  }, [])
+      setSelectedTicket(null);
+    }, 300);
+  }, []);
 
   const handleSaveTicket = useCallback(
-    (updatedTicket: Ticket) => {
-      setTickets((prevTickets) =>
-        prevTickets.map((ticket) => (ticket.id === updatedTicket.id ? updatedTicket : ticket)),
-      )
-      handleCloseModal()
-    },
-    [handleCloseModal],
-  )
+    async (updatedTicket: Ticket) => {
+      try {
+        const res = await fetch(`/api/tickets?id=${updatedTicket.id}`, {
+          method: 'PATCH',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ status: updatedTicket.status }),
+        });
 
-  // Filter tickets by status and search query
+        const data = await res.json();
+        if (!res.ok) throw new Error(data.error || 'Failed to update ticket');
+
+        await fetchTickets();
+        toast.success('Ticket updated successfully');
+        handleCloseModal();
+      } catch (error) {
+        const message = error instanceof Error ? error.message : 'Failed to update ticket';
+        toast.error(message);
+      }
+    },
+    [handleCloseModal, fetchTickets],
+  );
+
   const filteredTickets = tickets.filter((ticket) => {
-    const matchesFilter = filter === "all" || ticket.status === filter
+    const matchesFilter = filter === 'all' || ticket.status === filter;
     const matchesSearch =
-      searchQuery === "" ||
+      searchQuery === '' ||
       ticket.type.toLowerCase().includes(searchQuery.toLowerCase()) ||
       ticket.id.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      ticket.customer.name.toLowerCase().includes(searchQuery.toLowerCase())
+      ticket.customer.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      ticket.customer.email.toLowerCase().includes(searchQuery.toLowerCase());
 
-    return matchesFilter && matchesSearch
-  })
+    return matchesFilter && matchesSearch;
+  });
 
-  // Don't render the modal on the server
   const modalComponent =
     isMounted && selectedTicket ? (
-      <TicketModal isOpen={isModalOpen} ticket={selectedTicket} onClose={handleCloseModal} onSave={handleSaveTicket} />
-    ) : null
+      <TicketModal
+        isOpen={isModalOpen}
+        ticket={selectedTicket}
+        onClose={handleCloseModal}
+        onSave={handleSaveTicket}
+      />
+    ) : null;
 
   return (
     <div className="container mx-auto py-6">
@@ -149,31 +150,39 @@ export default function TicketsPage() {
             onChange={(e) => setSearchQuery(e.target.value)}
           />
         </div>
-
-
       </div>
 
       <div className="flex gap-2 mb-4">
-        {["all", "open", "pending", "closed"].map((status) => (
+        {['all', 'active', 'inactive', 'closed'].map((status) => (
           <button
             key={status}
             onClick={() => setFilter(status)}
-            className={`px-3 py-1 rounded ${filter === status ? "bg-blue-500 text-white" : "bg-gray-200 text-gray-700"
-              }`}
+            className={`px-3 py-1 rounded ${
+              filter === status ? 'bg-blue-500 text-white' : 'bg-gray-200 text-gray-700'
+            }`}
           >
             {status.charAt(0).toUpperCase() + status.slice(1)}
           </button>
         ))}
       </div>
 
-
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-        {filteredTickets.map((ticket) => (
-          <TicketCard key={ticket.id} ticket={ticket} onClick={() => handleOpenTicket(ticket)} />
-        ))}
-      </div>
+      {loading ? (
+        <div className="text-center text-gray-500">Loading tickets...</div>
+      ) : filteredTickets.length === 0 ? (
+        <div className="text-center text-gray-500">No tickets found.</div>
+      ) : (
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+          {filteredTickets.map((ticket) => (
+            <TicketCard
+              key={ticket.id}
+              ticket={ticket}
+              onClick={() => handleOpenTicket(ticket)}
+            />
+          ))}
+        </div>
+      )}
 
       {modalComponent}
     </div>
-  )
+  );
 }

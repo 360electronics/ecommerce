@@ -199,7 +199,7 @@ const HeroBanner: React.FC = () => {
                   src={getResponsiveImageUrl(mainBanners[currentImageIndex]?.imageUrls) || '/placeholder.svg'}
                   alt={mainBanners[currentImageIndex]?.title || `Banner ${currentImageIndex + 1}`}
                   fill
-                  className="object-cover object-left-top transition-opacity duration-500 ease-in-out"
+                  className="object-cover object-center transition-opacity duration-500 ease-in-out"
                   priority={currentImageIndex === 0}
                   quality={85}
                   onError={(e) => {
@@ -244,7 +244,7 @@ const HeroBanner: React.FC = () => {
                     onClick={() => goToSlide(index)}
                     className={cn(
                       'w-3 h-3 rounded-full transition-all duration-300',
-                      currentImageIndex === index ? 'bg-white scale-125' : 'bg-white bg-opacity-50'
+                      currentImageIndex === index ? 'bg-white scale-125' : 'bg-gray-100 '
                     )}
                     aria-label={`Go to slide ${index + 1}`}
                   />
@@ -335,7 +335,7 @@ const HeroBanner: React.FC = () => {
               }}
             ></div>
             )}
-            <div className="relative z-10 h-full flex flex-col md:flex-row items-start md:items-center justify-center md:justify-between px-4 sm:px-6 md:px-8 py-4 gap-3 md:gap-0">
+            <div className="relative z-10 h-full flex flex-col md:flex-row items-start md:items-center justify-end md:justify-between px-4 sm:px-6 md:px-8 py-4 gap-3 md:gap-0">
               <div className="text-white max-w-xl">
                 <h2 className="text-xl sm:text-2xl md:text-3xl font-bold mb-1 nohemi-bold">
                   Customize Your <span className="text-primary">Own PC</span>

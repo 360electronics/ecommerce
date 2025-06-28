@@ -16,7 +16,8 @@ const eslintConfig = [
     rules: {
       "@typescript-eslint/no-explicit-any": "off",
       '@typescript-eslint/no-empty-object-type': 'off',
-       "@next/next/suspense-boundary-bailout": "off"
+      "@next/next/suspense-boundary-bailout": "off",
+      "@typescript-eslint/no-unused-vars": "off"
     },
   },
 ];

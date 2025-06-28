@@ -18,32 +18,24 @@ export default function HomeContent() {
   }, [fetchHomeData]);
 
   // Check if we have any data to display
-  const hasData = banners.length > 0 || 
-                 featuredProducts.length > 0 || 
-                 newArrivals.length > 0 || 
-                 Object.values(gamersZoneProducts).some(arr => arr.length > 0) ||
-                 brandProducts.length > 0;
+  const hasData = banners.length > 0 ||
+    featuredProducts.length > 0 ||
+    newArrivals.length > 0 ||
+    Object.values(gamersZoneProducts).some(arr => arr.length > 0) ||
+    brandProducts.length > 0;
 
   return (
     <>
-      {error ? (
-        <div className="flex justify-center items-center h-screen">
-          <p>Error: {error}</p>
-        </div>
-      ) : isLoading && !hasData ? (
-        <div className="flex justify-center items-center h-screen">
-          <p>Loading...</p>
-        </div>
-      ) : (
-        <>
-          <HeroBanner />
-          <FeaturedProducts />
-          <OfferZoneCTA />
-          <NewArrivals />
-          <GamersZone />
-          <TopTierBrands />
-        </>
-      )}
+
+      <>
+        <HeroBanner />
+        <FeaturedProducts />
+        <OfferZoneCTA />
+        <NewArrivals />
+        <GamersZone />
+        <TopTierBrands />
+      </>
+
     </>
   );
 }

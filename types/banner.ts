@@ -1,7 +1,14 @@
+interface ImageUrls {
+  default: string;
+  sm?: string;
+  lg?: string;
+}
+
+
 export interface Banner {
     id: string;
     title: string;
-    imageUrl: string;
+    imageUrls: ImageUrls;
     type: 'hero-main' | 'hero-secondary' | 'customise-pc' | 'cta';
     createdAt: string;
     updatedAt: string;

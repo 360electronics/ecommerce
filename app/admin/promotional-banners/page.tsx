@@ -117,7 +117,7 @@ const bannerTypeConfig: Record<BannerType, BannerTypeConfig> = {
     label: 'CTA',
     description: 'Call to action banner',
     recommendedSizes: {
-      default: '1200x400px',
+      default: '1200x200px',
       sm: '640x200px',
       lg: '1920x600px',
     },
@@ -149,14 +149,14 @@ const bannerTypeConfig: Record<BannerType, BannerTypeConfig> = {
     label: 'Register',
     description: 'Registration banner',
     recommendedSizes: {
-      default: '1200x400px',
+      default: '640x200px',
       sm: '640x200px',
-      lg: '1920x600px',
+      lg: '640x600px',
     },
     dimensions: {
-      default: { width: 1200, height: 400 },
-      sm: { width: 640, height: 200 },
-      lg: { width: 1920, height: 600 },
+      default: { width: 640, height: 400 },
+      sm: { width: 640, height: 400 },
+      lg: { width: 640, height: 600 },
     },
     supportsVideo: false,
   },
@@ -554,7 +554,7 @@ const PromotionalBannersPage: React.FC = () => {
         const isVideo = isVideoUrl(defaultUrl);
 
         return (
-          <div className="flex-shrink-0 h-20 w-40 relative items-center justify-center">
+          <div className="flex-shrink-0 max-w-[200px] relative items-center justify-center">
             {isVideo ? (
               <video
                 src={defaultUrl}

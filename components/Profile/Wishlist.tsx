@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect } from 'react';
 import { useAuthStore } from '@/store/auth-store';
 import { useWishlistStore } from '@/store/wishlist-store';
 import { AlertCircle, Heart } from 'lucide-react';
@@ -9,34 +9,50 @@ import WishlistProductCard from '../Product/ProductCards/WishlistProductCard';
 import { ProductCardSkeleton } from '../Reusable/ProductCardSkeleton';
 import toast from 'react-hot-toast';
 
-export default function Wishlist() {
-  const { user, isLoading: authLoading } = useAuthStore();
-  const { wishlist: wishlistItems, wishlistCount, isLoading, isRefetching, errors, fetchWishlist } = useWishlistStore();
-  const [isRemoving, setIsRemoving] = useState<string | null>(null);
+// Define interfaces for type safety
+interface WishlistItem {
+  productId: string;
+  variantId: string;
+  variant: {
+    name?: string;
+    mrp?: number;
+    ourPrice?: number;
+    slug?: string;
+    productImages?: Array<{ url: string }>;
+  };
+}
 
-  // Fetch wishlist only if empty and user is authenticated
+export default function Wishlist() {
+  const { user, isLoading: authLoading, isLoggedIn } = useAuthStore();
+  const { wishlist,  errors, fetchWishlist, removeFromWishlist } = useWishlistStore();
+
+  // Fetch wishlist data on mount if user is authenticated
   useEffect(() => {
-    if (!authLoading && user?.id && !isLoading && wishlistItems.length === 0) {
-      fetchWishlist(true); // Force fetch if no items
+    if (authLoading || !isLoggedIn || !user?.id) {
+      return;
     }
-  }, [authLoading, user?.id, wishlistItems.length, isLoading, fetchWishlist]);
+
+    const abortController = new AbortController();
+    fetchWishlist(true);
+
+    return () => {
+      abortController.abort();
+    };
+  }, [authLoading, isLoggedIn, user?.id, fetchWishlist]);
 
   const handleRemoveFromWishlist = async (productId: string, variantId: string) => {
-    const key = `${productId}-${variantId}`;
-    setIsRemoving(key);
     try {
-      await useWishlistStore.getState().removeFromWishlist(productId, variantId);
-      await fetchWishlist(true); // Refetch to update UI
+      await removeFromWishlist(productId, variantId);
       toast.success('Item removed from wishlist');
     } catch (error) {
       toast.error('Failed to remove item from wishlist');
-    } finally {
-      setIsRemoving(null);
     }
   };
 
   const renderSkeletons = () => {
-    return Array(6)
+    // Dynamically adjust skeleton count based on screen size or grid layout
+    const skeletonCount = 6; // Adjust based on grid-cols (e.g., 3 for lg, 2 for sm)
+    return Array(skeletonCount)
       .fill(0)
       .map((_, index) => (
         <div key={`skeleton-${index}`} className="snap-start flex-shrink-0 w-72">
@@ -45,23 +61,34 @@ export default function Wishlist() {
       ));
   };
 
-  if (authLoading || isLoading || isRefetching) {
+
+
+  if (authLoading) {
     return <div className="flex flex-wrap w-full justify-between gap-6 pl-1">{renderSkeletons()}</div>;
   }
 
-  if (!user) {
+  if (!isLoggedIn || !user) {
     return (
       <div className="bg-yellow-50 border border-yellow-200 rounded-md p-4 my-4">
         <div className="flex">
           <AlertCircle className="h-5 w-5 text-yellow-400" />
           <div className="ml-3">
             <h3 className="text-sm font-medium text-yellow-800">Authentication required</h3>
-            <p className="text-sm text-yellow-700 mt-1">Please log in to view your wishlist.</p>
+            <p className="text-sm text-yellow-700 mt-1">
+              Please{' '}
+              <Link href="/login" className="text-blue-600 hover:underline">
+                log in
+              </Link>{' '}
+              to view your wishlist.
+            </p>
           </div>
         </div>
       </div>
     );
   }
+
+  const wishlistCount = wishlist.length;
+  const wishlistItems = wishlist;
 
   return (
     <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8 py-8">
@@ -79,7 +106,7 @@ export default function Wishlist() {
             <div className="ml-3">
               <h3 className="text-sm font-medium text-red-800">Error</h3>
               <p className="text-sm text-red-700 mt-1">
-                {errors.fetch || errors.add || errors.remove}
+                {errors.fetch || errors.add || errors.remove || 'An error occurred. Please try again.'}
               </p>
             </div>
           </div>
@@ -97,7 +124,23 @@ export default function Wishlist() {
                 mrp={Number(item.variant?.mrp || 0)}
                 ourPrice={Number(item.variant?.ourPrice || 0)}
                 slug={item.variant?.slug || '#'}
-                image={item.variant?.productImages?.[0]?.url || '/placeholder-image.png'}
+                image={
+                  (() => {
+                    const img = item.variant?.productImages?.[0];
+                    if (typeof img === 'string') {
+                      return img;
+                    }
+                    if (
+                      img &&
+                      typeof img === 'object' &&
+                      img !== null &&
+                      typeof (img as { url?: unknown }).url === 'string'
+                    ) {
+                      return (img as { url: string }).url;
+                    }
+                    return '/placeholder-image.png';
+                  })()
+                }
                 onRemove={() => handleRemoveFromWishlist(item.productId, item.variantId)}
               />
             </div>

@@ -123,13 +123,13 @@ const SearchBar: React.FC<SearchProps> = ({
   };
 
   return (
-    <div className="relative w-full px-2 sm:px-4 md:px-6">
+    <div className="relative w-full  sm:px-4 md:px-6">
       <form
         onSubmit={handleSearch}
         className="flex w-full items-center rounded-full border border-gray-200 bg-white focus-within:ring-none  transition-all duration-200 "
       >
         {/* Category Dropdown */}
-        <div ref={categoryDropdownRef} className="relative hidden  sm:block">
+        <div ref={categoryDropdownRef} className="relative hidden  md:block">
           <button
             type="button"
             className="flex items-center justify-between cursor-pointer bg-black px-3 py-2.5 text-sm text-white rounded-l-full  transition-colors"
@@ -166,7 +166,7 @@ const SearchBar: React.FC<SearchProps> = ({
             ref={actualInputRef}
             type="text"
             placeholder="Search for Products, Brands & More"
-            className="w-full px-4 py-2.5 text-sm bg-transparent focus:outline-none placeholder-gray-400"
+            className="w-full px-4  text-xs md:text-sm bg-transparent focus:outline-none placeholder-gray-400"
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
             onFocus={() => setShowSearchModal(true)}
@@ -182,7 +182,7 @@ const SearchBar: React.FC<SearchProps> = ({
         {/* Search Button */}
         <button
           type="submit"
-          className="flex cursor-pointer items-center justify-center bg-black/90 hover:bg-black text-white px-4 py-2.5 rounded-r-full  transition-colors"
+          className="flex cursor-pointer items-center justify-center bg-black/90 hover:bg-black text-white px-4 py-2 md:py-2.5 rounded-r-full  transition-colors"
           aria-label="Search"
         >
           <Search size={20} />

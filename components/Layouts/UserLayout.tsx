@@ -11,7 +11,7 @@ const UserLayout: React.FC<UserLayoutProps> = ({ children,isCategory }) => {
   return (
     <>
       <Header isCategory={isCategory} />
-      <div className=' mt-36 md:mt-32 px-4 md:px-12'>
+      <div className=' mt-36 md:mt-28 px-4 md:px-12'>
         {children}
       </div>
       <Footer />

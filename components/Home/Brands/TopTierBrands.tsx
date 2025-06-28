@@ -149,7 +149,7 @@ const TopTierBrands: React.FC = () => {
 
   if (isLoading) {
     return (
-      <div className="py-6 sm:py-8 md:py-12 mx-auto container px-4">
+      <div className="py-6 sm:py-8 md:py-12 mx-auto container md:px-4">
         <header className="text-center mb-6 sm:mb-8 md:mb-10">
           <h2 className="text-2xl sm:text-3xl md:text-4xl font-bold mb-2 sm:mb-4 nohemi-bold">
             Explore Top-Tier <span className="text-primary">Brands</span>
@@ -181,7 +181,7 @@ const TopTierBrands: React.FC = () => {
   }
 
   return (
-    <div className="py-6 sm:py-8 md:py-12 mx-auto container px-4">
+    <div className="py-6 sm:py-8 md:py-12 mx-auto container md:px-4">
       <header className="text-center mb-6 sm:mb-8 md:mb-10">
         <h2 className="text-2xl sm:text-3xl md:text-4xl font-bold mb-2 sm:mb-4 nohemi-bold">
           Explore Top-Tier <span className="text-primary">Brands</span>
@@ -192,7 +192,7 @@ const TopTierBrands: React.FC = () => {
       </header>
 
       <div
-        className="flex overflow-x-auto pb-4 sm:pb-6 sm:flex-wrap sm:justify-center gap-2 sm:gap-3 md:gap-4 mb-6 sm:mb-8 md:mb-12 scrollbar-hide sm:scrollbar-default"
+        className="flex overflow-x-auto pb-4 sm:pb-6 sm:flex-wrap justify-center gap-2 sm:gap-3 md:gap-4 mb-6 sm:mb-8 md:mb-12 scrollbar-hide sm:scrollbar-default"
         role="tablist"
         aria-label="Brand selector"
       >
@@ -219,7 +219,7 @@ const TopTierBrands: React.FC = () => {
                 <div
                   key={`${productId}-${variantId}`}
                   className="snap-start flex-shrink-0"
-                  style={{ width: 'calc(80vw - 32px)', maxWidth: '22rem' }}
+                  style={{ width: 'calc(60vw - 32px)', maxWidth: '20rem' }}
                 >
                   <ProductCardwithoutCart
                     productId={productId}

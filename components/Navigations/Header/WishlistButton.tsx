@@ -7,11 +7,7 @@ import { useWishlistStore } from '@/store/wishlist-store';
 
 const WishlistButton = () => {
   const { wishlistCount } = useWishlistStore(); 
-
   // console.log(wishlistCount)
-
- 
-
   return (
     <div className="relative">
       <Link

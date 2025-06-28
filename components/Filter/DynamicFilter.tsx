@@ -420,16 +420,16 @@ const DynamicFilter: React.FC<FilterProps> = ({ category, products, onFilterChan
   };
 
   return (
-    <div className="bg-white rounded-lg shadow-sm border border-gray-200">
-      <div className="md:hidden p-4 flex items-center justify-between border-b border-gray-200">
+    <div className="w-full bg-white md:rounded-lg md:border border-gray-200">
+      <div className="md:hidden p-4 flex items-center justify-center md:justify-between border-y border-gray-200">
         <button
           onClick={() => setMobileFiltersOpen(true)}
-          className="flex items-center text-sm font-medium text-gray-900"
+          className="flex items-center justify-center text-center text-sm font-medium text-gray-900"
           aria-label={`Open filters${getAppliedFilterCount() > 0 ? `, ${getAppliedFilterCount()} applied` : ''}`}
         >
           Filters
           {getAppliedFilterCount() > 0 && (
-            <span className="ml-2 bg-black text-white text-xs px-2 py-1 rounded-full">
+            <span className="ml-2 bg-black text-white text-center text-xs px-2 py-1 rounded-full">
               {getAppliedFilterCount()}
             </span>
           )}
@@ -438,7 +438,7 @@ const DynamicFilter: React.FC<FilterProps> = ({ category, products, onFilterChan
 
       {mobileFiltersOpen && (
         <div className="fixed inset-0 z-50 bg-black bg-opacity-50 md:hidden">
-          <div className="fixed top-0 right-0 w-3/4 max-w-sm bg-white h-full overflow-y-auto">
+          <div className="fixed top-0 right-0 bg-white h-full overflow-y-auto">
             <div className="p-4 flex items-center justify-between border-b border-gray-200">
               <h2 className="text-lg font-medium text-gray-900">Filters</h2>
               <button
