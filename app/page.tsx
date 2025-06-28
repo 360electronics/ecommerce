@@ -7,9 +7,9 @@ export const metadata = {
   title: '360 Electronics - Shop the Latest Products',
   description: 'Discover featured products, new arrivals, and gamers zone items at the best prices.',
   openGraph: {
-    title: 'Your E-Commerce Store',
+    title: '360 Electronics',
     description: 'Shop the latest products at unbeatable prices.',
-    url: 'https://your-site.com',
+    url: 'https://360electronics.in',
     type: 'website',
   },
 };
