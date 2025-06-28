@@ -116,7 +116,12 @@ export default function Help() {
         if (!res.ok) throw new Error(data.error || 'Failed to submit reply');
 
         setNewReply('');
-        refetch('tickets', user?.id!, true);
+
+        if (!user?.id) {
+          toast.error("User not authenticated.");
+          return;
+        }
+        refetch('tickets', user?.id, true);
         toast.success('Reply submitted successfully.');
       } catch (error) {
         const message = error instanceof Error ? error.message : 'Failed to submit reply';
@@ -237,9 +242,8 @@ export default function Help() {
             >
               <FaPlus size={16} /> New Ticket
             </Button>
-
             <Button
-              onClick={() => refetch('tickets', user?.id!, true)}
+              onClick={() => user?.id && refetch('tickets', user.id, true)}
               variant="outline"
               className="flex items-center justify-center gap-2 px-4 py-2 border border-gray-300 rounded-md hover:bg-gray-50 transition w-full sm:w-auto"
               disabled={isRefetching}

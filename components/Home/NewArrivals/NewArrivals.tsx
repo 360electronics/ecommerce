@@ -88,7 +88,7 @@ const NewArrivals: React.FC = () => {
               New <span className="text-primary">Arrivals</span>
             </h2>
             <p className="mt-1 text-sm text-gray-600 max-w-xs mx-auto md:max-w-sm">
-              The Future of Tech Starts Here, Unbox what's New & Next.
+              The Future of Tech Starts Here, Unbox what&apos;s New & Next.
             </p>
           </div>
           <div className="flex overflow-x-auto pb-4 sm:pb-6 snap-x snap-mandatory minimal-scrollbar gap-3 sm:gap-5 scrollbar-hide">
@@ -104,7 +104,7 @@ const NewArrivals: React.FC = () => {
       <div className="py-6 md:py-12 flex items-center justify-center h-[50vh]">
         <div className="text-center space-y-4">
           <AlertCircle className="h-12 w-12 text-red-500 mx-auto" />
-          <p className="text-red-600">{error}</p>
+          <p className="text-red-600">{typeof error === 'string' ? error : error?.message}</p>
           <PrimaryLinkButton href="/category/all">Browse All Products</PrimaryLinkButton>
         </div>
       </div>
@@ -119,7 +119,7 @@ const NewArrivals: React.FC = () => {
             New <span className="text-primary">Arrivals</span>
           </h2>
           <p className="mt-1 text-sm text-gray-600 max-w-xs mx-auto">
-            The Future of Tech Starts Here, Unbox what's New & Next.
+            The Future of Tech Starts Here, Unbox what&apos;s New & Next.
           </p>
         </div>
       </div>
@@ -133,7 +133,7 @@ const NewArrivals: React.FC = () => {
                 New <br />
                 <span className="text-primary">Arrivals</span>
               </h2>
-              <p className="mb-4">The Future of Tech Starts Here, Unbox what's New & Next.</p>
+              <p className="mb-4">The Future of Tech Starts Here, Unbox what&apos;s New & Next.</p>
               <PrimaryLinkButton href="/category/all">View All</PrimaryLinkButton>
             </div>
 

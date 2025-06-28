@@ -136,7 +136,7 @@ export default function Referrals() {
             <AlertCircle className="h-5 w-5 text-red-400" />
             <div className="ml-3">
               <h3 className="text-sm font-medium text-red-800">Error</h3>
-              <p className="text-sm text-red-700 mt-1">{errors.referrals}</p>
+              <p className="text-sm text-red-700 mt-1">{errors.referrals?.message || String(errors.referrals)}</p>
             </div>
           </div>
         </div>
@@ -148,7 +148,7 @@ export default function Referrals() {
             <div className="px-4 py-5 sm:px-6 bg-blue-50 border-b border-gray-200">
               <h3 className="text-lg font-medium text-gray-900">Your Referral Link</h3>
               <p className="mt-1 text-sm text-gray-600">
-                Share this link with friends. When they sign up, you'll both receive rewards!
+                Share this link with friends. When they sign up, you&apos;ll both receive rewards!
               </p>
             </div>
             <div className="px-4 py-5 sm:p-6">
@@ -215,7 +215,7 @@ export default function Referrals() {
             <div className="px-4 py-5 sm:px-6 bg-green-50 border-b border-gray-200">
               <h3 className="text-lg font-medium text-gray-900">Your Coupons</h3>
               <p className="mt-1 text-sm text-gray-600">
-                Coupons you've earned from successful referrals
+                Coupons you&apos;ve earned from successful referrals
               </p>
             </div>
             <div className="px-4 py-5 sm:p-6">
@@ -238,8 +238,8 @@ export default function Referrals() {
                         <p className="text-sm text-gray-600 mt-1">₹{coupon.discount} discount</p>
                         <p className="text-xs text-gray-500 mt-1">
                           {coupon.isUsed
-                            ? 'Used on ' + formatDate(coupon.createdAt)
-                            : 'Expires on ' + formatDate(coupon.expiryDate)}
+                            ? 'Used on ' + formatDate(coupon.createdAt.toString())
+                            : 'Expires on ' + formatDate(coupon.expiryDate.toString())}
                         </p>
                       </div>
                       {!coupon.isUsed && (
@@ -269,7 +269,7 @@ export default function Referrals() {
             <div className="px-4 py-5 sm:px-6 bg-gray-50 border-b border-gray-200">
               <h3 className="text-lg font-medium text-gray-900">Referral History</h3>
               <p className="mt-1 text-sm text-gray-600">
-                Track the status of people you've referred
+                Track the status of people you&apos;ve referred
               </p>
             </div>
             <div className="px-4 py-5 sm:p-6">
@@ -375,7 +375,7 @@ export default function Referrals() {
                 <div className="ml-4">
                   <p className="text-sm font-medium text-blue-900">Friends sign up using your link</p>
                   <p className="mt-1 text-sm text-blue-700">
-                    When someone uses your link to create an account, they're added to your referrals.
+                    When someone uses your link to create an account, they&apos;re added to your referrals.
                   </p>
                 </div>
               </div>
@@ -390,7 +390,7 @@ export default function Referrals() {
                     Earn rewards when they complete a purchase
                   </p>
                   <p className="mt-1 text-sm text-blue-700">
-                    After your referred friend makes their first purchase, you'll receive a ₹100 coupon.
+                    After your referred friend makes their first purchase, you&apos;ll receive a ₹100 coupon.
                   </p>
                 </div>
               </div>

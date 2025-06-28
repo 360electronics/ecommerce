@@ -5,13 +5,12 @@ import { eq, and, isNull, inArray } from 'drizzle-orm';
 import { z } from 'zod';
 import { uploadProductImageToR2, extractKeyFromR2Url, deleteFromR2 } from '@/lib/r2';
 
-
 // Utility to convert numeric fields to strings for Drizzle ORM
 const toNumericString = (value: number | undefined | null, defaultValue?: string): string | undefined =>
   value != null ? value.toString() : defaultValue;
 
 // Utility to parse JSON fields safely
-const parseJSONField = <T extends unknown>(
+const parseJSONField = <T,>(
   field: string | null | undefined,
   defaultValue: T,
   isTags: boolean = false
@@ -27,7 +26,6 @@ const parseJSONField = <T extends unknown>(
     return defaultValue;
   }
 };
-
 
 // Input validation schema for POST
 const createProductSchema = z.object({

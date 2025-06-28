@@ -10,7 +10,7 @@ export async function GET(req: NextRequest) {
     const userId = searchParams.get('user_id');
 
     // Build the query with joins for users and saved_addresses
-    let query = db
+    const query = db
       .select({
         id: tickets.id,
         user_id: tickets.user_id,

@@ -45,12 +45,18 @@ export default function Page({ params }: { params: Params }) {
         setProduct(data);
         setInitialLoad(false);
       } else {
-        setError('Failed to load product. Retrying...');
+        setError({
+          message: 'Failed to load product. Retrying...',
+          name: ''
+        });
         if (retryCount < maxRetries) {
           retryCount += 1;
           setTimeout(() => fetchData(), 2000);
         } else {
-          setError('Product not found or server error.');
+          setError({
+            message: 'Product not found or server error.',
+            name: 'ProductError'
+          });
           toast.error('Failed to load product after multiple attempts.');
         }
       }
@@ -82,14 +88,17 @@ export default function Page({ params }: { params: Params }) {
         </div>
       ) : error ? (
         <div className="container mx-auto p-4 text-center text-red-600">
-          {error}
+          {error.message}
           <button
             onClick={() => {
               setError(null);
               setIsLoading(true);
               getProductData(slug).then((data) => {
                 if (data) setProduct(data);
-                else setError('Failed to load product.');
+                else setError({
+                  message: 'Failed to load product.',
+                  name: 'ProductError'
+                });
                 setIsLoading(false);
               });
             }}

@@ -25,6 +25,7 @@ export default function ProductDetailsContent({ className, activeVariant }: Prod
     quantity,
     setQuantity,
     handleBuyNow,
+    setProduct,
   } = useProductStore();
   const router = useRouter();
   const { user } = useAuthStore();
@@ -36,6 +37,16 @@ export default function ProductDetailsContent({ className, activeVariant }: Prod
   const [isNavigating, setIsNavigating] = useState(false);
   const userId = user?.id;
 
+  // Calculate discount
+  const discount = useMemo(
+    () =>
+      activeVariant.mrp && activeVariant.mrp > activeVariant.ourPrice
+        ? Math.round(((activeVariant.mrp - activeVariant.ourPrice) / activeVariant.mrp) * 100)
+        : 0,
+    [activeVariant.mrp, activeVariant.ourPrice]
+  );
+
+  // Handle share functionality
   const handleShare = useCallback(() => {
     if (typeof window === 'undefined' || !product) {
       toast.error('Sharing is not available');
@@ -66,24 +77,137 @@ export default function ProductDetailsContent({ className, activeVariant }: Prod
         .then(() => toast.success('Link copied to clipboard!'))
         .catch(() => toast.error('Failed to copy link'));
     }
-  }, [product, activeVariant.ourPrice]);
+  }, [product, activeVariant.ourPrice, discount]);
 
-  if (!product || !product.productParent || product.productParent.variants.length === 0) {
-    return (
-      <div className={cn('p-4', className)}>
-        <Toaster />
-        <div className="flex items-center gap-2 justify-end mb-4 cursor-pointer text-sm" onClick={handleShare}>
-          <Share2 className="w-5 h-5" />
-          <span>Share</span>
-        </div>
-        <h1 className="text-xl font-semibold mb-4">Loading product...</h1>
-        <p className="text-gray-500">Product details are not available.</p>
-      </div>
-    );
-  }
+  // Compute attribute keys and options
+  const attributeKeys = useMemo(() => {
+    if (!product?.productParent?.variants) return [];
 
-  const isInWishlistStatus = isInWishlist(product.productId, activeVariant.id);
+    const keys = new Set<string>();
+    const valueCounts = new Map<string, Set<string>>();
 
+    product.productParent.variants.forEach((variant) => {
+      Object.entries(variant.attributes).forEach(([key, value]) => {
+        keys.add(key);
+        if (!valueCounts.has(key)) {
+          valueCounts.set(key, new Set<string>());
+        }
+        valueCounts.get(key)!.add(String(value));
+      });
+    });
+
+    return Array.from(keys).filter((key) => valueCounts.get(key)!.size > 1);
+  }, [product?.productParent?.variants]);
+
+  const attributeOptions = useMemo(() => {
+    if (!product?.productParent?.variants) return {};
+
+    return attributeKeys.reduce((acc, key) => {
+      const options = Array.from(
+        new Set(
+          product.productParent?.variants
+            ?.map((variant) => String(variant.attributes[key]))
+            .filter((value): value is string => !!value) ?? []
+        )
+      ).map((value) => ({
+        value,
+        label: value,
+        variantIds: product.productParent?.variants
+          ?.filter((v) => String(v.attributes[key]) === value)
+          .map((v) => v.id) ?? [],
+      }));
+      acc[key] = options;
+      return acc;
+    }, {} as Record<string, Array<{ value: string; label: string; variantIds: string[] }>>);
+  }, [attributeKeys, product?.productParent?.variants]);
+
+  const findValidVariant = useCallback(
+    (key: string, value: string | number | boolean) => {
+      return product?.productParent?.variants?.find((variant) =>
+        String(variant.attributes[key]) === String(value)
+      );
+    },
+    [product?.productParent?.variants]
+  );
+
+  const isValidAttributeCombination = useCallback(
+    (key: string, value: string | number | boolean) => {
+      return product?.productParent?.variants?.some((variant) =>
+        String(variant.attributes[key]) === String(value)
+      ) ?? false;
+    },
+    [product?.productParent?.variants]
+  );
+
+  const handleAttributeSelection = useCallback(
+    (key: string, value: string | number | boolean) => {
+      const validVariant = findValidVariant(key, value);
+      if (!validVariant) return;
+
+      const newAttributes = { [key]: value };
+      attributeKeys.forEach((k) => {
+        if (k !== key) {
+          newAttributes[k] = validVariant.attributes[k] ?? selectedAttributes[k] ?? '';
+        }
+      });
+
+      setSelectedAttributes(newAttributes);
+    },
+    [attributeKeys, findValidVariant, setSelectedAttributes, selectedAttributes]
+  );
+
+  const handleVariantNavigation = useCallback(() => {
+    if (!activeVariant || activeVariant.id === product?.id || isNavigating) return;
+
+    setIsNavigating(true);
+    const fetchNewProduct = async () => {
+      try {
+        const res = await fetch(`/api/products/${activeVariant.slug}`);
+        if (!res.ok) {
+          toast.error('Failed to load variant data');
+          setIsNavigating(false);
+          return;
+        }
+        const newProduct: FlattenedProduct = await res.json();
+        setProduct(newProduct);
+        router.push(`/product/${activeVariant.slug}`, { scroll: false });
+      } catch (error) {
+        toast.error('Network error while loading variant');
+      } finally {
+        setIsNavigating(false);
+      }
+    };
+
+    fetchNewProduct();
+  }, [activeVariant, product?.id, router, isNavigating, setProduct]);
+
+  // Non-varying attributes
+  const nonVaryingAttributes = useMemo(() => {
+    if (!product?.productParent?.variants) return [];
+
+    const allKeys = new Set<string>();
+    product.productParent.variants.forEach((variant) => {
+      Object.keys(variant.attributes).forEach((key) => allKeys.add(key));
+    });
+
+    return Array.from(allKeys)
+      .filter((key) => !attributeKeys.includes(key))
+      .map((key) => {
+        const values = new Set(
+          product.productParent?.variants.map((v) => String(v.attributes[key])).filter((v): v is string => !!v)
+        );
+        if (values.size === 1) {
+          return { key, value: values.values().next().value };
+        }
+        return null;
+      })
+      .filter((item): item is { key: string; value: string } => item !== null);
+  }, [attributeKeys, product?.productParent?.variants]);
+
+  // Check wishlist status
+  const isInWishlistStatus = product && activeVariant ? isInWishlist(product.productId, activeVariant.id) : false;
+
+  // Handle wishlist click
   const handleWishlistClick = async (e: React.MouseEvent) => {
     e.preventDefault();
     e.stopPropagation();
@@ -93,6 +217,8 @@ export default function ProductDetailsContent({ className, activeVariant }: Prod
       router.push('/login');
       return;
     }
+
+    if (!product) return;
 
     setIsAddingToWishlist(true);
     try {
@@ -114,6 +240,7 @@ export default function ProductDetailsContent({ className, activeVariant }: Prod
     }
   };
 
+  // Handle cart click
   const handleCartClick = async (e: React.MouseEvent) => {
     e.preventDefault();
     e.stopPropagation();
@@ -124,11 +251,10 @@ export default function ProductDetailsContent({ className, activeVariant }: Prod
       return;
     }
 
-    if (!activeVariant) {
+    if (!activeVariant || !product) {
       toast.error('Selected variant is not available');
       return;
     }
-
 
     if (activeVariant.stock < quantity && !activeVariant.isBackorderable) {
       toast.error(`Only ${activeVariant.stock} items available in stock`);
@@ -146,6 +272,7 @@ export default function ProductDetailsContent({ className, activeVariant }: Prod
     }
   };
 
+  // Handle buy now click
   const handleBuyNowClick = async (e: React.MouseEvent) => {
     e.preventDefault();
     e.stopPropagation();
@@ -156,7 +283,7 @@ export default function ProductDetailsContent({ className, activeVariant }: Prod
       return;
     }
 
-    if (!activeVariant) {
+    if (!activeVariant || !product) {
       toast.error('Selected variant is not available');
       return;
     }
@@ -170,7 +297,7 @@ export default function ProductDetailsContent({ className, activeVariant }: Prod
     try {
       const success = await handleBuyNow(userId);
       if (success) {
-        router.push('/checkout');
+        await router.push('/checkout');
       } else {
         toast.error('Failed to proceed to checkout');
       }
@@ -181,83 +308,15 @@ export default function ProductDetailsContent({ className, activeVariant }: Prod
     }
   };
 
-  const attributeKeys = useMemo(() => {
-    const keys = new Set<string>();
-    const valueCounts = new Map<string, Set<string>>();
-
-    product.productParent?.variants.forEach((variant) => {
-      Object.entries(variant.attributes).forEach(([key, value]) => {
-        keys.add(key);
-        if (!valueCounts.has(key)) {
-          valueCounts.set(key, new Set<string>());
-        }
-        valueCounts.get(key)!.add(String(value));
-      });
-    });
-
-    return Array.from(keys).filter((key) => valueCounts.get(key)!.size > 1);
-  }, [product.productParent.variants]);
-
-  const attributeOptions = useMemo(() => {
-    return attributeKeys.reduce((acc, key) => {
-      const options = Array.from(
-        new Set(
-          product.productParent?.variants
-            ?.map((variant) => String(variant.attributes[key]))
-            .filter((value): value is string => !!value) ?? []
-        )
-      ).map((value) => ({
-        value,
-        label: value,
-        variantIds: product.productParent?.variants
-          ?.filter((v) => String(v.attributes[key]) === value)
-          .map((v) => v.id) ?? [],
-      }));
-      acc[key] = options;
-      return acc;
-    }, {} as Record<string, Array<{ value: string; label: string; variantIds: string[] }>>);
-  }, [attributeKeys, product.productParent.variants]);
-
-  const findValidVariant = useCallback(
-    (key: string, value: string | number | boolean) => {
-      return product?.productParent?.variants.find((variant) =>
-        String(variant.attributes[key]) === String(value)
-      );
-    }, [product.productParent.variants]);
-
-  const isValidAttributeCombination = useCallback(
-    (key: string, value: string | number | boolean) => {
-      return product.productParent?.variants.some((variant) =>
-        String(variant.attributes[key]) === String(value)
-      ) ?? false;
-    },
-    [product.productParent?.variants]
-  );
-
-  const handleAttributeSelection = useCallback(
-    (key: string, value: string | number | boolean) => {
-      const validVariant = findValidVariant(key, value);
-      if (!validVariant) return;
-
-      const newAttributes = { [key]: value };
-      attributeKeys.forEach((k) => {
-        if (k !== key) {
-          newAttributes[k] = validVariant.attributes[k] ?? selectedAttributes[k] ?? '';
-        }
-      });
-
-      setSelectedAttributes(newAttributes);
-    },
-    [attributeKeys, findValidVariant, setSelectedAttributes, selectedAttributes]
-  );
-
+  // Handle attribute selection effect
   useEffect(() => {
-    if (!product || !product.productParent) return;
+    if (!product?.productParent?.variants) return;
 
     const currentVariant = product.productParent.variants.find((v) => v.id === product.id);
     if (!currentVariant) return;
 
-    const isValidSelection = Object.keys(selectedAttributes).length > 0 &&
+    const isValidSelection =
+      Object.keys(selectedAttributes).length > 0 &&
       product.productParent.variants.some((v) =>
         Object.entries(selectedAttributes).every(([key, value]) => String(v.attributes[key]) === String(value))
       );
@@ -269,33 +328,9 @@ export default function ProductDetailsContent({ className, activeVariant }: Prod
       }, {} as Record<string, string | number | boolean>);
       setSelectedAttributes(newAttributes);
     }
-  }, [product, attributeKeys, setSelectedAttributes]);
+  }, [product?.productParent?.variants, attributeKeys, setSelectedAttributes, selectedAttributes, product?.id]);
 
-  const handleVariantNavigation = useCallback(() => {
-    if (!activeVariant || activeVariant.id === product.id || isNavigating) return;
-
-    setIsNavigating(true);
-    const fetchNewProduct = async () => {
-      try {
-        const res = await fetch(`/api/products/${activeVariant.slug}`);
-        if (!res.ok) {
-          toast.error('Failed to load variant data');
-          setIsNavigating(false);
-          return;
-        }
-        const newProduct: FlattenedProduct = await res.json();
-        useProductStore.getState().setProduct(newProduct);
-        router.push(`/product/${activeVariant.slug}`, { scroll: false });
-      } catch (error) {
-        toast.error('Network error while loading variant');
-      } finally {
-        setIsNavigating(false);
-      }
-    };
-
-    fetchNewProduct();
-  }, [activeVariant, product.id, router, isNavigating]);
-
+  // Handle variant navigation effect
   useEffect(() => {
     handleVariantNavigation();
   }, [handleVariantNavigation]);
@@ -312,14 +347,6 @@ export default function ProductDetailsContent({ className, activeVariant }: Prod
     }
   };
 
-  const discount = useMemo(
-    () =>
-      activeVariant.mrp && activeVariant.mrp > activeVariant.ourPrice
-        ? Math.round(((activeVariant.mrp - activeVariant.ourPrice) / activeVariant.mrp) * 100)
-        : 0,
-    [activeVariant]
-  );
-
   const formatAttributeLabel = (key: string) => {
     return key
       .replace(/([A-Z])/g, ' $1')
@@ -328,25 +355,20 @@ export default function ProductDetailsContent({ className, activeVariant }: Prod
       .trim();
   };
 
-  const nonVaryingAttributes = useMemo(() => {
-    const allKeys = new Set<string>();
-    product?.productParent?.variants.forEach((variant) => {
-      Object.keys(variant.attributes).forEach((key) => allKeys.add(key));
-    });
-
-    return Array.from(allKeys)
-      .filter((key) => !attributeKeys.includes(key))
-      .map((key) => {
-        const values = new Set(
-          product?.productParent?.variants.map((v) => String(v.attributes[key])).filter((v): v is string => !!v)
-        );
-        if (values.size === 1) {
-          return { key, value: values.values().next().value };
-        }
-        return null;
-      })
-      .filter((item): item is { key: string; value: string } => item !== null);
-  }, [attributeKeys, product.productParent.variants]);
+  // Render loading state if product is not available
+  if (!product || !product.productParent || product.productParent.variants.length === 0) {
+    return (
+      <div className={cn('p-4', className)}>
+        <Toaster />
+        <div className="flex items-center gap-2 justify-end mb-4 cursor-pointer text-sm" onClick={handleShare}>
+          <Share2 className="w-5 h-5" />
+          <span>Share</span>
+        </div>
+        <h1 className="text-xl font-semibold mb-4">Loading product...</h1>
+        <p className="text-gray-500">Product details are not available.</p>
+      </div>
+    );
+  }
 
   const Pricing = () => (
     <div className="flex flex-col gap-4">
@@ -481,7 +503,7 @@ export default function ProductDetailsContent({ className, activeVariant }: Prod
   );
 
   return (
-    <div className={cn('space-y-6 w-full  md:h-[90dvh] md:overflow-auto', className)}>
+    <div className={cn('space-y-6 w-full md:h-[90dvh] md:overflow-auto', className)}>
       <Toaster />
       <div className="flex items-center justify-end mb-4">
         <button
@@ -542,7 +564,7 @@ export default function ProductDetailsContent({ className, activeVariant }: Prod
           <h2 className="text-lg font-semibold mb-4">Product Highlights</h2>
           <div className="grid grid-cols-1 md:grid-cols-2 px-4">
             {nonVaryingAttributes.map((item) => (
-              <p key={item.key} className=" text-sm md:text-base text-gray-600 list-item">
+              <p key={item.key} className="text-sm md:text-base text-gray-600 list-item">
                 <span className="font-medium">{formatAttributeLabel(item.key)}:</span> {item.value}
               </p>
             ))}

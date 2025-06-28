@@ -487,7 +487,7 @@ const ProductListing = ({ category, searchQuery }: { category?: string; searchQu
                         <div className="flex flex-col items-center justify-center min-h-[400px] text-center" aria-live="polite">
                             <div className="text-4xl mb-4">🔍</div>
                             <h3 className="text-xl font-medium text-gray-800 mb-2">No products found</h3>
-                            <p className="text-gray-600">Try adjusting your filters or search query to find what you're looking for.</p>
+                            <p className="text-gray-600">Try adjusting your filters or search query to find what you&apos;re looking for.</p>
                         </div>
                     ) : (
                         <>

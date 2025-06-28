@@ -18,6 +18,7 @@ interface Address {
 }
 
 interface Coupon {
+  createdAt(createdAt: any): unknown;
   id: string;
   code: string;
   isUsed: boolean;
@@ -34,6 +35,7 @@ interface Order {
 }
 
 interface Referral {
+  couponGenerated: any;
   id: string;
   referredUserId: string;
   status: 'pending' | 'completed';
