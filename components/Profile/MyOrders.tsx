@@ -96,7 +96,7 @@ export default function Orders() {
             <AlertCircle className="h-5 w-5 text-red-400" />
             <div className="ml-3">
               <h3 className="text-sm font-medium text-red-800">Error</h3>
-              <p className="text-sm text-red-700 mt-1">{errors.orders}</p>
+              <p className="text-sm text-red-700 mt-1">{errors.orders?.message || String(errors.orders)}</p>
             </div>
           </div>
         </div>
@@ -127,10 +127,10 @@ export default function Orders() {
                     </span>
                     <span
                       className={`inline-flex px-2 py-1 text-xs font-medium rounded-full capitalize ${getPaymentStatusColor(
-                        order.paymentStatus
+                        String(order.paymentStatus)
                       )}`}
                     >
-                      {order.paymentStatus}
+                      {String(order.paymentStatus)}
                     </span>
                   </div>
                 </div>
@@ -190,10 +190,10 @@ export default function Orders() {
                         Order Status: <span className="font-medium capitalize">{order.status}</span>
                       </p>
                       <p className="text-sm text-gray-600">
-                        Payment Status: <span className="font-medium capitalize">{order.paymentStatus}</span>
+                        Payment Status: <span className="font-medium capitalize">{String(order.paymentStatus)}</span>
                       </p>
                       <p className="text-sm text-gray-600">
-                        Payment Method: <span className="font-medium capitalize">{order.paymentMethod}</span>
+                        Payment Method: <span className="font-medium capitalize">{String(order.paymentMethod)}</span>
                       </p>
                     </div>
                     <div className="text-right">

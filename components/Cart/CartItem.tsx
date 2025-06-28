@@ -2,6 +2,16 @@ import { Minus, Plus, Trash2 } from 'lucide-react';
 import Image from 'next/image';
 import Link from 'next/link';
 
+export type ProductImage = {
+  length: number;
+  url: string;
+  alt: string;
+  isFeatured: boolean;
+  displayOrder: number;
+};
+
+
+// In CartItemComponent file
 export interface CartItem {
   id: string;
   userId: string;
@@ -33,17 +43,18 @@ export interface CartItem {
     slug: string;
     color: string | null;
     material: string | null;
-    dimensions: string | null;
+    dimensions: string | null; // Consider using ProductDimensions type if applicable
     weight: string | null;
     storage: string | null;
     stock: string;
     mrp: string;
     ourPrice: string;
-    productImages: string[];
+    productImages: ProductImage[]; // Changed from string[] to ProductImage[]
     createdAt: string;
     updatedAt: string;
   };
 }
+
 
 export const CartItemComponent: React.FC<{
   item: CartItem;

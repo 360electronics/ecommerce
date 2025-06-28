@@ -4,15 +4,50 @@ import { create } from 'zustand';
 import { produce } from 'immer';
 import { fetchWithRetry, logError, debounce, AppError } from './store-utils';
 import { useAuthStore } from './auth-store';
-import { ProductVariant } from '@/types/product';
+import { ProductImage, ProductVariant } from '@/types/product';
 
+// In cart-store.ts
 interface CartItem {
   id: string;
   userId: string;
   productId: string;
   variantId: string;
   quantity: number;
-  variant: ProductVariant;
+  createdAt: string; // Add createdAt
+  updatedAt: string; // Add updatedAt
+  isOfferProduct?: boolean;
+  product: {
+    id: string;
+    shortName: string;
+    description: string | null;
+    category: string;
+    brand: string;
+    status: 'active' | 'inactive';
+    subProductStatus: 'active' | 'inactive';
+    totalStocks: string;
+    averageRating: string;
+    ratingCount: string;
+    createdAt: string;
+    updatedAt: string;
+  };
+  variant: {
+    id: string;
+    productId: string;
+    name: string;
+    sku: string;
+    slug: string;
+    color: string | null;
+    material: string | null;
+    dimensions: string | null;
+    weight: string | null;
+    storage: string | null;
+    stock: string;
+    mrp: string;
+    ourPrice: string;
+    productImages: ProductImage[];
+    createdAt: string;
+    updatedAt: string;
+  };
 }
 
 interface Coupon {

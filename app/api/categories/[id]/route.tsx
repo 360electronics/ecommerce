@@ -4,9 +4,11 @@ import { db } from '@/db/drizzle';
 import { categories, attributeTemplates, subcategories } from '@/db/schema';
 import { eq } from 'drizzle-orm';
 
-export async function GET(req: NextRequest, { params }: { params: { id: string } }) {
+type Params = { id: string };
+
+export async function GET(req: NextRequest, context: { params: Promise<Params> } ) {
   try {
-    const { id } = params;
+    const { id } = await context.params;
 
     const categoryData = await db
       .select({

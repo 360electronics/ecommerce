@@ -1,4 +1,5 @@
 'use client';
+
 import { useEffect, useState } from 'react';
 import UserLayout from '@/components/Layouts/UserLayout';
 import { useProductStore } from '@/store/product-store';
@@ -6,9 +7,9 @@ import toast from 'react-hot-toast';
 import { FlattenedProduct } from '@/types/product';
 import ProductDetailPage from '@/components/Product/ProductDetails/ProductDetailsPage';
 
-type Params = { slug: string };
+type Params = Promise<{slug: string}>;
 
-export default function Page({ params }: { params: Params }) {
+export default function Page({ params }: any) {
   const { slug } = params;
   const { product, setProduct, isLoading, setIsLoading, error, setError } = useProductStore();
   const [initialLoad, setInitialLoad] = useState(true);
@@ -17,13 +18,10 @@ export default function Page({ params }: { params: Params }) {
     try {
       const res = await fetch(`/api/products/${slug}`);
       if (!res.ok) {
-        if (res.status === 404) {
-          throw new Error('Product not found');
-        }
+        if (res.status === 404) throw new Error('Product not found');
         throw new Error(`Failed to fetch product data: ${res.status}`);
       }
       const data: FlattenedProduct = await res.json();
-      console.log('Fetched product data:', data);
       return data;
     } catch (error) {
       console.error('Error fetching product data:', error);
@@ -45,18 +43,13 @@ export default function Page({ params }: { params: Params }) {
         setProduct(data);
         setInitialLoad(false);
       } else {
-        setError({
-          message: 'Failed to load product. Retrying...',
-          name: ''
-        });
+        setError({ message: 'Failed to load product. Retrying...', name: '' });
+
         if (retryCount < maxRetries) {
           retryCount += 1;
-          setTimeout(() => fetchData(), 2000);
+          setTimeout(fetchData, 2000);
         } else {
-          setError({
-            message: 'Product not found or server error.',
-            name: 'ProductError'
-          });
+          setError({ message: 'Product not found or server error.', name: 'ProductError' });
           toast.error('Failed to load product after multiple attempts.');
         }
       }
@@ -67,7 +60,7 @@ export default function Page({ params }: { params: Params }) {
     if (initialLoad || !product || product.slug !== slug) {
       fetchData();
     }
-  }, [slug, setProduct, setIsLoading, setError, product, initialLoad]);
+  }, [slug, product, initialLoad, setError, setIsLoading, setProduct]);
 
   return (
     <UserLayout isCategory={false}>
@@ -90,17 +83,16 @@ export default function Page({ params }: { params: Params }) {
         <div className="container mx-auto p-4 text-center text-red-600">
           {error.message}
           <button
-            onClick={() => {
+            onClick={async () => {
               setError(null);
               setIsLoading(true);
-              getProductData(slug).then((data) => {
-                if (data) setProduct(data);
-                else setError({
-                  message: 'Failed to load product.',
-                  name: 'ProductError'
-                });
-                setIsLoading(false);
-              });
+              const data = await getProductData(slug);
+              if (data) {
+                setProduct(data);
+              } else {
+                setError({ message: 'Failed to load product.', name: 'ProductError' });
+              }
+              setIsLoading(false);
             }}
             className="ml-4 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
           >

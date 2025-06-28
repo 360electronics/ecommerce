@@ -105,6 +105,7 @@ const CartPage: React.FC = () => {
   };
 
   // Handle adding the selected offer product to the cart
+  // In CartPage.tsx, replace handleAddOfferProduct with:
   const handleAddOfferProduct = async () => {
     if (!isLoggedIn || !user?.id) {
       toast.error('Please log in to add offer products');
@@ -122,62 +123,16 @@ const CartPage: React.FC = () => {
     }
 
     try {
-      // Map offer product to CartItem structure
       const offerProduct = offerProducts.find((p) => p.id === selectedOfferProduct);
       if (!offerProduct) {
         toast.error('Selected offer product not found');
         return;
       }
 
-      // Use a unique productId for offer products (e.g., prefix with 'offer_')
       const pseudoProductId = `offer_${offerProduct.id}`;
       const pseudoVariantId = `offer_variant_${offerProduct.id}`;
 
       await addToCart(pseudoProductId, pseudoVariantId, 1);
-
-      // Update cart items locally to reflect the offer product
-      // const pseudoCartItem: any = {
-      //   id: `temp_${pseudoProductId}`, // Temporary ID, will be updated by fetchCart
-      //   userId: user.id,
-      //   productId: pseudoProductId,
-      //   variantId: pseudoVariantId,
-      //   quantity: offerProduct.quantity,
-      //   createdAt: new Date().toISOString(),
-      //   updatedAt: new Date().toISOString(),
-      //   product: {
-      //     id: pseudoProductId,
-      //     shortName: offerProduct.productName,
-      //     description: null,
-      //     category: 'offer',
-      //     brand: 'Offer',
-      //     status: 'active',
-      //     subProductStatus: 'active',
-      //     totalStocks: offerProduct.quantity.toString(),
-      //     averageRating: '0',
-      //     ratingCount: '0',
-      //     createdAt: new Date().toISOString(),
-      //     updatedAt: new Date().toISOString(),
-      //   },
-      //   variant: {
-      //     id: pseudoVariantId,
-      //     productId: pseudoProductId,
-      //     name: offerProduct.productName,
-      //     sku: `OFFER-${offerProduct.id}`,
-      //     slug: `offer-${offerProduct.id}`,
-      //     color: '',
-      //     material: null,
-      //     dimensions: null,
-      //     weight: null,
-      //     storage: null,
-      //     stock: offerProduct.quantity.toString(),
-      //     mrp: offerProduct.ourPrice,
-      //     ourPrice: offerProduct.ourPrice,
-      //     productImages: [offerProduct.productImage],
-      //     createdAt: new Date().toISOString(),
-      //     updatedAt: new Date().toISOString(),
-      //   },
-      // };
-
       toast.success(`${offerProduct.productName} added to cart!`);
       setSelectedOfferProduct(null);
     } catch (error) {
@@ -185,7 +140,6 @@ const CartPage: React.FC = () => {
       toast.error('Failed to add offer product');
     }
   };
-
   useEffect(() => {
     if (!isLoading && !isLoggedIn) {
       toast.error('Please log in to view your cart');
@@ -332,11 +286,10 @@ const CartPage: React.FC = () => {
                         {offerProducts.map((product) => (
                           <div
                             key={product.id}
-                            className={`relative bg-white border rounded-lg p-4 cursor-pointer transition-all ${
-                              selectedOfferProduct === product.id
+                            className={`relative bg-white border rounded-lg p-4 cursor-pointer transition-all ${selectedOfferProduct === product.id
                                 ? 'border-blue-500 shadow-md'
                                 : 'border-gray-200 hover:border-gray-300'
-                            } ${hasOfferProductInCart ? 'opacity-50 cursor-not-allowed' : ''}`}
+                              } ${hasOfferProductInCart ? 'opacity-50 cursor-not-allowed' : ''}`}
                             onClick={() =>
                               !hasOfferProductInCart && handleSelectOfferProduct(product.id)
                             }

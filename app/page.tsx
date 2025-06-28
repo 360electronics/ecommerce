@@ -14,7 +14,6 @@ export const metadata = {
   },
 };
 
-export const revalidate = 3600; // ISR: Revalidate every hour
 
 export default function Home() {
   return (

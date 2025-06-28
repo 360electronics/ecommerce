@@ -226,6 +226,7 @@ export function SubProductSelector() {
             <div key={product.id} className="flex-shrink-0 w-[300px]">
               <ProductCardwithoutCart
                 productId={product.id}
+                slug={product.slug}
                 variantId={product.variant.id}
                 image={product.image}
                 name={product.name}

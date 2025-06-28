@@ -177,7 +177,7 @@ export default function ProfileInfo() {
       {(error || errors.profile) && (
         <div className="mb-6 p-4 bg-red-50 border border-red-200 rounded-lg flex items-center">
           <AlertCircle className="h-5 w-5 text-red-400 mr-2" />
-          <span className="text-sm text-red-700">{error || errors.profile}</span>
+          <span className="text-sm text-red-700">{error}</span>
         </div>
       )}
       {success && (

@@ -106,7 +106,7 @@ export default function Wishlist() {
             <div className="ml-3">
               <h3 className="text-sm font-medium text-red-800">Error</h3>
               <p className="text-sm text-red-700 mt-1">
-                {errors.fetch || errors.add || errors.remove || 'An error occurred. Please try again.'}
+                {String(errors.fetch || errors.add || errors.remove || 'An error occurred. Please try again.')}
               </p>
             </div>
           </div>

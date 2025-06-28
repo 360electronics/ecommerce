@@ -1,6 +1,6 @@
 "use client";
 
-import { useAuth } from '@/context/auth-context';
+import { useAuthStore } from '@/store/auth-store';
 import { useState } from 'react';
 
 interface CartItemResponse {
@@ -14,7 +14,7 @@ interface CartItemResponse {
 }
 
 export const useCart = () => {
-  const { user, isLoggedIn, isLoading } = useAuth();
+  const { user, isLoggedIn, isLoading } = useAuthStore();
   const [error, setError] = useState<string | null>(null);
   const [isAdding, setIsAdding] = useState(false);
 

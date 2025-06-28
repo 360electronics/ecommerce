@@ -88,7 +88,7 @@ const FeaturedProducts: React.FC = () => {
       <div className="py-12 flex items-center justify-center h-[50vh]">
         <div className="text-center space-y-4">
           <AlertCircle className="h-12 w-12 text-red-500 mx-auto" />
-          <p className="text-red-600">{error}</p>
+          <p className="text-red-600">{typeof error === 'string' ? error : error.message}</p>
           <PrimaryLinkButton href="/category/all">Browse All Products</PrimaryLinkButton>
         </div>
       </div>

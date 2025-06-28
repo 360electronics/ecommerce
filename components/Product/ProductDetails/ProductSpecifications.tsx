@@ -50,8 +50,8 @@ export default function ProductSpecifications({ className }: ProductSpecificatio
     );
   }
 
-  const specifications = product.productParent.specifications;
-  const hasSpecifications = isSpecificationArray(specifications) && specifications.length > 0;
+  const specifications = product.productParent?.specifications;
+  const hasSpecifications = specifications && isSpecificationArray(specifications) && specifications.length > 0;
 
   return (
     <div className={`${className}`}>
@@ -92,7 +92,7 @@ export default function ProductSpecifications({ className }: ProductSpecificatio
                   {product.brand && (
                     <div className="grid grid-cols-[1fr_1.5fr] gap-2 py-2 text-xs md:text-base">
                       <div className="font-medium">Brand</div>
-                      <div>{product.brand}</div>
+                      <div>{product.brand.name}</div>
                     </div>
                   )}
                   {product.material && (

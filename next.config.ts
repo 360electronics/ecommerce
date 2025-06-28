@@ -27,7 +27,7 @@ const nextConfig: NextConfig = {
       },
     ],
   },
-  output: 'export'
+  distDir: 'build',
 };
 
 export default nextConfig;

@@ -117,7 +117,13 @@ export async function POST(req: NextRequest) {
         stock: offerProduct[0].quantity.toString(),
         mrp: offerProduct[0].ourPrice,
         ourPrice: offerProduct[0].ourPrice,
-        productImages: [offerProduct[0].productImage],
+        productImages: [{
+          url: offerProduct[0].productImage,
+          length: 0,
+          alt: '',
+          isFeatured: false,
+          displayOrder: 0
+        }],
         createdAt: offerProduct[0].createdAt.toISOString(),
         updatedAt: offerProduct[0].updatedAt.toISOString(),
       },

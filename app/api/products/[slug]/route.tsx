@@ -4,12 +4,15 @@ import { eq, and } from 'drizzle-orm';
 import { db } from '@/db/drizzle';
 import { brands, categories, products, subcategories, variants } from '@/db/schema';
 
+type Params = { slug: string };
+
+
 export async function GET(
   request: Request,
-  { params }: { params: { slug: string } }
+  context: { params: Promise<Params> }
 ) {
   try {
-    const { slug } = params;
+    const { slug } = await context.params;
 
     // Fetch the variant and associated product data
     const variantData = await db

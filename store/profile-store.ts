@@ -3,6 +3,7 @@
 import { create } from 'zustand';
 import { produce } from 'immer';
 import { fetchWithRetry, logError, AppError } from './store-utils';
+import { ReactNode } from 'react';
 
 interface Address {
   id: string;
@@ -27,11 +28,16 @@ interface Coupon {
 }
 
 interface Order {
+  paymentStatus(paymentStatus: any): unknown;
+  paymentMethod: ReactNode;
   id: string;
   orderDate: string;
   totalAmount: number;
   status: string;
-  items: Array<{ productId: string; variantId: string; quantity: number }>;
+  items: Array<{
+    variant: any;
+    unitPrice(unitPrice: any): unknown; productId: string; variantId: string; quantity: number 
+}>;
 }
 
 interface Referral {

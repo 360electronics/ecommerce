@@ -3,14 +3,17 @@ import { brands } from '@/db/schema';
 import { eq } from 'drizzle-orm';
 import { db } from '@/db/drizzle';
 
+type Params = { id: string };
+
 export async function PATCH(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  context: { params: Promise<Params> } 
 ) {
   try {
-    const { id } = params;
+    const { id } = await context.params;
     const body = await request.json();
     const { isActive } = body;
+
     const updatedBrand = await db
       .update(brands)
       .set({ isActive, updatedAt: new Date() })
@@ -30,11 +33,14 @@ export async function PATCH(
 
 export async function DELETE(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  context: { params: Promise<Params> } // Adjust type to expect a Promise
 ) {
   try {
-    const { id } = params;
-    const deletedBrand = await db.delete(brands).where(eq(brands.id, id)).returning();
+    const { id } = await context.params; // Await the params
+    const deletedBrand = await db
+      .delete(brands)
+      .where(eq(brands.id, id))
+      .returning();
 
     if (deletedBrand.length === 0) {
       return NextResponse.json({ error: 'Brand not found' }, { status: 404 });
