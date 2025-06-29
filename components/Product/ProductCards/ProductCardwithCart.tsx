@@ -11,6 +11,7 @@ import { useWishlistStore, useWishlistAuthSync } from '@/store/wishlist-store';
 import { useProfileStore } from '@/store/profile-store';
 import { useCartStore } from '@/store/cart-store';
 import toast from 'react-hot-toast';
+import { refetchCart } from '@/app/provider';
 
 interface ProductCardProps {
   image?: string; // Primary image URL (first from productImages)
@@ -81,7 +82,7 @@ const ProductCardwithCart: React.FC<ProductCardProps> = ({
       try {
         const success = isInWishlistStatus
           ? await removeFromWishlist(productId, variantId, () => refetchProfile('profile', ''))
-          : await addToWishlist(productId, variantId, { product: { id: productId }, variant: { id: variantId } }, () => refetchProfile('profile', ''));
+          : await addToWishlist(productId, variantId, () => refetchProfile('profile', ''));
 
         if (success) {
           toast.success(isInWishlistStatus ? 'Removed from wishlist!' : 'Added to wishlist!');
@@ -115,6 +116,7 @@ const ProductCardwithCart: React.FC<ProductCardProps> = ({
       setIsAdding(true);
       try {
         await addToCart(productId, variantId, 1);
+        refetchCart()
         toast.success('Added to cart!');
       } catch (error) {
         console.error('[CART_ERROR]', { productId, variantId, error });
@@ -160,7 +162,7 @@ const ProductCardwithCart: React.FC<ProductCardProps> = ({
   return (
     <Link
       href={`/product/${slug}`}
-      className={cn('w-full rounded-lg cursor-pointer focus:outline-none focus:ring-2 focus:ring-blue-500', className)}
+      className={cn('w-full rounded-lg cursor-pointer focus:outline-none ', className)}
       aria-label={`View details for ${name}`}
     >
       <div className="relative w-full md:w-full sm:max-w-[75%] md:max-w-[90%]">

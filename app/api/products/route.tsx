@@ -39,7 +39,7 @@ const createProductSchema = z.object({
   status: z.enum(['active', 'inactive', 'coming_soon', 'discontinued']).default('active'),
   isFeatured: z.boolean().default(false),
   totalStocks: z.number().int().min(0).default(0),
-  deliveryMode: z.enum(['standard', 'express', 'same_day', 'pickup']).default('standard'),
+  deliveryMode: z.enum(['standard', 'express']).default('standard'),
   tags: z.array(z.string()).default([]),
   attributes: z.record(z.string(), z.union([z.string(), z.number(), z.boolean()])).default({}),
   specifications: z

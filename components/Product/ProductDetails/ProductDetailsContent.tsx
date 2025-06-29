@@ -11,6 +11,7 @@ import { useProductStore } from '@/store/product-store';
 import { useCartStore } from '@/store/cart-store';
 import { useAuthStore } from '@/store/auth-store';
 import { ProductVariant, FlattenedProduct } from '@/types/product';
+import { refetchCart, refetchWishlist } from '@/app/provider';
 
 interface ProductDetailsContentProps {
   className?: string;
@@ -226,6 +227,9 @@ export default function ProductDetailsContent({ className, activeVariant }: Prod
         ? await removeFromWishlist(userId, product.productId, activeVariant.id)
         : await addToWishlist(userId, product.productId, activeVariant.id);
 
+      refetchWishlist();
+        
+
       if (result.success) {
         toast.success(isInWishlistStatus ? 'Removed from wishlist!' : 'Added to wishlist!');
         fetchWishlist();
@@ -264,6 +268,7 @@ export default function ProductDetailsContent({ className, activeVariant }: Prod
     setIsAddingToCart(true);
     try {
       await addToCart(activeVariant.productId, activeVariant.id, quantity);
+      refetchCart()
       toast.success(`${product.name} added to cart!`);
     } catch (error) {
       toast.error('Network error. Please try again.');

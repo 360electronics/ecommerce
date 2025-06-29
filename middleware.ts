@@ -5,8 +5,11 @@ const authProtectedRoutes = ["/profile", "/cart", "/checkout", "/wishlist"];
 const adminRoutes = ["/admin"];
 const nonAuthRoutes = ["/signin", "/signup"];
 
+
+
 export async function middleware(request: NextRequest) {
   const { pathname } = request.nextUrl;
+  
 
   // Get authToken from cookies
   const token = request.cookies.get("authToken")?.value;

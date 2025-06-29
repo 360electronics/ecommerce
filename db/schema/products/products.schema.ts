@@ -104,7 +104,7 @@ export const products = pgTable(
     isFeatured: boolean('is_featured').default(false).notNull(),
     totalStocks: numeric('total_stocks', { precision: 10, scale: 0 }).notNull().default('0'),
     deliveryMode: varchar('delivery_mode', {
-      enum: ['standard', 'express', 'same_day', 'pickup'],
+      enum: ['standard', 'express'],
     }).notNull().default('standard'),
     tags: jsonb('tags').$type<string[]>().default([]),
     attributes: jsonb('attributes').$type<Record<string, string | number | boolean>>().default({}),
@@ -115,6 +115,7 @@ export const products = pgTable(
     warranty: varchar('warranty', { length: 100 }),
     averageRating: numeric('average_rating', { precision: 2, scale: 1 }).default('0.0').notNull(),
     ratingCount: numeric('rating_count', { precision: 10, scale: 0 }).default('0').notNull(),
+    ratingDistribution: jsonb('rating_distribution').$type<{ value: number; count: number }[]>().default([]),
     metaTitle: varchar('meta_title', { length: 255 }),
     metaDescription: text('meta_description'),
     createdAt: timestamp('created_at', { withTimezone: true }).defaultNow().notNull(),
@@ -194,23 +195,6 @@ export const relatedProducts = pgTable(
   ]
 );
 
-// Compatibility relationships between products
-export const productCompatibility = pgTable(
-  'product_compatibility',
-  {
-    id: uuid('id').primaryKey().default(sql`gen_random_uuid()`),
-    productId: uuid('product_id').notNull().references(() => products.id, { onDelete: 'cascade' }),
-    compatibleWithId: uuid('compatible_with_id').notNull().references(() => products.id, { onDelete: 'cascade' }),
-    compatibilityNote: text('compatibility_note'),
-    createdAt: timestamp('created_at', { withTimezone: true }).defaultNow().notNull(),
-  },
-  (table) => [
-    index('idx_compatibility_product_id').on(table.productId),
-    index('idx_compatibility_with_id').on(table.compatibleWithId),
-    unique('uniq_product_compatibility').on(table.productId, table.compatibleWithId),
-  ]
-);
-
 // Product reviews
 export const reviews = pgTable(
   'reviews',
@@ -222,9 +206,11 @@ export const reviews = pgTable(
     rating: numeric('rating', { precision: 2, scale: 1 }).notNull(),
     title: varchar('title', { length: 255 }),
     comment: text('comment'),
-    isVerifiedPurchase: boolean('is_verified_purchase').default(false).notNull(),
-    isApproved: boolean('is_approved').default(false).notNull(),
-    helpfulVotes: numeric('helpful_votes', { precision: 10, scale: 0 }).default('0').notNull(),
+    images: jsonb('images').$type<{
+      url: string;
+      alt: string;
+      displayOrder: number;
+    }[]>().default([]),
     createdAt: timestamp('created_at', { withTimezone: true }).defaultNow().notNull(),
     updatedAt: timestamp('updated_at', { withTimezone: true }).defaultNow().notNull(),
   },
@@ -235,77 +221,7 @@ export const reviews = pgTable(
   ]
 );
 
-// Product filters configuration
-export const filterConfigs = pgTable(
-  'filter_configs',
-  {
-    id: uuid('id').primaryKey().default(sql`gen_random_uuid()`),
-    categoryId: uuid('category_id').references(() => categories.id),
-    subcategoryId: uuid('subcategory_id').references(() => subcategories.id),
-    filters: jsonb('filters').$type<{
-      attributeName: string;
-      displayName: string;
-      filterType: 'range' | 'select' | 'checkbox' | 'radio';
-      options?: string[];
-      rangeMin?: number;
-      rangeMax?: number;
-      unit?: string;
-      displayOrder: number;
-    }[]>().notNull().default([]),
-    createdAt: timestamp('created_at', { withTimezone: true }).defaultNow().notNull(),
-    updatedAt: timestamp('updated_at', { withTimezone: true }).defaultNow().notNull(),
-  },
-  (table) => [
-    index('idx_filter_category').on(table.categoryId),
-    index('idx_filter_subcategory').on(table.subcategoryId),
-  ]
-);
 
-// Special offers and discounts
-export const promotions = pgTable(
-  'promotions',
-  {
-    id: uuid('id').primaryKey().default(sql`gen_random_uuid()`),
-    name: varchar('name', { length: 255 }).notNull(),
-    description: text('description'),
-    promoType: varchar('promo_type', {
-      enum: ['percentage', 'fixed_amount', 'buy_x_get_y', 'bundle'],
-    }).notNull(),
-    value: numeric('value', { precision: 10, scale: 2 }).notNull(),
-    code: varchar('code', { length: 50 }),
-    minPurchase: numeric('min_purchase', { precision: 10, scale: 2 }),
-    maxDiscount: numeric('max_discount', { precision: 10, scale: 2 }),
-    startDate: timestamp('start_date', { withTimezone: true }).notNull(),
-    endDate: timestamp('end_date', { withTimezone: true }),
-    isActive: boolean('is_active').default(true).notNull(),
-    usageLimit: numeric('usage_limit', { precision: 10, scale: 0 }),
-    usageCount: numeric('usage_count', { precision: 10, scale: 0 }).default('0').notNull(),
-    createdAt: timestamp('created_at', { withTimezone: true }).defaultNow().notNull(),
-    updatedAt: timestamp('updated_at', { withTimezone: true }).defaultNow().notNull(),
-  },
-  (table) => [
-    index('idx_promotion_code').on(table.code),
-    index('idx_promotion_active').on(table.isActive),
-  ]
-);
-
-// Junction table for promotions and products/categories
-export const promotionRules = pgTable(
-  'promotion_rules',
-  {
-    id: uuid('id').primaryKey().default(sql`gen_random_uuid()`),
-    promotionId: uuid('promotion_id').notNull().references(() => promotions.id, { onDelete: 'cascade' }),
-    entityType: varchar('entity_type', {
-      enum: ['product', 'variant', 'category', 'subcategory', 'brand'],
-    }).notNull(),
-    entityId: uuid('entity_id').notNull(),
-    createdAt: timestamp('created_at', { withTimezone: true }).defaultNow().notNull(),
-  },
-  (table) => [
-    index('idx_promotion_rule_promotion').on(table.promotionId),
-    index('idx_promotion_rule_entity').on(table.entityType, table.entityId),
-  ]
-);
 
 export const offerZone = pgTable(
   'offer_zone',

@@ -23,6 +23,10 @@ const nextConfig: NextConfig = {
       },
       {
         protocol: "https", 
+        hostname: "avatar.iran.liara.run",
+      },
+      {
+        protocol: "https", 
         hostname: "assets.360electronics.in",
       },
     ],

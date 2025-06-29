@@ -75,6 +75,7 @@ export async function GET(
       category: category.name,
       brand: brand.name,
       averageRating: Number(product.averageRating),
+      ratingDistribution: product.ratingDistribution,
       totalStocks: Number(product.totalStocks),
       tags: product.tags,
       description: product.description,

@@ -2,6 +2,7 @@ import { pgTable, uuid, timestamp, varchar, numeric, integer, index } from "driz
 import { sql } from "drizzle-orm";
 import { savedAddresses, users } from "../user/users.schema";
 import { products, variants } from "../products/products.schema";
+import { cart_offer_products } from "../cart/cart.schema";
 
 export const orders = pgTable(
   "orders",
@@ -71,6 +72,7 @@ export const orderItems = pgTable(
     variantId: uuid("variant_id")
       .notNull()
       .references(() => variants.id, { onDelete: "restrict" }),
+    cartOfferProductId: uuid("cart_offer_product_id").references(() => cart_offer_products.id),
     quantity: integer("quantity").notNull(),
     unitPrice: numeric("unit_price", { precision: 10, scale: 2 }).notNull(),
   },

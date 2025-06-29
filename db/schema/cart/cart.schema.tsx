@@ -16,6 +16,7 @@ export const cart = pgTable(
     variantId: uuid("variant_id")
       .notNull()
       .references(() => variants.id, { onDelete: "cascade" }),
+    cartOfferProductId: uuid("cart_offer_product_id").references(() => cart_offer_products.id),
     quantity: integer("quantity").notNull().default(1),
     createdAt: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
     updatedAt: timestamp("updated_at", { withTimezone: true }).defaultNow().notNull(),

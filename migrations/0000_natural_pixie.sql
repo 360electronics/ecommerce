@@ -83,15 +83,6 @@ CREATE TABLE "categories" (
 	CONSTRAINT "uniq_category_slug" UNIQUE("slug")
 );
 --> statement-breakpoint
-CREATE TABLE "filter_configs" (
-	"id" uuid PRIMARY KEY DEFAULT gen_random_uuid() NOT NULL,
-	"category_id" uuid,
-	"subcategory_id" uuid,
-	"filters" jsonb DEFAULT '[]'::jsonb NOT NULL,
-	"created_at" timestamp with time zone DEFAULT now() NOT NULL,
-	"updated_at" timestamp with time zone DEFAULT now() NOT NULL
-);
---> statement-breakpoint
 CREATE TABLE "gamers_zone" (
 	"id" uuid PRIMARY KEY DEFAULT gen_random_uuid() NOT NULL,
 	"product_id" uuid NOT NULL,
@@ -120,15 +111,6 @@ CREATE TABLE "offer_zone" (
 	CONSTRAINT "uniq_offer_variant_id" UNIQUE("variant_id")
 );
 --> statement-breakpoint
-CREATE TABLE "product_compatibility" (
-	"id" uuid PRIMARY KEY DEFAULT gen_random_uuid() NOT NULL,
-	"product_id" uuid NOT NULL,
-	"compatible_with_id" uuid NOT NULL,
-	"compatibility_note" text,
-	"created_at" timestamp with time zone DEFAULT now() NOT NULL,
-	CONSTRAINT "uniq_product_compatibility" UNIQUE("product_id","compatible_with_id")
-);
---> statement-breakpoint
 CREATE TABLE "products" (
 	"id" uuid PRIMARY KEY DEFAULT gen_random_uuid() NOT NULL,
 	"short_name" varchar(255) NOT NULL,
@@ -148,37 +130,12 @@ CREATE TABLE "products" (
 	"warranty" varchar(100),
 	"average_rating" numeric(2, 1) DEFAULT '0.0' NOT NULL,
 	"rating_count" numeric(10, 0) DEFAULT '0' NOT NULL,
+	"rating_distribution" jsonb DEFAULT '[]'::jsonb,
 	"meta_title" varchar(255),
 	"meta_description" text,
 	"created_at" timestamp with time zone DEFAULT now() NOT NULL,
 	"updated_at" timestamp with time zone DEFAULT now() NOT NULL,
 	CONSTRAINT "uniq_product_slug" UNIQUE("slug")
-);
---> statement-breakpoint
-CREATE TABLE "promotion_rules" (
-	"id" uuid PRIMARY KEY DEFAULT gen_random_uuid() NOT NULL,
-	"promotion_id" uuid NOT NULL,
-	"entity_type" varchar NOT NULL,
-	"entity_id" uuid NOT NULL,
-	"created_at" timestamp with time zone DEFAULT now() NOT NULL
-);
---> statement-breakpoint
-CREATE TABLE "promotions" (
-	"id" uuid PRIMARY KEY DEFAULT gen_random_uuid() NOT NULL,
-	"name" varchar(255) NOT NULL,
-	"description" text,
-	"promo_type" varchar NOT NULL,
-	"value" numeric(10, 2) NOT NULL,
-	"code" varchar(50),
-	"min_purchase" numeric(10, 2),
-	"max_discount" numeric(10, 2),
-	"start_date" timestamp with time zone NOT NULL,
-	"end_date" timestamp with time zone,
-	"is_active" boolean DEFAULT true NOT NULL,
-	"usage_limit" numeric(10, 0),
-	"usage_count" numeric(10, 0) DEFAULT '0' NOT NULL,
-	"created_at" timestamp with time zone DEFAULT now() NOT NULL,
-	"updated_at" timestamp with time zone DEFAULT now() NOT NULL
 );
 --> statement-breakpoint
 CREATE TABLE "related_products" (
@@ -199,9 +156,7 @@ CREATE TABLE "reviews" (
 	"rating" numeric(2, 1) NOT NULL,
 	"title" varchar(255),
 	"comment" text,
-	"is_verified_purchase" boolean DEFAULT false NOT NULL,
-	"is_approved" boolean DEFAULT false NOT NULL,
-	"helpful_votes" numeric(10, 0) DEFAULT '0' NOT NULL,
+	"images" jsonb DEFAULT '[]'::jsonb,
 	"created_at" timestamp with time zone DEFAULT now() NOT NULL,
 	"updated_at" timestamp with time zone DEFAULT now() NOT NULL
 );
@@ -262,6 +217,7 @@ CREATE TABLE "order_items" (
 	"order_id" uuid NOT NULL,
 	"product_id" uuid NOT NULL,
 	"variant_id" uuid NOT NULL,
+	"cart_offer_product_id" uuid,
 	"quantity" integer NOT NULL,
 	"unit_price" numeric(10, 2) NOT NULL
 );
@@ -329,6 +285,7 @@ CREATE TABLE "cart" (
 	"user_id" uuid NOT NULL,
 	"product_id" uuid NOT NULL,
 	"variant_id" uuid NOT NULL,
+	"cart_offer_product_id" uuid,
 	"quantity" integer DEFAULT 1 NOT NULL,
 	"created_at" timestamp with time zone DEFAULT now() NOT NULL,
 	"updated_at" timestamp with time zone DEFAULT now() NOT NULL,
@@ -351,6 +308,7 @@ CREATE TABLE "checkout" (
 	"user_id" uuid NOT NULL,
 	"product_id" uuid NOT NULL,
 	"variant_id" uuid NOT NULL,
+	"cart_offer_product_id" uuid,
 	"total_price" numeric NOT NULL,
 	"quantity" integer DEFAULT 1 NOT NULL,
 	"created_at" timestamp with time zone DEFAULT now() NOT NULL,
@@ -393,20 +351,15 @@ ALTER TABLE "saved_addresses" ADD CONSTRAINT "saved_addresses_user_id_users_id_f
 ALTER TABLE "auth_tokens" ADD CONSTRAINT "auth_tokens_user_id_users_id_fk" FOREIGN KEY ("user_id") REFERENCES "public"."users"("id") ON DELETE cascade ON UPDATE no action;--> statement-breakpoint
 ALTER TABLE "otp_tokens" ADD CONSTRAINT "otp_tokens_user_id_users_id_fk" FOREIGN KEY ("user_id") REFERENCES "public"."users"("id") ON DELETE cascade ON UPDATE no action;--> statement-breakpoint
 ALTER TABLE "attribute_templates" ADD CONSTRAINT "attribute_templates_category_id_categories_id_fk" FOREIGN KEY ("category_id") REFERENCES "public"."categories"("id") ON DELETE cascade ON UPDATE no action;--> statement-breakpoint
-ALTER TABLE "filter_configs" ADD CONSTRAINT "filter_configs_category_id_categories_id_fk" FOREIGN KEY ("category_id") REFERENCES "public"."categories"("id") ON DELETE no action ON UPDATE no action;--> statement-breakpoint
-ALTER TABLE "filter_configs" ADD CONSTRAINT "filter_configs_subcategory_id_subcategories_id_fk" FOREIGN KEY ("subcategory_id") REFERENCES "public"."subcategories"("id") ON DELETE no action ON UPDATE no action;--> statement-breakpoint
 ALTER TABLE "gamers_zone" ADD CONSTRAINT "gamers_zone_product_id_products_id_fk" FOREIGN KEY ("product_id") REFERENCES "public"."products"("id") ON DELETE cascade ON UPDATE no action;--> statement-breakpoint
 ALTER TABLE "gamers_zone" ADD CONSTRAINT "gamers_zone_variant_id_variants_id_fk" FOREIGN KEY ("variant_id") REFERENCES "public"."variants"("id") ON DELETE cascade ON UPDATE no action;--> statement-breakpoint
 ALTER TABLE "new_arrivals" ADD CONSTRAINT "new_arrivals_product_id_products_id_fk" FOREIGN KEY ("product_id") REFERENCES "public"."products"("id") ON DELETE cascade ON UPDATE no action;--> statement-breakpoint
 ALTER TABLE "new_arrivals" ADD CONSTRAINT "new_arrivals_variant_id_variants_id_fk" FOREIGN KEY ("variant_id") REFERENCES "public"."variants"("id") ON DELETE cascade ON UPDATE no action;--> statement-breakpoint
 ALTER TABLE "offer_zone" ADD CONSTRAINT "offer_zone_product_id_products_id_fk" FOREIGN KEY ("product_id") REFERENCES "public"."products"("id") ON DELETE cascade ON UPDATE no action;--> statement-breakpoint
 ALTER TABLE "offer_zone" ADD CONSTRAINT "offer_zone_variant_id_variants_id_fk" FOREIGN KEY ("variant_id") REFERENCES "public"."variants"("id") ON DELETE cascade ON UPDATE no action;--> statement-breakpoint
-ALTER TABLE "product_compatibility" ADD CONSTRAINT "product_compatibility_product_id_products_id_fk" FOREIGN KEY ("product_id") REFERENCES "public"."products"("id") ON DELETE cascade ON UPDATE no action;--> statement-breakpoint
-ALTER TABLE "product_compatibility" ADD CONSTRAINT "product_compatibility_compatible_with_id_products_id_fk" FOREIGN KEY ("compatible_with_id") REFERENCES "public"."products"("id") ON DELETE cascade ON UPDATE no action;--> statement-breakpoint
 ALTER TABLE "products" ADD CONSTRAINT "products_category_id_categories_id_fk" FOREIGN KEY ("category_id") REFERENCES "public"."categories"("id") ON DELETE no action ON UPDATE no action;--> statement-breakpoint
 ALTER TABLE "products" ADD CONSTRAINT "products_subcategory_id_subcategories_id_fk" FOREIGN KEY ("subcategory_id") REFERENCES "public"."subcategories"("id") ON DELETE no action ON UPDATE no action;--> statement-breakpoint
 ALTER TABLE "products" ADD CONSTRAINT "products_brand_id_brands_id_fk" FOREIGN KEY ("brand_id") REFERENCES "public"."brands"("id") ON DELETE no action ON UPDATE no action;--> statement-breakpoint
-ALTER TABLE "promotion_rules" ADD CONSTRAINT "promotion_rules_promotion_id_promotions_id_fk" FOREIGN KEY ("promotion_id") REFERENCES "public"."promotions"("id") ON DELETE cascade ON UPDATE no action;--> statement-breakpoint
 ALTER TABLE "related_products" ADD CONSTRAINT "related_products_product_id_products_id_fk" FOREIGN KEY ("product_id") REFERENCES "public"."products"("id") ON DELETE cascade ON UPDATE no action;--> statement-breakpoint
 ALTER TABLE "related_products" ADD CONSTRAINT "related_products_related_product_id_products_id_fk" FOREIGN KEY ("related_product_id") REFERENCES "public"."products"("id") ON DELETE cascade ON UPDATE no action;--> statement-breakpoint
 ALTER TABLE "reviews" ADD CONSTRAINT "reviews_product_id_products_id_fk" FOREIGN KEY ("product_id") REFERENCES "public"."products"("id") ON DELETE cascade ON UPDATE no action;--> statement-breakpoint
@@ -417,6 +370,7 @@ ALTER TABLE "variants" ADD CONSTRAINT "variants_product_id_products_id_fk" FOREI
 ALTER TABLE "order_items" ADD CONSTRAINT "order_items_order_id_orders_id_fk" FOREIGN KEY ("order_id") REFERENCES "public"."orders"("id") ON DELETE cascade ON UPDATE no action;--> statement-breakpoint
 ALTER TABLE "order_items" ADD CONSTRAINT "order_items_product_id_products_id_fk" FOREIGN KEY ("product_id") REFERENCES "public"."products"("id") ON DELETE restrict ON UPDATE no action;--> statement-breakpoint
 ALTER TABLE "order_items" ADD CONSTRAINT "order_items_variant_id_variants_id_fk" FOREIGN KEY ("variant_id") REFERENCES "public"."variants"("id") ON DELETE restrict ON UPDATE no action;--> statement-breakpoint
+ALTER TABLE "order_items" ADD CONSTRAINT "order_items_cart_offer_product_id_cart_offer_products_id_fk" FOREIGN KEY ("cart_offer_product_id") REFERENCES "public"."cart_offer_products"("id") ON DELETE no action ON UPDATE no action;--> statement-breakpoint
 ALTER TABLE "orders" ADD CONSTRAINT "orders_user_id_users_id_fk" FOREIGN KEY ("user_id") REFERENCES "public"."users"("id") ON DELETE cascade ON UPDATE no action;--> statement-breakpoint
 ALTER TABLE "orders" ADD CONSTRAINT "orders_address_id_saved_addresses_id_fk" FOREIGN KEY ("address_id") REFERENCES "public"."saved_addresses"("id") ON DELETE restrict ON UPDATE no action;--> statement-breakpoint
 ALTER TABLE "wishlists" ADD CONSTRAINT "wishlists_user_id_users_id_fk" FOREIGN KEY ("user_id") REFERENCES "public"."users"("id") ON DELETE cascade ON UPDATE no action;--> statement-breakpoint
@@ -429,17 +383,17 @@ ALTER TABLE "tickets" ADD CONSTRAINT "tickets_user_id_users_id_fk" FOREIGN KEY (
 ALTER TABLE "cart" ADD CONSTRAINT "cart_user_id_users_id_fk" FOREIGN KEY ("user_id") REFERENCES "public"."users"("id") ON DELETE cascade ON UPDATE no action;--> statement-breakpoint
 ALTER TABLE "cart" ADD CONSTRAINT "cart_product_id_products_id_fk" FOREIGN KEY ("product_id") REFERENCES "public"."products"("id") ON DELETE cascade ON UPDATE no action;--> statement-breakpoint
 ALTER TABLE "cart" ADD CONSTRAINT "cart_variant_id_variants_id_fk" FOREIGN KEY ("variant_id") REFERENCES "public"."variants"("id") ON DELETE cascade ON UPDATE no action;--> statement-breakpoint
+ALTER TABLE "cart" ADD CONSTRAINT "cart_cart_offer_product_id_cart_offer_products_id_fk" FOREIGN KEY ("cart_offer_product_id") REFERENCES "public"."cart_offer_products"("id") ON DELETE no action ON UPDATE no action;--> statement-breakpoint
 ALTER TABLE "checkout" ADD CONSTRAINT "checkout_user_id_users_id_fk" FOREIGN KEY ("user_id") REFERENCES "public"."users"("id") ON DELETE cascade ON UPDATE no action;--> statement-breakpoint
 ALTER TABLE "checkout" ADD CONSTRAINT "checkout_product_id_products_id_fk" FOREIGN KEY ("product_id") REFERENCES "public"."products"("id") ON DELETE cascade ON UPDATE no action;--> statement-breakpoint
 ALTER TABLE "checkout" ADD CONSTRAINT "checkout_variant_id_variants_id_fk" FOREIGN KEY ("variant_id") REFERENCES "public"."variants"("id") ON DELETE cascade ON UPDATE no action;--> statement-breakpoint
+ALTER TABLE "checkout" ADD CONSTRAINT "checkout_cart_offer_product_id_cart_offer_products_id_fk" FOREIGN KEY ("cart_offer_product_id") REFERENCES "public"."cart_offer_products"("id") ON DELETE no action ON UPDATE no action;--> statement-breakpoint
 ALTER TABLE "coupons" ADD CONSTRAINT "coupons_user_id_users_id_fk" FOREIGN KEY ("user_id") REFERENCES "public"."users"("id") ON DELETE cascade ON UPDATE no action;--> statement-breakpoint
 ALTER TABLE "coupons" ADD CONSTRAINT "coupons_referral_id_referrals_id_fk" FOREIGN KEY ("referral_id") REFERENCES "public"."referrals"("id") ON DELETE set null ON UPDATE no action;--> statement-breakpoint
 ALTER TABLE "special_coupon_usage" ADD CONSTRAINT "special_coupon_usage_user_id_users_id_fk" FOREIGN KEY ("user_id") REFERENCES "public"."users"("id") ON DELETE cascade ON UPDATE no action;--> statement-breakpoint
 ALTER TABLE "special_coupon_usage" ADD CONSTRAINT "special_coupon_usage_coupon_id_special_coupons_id_fk" FOREIGN KEY ("coupon_id") REFERENCES "public"."special_coupons"("id") ON DELETE cascade ON UPDATE no action;--> statement-breakpoint
 CREATE INDEX "idx_brand_name" ON "brands" USING btree ("name");--> statement-breakpoint
 CREATE INDEX "idx_category_name" ON "categories" USING btree ("name");--> statement-breakpoint
-CREATE INDEX "idx_filter_category" ON "filter_configs" USING btree ("category_id");--> statement-breakpoint
-CREATE INDEX "idx_filter_subcategory" ON "filter_configs" USING btree ("subcategory_id");--> statement-breakpoint
 CREATE INDEX "idx_gamers_zone_product_id" ON "gamers_zone" USING btree ("product_id");--> statement-breakpoint
 CREATE INDEX "idx_gamers_zone_variant_id" ON "gamers_zone" USING btree ("variant_id");--> statement-breakpoint
 CREATE INDEX "idx_gamers_zone_category" ON "gamers_zone" USING btree ("category");--> statement-breakpoint
@@ -447,17 +401,11 @@ CREATE INDEX "idx_new_arrivals_product_id" ON "new_arrivals" USING btree ("produ
 CREATE INDEX "idx_new_arrivals_variant_id" ON "new_arrivals" USING btree ("variant_id");--> statement-breakpoint
 CREATE INDEX "idx_offer_zone_id" ON "offer_zone" USING btree ("product_id");--> statement-breakpoint
 CREATE INDEX "idx_offer_variant_id" ON "offer_zone" USING btree ("variant_id");--> statement-breakpoint
-CREATE INDEX "idx_compatibility_product_id" ON "product_compatibility" USING btree ("product_id");--> statement-breakpoint
-CREATE INDEX "idx_compatibility_with_id" ON "product_compatibility" USING btree ("compatible_with_id");--> statement-breakpoint
 CREATE INDEX "idx_product_category" ON "products" USING btree ("category_id");--> statement-breakpoint
 CREATE INDEX "idx_product_subcategory" ON "products" USING btree ("subcategory_id");--> statement-breakpoint
 CREATE INDEX "idx_product_brand" ON "products" USING btree ("brand_id");--> statement-breakpoint
 CREATE INDEX "idx_product_status" ON "products" USING btree ("status");--> statement-breakpoint
 CREATE INDEX "idx_product_featured" ON "products" USING btree ("is_featured");--> statement-breakpoint
-CREATE INDEX "idx_promotion_rule_promotion" ON "promotion_rules" USING btree ("promotion_id");--> statement-breakpoint
-CREATE INDEX "idx_promotion_rule_entity" ON "promotion_rules" USING btree ("entity_type","entity_id");--> statement-breakpoint
-CREATE INDEX "idx_promotion_code" ON "promotions" USING btree ("code");--> statement-breakpoint
-CREATE INDEX "idx_promotion_active" ON "promotions" USING btree ("is_active");--> statement-breakpoint
 CREATE INDEX "idx_related_product_id" ON "related_products" USING btree ("product_id");--> statement-breakpoint
 CREATE INDEX "idx_related_to_product_id" ON "related_products" USING btree ("related_product_id");--> statement-breakpoint
 CREATE INDEX "idx_review_product_id" ON "reviews" USING btree ("product_id");--> statement-breakpoint

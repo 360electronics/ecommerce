@@ -2,8 +2,8 @@
 
 import { create } from 'zustand';
 import { produce } from 'immer';
-import { useRouter } from 'next/navigation';
 import { fetchWithRetry, logError, AppError } from './store-utils';
+import { ProductImage } from '@/types/product';
 
 interface CheckoutItem {
   userId: string;
@@ -13,8 +13,8 @@ interface CheckoutItem {
   totalPrice: number;
   createdAt: string;
   updatedAt: string;
-  product: { shortName: string; brand: string; deliveryMode: string };
-  variant: { name: string; ourPrice: number; mrp: number; productImages: string[] };
+  product: { shortName: string; brand: string; delivery_mode: string };
+  variant: { name: string; ourPrice: number; mrp: number; productImages: ProductImage[] };
 }
 
 interface CheckoutState {
@@ -29,6 +29,7 @@ interface CheckoutState {
     variantId: string;
     totalPrice: number;
     quantity: number;
+    cartOfferProductId?: string;
   }) => Promise<void>;
   removeFromCheckout: (id: string, userId: string) => Promise<void>;
   clearCheckout: (userId: string) => Promise<void>;
@@ -40,22 +41,22 @@ export const useCheckoutStore = create<CheckoutState>((set, get) => ({
   isLoading: false,
   error: null,
   lastFetched: null,
-  fetchCheckoutItems: async (userId: string) => {
-    const cacheDuration = 10 * 60 * 1000; // 10 minutes
-    const lastFetched = get().lastFetched;
-    if (lastFetched && Date.now() - lastFetched < cacheDuration) return;
-    
+  fetchCheckoutItems: async (userId) => {
     try {
-      set({ isLoading: true, error: null });
-      const data = await fetchWithRetry<CheckoutItem[]>(() => fetch(`/api/checkout?userId=${userId}`));
-      set({ checkoutItems: Array.isArray(data) ? data : [], isLoading: false, lastFetched: Date.now() });
+      const response = await fetch(`/api/checkout?userId=${userId}`, {
+        headers: { 'Content-Type': 'application/json' },
+        credentials: 'include',
+      });
+      if (!response.ok) throw new Error('Failed to fetch checkout items');
+      const data = await response.json();
+      console.log('Fetched checkout items:', data); // Log the API response
+      set({ checkoutItems: data });
     } catch (error) {
-      logError('fetchCheckoutItems', error);
-      set({ error: error as AppError, isLoading: false });
+      console.error('Error fetching checkout items:', error);
+      set({ checkoutItems: [] }); // Ensure state is not corrupted
     }
   },
   addToCheckout: async (item) => {
-    const router = useRouter();
     const optimisticItem = { ...item, createdAt: new Date().toISOString(), updatedAt: new Date().toISOString() };
     set(
       produce((state: CheckoutState) => {
@@ -73,7 +74,7 @@ export const useCheckoutStore = create<CheckoutState>((set, get) => ({
         })
       );
       await get().fetchCheckoutItems(item.userId);
-      router.push('/checkout');
+      set({ isLoading: false }); // Ensure loading state is reset
     } catch (error) {
       logError('addToCheckout', error);
       set(
@@ -103,11 +104,9 @@ export const useCheckoutStore = create<CheckoutState>((set, get) => ({
     }
   },
   clearCheckout: async (userId: string) => {
-    const router = useRouter();
     try {
       await fetchWithRetry(() => fetch(`/api/checkout/clear?userId=${userId}`, { method: 'DELETE' }));
       set({ checkoutItems: [], isLoading: false, lastFetched: Date.now() });
-      router.push('/');
     } catch (error) {
       logError('clearCheckout', error);
       set({ error: error as AppError, isLoading: false });

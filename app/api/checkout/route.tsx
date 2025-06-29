@@ -27,15 +27,18 @@ export async function GET(request: NextRequest) {
       })
       .from(checkout)
       .innerJoin(variants, eq(checkout.variantId, variants.id))
-      .innerJoin(products, eq(checkout.productId, products.id))
+      .leftJoin(products, eq(checkout.productId, products.id))
       .where(eq(checkout.userId, userId));
 
-    const sanitizedItems = checkouts.map((item) => ({
-      ...item,
-      quantity: Number.isNaN(Number(item.quantity)) || item.quantity <= 0 ? 1 : item.quantity,
-    }));
+    const sanitizedItems = checkouts
+      .filter((item) => item.product !== null)
+      .map((item) => ({
+        ...item,
+        quantity: Number.isNaN(Number(item.quantity)) || item.quantity <= 0 ? 1 : item.quantity,
+      }));
 
     return NextResponse.json(sanitizedItems, { status: 200 });
+    
   } catch (error) {
     console.error('Error fetching checkouts:', error);
     return NextResponse.json({ error: 'Internal server error' }, { status: 500 });

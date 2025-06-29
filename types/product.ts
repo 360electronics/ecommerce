@@ -1,3 +1,4 @@
+import { reviews } from './../db/schema/products/products.schema';
 // Core Entity Types
 export type Category = {
   attributes: any;
@@ -72,26 +73,28 @@ export type ProductSpecification = {
   }>;
 };
 
+export interface ReviewImage {
+  url: string;
+  alt: string;
+  displayOrder: number;
+}
+
 // Review Type with User Information
-export type ProductReview = {
+export interface Review {
   id: string;
   productId: string;
-  variantId: string | null;
+  variantId?: string;
   userId: string;
-  user: {
-    id: string;
-    name: string;
-    avatar: string | null;
-  };
-  rating: number;
-  title: string | null;
-  comment: string | null;
-  isVerifiedPurchase: boolean;
+  rating: string; // Stored as string in DB (e.g., "4.5")
+  title?: string;
+  comment?: string;
+  images?: ReviewImage[];
   isApproved: boolean;
-  helpfulVotes: number;
-  createdAt: Date;
-  updatedAt: Date;
-};
+  helpfulVotes: string;
+  createdAt: string;
+  updatedAt: string;
+  canEdit: boolean;
+}
 
 // Variant Type with Complete Information
 export type ProductVariant = {
@@ -209,7 +212,7 @@ export type CompleteProduct = {
   }>;
   
   // Reviews
-  reviews: ProductReview[];
+  reviews: Review[];
   
   // Special zones and promotions
   isInOfferZone: boolean;
@@ -238,6 +241,10 @@ export type CompleteProduct = {
   isComingSoon: boolean;
 };
 
+export interface RatingDistribution {
+  value: number;
+  count: number;
+}
 
 export interface FlattenedProduct {
   attributes: any;
@@ -252,6 +259,9 @@ export interface FlattenedProduct {
   slug: string;
   productImages?: ProductImage;
   sku: string;
+  reviews?: Review[];
+  ratingDistribution: RatingDistribution[]; // Add this
+  ratingCount?: number; // Add this
   dimensions?: string;
   material?: string;
   weight?: string;
@@ -264,4 +274,5 @@ export interface FlattenedProduct {
   tags: string[];
   description?: string | null;
   productParent?: CompleteProduct;
+
 }

@@ -2,6 +2,7 @@ import { pgTable, uuid, timestamp, integer, unique, index, numeric } from 'drizz
 import { users } from '../user/users.schema';
 import { products, variants } from '../products/products.schema';
 import { sql } from 'drizzle-orm';
+import { cart_offer_products } from '../cart/cart.schema';
 
 export const checkout = pgTable(
   "checkout",
@@ -16,6 +17,7 @@ export const checkout = pgTable(
     variantId: uuid("variant_id")
       .notNull()
       .references(() => variants.id, { onDelete: "cascade" }),
+    cartOfferProductId: uuid("cart_offer_product_id").references(() => cart_offer_products.id),
     totalPrice: numeric("total_price").notNull(),
     quantity: integer("quantity").notNull().default(1),
     createdAt: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
@@ -23,7 +25,7 @@ export const checkout = pgTable(
   },
   (table) => ([unique("checkout_unique_user_product_variant").on(
     table.userId,
-    table.productId, 
+    table.productId,
     table.variantId
   ),
   index("idx_checkout_user_id").on(table.userId),

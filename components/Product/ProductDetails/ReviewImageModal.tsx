@@ -1,74 +1,74 @@
-"use client"
+"use client";
 
-import { useEffect, useState } from "react"
-import Image from "next/image"
-import { X, ChevronLeft, ChevronRight, Star, ArrowLeft } from "lucide-react"
-import { cn } from "@/lib/utils"
-import type { Review } from "@/components/Product/ProductDetails/Data"
-import { useMobile } from "@/hooks/use-mobile"
+import { useEffect, useState } from "react";
+import Image from "next/image";
+import { X, ChevronLeft, ChevronRight, Star, ArrowLeft } from "lucide-react";
+import { cn } from "@/lib/utils";
+import { useMobile } from "@/hooks/use-mobile";
+import type { Review } from "./ProductRatingsReviews";
 
 interface ReviewImageModalProps {
-  isOpen: boolean
-  onClose: () => void
-  review: Review | null
-  initialImageIndex: number
+  isOpen: boolean;
+  onClose: () => void;
+  review: Review | null;
+  initialImageIndex: number;
 }
 
 export default function ReviewImageModal({ isOpen, onClose, review, initialImageIndex }: ReviewImageModalProps) {
-  const [currentImageIndex, setCurrentImageIndex] = useState(initialImageIndex)
-  const [isLoading, setIsLoading] = useState(true)
-  const isMobile = useMobile()
+  const [currentImageIndex, setCurrentImageIndex] = useState(initialImageIndex);
+  const [isLoading, setIsLoading] = useState(true);
+  const isMobile = useMobile();
 
   // Reset current image index when review changes
   useEffect(() => {
-    setCurrentImageIndex(initialImageIndex)
-  }, [review, initialImageIndex])
+    setCurrentImageIndex(initialImageIndex);
+  }, [review, initialImageIndex]);
 
   // Handle keyboard events
   useEffect(() => {
-    if (!isOpen) return
+    if (!isOpen) return;
 
     const handleKeyDown = (e: KeyboardEvent) => {
       if (e.key === "Escape") {
-        onClose()
+        onClose();
       } else if (e.key === "ArrowLeft") {
-        handlePrevImage()
+        handlePrevImage();
       } else if (e.key === "ArrowRight") {
-        handleNextImage()
+        handleNextImage();
       }
-    }
+    };
 
-    window.addEventListener("keydown", handleKeyDown)
-    return () => window.removeEventListener("keydown", handleKeyDown)
-  }, [isOpen, onClose, review, currentImageIndex])
+    window.addEventListener("keydown", handleKeyDown);
+    return () => window.removeEventListener("keydown", handleKeyDown);
+  }, [isOpen, onClose, review, currentImageIndex]);
 
   // Prevent body scroll when modal is open
   useEffect(() => {
     if (isOpen) {
-      document.body.style.overflow = "hidden"
+      document.body.style.overflow = "hidden";
     } else {
-      document.body.style.overflow = ""
+      document.body.style.overflow = "";
     }
     return () => {
-      document.body.style.overflow = ""
-    }
-  }, [isOpen])
+      document.body.style.overflow = "";
+    };
+  }, [isOpen]);
 
   if (!isOpen || !review || !review.images || review.images.length === 0) {
-    return null
+    return null;
   }
 
   const handlePrevImage = () => {
-    setIsLoading(true)
-    setCurrentImageIndex((prev) => (prev === 0 ? review.images!.length - 1 : prev - 1))
-  }
+    setIsLoading(true);
+    setCurrentImageIndex((prev) => (prev === 0 ? review.images!.length - 1 : prev - 1));
+  };
 
   const handleNextImage = () => {
-    setIsLoading(true)
-    setCurrentImageIndex((prev) => (prev === review.images!.length - 1 ? 0 : prev + 1))
-  }
+    setIsLoading(true);
+    setCurrentImageIndex((prev) => (prev === review.images!.length - 1 ? 0 : prev + 1));
+  };
 
-  const currentImage = review.images[currentImageIndex]
+  const currentImage = review.images[currentImageIndex];
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70">
@@ -106,7 +106,7 @@ export default function ReviewImageModal({ isOpen, onClose, review, initialImage
             {/* Main image */}
             <div className="relative w-full h-full">
               <Image
-                src={currentImage.src || "/placeholder.svg"}
+                src={currentImage.url || "/placeholder.svg"}
                 alt={currentImage.alt || "Review image"}
                 fill
                 className="object-contain"
@@ -148,25 +148,25 @@ export default function ReviewImageModal({ isOpen, onClose, review, initialImage
             <div className="flex items-center gap-3 mb-2">
               <div className="w-10 h-10 rounded-full overflow-hidden relative bg-gray-200">
                 <Image
-                  src={review.author.avatar || "/diverse-group.png"}
-                  alt={review.author.name}
+                  src="/diverse-group.png" // Placeholder since author.avatar isn't in schema
+                  alt="User avatar"
                   fill
                   className="object-cover"
                 />
               </div>
               <div>
-                <h3 className="font-medium">{review.author.name}</h3>
-                <div className="flex items-center gap-1">
+                <h3 className="font-medium">{review.title || "Anonymous"}</h3>
+                <div className="flex items-center gap-1_tabs">
                   <div className="flex">
                     {[1, 2, 3, 4, 5].map((star) => (
                       <Star
                         key={star}
-                        className={cn("w-3 h-3", star <= review.rating ? "fill-black" : "text-gray-300")}
+                        className={cn("w-3 h-3", star <= parseFloat(review.rating) ? "fill-black" : "text-gray-300")}
                       />
                     ))}
                   </div>
-                  <span className="text-sm font-medium ml-1">{review.rating.toFixed(1)}</span>
-                  <span className="text-xs text-gray-500 ml-2">{review.author.date}</span>
+                  <span className="text-sm font-medium ml-1">{parseFloat(review.rating).toFixed(1)}</span>
+                  <span className="text-xs text-gray-500 ml-2">{new Date(review.createdAt).toLocaleDateString()}</span>
                 </div>
               </div>
             </div>
@@ -174,7 +174,7 @@ export default function ReviewImageModal({ isOpen, onClose, review, initialImage
           </div>
         </div>
       ) : (
-        // Desktop Layout (unchanged)
+        // Desktop Layout
         <div className="w-full h-full md:w-[90%] md:h-[90%] md:max-w-6xl bg-white md:rounded-lg overflow-hidden flex flex-col md:flex-row">
           {/* Image section - takes 70% on desktop */}
           <div className="relative w-full h-[50vh] md:h-full md:w-[70%] bg-gray-100 flex items-center justify-center">
@@ -188,7 +188,7 @@ export default function ReviewImageModal({ isOpen, onClose, review, initialImage
             {/* Main image */}
             <div className="relative w-full h-full">
               <Image
-                src={currentImage.src || "/placeholder.svg"}
+                src={currentImage.url || "/placeholder.svg"}
                 alt={currentImage.alt || "Review image"}
                 fill
                 className="object-contain"
@@ -230,25 +230,25 @@ export default function ReviewImageModal({ isOpen, onClose, review, initialImage
             <div className="flex items-start gap-4 mb-6">
               <div className="w-12 h-12 rounded-full overflow-hidden relative bg-gray-200 flex-shrink-0">
                 <Image
-                  src={review.author.avatar || "/diverse-group.png"}
-                  alt={review.author.name}
+                  src="/diverse-group.png" // Placeholder since author.avatar isn't in schema
+                  alt="User avatar"
                   fill
                   className="object-cover"
                 />
               </div>
               <div>
-                <h3 className="font-semibold text-lg">{review.author.name}</h3>
-                <p className="text-sm text-gray-500">{review.author.date}</p>
+                <h3 className="font-semibold text-lg">{review.title || "Anonymous"}</h3>
+                <p className="text-sm text-gray-500">{new Date(review.createdAt).toLocaleDateString()}</p>
                 <div className="flex items-center gap-1 mt-1">
                   <div className="flex">
                     {[1, 2, 3, 4, 5].map((star) => (
                       <Star
                         key={star}
-                        className={cn("w-4 h-4", star <= review.rating ? "fill-black" : "text-gray-300")}
+                        className={cn("w-4 h-4", star <= parseFloat(review.rating) ? "fill-black" : "text-gray-300")}
                       />
                     ))}
                   </div>
-                  <span className="font-medium ml-1">{review.rating.toFixed(1)}</span>
+                  <span className="font-medium ml-1">{parseFloat(review.rating).toFixed(1)}</span>
                 </div>
               </div>
             </div>
@@ -266,8 +266,8 @@ export default function ReviewImageModal({ isOpen, onClose, review, initialImage
                     <button
                       key={index}
                       onClick={() => {
-                        setIsLoading(true)
-                        setCurrentImageIndex(index)
+                        setIsLoading(true);
+                        setCurrentImageIndex(index);
                       }}
                       className={cn(
                         "relative w-full aspect-square border rounded overflow-hidden",
@@ -275,7 +275,7 @@ export default function ReviewImageModal({ isOpen, onClose, review, initialImage
                       )}
                     >
                       <Image
-                        src={image.src || "/placeholder.svg"}
+                        src={image.url || "/placeholder.svg"}
                         alt={image.alt || `Review image ${index + 1}`}
                         fill
                         className="object-cover"
@@ -289,5 +289,5 @@ export default function ReviewImageModal({ isOpen, onClose, review, initialImage
         </div>
       )}
     </div>
-  )
+  );
 }

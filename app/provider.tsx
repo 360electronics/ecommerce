@@ -9,9 +9,34 @@ import { logError } from '@/store/store-utils';
 import { useWishlistAuthSync, useWishlistStore } from '@/store/wishlist-store';
 import { useEffect, useRef, type ReactNode } from 'react';
 
+export const refetchWishlist = async () => {
+  const { isLoggedIn, user } = useAuthStore.getState();
+  const { fetchWishlist } = useWishlistStore.getState();
+  try {
+    if (isLoggedIn && user?.id) {
+      await fetchWishlist(true);
+    }
+  } catch (error) {
+    logError('refetchWishlist', error);
+  }
+};
+
+export const refetchCart = async () => {
+  const { isLoggedIn, user } = useAuthStore.getState();
+  const { fetchCart } = useCartStore.getState();
+  try {
+    if (isLoggedIn && user?.id) {
+      await fetchCart();
+      console.log("refetch success for cart")
+    }
+  } catch (error) {
+    logError('refetchCart', error);
+  }
+};
+
 export const StoreProvider = ({ children }: { children: ReactNode }) => {
   const abortControllerRef = useRef<AbortController | null>(null);
-  const { fetchAuthStatus } = useAuthStore();
+  const { fetchAuthStatus, isLoggedIn, user } = useAuthStore();
   const { fetchCart } = useCartStore();
   const { fetchCheckoutItems } = useCheckoutStore();
   const { fetchHomeData } = useHomeStore();
@@ -26,7 +51,6 @@ export const StoreProvider = ({ children }: { children: ReactNode }) => {
       try {
         await fetchAuthStatus();
 
-        const { isLoggedIn, user } = useAuthStore.getState();
         if (isLoggedIn && user?.id) {
           const results = await Promise.allSettled([
             fetchCart(),
@@ -45,7 +69,7 @@ export const StoreProvider = ({ children }: { children: ReactNode }) => {
           });
         }
 
-        // Fetch home data only if on home page (assumes route check)
+        // Fetch home data only if on home page
         if (typeof window !== 'undefined' && window.location.pathname === '/') {
           await fetchHomeData();
         }
@@ -59,7 +83,7 @@ export const StoreProvider = ({ children }: { children: ReactNode }) => {
     return () => {
       abortControllerRef.current?.abort();
     };
-  }, [fetchAuthStatus, fetchCart, fetchCheckoutItems, fetchHomeData, fetchProfileData, fetchOrders, fetchReferrals, fetchTickets, fetchWishlist]);
+  }, [fetchAuthStatus, fetchCart, fetchCheckoutItems, fetchHomeData, fetchProfileData, fetchOrders, fetchReferrals, fetchTickets, fetchWishlist, isLoggedIn, user?.id]);
 
   return <>{children}</>;
 };

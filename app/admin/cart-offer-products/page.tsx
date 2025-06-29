@@ -59,7 +59,7 @@ export default function CartOfferProductsPage() {
     const fetchCartOfferProducts = async () => {
       setLoading(true);
       try {
-        const response = await fetch('/api/cart/offer-products');
+        const response = await fetch('/api/cart/range-offers');
         if (!response.ok) throw new Error('Failed to fetch');
         const products: CartOfferProduct[] = await response.json();
         const categorized: CategorizedProducts = { 1000: [], 5000: [], 10000: [], 25000: [] };
@@ -106,7 +106,7 @@ export default function CartOfferProductsPage() {
     if (!activeCategory) return;
     setLoading(true);
     try {
-      const response = await fetch(`/api/cart/offer-products/${productId}`, {
+      const response = await fetch(`/api/cart/range-offers/${productId}`, {
         method: 'DELETE',
       });
       if (!response.ok) throw new Error('Failed to delete');
@@ -138,7 +138,7 @@ export default function CartOfferProductsPage() {
         form.append('productImage', formData.productImage);
       }
 
-      const response = await fetch('/api/cart/offer-products', {
+      const response = await fetch('/api/cart/range-offers', {
         method: 'POST',
         body: form,
       });

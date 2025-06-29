@@ -32,7 +32,7 @@ const CartPage: React.FC = () => {
     clearCart,
     applyCoupon,
     removeCoupon,
-    addToCart,
+    addOfferProductToCart,
     getCartSubtotal,
     getCartTotal,
     getItemCount,
@@ -44,22 +44,47 @@ const CartPage: React.FC = () => {
   const [couponCode, setCouponCode] = useState('');
   const { addToCheckout } = useCheckoutStore();
   const [offerProducts, setOfferProducts] = useState<CartOfferProduct[]>([]);
-  const [selectedOfferProduct, setSelectedOfferProduct] = useState<string | null>(null);
   const [isFetchingOffers, setIsFetchingOffers] = useState(false);
+  const [effectiveRange, setEffectiveRange] = useState<string | null>(null);
 
-  // Calculate totals
-  const subtotal = getCartSubtotal();
-  const grandTotal = getCartTotal();
-  const savings = getSavings();
-  const shippingAmount = subtotal > 500 ? 0 : cartItems.reduce((sum, item) => sum + 50 * item.quantity, 0);
-  const discountAmount =
-    coupon && couponStatus === 'applied'
+  // Calculate totals including offer products
+  const calculateTotals = () => {
+    const subtotal = cartItems.reduce((sum, item) => {
+      const itemPrice = Number(item.variant.ourPrice) || 0;
+      const offerPrice = item.cartOfferProductId ? Number(item.offerProduct?.ourPrice) || 0 : 0;
+      return sum + (itemPrice + offerPrice) * item.quantity;
+    }, 0);
+
+    const savings = cartItems.reduce((sum, item) => {
+      const originalPrice = Number(item.variant.mrp) || 0;
+      const ourPrice = Number(item.variant.ourPrice) || 0;
+      return sum + (originalPrice - ourPrice) * item.quantity;
+    }, 0);
+
+    const discountAmount = coupon && couponStatus === 'applied'
       ? coupon.type === 'amount'
-        ? coupon.value
-        : (subtotal * coupon.value) / 100
+        ? coupon.value || 0
+        : (subtotal * (coupon.value || 0)) / 100
       : 0;
 
-  // Determine eligible offer range based on cart subtotal
+    const shippingAmount = subtotal > 500 ? 0 : cartItems.reduce((sum, item) => sum + 50 * item.quantity, 0);
+    const grandTotal = subtotal - discountAmount;
+
+    return { subtotal, savings, discountAmount, shippingAmount, grandTotal };
+  };
+
+  const { subtotal, savings, discountAmount, shippingAmount, grandTotal } = calculateTotals();
+
+  // Format numbers safely
+  const formatCurrency = (value: number | null | undefined): string => {
+    return (value ?? 0).toLocaleString('en-IN', {
+      style: 'currency',
+      currency: 'INR',
+      minimumFractionDigits: 0,
+    });
+  };
+
+  // Determine eligible range based on cart subtotal
   const getEligibleRange = (subtotal: number): string | null => {
     if (subtotal >= 25000) return '25000';
     if (subtotal >= 10000) return '10000';
@@ -70,82 +95,84 @@ const CartPage: React.FC = () => {
 
   const eligibleRange = getEligibleRange(subtotal);
 
-  // Fetch offer products based on eligible range
+  // Check if cart has at least one regular product
+  const hasRegularProduct = cartItems.some((item) => !item.cartOfferProductId);
+  const hasOfferProductInCart = cartItems.some((item) => item.cartOfferProductId);
+
+  // Fetch offer products with fallback to lower ranges
   useEffect(() => {
     const fetchOfferProducts = async () => {
-      if (!eligibleRange) {
+      if (!eligibleRange || !hasRegularProduct) {
         setOfferProducts([]);
+        setEffectiveRange(null);
         return;
       }
 
       setIsFetchingOffers(true);
       try {
-        const response = await fetch(`/api/cart/offer-products?range=${eligibleRange}`);
-        if (!response.ok) throw new Error('Failed to fetch offer products');
-        const products: CartOfferProduct[] = await response.json();
+        const ranges = ['25000', '10000', '5000', '1000'];
+        let products: CartOfferProduct[] = [];
+        let selectedRange: string | null = null;
+
+        for (const range of ranges) {
+          if (ranges.indexOf(range) >= ranges.indexOf(eligibleRange)) {
+            const response = await fetch(`/api/cart/range-offers?range=${range}`);
+            if (!response.ok) {
+              console.error(`Failed to fetch offer products for range ${range}`);
+              continue;
+            }
+            const fetchedProducts: CartOfferProduct[] = await response.json();
+            if (fetchedProducts.length > 0) {
+              products = fetchedProducts;
+              selectedRange = range;
+              break;
+            }
+          }
+        }
+
         setOfferProducts(products);
+        setEffectiveRange(selectedRange);
       } catch (error) {
         console.error('Error fetching offer products:', error);
         toast.error('Failed to load offer products');
         setOfferProducts([]);
+        setEffectiveRange(null);
       } finally {
         setIsFetchingOffers(false);
       }
     };
 
     fetchOfferProducts();
-  }, [eligibleRange]);
+  }, [eligibleRange, hasRegularProduct]);
 
-  // Check if an offer product is already in the cart
-  const hasOfferProductInCart = cartItems.some((item) => item.productId.startsWith('offer_'));
-
-  // Handle selecting an offer product
-  const handleSelectOfferProduct = (productId: string) => {
-    setSelectedOfferProduct(productId);
-  };
-
-  // Handle adding the selected offer product to the cart
-  // In CartPage.tsx, replace handleAddOfferProduct with:
-  const handleAddOfferProduct = async () => {
+  // Handle adding an offer product
+  const handleAddOfferProduct = async (offerProduct: CartOfferProduct) => {
     if (!isLoggedIn || !user?.id) {
       toast.error('Please log in to add offer products');
       return;
     }
 
-    if (!selectedOfferProduct) {
-      toast.error('Please select an offer product');
+    if (!hasRegularProduct) {
+      toast.error('Add a regular product to your cart first');
       return;
     }
 
-    if (hasOfferProductInCart) {
-      toast.error('You have already added an offer product');
+   
+    // Select the first regular cart item
+    const regularItem = cartItems.find((item) => !item.cartOfferProductId);
+    if (!regularItem) {
+      toast.error('No regular product found in cart');
       return;
     }
 
     try {
-      const offerProduct = offerProducts.find((p) => p.id === selectedOfferProduct);
-      if (!offerProduct) {
-        toast.error('Selected offer product not found');
-        return;
-      }
-
-      const pseudoProductId = `offer_${offerProduct.id}`;
-      const pseudoVariantId = `offer_variant_${offerProduct.id}`;
-
-      await addToCart(pseudoProductId, pseudoVariantId, 1);
+      await addOfferProductToCart(regularItem.id, offerProduct.id, offerProduct.ourPrice);
       toast.success(`${offerProduct.productName} added to cart!`);
-      setSelectedOfferProduct(null);
     } catch (error) {
       console.error('Error adding offer product:', error);
       toast.error('Failed to add offer product');
     }
   };
-  useEffect(() => {
-    if (!isLoading && !isLoggedIn) {
-      toast.error('Please log in to view your cart');
-      router.push('/login');
-    }
-  }, [isLoading, isLoggedIn, router]);
 
   const handleApplyCoupon = async () => {
     if (!couponCode) {
@@ -153,6 +180,18 @@ const CartPage: React.FC = () => {
       return;
     }
     await applyCoupon(couponCode);
+    const { couponStatus: status, coupon } = useCartStore.getState();
+    if (status === 'applied' && coupon) {
+      toast.success(`Coupon ${coupon.code} applied (${coupon.type === 'amount' ? formatCurrency(coupon.value) : `${coupon.value}%`})`);
+    } else if (status === 'invalid') {
+      toast.error('Invalid coupon code');
+    } else if (status === 'invalid_amount') {
+      toast.error('Coupon has an invalid discount value');
+    } else if (status === 'expired') {
+      toast.error('Coupon has expired');
+    } else if (status === 'used') {
+      toast.error('Coupon has already been used');
+    }
     setCouponCode('');
   };
 
@@ -170,18 +209,25 @@ const CartPage: React.FC = () => {
 
     try {
       for (const item of cartItems) {
+        const itemPrice = Number(item.variant.ourPrice) || 0;
+        const offerPrice = item.cartOfferProductId ? Number(item.offerProduct?.ourPrice) || 0 : 0;
+        const totalPrice = (itemPrice + offerPrice) * item.quantity;
+        if (isNaN(totalPrice)) {
+          throw new Error(`Invalid price for item ${item.productId}`);
+        }
         await addToCheckout({
           userId: user.id,
           productId: item.productId,
           variantId: item.variantId,
-          totalPrice: Number(item.variant.ourPrice) * item.quantity,
+          totalPrice,
           quantity: item.quantity,
+          cartOfferProductId: item.cartOfferProductId,
         });
       }
 
       toast.success('Items added to checkout');
       router.push(
-        coupon && couponStatus === 'applied'
+        coupon && couponStatus === 'applied' && coupon.value != null
           ? `/checkout?coupon=${coupon.code}&discountType=${coupon.type}&discountValue=${coupon.value}`
           : '/checkout'
       );
@@ -196,6 +242,7 @@ const CartPage: React.FC = () => {
     setIsUpdating(variantId);
     try {
       await removeFromCart(productId, variantId);
+      toast.success('Item removed from cart');
     } catch (error) {
       console.error('Error removing from cart:', error);
       toast.error('Failed to remove item from cart');
@@ -208,6 +255,7 @@ const CartPage: React.FC = () => {
     setIsUpdating(cartItemId);
     try {
       await updateQuantity(cartItemId, quantity);
+      toast.success('Quantity updated');
     } catch (error) {
       console.error('Error updating quantity:', error);
       toast.error('Failed to update quantity');
@@ -221,6 +269,14 @@ const CartPage: React.FC = () => {
     { name: 'Cart', path: '/cart' },
   ];
 
+  // Map range to display name
+  const rangeDisplayNames: Record<string, string> = {
+    '1000': 'Above ₹1,000',
+    '5000': 'Above ₹5,000',
+    '10000': 'Above ₹10,000',
+    '25000': 'Above ₹25,000',
+  };
+
   if (isLoading) {
     return (
       <UserLayout>
@@ -233,7 +289,7 @@ const CartPage: React.FC = () => {
 
   return (
     <UserLayout>
-      <div className="mx-auto max-w-7xl">
+      <div className="mx-auto ">
         <Breadcrumbs breadcrumbs={breadcrumbItems} />
         <h1 className="text-2xl font-bold text-gray-900 my-6 nohemi-bold">
           Shopping Cart ({getItemCount()} {getItemCount() === 1 ? 'item' : 'items'})
@@ -259,40 +315,55 @@ const CartPage: React.FC = () => {
               {/* Cart Items */}
               <div className="space-y-4 mb-8">
                 {cartItems.map((item) => (
-                  <CartItemComponent
-                    key={item.id}
-                    item={item}
-                    isUpdating={isUpdating}
-                    handleUpdateQuantity={handleUpdateQuantity}
-                    handleRemoveFromCart={handleRemoveFromCart}
-                  />
+                  <div key={item.id} className="bg-white border border-gray-200 rounded-lg p-4">
+                    <CartItemComponent
+                      item={item}
+                      isUpdating={isUpdating}
+                      handleUpdateQuantity={handleUpdateQuantity}
+                      handleRemoveFromCart={handleRemoveFromCart}
+                    />
+                    {item.cartOfferProductId && item.offerProduct && (
+                      <div className="mt-4 border-t pt-4">
+                        <h4 className="text-sm font-semibold text-gray-700 mb-2">Included Offer Product:</h4>
+                        <div className="flex items-center gap-4">
+                          <div className="relative w-20 h-20">
+                            <Image
+                              src={item.offerProduct.productImage || '/placeholder.png'}
+                              alt={item.offerProduct.productName}
+                              fill
+                              className="object-cover rounded-md"
+                            />
+                          </div>
+                          <div>
+                            <p className="text-sm font-medium text-gray-900">{item.offerProduct.productName}</p>
+                            <p className="text-sm text-gray-600">Price: {formatCurrency(Number(item.offerProduct.ourPrice))}</p>
+                            <p className="text-sm text-green-600">Offer Product</p>
+                          </div>
+                        </div>
+                      </div>
+                    )}
+                  </div>
                 ))}
               </div>
 
               {/* Offer Products Section */}
-              {eligibleRange && (
+              {effectiveRange && hasRegularProduct && (
                 <div className="bg-white border border-gray-200 rounded-lg p-6">
                   <h2 className="text-xl font-semibold text-gray-900 mb-4 nohemi-bold">
-                    Eligible Offer Products (Cart Value: ₹{subtotal.toLocaleString('en-IN')})
+                    Eligible Offer Products ({rangeDisplayNames[effectiveRange] || 'Offers'} - Cart Value: {formatCurrency(subtotal)})
                   </h2>
                   {isFetchingOffers ? (
                     <p className="text-gray-600">Loading offer products...</p>
                   ) : offerProducts.length > 0 ? (
                     <div>
-                      <p className="text-sm text-gray-600 mb-4">
-                        Select one offer product to add to your cart:
+                      <p className="text-sm text-gray-600 mb TWITTER_X_ID mb-4">
+                        Add an offer product to your cart:
                       </p>
                       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-                        {offerProducts.map((product) => (
+                        {offerProducts.map((product) =>(
                           <div
                             key={product.id}
-                            className={`relative bg-white border rounded-lg p-4 cursor-pointer transition-all ${selectedOfferProduct === product.id
-                                ? 'border-blue-500 shadow-md'
-                                : 'border-gray-200 hover:border-gray-300'
-                              } ${hasOfferProductInCart ? 'opacity-50 cursor-not-allowed' : ''}`}
-                            onClick={() =>
-                              !hasOfferProductInCart && handleSelectOfferProduct(product.id)
-                            }
+                            className="relative bg-white border border-gray-200 rounded-lg p-4"
                           >
                             <div className="relative w-full aspect-square mb-2">
                               <Image
@@ -302,42 +373,22 @@ const CartPage: React.FC = () => {
                                 className="object-cover rounded-md"
                               />
                             </div>
-                            <h3 className="text-sm font-medium text-gray-900 line-clamp-2">
+                            <h3 className="text-sm font-medium text-gray-900 line-clamp-2 mb-2">
                               {product.productName}
                             </h3>
-                            <p className="text-sm text-gray-600 mt-1">
-                              ₹{Number(product.ourPrice).toLocaleString('en-IN')}
+                            <p className="text-sm text-gray-600 mb-2">
+                              Price: {formatCurrency(Number(product.ourPrice))}
                             </p>
-                            <p className="text-sm text-gray-600">Quantity: {product.quantity}</p>
-                            {selectedOfferProduct === product.id && !hasOfferProductInCart && (
-                              <div className="absolute top-2 right-2 bg-blue-500 text-white rounded-full p-1">
-                                <svg
-                                  className="w-4 h-4"
-                                  fill="none"
-                                  stroke="currentColor"
-                                  viewBox="0 0 24 24"
-                                >
-                                  <path
-                                    strokeLinecap="round"
-                                    strokeLinejoin="round"
-                                    strokeWidth="2"
-                                    d="M5 13l4 4L19 7"
-                                  />
-                                </svg>
-                              </div>
-                            )}
+                            <Button
+                              onClick={() => handleAddOfferProduct(product)}
+                              className="w-full bg-blue-600 text-white hover:bg-blue-700"
+                              disabled={hasOfferProductInCart || !hasRegularProduct}
+                            >
+                              Add
+                            </Button>
                           </div>
                         ))}
                       </div>
-                      {!hasOfferProductInCart && (
-                        <Button
-                          onClick={handleAddOfferProduct}
-                          className="mt-4 bg-blue-600 text-white hover:bg-blue-700"
-                          disabled={!selectedOfferProduct}
-                        >
-                          Add Selected Offer Product
-                        </Button>
-                      )}
                     </div>
                   ) : (
                     <p className="text-gray-600">No offer products available for this cart value.</p>
@@ -388,13 +439,18 @@ const CartPage: React.FC = () => {
                       <p className="text-sm text-green-600 mt-2">
                         Coupon {coupon.code} applied (
                         {coupon.type === 'amount'
-                          ? `₹${coupon.value.toLocaleString('en-IN')}`
-                          : `${coupon.value}%`}
+                          ? formatCurrency(coupon.value)
+                          : coupon.value != null
+                          ? `${coupon.value}%`
+                          : 'Invalid discount'}
                         )
                       </p>
                     )}
                     {couponStatus === 'invalid' && (
                       <p className="text-sm text-red-600 mt-2">Invalid coupon code</p>
+                    )}
+                    {couponStatus === 'invalid_amount' && (
+                      <p className="text-sm text-red-600 mt-2">Coupon has an invalid discount value</p>
                     )}
                     {couponStatus === 'used' && (
                       <p className="text-sm text-red-600 mt-2">Coupon has already been used</p>
@@ -408,29 +464,38 @@ const CartPage: React.FC = () => {
                   <div className="space-y-2">
                     <div className="flex justify-between text-sm">
                       <span className="text-gray-600">Price ({getItemCount()} items)</span>
-                      <span className="text-gray-900">₹{subtotal.toLocaleString('en-IN')}</span>
+                      <span className="text-gray-900">{formatCurrency(subtotal)}</span>
                     </div>
+                    {cartItems.some(item => item.cartOfferProductId) && (
+                      <div className="flex justify-between text-sm">
+                        <span className="text-gray-600">Offer Products</span>
+                        <span className="text-gray-900">
+                          {formatCurrency(cartItems.reduce((sum, item) => 
+                            item.cartOfferProductId ? sum + (Number(item.offerProduct?.ourPrice) || 0) * item.quantity : sum, 
+                            0
+                          ))}
+                        </span>
+                      </div>
+                    )}
                     <div className="flex justify-between text-sm">
                       <span className="text-gray-600">Delivery Charges</span>
-                      <span className="text-gray-900">₹{shippingAmount.toLocaleString('en-IN')}</span>
+                      <span className="text-gray-900">{formatCurrency(shippingAmount)}</span>
                     </div>
                     {savings > 0 && (
                       <div className="flex justify-between text-sm">
                         <span className="text-gray-600">You Save</span>
-                        <span className="text-green-600">₹{savings.toLocaleString('en-IN')}</span>
+                        <span className="text-green-600">{formatCurrency(savings)}</span>
                       </div>
                     )}
                     {discountAmount > 0 && (
                       <div className="flex justify-between text-sm">
                         <span className="text-gray-600">Coupon Discount ({coupon?.code})</span>
-                        <span className="text-green-600">
-                          -₹{discountAmount.toLocaleString('en-IN')}
-                        </span>
+                        <span className="text-green-600">-{formatCurrency(discountAmount)}</span>
                       </div>
                     )}
                     <div className="flex justify-between text-lg font-semibold text-gray-900 pt-2 border-t border-gray-200">
                       <span>Total</span>
-                      <span>₹{(grandTotal + shippingAmount).toLocaleString('en-IN')}</span>
+                      <span>{formatCurrency(grandTotal + shippingAmount)}</span>
                     </div>
                   </div>
                 </div>

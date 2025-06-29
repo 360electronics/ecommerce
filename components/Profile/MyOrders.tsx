@@ -147,7 +147,7 @@ export default function Orders() {
                           <div className="flex-shrink-0">
                             {item.variant && item.variant.productImages?.[0] ? (
                               <Image
-                                src={item.variant.productImages[0]}
+                                src={item.variant.productImages[0].url}
                                 alt={item.variant.name || 'Product'}
                                 width={80}
                                 height={80}
@@ -207,7 +207,7 @@ export default function Orders() {
               </div>
               <div className="px-4 py-3 bg-gray-50 border-t border-gray-200 text-right">
                 <Link
-                  href={`/orders/${order.id}`}
+                  href={`/profile/orders/${order.id}`}
                   className="text-sm font-medium text-blue-600 hover:text-blue-500"
                   aria-label={`View details for order ${order.id.substring(0, 8)}`}
                 >

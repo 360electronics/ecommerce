@@ -45,7 +45,7 @@ const ProductCardwithoutCart: React.FC<ProductCardProps> = ({
 }) => {
   useWishlistAuthSync();
   const { isInWishlist, addToWishlist, removeFromWishlist, isLoading } = useWishlistStore();
-  const { isLoggedIn, fetchAuthStatus } = useAuthStore();
+  const { isLoggedIn, fetchAuthStatus, user } = useAuthStore();
   const { refetch: refetchProfile } = useProfileStore();
   const [isAdding, setIsAdding] = useState(false);
   const router = useRouter();
@@ -87,9 +87,9 @@ const ProductCardwithoutCart: React.FC<ProductCardProps> = ({
       try {
         const success = isInWishlistStatus
           ? await removeFromWishlist(productId, variantId, () => refetchProfile('profile', ''))
-          : await addToWishlist(productId, variantId, { product: { id: productId }, variant: { id: variantId } }, () =>
-              refetchProfile('profile', '')
-            );
+          : await addToWishlist(productId, variantId, () => refetchProfile('profile', ''));
+
+          
 
         if (success) {
           showFancyToast({

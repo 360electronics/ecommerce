@@ -1,6 +1,6 @@
 "use client"
 
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import { useRouter } from "next/navigation"
 import { EnhancedTable, type ColumnDefinition } from "@/components/Layouts/TableLayout"
 
@@ -17,98 +17,6 @@ interface Order {
   shippingMethod: string
 }
 
-// Sample order data
-const orderData: Order[] = [
-  {
-    id: "ORD-2023-0001",
-    customer: "John Doe",
-    email: "john.doe@example.com",
-    date: "2023-04-15",
-    status: "delivered",
-    payment: "paid",
-    total: 12500,
-    items: 3,
-    shippingMethod: "Express",
-  },
-  {
-    id: "ORD-2023-0002",
-    customer: "Jane Smith",
-    email: "jane.smith@example.com",
-    date: "2023-04-14",
-    status: "processing",
-    payment: "paid",
-    total: 8750,
-    items: 2,
-    shippingMethod: "Standard",
-  },
-  {
-    id: "ORD-2023-0003",
-    customer: "Robert Johnson",
-    email: "robert.johnson@example.com",
-    date: "2023-04-13",
-    status: "shipped",
-    payment: "paid",
-    total: 15000,
-    items: 4,
-    shippingMethod: "Express",
-  },
-  {
-    id: "ORD-2023-0004",
-    customer: "Emily Davis",
-    email: "emily.davis@example.com",
-    date: "2023-04-12",
-    status: "delivered",
-    payment: "paid",
-    total: 5600,
-    items: 1,
-    shippingMethod: "Standard",
-  },
-  {
-    id: "ORD-2023-0005",
-    customer: "Michael Wilson",
-    email: "michael.wilson@example.com",
-    date: "2023-04-11",
-    status: "cancelled",
-    payment: "refunded",
-    total: 9800,
-    items: 2,
-    shippingMethod: "Express",
-  },
-  {
-    id: "ORD-2023-0006",
-    customer: "Sarah Brown",
-    email: "sarah.brown@example.com",
-    date: "2023-04-10",
-    status: "delivered",
-    payment: "paid",
-    total: 7300,
-    items: 3,
-    shippingMethod: "Standard",
-  },
-  {
-    id: "ORD-2023-0007",
-    customer: "David Miller",
-    email: "david.miller@example.com",
-    date: "2023-04-09",
-    status: "processing",
-    payment: "pending",
-    total: 18500,
-    items: 5,
-    shippingMethod: "Express",
-  },
-  {
-    id: "ORD-2023-0008",
-    customer: "Jennifer Taylor",
-    email: "jennifer.taylor@example.com",
-    date: "2023-04-08",
-    status: "shipped",
-    payment: "paid",
-    total: 11200,
-    items: 2,
-    shippingMethod: "Standard",
-  },
-]
-
 // Available order statuses and payment statuses
 const orderStatuses = ["Processing", "Shipped", "Delivered", "Cancelled", "Returned", "All"]
 const paymentStatuses = ["Paid", "Pending", "Refunded", "All"]
@@ -116,6 +24,47 @@ const paymentStatuses = ["Paid", "Pending", "Refunded", "All"]
 export function OrdersTable() {
   const router = useRouter()
   const [selectedOrders, setSelectedOrders] = useState<Order[]>([])
+  const [orders, setOrders] = useState<Order[]>([])
+  const [loading, setLoading] = useState(true)
+  const [error, setError] = useState<string | null>(null)
+
+  // Fetch orders from API
+  useEffect(() => {
+    const fetchOrders = async () => {
+      try {
+        setLoading(true)
+        const response = await fetch("/api/orders")
+        const result = await response.json()
+
+        if (!result.success) {
+          throw new Error(result.message || "Failed to fetch orders")
+        }
+
+        // Transform API data to match Order interface
+        const transformedOrders: Order[] = result.data.map((order: any) => ({
+          id: order.orders.id,
+          customer: order.savedAddresses.fullName,
+          email: "", // Note: Email is not available in the provided API response
+          date: new Date(order.orders.createdAt).toISOString().split("T")[0], // Format as YYYY-MM-DD
+          status: order.orders.status,
+          payment: order.orders.paymentStatus,
+          total: parseFloat(order.orders.totalAmount),
+          items: order.orderItems ? 1 : 0, // Since the response shows one item per order, adjust if multiple items are possible
+          shippingMethod: order.orders.deliveryMode.charAt(0).toUpperCase() + order.orders.deliveryMode.slice(1), // Capitalize first letter
+        }))
+
+        setOrders(transformedOrders)
+        setError(null)
+      } catch (err) {
+        console.error("[OrdersTable] Fetch error:", err)
+        setError(err instanceof Error ? err.message : "Failed to fetch orders")
+      } finally {
+        setLoading(false)
+      }
+    }
+
+    fetchOrders()
+  }, [])
 
   // Column definitions for Order Table
   const orderColumns: ColumnDefinition<Order>[] = [
@@ -182,13 +131,7 @@ export function OrdersTable() {
     },
   ]
 
-  console.log(selectedOrders)
-
   // Handle order actions
-  // const handleAddOrder = () => {
-  //   router.push("/admin/orders/add")
-  // }
-
   const handleEditOrder = (orders: Order[]) => {
     if (orders.length === 1) {
       router.push(`/admin/orders/edit/${orders[0].id}`)
@@ -202,7 +145,6 @@ export function OrdersTable() {
   }
 
   const handleDeleteOrder = (order: Order) => {
-    // Show confirmation dialog and delete order
     if (window.confirm(`Are you sure you want to delete order ${order.id}?`)) {
       console.log("Delete order:", order)
       // Implement delete logic here
@@ -221,10 +163,19 @@ export function OrdersTable() {
     // Implement export logic here
   }
 
+  // Render loading or error states
+  if (loading) {
+    return <div>Loading orders...</div>
+  }
+
+  if (error) {
+    return <div>Error: {error}</div>
+  }
+
   return (
     <EnhancedTable
       id="orders-table"
-      data={orderData}
+      data={orders}
       columns={orderColumns}
       selection={{
         enabled: true,
@@ -250,13 +201,10 @@ export function OrdersTable() {
         defaultSortDirection: "desc",
       }}
       actions={{
-        // onAdd: handleAddOrder,
-        // addButtonText: "Add Order",
         bulkActions: {
           delete: handleBulkDelete,
           export: handleExportOrders,
           edit: handleEditOrder,
-          // view: handleViewOrder,
         },
         rowActions: {
           view: handleViewOrder,
@@ -271,6 +219,7 @@ export function OrdersTable() {
           delivered: "bg-green-100 text-green-800 border-green-200",
           cancelled: "bg-red-100 text-red-800 border-red-200",
           returned: "bg-purple-100 text-purple-800 border-purple-200",
+          confirmed: "bg-teal-100 text-teal-800 border-teal-200", // Added for API status
         },
         rowHoverEffect: true,
         zebraStriping: false,

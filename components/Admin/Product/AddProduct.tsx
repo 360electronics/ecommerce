@@ -114,8 +114,6 @@ const statusOptions = [
 const deliveryModeOptions = [
   { value: 'standard', label: 'Standard' },
   { value: 'express', label: 'Express' },
-  { value: 'same_day', label: 'Same Day' },
-  { value: 'pickup', label: 'Pickup' },
 ];
 
 // DraggableSpecSection component (unchanged)

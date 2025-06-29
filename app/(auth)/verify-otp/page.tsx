@@ -7,8 +7,10 @@ import { toast } from "react-hot-toast";
 import Link from "next/link";
 import { cn } from "@/lib/utils";
 import { useAuthStore } from "@/store/auth-store";
-import { useWishlistStore } from "@/store/wishlist-store";
 import { useCartStore } from "@/store/cart-store";
+import { useCheckoutStore } from "@/store/checkout-store";
+import { useProfileStore } from "@/store/profile-store";
+import { useWishlistStore } from "@/store/wishlist-store";
 
 interface Banner {
   id: string;
@@ -160,56 +162,66 @@ function VerifyOTPContent() {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError("");
-
+  
     const validationError = validateOTP();
     if (validationError) {
       setError(validationError);
       toast.error(validationError);
       return;
     }
-
+  
     if (!userId) {
       setError("Invalid request: Missing user ID");
       toast.error("Invalid request");
       return;
     }
-
+  
     setLoading(true);
-
+  
     try {
       const response = await fetch("/api/auth/verify-otp", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ userId, otp: otp.join(""), type }),
-        credentials: "include"
+        credentials: "include",
       });
-
+  
       const data: VerifyOTPResponse = await response.json();
-
+  
       if (!response.ok) {
         throw new Error(data.error || "Failed to verify OTP");
       }
-
-      // localStorage.setItem("authToken", data.token);
-      // Cookies.set("authToken", data.token, { expires: 0.5 });
-
-      const roleValue =
-        typeof data.user.role === "string"
-          ? data.user.role
-          : data.user.role || "unknown";
-
-
+  
       toast.success("OTP verified successfully!");
-
-      if (roleValue === "admin") {
+  
+      // Update auth state
+      setAuth(true, data.user);
+  
+      // Fetch critical store data
+      if (data.user.id) {
+        // toast.loading("Fetching your data...");
+        const results = await Promise.allSettled([
+          useCartStore.getState().fetchCart(),
+          useWishlistStore.getState().fetchWishlist(true), // Force fetch
+          useCheckoutStore.getState().fetchCheckoutItems(data.user.id),
+        ]);
+        results.forEach((result, index) => {
+          if (result.status === 'rejected') {
+            console.log(`[VerifyOTPContent] Fetch[${index}] failed:`, result.reason);
+          } else {
+            console.log(`[VerifyOTPContent] Fetch[${index}] succeeded`);
+          }
+        });
+        toast.dismiss();
+      }
+  
+      // Navigate based on role
+      if (data.user.role === "admin") {
         router.push("/admin/dashboard");
+        router.refresh();
       } else {
         router.push("/");
       }
-
-      setAuth(true, data.user);
-      // fetchWishlist(true);
-      // fetchCart()
     } catch (err: unknown) {
       const errorMessage = err instanceof Error ? err.message : "Failed to verify OTP";
       setError(errorMessage);

@@ -52,12 +52,7 @@ interface WishlistState {
   isInWishlist: (productId: string, variantId: string) => boolean;
   fetchWishlist: (force?: boolean) => Promise<void>;
   reset: () => void;
-  addToWishlist: (
-    productId: string,
-    variantId: string,
-    tempData?: { product: Partial<Product>; variant: Partial<Variant> },
-    onSuccess?: () => void
-  ) => Promise<boolean>;
+  addToWishlist: (productId: string, variantId: string, onSuccess?: () => void) => Promise<boolean>;
   removeFromWishlist: (productId: string, variantId: string, onSuccess?: () => void) => Promise<boolean>;
   refreshWishlist: () => Promise<void>;
 }
@@ -84,17 +79,24 @@ export const useWishlistStore = create<WishlistState>((set, get) => ({
   fetchWishlist: async (force = false) => {
     const { user, isLoggedIn } = useAuthStore.getState();
     if (!isLoggedIn || !user?.id) {
+      console.log('[fetchWishlist] User not logged in, resetting wishlist');
       set({ wishlist: [], wishlistCount: 0, lastFetched: Date.now() });
       return;
     }
-
+  
     const cacheDuration = 10 * 60 * 1000;
     const lastFetched = get().lastFetched;
-    if (!force && lastFetched && Date.now() - lastFetched < cacheDuration) return;
-
+    if (!force && lastFetched && Date.now() - lastFetched < cacheDuration) {
+      console.log('[fetchWishlist] Cache hit, skipping fetch');
+      return;
+    }
+  
     try {
       set({ isLoading: true, isRefetching: force, errors: { ...get().errors, fetch: undefined } });
+      const response = await fetch(`/api/users/wishlist?userId=${user.id}`);
+      console.log('[fetchWishlist] Raw API response:', response);
       const data = await fetchWithRetry<WishlistItem[]>(() => fetch(`/api/users/wishlist?userId=${user.id}`));
+      console.log('[fetchWishlist] Fetched data:', data);
       const validatedData = Array.isArray(data) ? data : [];
       set({
         wishlist: validatedData,
@@ -103,6 +105,7 @@ export const useWishlistStore = create<WishlistState>((set, get) => ({
         isRefetching: false,
         lastFetched: Date.now(),
       });
+      console.log('[fetchWishlist] State updated:', { wishlist: validatedData, wishlistCount: validatedData.length });
     } catch (error) {
       logError('fetchWishlist', error);
       set({
@@ -110,9 +113,10 @@ export const useWishlistStore = create<WishlistState>((set, get) => ({
         isLoading: false,
         isRefetching: false,
       });
+      console.log('[fetchWishlist] Error:', error);
     }
   },
-  addToWishlist: async (productId, variantId, tempData, onSuccess) => {
+  addToWishlist: async (productId, variantId, onSuccess) => {
     const { user, isLoggedIn } = useAuthStore.getState();
     if (!isLoggedIn || !user?.id) {
       logError('addToWishlist', new Error('User not logged in'));
@@ -126,40 +130,10 @@ export const useWishlistStore = create<WishlistState>((set, get) => ({
 
     if (get().isInWishlist(productId, variantId)) return true;
 
-    const optimisticItem: WishlistItem = {
-      productId,
-      variantId,
-      createdAt: new Date().toISOString(),
-      product: {
-        id: productId,
-        name: tempData?.product.name ?? '',
-        slug: tempData?.product.slug ?? '',
-        description: tempData?.product.description ?? '',
-        variants: tempData?.product.variants ?? [],
-      },
-      variant: {
-        id: variantId,
-        productId,
-        name: tempData?.variant.name ?? '',
-        sku: tempData?.variant.sku ?? '',
-        slug: tempData?.variant.slug ?? '',
-        dimensions: tempData?.variant.dimensions ?? {},
-        weight: tempData?.variant.weight ?? 0,
-        stock: tempData?.variant.stock ?? 0,
-        mrp: tempData?.variant.mrp ?? 0,
-        ourPrice: tempData?.variant.ourPrice ?? 0,
-        productImages: tempData?.variant.productImages ?? [],
-      },
-    };
-
-    // Apply optimistic update
     set(
       produce((state: WishlistState) => {
-        state.wishlist.push(optimisticItem);
-        state.wishlistCount += 1;
         state.isLoading = true;
         state.errors.add = undefined;
-        state.lastFetched = Date.now(); // Prevent redundant fetches
       })
     );
 
@@ -174,14 +148,10 @@ export const useWishlistStore = create<WishlistState>((set, get) => ({
       );
       set(
         produce((state: WishlistState) => {
-          const index = state.wishlist.findIndex((i) => i.productId === productId && i.variantId === variantId);
-          if (index !== -1) {
-            state.wishlist[index] = item; // Replace optimistic item with server response
-          } else {
-            state.wishlist.push(item); // Fallback: add if not found
-          }
+          state.wishlist.push(item);
           state.wishlistCount = state.wishlist.length;
           state.isLoading = false;
+          state.lastFetched = Date.now();
         })
       );
       onSuccess?.();
@@ -190,8 +160,6 @@ export const useWishlistStore = create<WishlistState>((set, get) => ({
       logError('addToWishlist', error);
       set(
         produce((state: WishlistState) => {
-          state.wishlist = state.wishlist.filter((i) => !(i.productId === productId && i.variantId === variantId));
-          state.wishlistCount = state.wishlist.length;
           state.errors.add = error as AppError;
           state.isLoading = false;
         })
@@ -215,7 +183,7 @@ export const useWishlistStore = create<WishlistState>((set, get) => ({
         state.wishlistCount = state.wishlist.length;
         state.isLoading = true;
         state.errors.remove = undefined;
-        state.lastFetched = Date.now(); // Prevent redundant fetches
+        state.lastFetched = Date.now();
       })
     );
 

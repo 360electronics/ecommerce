@@ -7,6 +7,7 @@ import Breadcrumbs from '@/components/Reusable/BreadScrumb';
 import ProductZoomOverlay from './ProductZoomOverlay';
 import { useProductStore } from '@/store/product-store';
 import { FlattenedProduct, ProductVariant } from '@/types/product';
+import ProductRatingsReviews from './ProductRatingsReviews';
 
 interface ProductDetailPageProps {
   product: FlattenedProduct;
@@ -116,6 +117,7 @@ export default function ProductDetailPage({ product }: ProductDetailPageProps) {
         </div>
       </div>
       <ProductSpecifications className="mb-12" />
+      <ProductRatingsReviews />
     </div>
   );
 }
