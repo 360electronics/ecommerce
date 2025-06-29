@@ -81,7 +81,7 @@ const WishlistProductCard: React.FC<ProductCardProps> = ({
       try {
         const success = isInWishlistStatus
           ? await removeFromWishlist(productId, variantId, () => refetchProfile('profile', ''))
-          : await addToWishlist(productId, variantId, { product: { id: productId }, variant: { id: variantId } }, () => refetchProfile('profile', ''));
+          : await addToWishlist(productId, variantId, () => refetchProfile('profile', ''));
 
         if (success) {
           toast.success(isInWishlistStatus ? 'Removed from wishlist!' : 'Added to wishlist!');

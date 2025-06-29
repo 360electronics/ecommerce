@@ -114,10 +114,13 @@ async function updateProductRating(productId: string) {
     .where(eq(products.id, productId));
 }
 
+type Params = Promise<{ id: string }>;
+
+
 // GET: Fetch reviews for a product or a specific review
 export async function GET(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Params }
 ) {
   try {
     const { searchParams } = new URL(request.url);
@@ -128,7 +131,7 @@ export async function GET(
     });
 
     const { isAuthenticated, user } = await checkAuth(request);
-    const productId = params.id;
+    const { id: productId } = await params;
 
     // Verify product exists
     const product = await db
@@ -215,7 +218,7 @@ export async function GET(
 // POST: Create a new review
 export async function POST(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Params }
 ) {
   try {
     const { isAuthenticated, user } = await checkAuth(request);
@@ -223,7 +226,7 @@ export async function POST(
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
-    const productId = params.id;
+    const { id: productId } = await params;
     const body = await request.json();
     const validatedData = createReviewSchema.parse(body);
 
@@ -306,7 +309,7 @@ export async function POST(
 // PUT: Update an existing review
 export async function PUT(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Params }
 ) {
   try {
     const { isAuthenticated, user } = await checkAuth(request);
@@ -314,7 +317,7 @@ export async function PUT(
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
-    const reviewId = params.id;
+    const { id: reviewId } = await params;
     const body = await request.json();
     const validatedData = updateReviewSchema.parse(body);
 
@@ -386,7 +389,7 @@ export async function PUT(
 // DELETE: Delete a review
 export async function DELETE(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Params }
 ) {
   try {
     const { isAuthenticated, user } = await checkAuth(request);
@@ -394,7 +397,7 @@ export async function DELETE(
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
-    const reviewId = params.id;
+    const { id: reviewId } = await params;
 
     // Verify review exists and belongs to user
     const existingReview = await db

@@ -89,6 +89,7 @@ export async function GET(req: NextRequest) {
               variant: variant
                 ? (variant as typeof variants.$inferSelect)
                 : null,
+              cartOfferProductId: null
             });
           }
         } else {
@@ -98,6 +99,7 @@ export async function GET(req: NextRequest) {
               ? [
                   {
                     ...item,
+                    cartOfferProductId: null,
                     product: product
                       ? (product as Omit<typeof products.$inferSelect, "specifications">)
                       : null,
