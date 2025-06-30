@@ -553,7 +553,7 @@ export default function CartOfferProductsPage() {
           ) : (
             <div className="rounded-2xl border border-dashed border-gray-300 bg-gray-50 p-8 text-center min-h-[240px] flex items-center justify-center">
               <p className="text-gray-500">
-                No products in {CATEGORIES[activeCategory]}. Click "Add New Product" to add one.
+                No products in {CATEGORIES[activeCategory]}. Click &ldquo;Add New Product&ldquo; to add one.
               </p>
             </div>
           )}
