@@ -1,11 +1,13 @@
 'use client';
+
 import { useState, useRef, useEffect, useMemo, useCallback } from 'react';
-import { Search, Save, Check, X, AlertCircle } from 'lucide-react';
+import { Search, Save, Check, X, AlertCircle, Gamepad2 } from 'lucide-react';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { fetchProducts, fetchGamersZoneProducts } from '@/utils/products.util';
 import Image from 'next/image';
 import { cn } from '@/lib/utils';
+import toast from 'react-hot-toast';
 
 // Types
 interface Product {
@@ -31,7 +33,7 @@ interface GamerZoneSelection {
   variantId: string;
   product: Product;
   variant: Variant;
-  displayName: string; // Combined product + variant name
+  displayName: string;
   category: string;
 }
 
@@ -61,6 +63,7 @@ export default function GamerZonePage() {
   const [error, setError] = useState<string | null>(null);
   const searchResultsRef = useRef<HTMLDivElement>(null);
   const searchInputRef = useRef<HTMLInputElement>(null);
+  const debounceRef = useRef<NodeJS.Timeout | null>(null);
 
   // Fetch initial data
   useEffect(() => {
@@ -91,7 +94,7 @@ export default function GamerZonePage() {
               variantId: item.variantId,
               product: item.product,
               variant: item.variant,
-              displayName: `${item.product.fullName} - ${item.variant.name}`,
+              displayName: `${item.product.shortName} - ${item.variant.name}`,
               category,
             })) || [];
           });
@@ -107,7 +110,7 @@ export default function GamerZonePage() {
         if (!signal.aborted) {
           console.error('[FETCH_GAMERS_ZONE_ERROR]', err);
           setError('Failed to load data. Please try again.');
-          alert('Failed to load data. Please try again.');
+          toast.error('Failed to load data. Please try again.');
         }
       } finally {
         if (!signal.aborted) setIsFetching(false);
@@ -118,7 +121,16 @@ export default function GamerZonePage() {
     return () => abortController.abort();
   }, []);
 
-  // Filter available variants
+  // Calculate total variants and active categories
+  const totalVariants = useMemo(() => {
+    return allProducts.reduce((sum, p) => sum + p.variants.length, 0);
+  }, [allProducts]);
+
+  const activeCategoriesCount = useMemo(() => {
+    return Object.values(categorizedVariants).filter((variants) => variants.length > 0).length;
+  }, [categorizedVariants]);
+
+  // Filter search results
   const searchResults = useMemo(() => {
     if (!activeCategory || !searchTerm.trim()) return [];
 
@@ -172,14 +184,25 @@ export default function GamerZonePage() {
     return () => document.removeEventListener('mousedown', handleClickOutside);
   }, []);
 
-  // Handle search
+  // Handle search with debouncing
   const handleSearch = useCallback((value: string) => {
     setSearchTerm(value);
     setIsLoading(true);
     setShowSearchResults(true);
 
-    const timeout = setTimeout(() => setIsLoading(false), 300);
-    return () => clearTimeout(timeout);
+    if (debounceRef.current) {
+      clearTimeout(debounceRef.current);
+    }
+
+    debounceRef.current = setTimeout(() => {
+      setIsLoading(false);
+    }, 500);
+
+    return () => {
+      if (debounceRef.current) {
+        clearTimeout(debounceRef.current);
+      }
+    };
   }, []);
 
   // Handle variant selection
@@ -195,10 +218,10 @@ export default function GamerZonePage() {
         setSearchTerm('');
         setShowSearchResults(false);
         setIsSaved(false);
-        alert(`Variant added to ${CATEGORIES[activeCategory]} in Gamer Zone`);
+        toast.success(`Variant added to ${CATEGORIES[activeCategory]} in Gamer Zone`);
       } catch (error) {
         console.error('[SELECT_GAMER_ZONE_VARIANT_ERROR]', error);
-        alert('Failed to add variant');
+        toast.error('Failed to add variant');
       }
     },
     [activeCategory]
@@ -227,10 +250,10 @@ export default function GamerZonePage() {
           [activeCategory]: prev[activeCategory].filter((v) => v.variantId !== variantId),
         }));
         setIsSaved(false);
-        alert(`Variant removed from ${CATEGORIES[activeCategory]} in Gamer Zone`);
+        toast.success(`Variant removed from ${CATEGORIES[activeCategory]} in Gamer Zone`);
       } catch (error: any) {
         console.error('[DELETE_GAMER_ZONE_VARIANT_ERROR]', error);
-        alert(error.message || 'Failed to remove variant');
+        toast.error(error.message || 'Failed to remove variant');
       } finally {
         setIsLoading(false);
       }
@@ -265,12 +288,12 @@ export default function GamerZonePage() {
       }
 
       setIsSaved(true);
-      alert('Gamer Zone variants saved successfully');
+      toast.success('Gamer Zone variants saved successfully');
       setTimeout(() => setIsSaved(false), 3000);
     } catch (error: any) {
       console.error('[SAVE_GAMERS_ZONE_ERROR]', error);
       setError(error.message || 'Failed to save changes');
-      alert(error.message || 'Failed to save Gamer Zone variants');
+      toast.error(error.message || 'Failed to save Gamer Zone variants');
       setTimeout(() => setError(null), 5000);
     } finally {
       setIsLoading(false);
@@ -278,17 +301,20 @@ export default function GamerZonePage() {
   }, [categorizedVariants]);
 
   // Clear search
-  const clearSearch = useCallback(() => {
+  const handleClearSearch = useCallback(() => {
     setSearchTerm('');
     setShowSearchResults(false);
+    searchInputRef.current?.focus();
   }, []);
 
   if (isFetching) {
     return (
-      <div className="flex items-center justify-center h-[50vh]">
-        <div className="text-center">
-          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600 mx-auto mb-2"></div>
-          <p>Loading products...</p>
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+        <div className="flex items-center justify-center h-[50vh]">
+          <div className="text-center space-y-4">
+            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600 mx-auto"></div>
+            <p className="text-gray-600">Loading products...</p>
+          </div>
         </div>
       </div>
     );
@@ -296,87 +322,149 @@ export default function GamerZonePage() {
 
   if (error) {
     return (
-      <div className="flex items-center justify-center h-[50vh]">
-        <div className="text-center space-y-4">
-          <AlertCircle className="h-12 w-12 text-red-500 mx-auto" />
-          <p className="text-red-600">{error}</p>
-          <Button onClick={() => window.location.reload()}>Retry</Button>
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+        <div className="flex items-center justify-center h-[50vh]">
+          <div className="text-center space-y-4">
+            <AlertCircle className="h-12 w-12 text-red-500 mx-auto" />
+            <p className="text-red-600">{error}</p>
+            <Button
+              onClick={() => window.location.reload()}
+              className="bg-blue-600 text-white hover:bg-blue-700 rounded-lg"
+            >
+              Retry
+            </Button>
+          </div>
         </div>
       </div>
     );
   }
 
   return (
-    <div className="container mx-auto py-8">
-      {/* Success message */}
+    <div className="mx-auto">
+      {/* Header */}
+      <div className="mb-8">
+        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between">
+          <div className="mb-4 sm:mb-0">
+            <h1 className="text-3xl font-bold text-gray-900">Gamer Zone Management</h1>
+            <p className="mt-2 text-gray-600">Manage categorized variants for Gamer Zone</p>
+          </div>
+        </div>
+      </div>
+
+      {/* Stats Cards */}
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6 mb-8">
+        <div className="bg-white p-6 rounded-xl border border-gray-200">
+          <div className="flex items-center">
+            <div className="p-3 bg-blue-100 rounded-lg">
+              <Gamepad2 className="w-6 h-6 text-blue-600" />
+            </div>
+            <div className="ml-4">
+              <p className="text-sm font-medium text-gray-600">Total Variants</p>
+              <p className="text-2xl font-bold text-gray-900">{totalVariants}</p>
+            </div>
+          </div>
+        </div>
+        <div className="bg-white p-6 rounded-xl border border-gray-200">
+          <div className="flex items-center">
+            <div className="p-3 bg-green-100 rounded-lg">
+              <Check className="w-6 h-6 text-green-600" />
+            </div>
+            <div className="ml-4">
+              <p className="text-sm font-medium text-gray-600">Gamer Zone Variants</p>
+              <p className="text-2xl font-bold text-gray-900">
+                {Object.values(categorizedVariants).reduce((sum, arr) => sum + arr.length, 0)}
+              </p>
+            </div>
+          </div>
+        </div>
+        <div className="bg-white p-6 rounded-xl border border-gray-200">
+          <div className="flex items-center">
+            <div className="p-3 bg-purple-100 rounded-lg">
+              <Gamepad2 className="w-6 h-6 text-purple-600" />
+            </div>
+            <div className="ml-4">
+              <p className="text-sm font-medium text-gray-600">Active Categories</p>
+              <p className="text-2xl font-bold text-gray-900">{activeCategoriesCount}</p>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      {/* Success Message */}
       {isSaved && (
-        <div className="mb-6 rounded-md bg-green-50 p-4 text-green-800 flex items-center justify-between">
+        <div className="mb-6 rounded-lg bg-green-50 p-4 text-green-800 flex items-center justify-between border border-green-200">
           <div className="flex items-center">
             <Check className="h-5 w-5 mr-2" />
             Gamer Zone variants saved successfully!
           </div>
-          <Button variant="ghost" size="sm" onClick={() => setIsSaved(false)}>
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={() => setIsSaved(false)}
+            className="text-green-600 hover:text-green-800"
+            aria-label="Dismiss success message"
+          >
             <X className="h-4 w-4" />
           </Button>
         </div>
       )}
 
-      {/* Search bar and save button */}
-      <div className="mb-6 space-y-4">
-        <div className="flex flex-col sm:flex-row items-center justify-between gap-4">
-          <div className="relative flex-1 max-w-md">
-            <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
-            <Input
-              ref={searchInputRef}
-              placeholder={
-                activeCategory
-                  ? `Search ${CATEGORIES[activeCategory] || activeCategory} by name, SKU, ID, or product details`
-                  : 'Select a category first'
-              }
-              value={searchTerm}
-              onChange={(e) => handleSearch(e.target.value)}
-              onFocus={() => {
-                if (searchTerm.trim() && activeCategory) setShowSearchResults(true);
-              }}
-              className="pl-10 pr-10 py-6"
-              disabled={!activeCategory}
-              aria-label="Search variants"
-            />
-            {searchTerm && (
-              <button
-                onClick={clearSearch}
-                className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600"
-                aria-label="Clear search"
-              >
-                <X className="h-4 w-4" />
-              </button>
-            )}
-          </div>
-          <Button
-            onClick={handleSave}
-            disabled={isLoading}
-            className="flex items-center gap-2 bg-blue-600 hover:bg-blue-700"
-            aria-label="Save Gamer Zone variants"
-          >
-            <Save className="h-4 w-4" />
-            {isLoading ? 'Saving...' : 'Save Changes'}
-          </Button>
+      {/* Search and Save Controls */}
+      <div className="mb-8 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+        <div className="relative max-w-md w-full">
+          <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 h-5 w-5" />
+          <Input
+            ref={searchInputRef}
+            placeholder={
+              activeCategory
+                ? `Search ${CATEGORIES[activeCategory] || activeCategory} by name, SKU, ID, or description...`
+                : 'Select a category first'
+            }
+            value={searchTerm}
+            onChange={(e) => handleSearch(e.target.value)}
+            onFocus={() => {
+              if (searchTerm.trim() && activeCategory) setShowSearchResults(true);
+            }}
+            className="pl-10 pr-10 rounded-lg border-gray-300 focus:ring-2 focus:ring-blue-500 transition-all duration-200"
+            disabled={!activeCategory}
+            aria-label="Search variants"
+          />
+          {searchTerm && (
+            <button
+              onClick={handleClearSearch}
+              className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400 hover:text-gray-600"
+              aria-label="Clear search"
+            >
+              <X className="h-5 w-5" />
+            </button>
+          )}
         </div>
+        <Button
+          onClick={handleSave}
+          disabled={isLoading}
+          className="bg-blue-600 text-white hover:bg-blue-700 rounded-lg flex items-center gap-2 px-6"
+          aria-label="Save Gamer Zone variants"
+        >
+          <Save className="h-5 w-5" />
+          {isLoading ? 'Saving...' : 'Save Changes'}
+        </Button>
       </div>
 
-      {/* Categories tab navigation */}
-      <div className="relative mb-6">
-        <div className="flex items-center space-x-3 overflow-x-auto pb-4 scrollbar-thin scrollbar-thumb-gray-300 scrollbar-track-gray-100">
+      {/* Categories Tab Navigation */}
+      <div className="mb-8 border-b border-gray-200">
+        <div className="flex items-center space-x-2 overflow-x-auto pb-2 scrollbar-thin scrollbar-thumb-gray-300 scrollbar-track-gray-100">
           <Button
             variant={activeCategory === null ? 'default' : 'outline'}
-            className={`px-6 py-2 h-auto whitespace-nowrap ${
-              activeCategory === null ? 'bg-blue-600 text-white hover:bg-blue-700' : ''
-            }`}
+            className={cn(
+              'px-6 py-2 h-auto font-medium rounded-lg',
+              activeCategory === null ? 'bg-blue-600 text-white hover:bg-blue-700' : 'text-gray-600 hover:bg-gray-100'
+            )}
             onClick={() => {
               setActiveCategory(null);
               setSearchTerm('');
               setShowSearchResults(false);
             }}
+            aria-label="View all categories"
           >
             All
           </Button>
@@ -384,14 +472,16 @@ export default function GamerZonePage() {
             <Button
               key={apiKey}
               variant={activeCategory === apiKey ? 'default' : 'outline'}
-              className={`px-6 py-2 h-auto whitespace-nowrap ${
-                activeCategory === apiKey ? 'bg-blue-600 text-white hover:bg-blue-700' : ''
-              }`}
+              className={cn(
+                'px-6 py-2 h-auto font-medium rounded-lg',
+                activeCategory === apiKey ? 'bg-blue-600 text-white hover:bg-blue-700' : 'text-gray-600 hover:bg-gray-100'
+              )}
               onClick={() => {
                 setActiveCategory(apiKey);
                 setSearchTerm('');
                 setShowSearchResults(false);
               }}
+              aria-label={`View ${displayName} category`}
             >
               {displayName} ({categorizedVariants[apiKey]?.length || 0})
             </Button>
@@ -399,26 +489,42 @@ export default function GamerZonePage() {
         </div>
       </div>
 
-      {/* Search results */}
+      {/* Search Results */}
       {activeCategory && showSearchResults && searchTerm.trim() && (
         <div ref={searchResultsRef} className="mb-8">
-          <h3 className="text-lg font-semibold mb-4">
-            Search Results ({searchResults.length})
-          </h3>
-          {searchResults.length > 0 ? (
-            <div className="grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
+          <div className="flex justify-between items-center mb-4">
+            <h3 className="text-lg font-semibold text-gray-900">
+              Search Results ({searchResults.length})
+            </h3>
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={() => setShowSearchResults(false)}
+              className="text-gray-600 hover:text-gray-800"
+              aria-label="Close search results"
+            >
+              Close
+            </Button>
+          </div>
+          {isLoading ? (
+            <div className="rounded-lg border border-gray-200 bg-white p-8 text-center">
+              <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-blue-600 mx-auto mb-2"></div>
+              <p className="text-gray-500">Searching variants...</p>
+            </div>
+          ) : searchResults.length > 0 ? (
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
               {searchResults.map((selection) => (
                 <VariantCard
                   key={`${selection.productId}-${selection.variantId}`}
                   selection={selection}
                   onSelect={(sel) => handleSelectVariant(sel as GamerZoneSelection)}
-                  actionLabel="Add"
+                  actionLabel={`Add to ${CATEGORIES[activeCategory]}`}
                   actionVariant="secondary"
                 />
               ))}
             </div>
           ) : (
-            <div className="rounded-md border border-dashed border-gray-300 bg-gray-50 p-8 text-center">
+            <div className="rounded-lg border border-gray-200 bg-white p-8 text-center">
               <p className="text-gray-500">
                 No more variants available for {CATEGORIES[activeCategory]} or all matching variants are already selected.
               </p>
@@ -427,26 +533,26 @@ export default function GamerZonePage() {
         </div>
       )}
 
-      {/* Selected variants for active category */}
+      {/* Selected Variants for Active Category */}
       {activeCategory && (
         <div>
-          <h2 className="text-xl font-semibold mb-6">
+          <h2 className="text-lg font-semibold text-gray-900 mb-4">
             {CATEGORIES[activeCategory]} Variants ({selectedVariants.length})
           </h2>
           {selectedVariants.length > 0 ? (
-            <div className="grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
               {selectedVariants.map((selection) => (
                 <VariantCard
                   key={`${selection.productId}-${selection.variantId}`}
                   selection={selection}
-                  onSelect={(sel) => handleSelectVariant(sel as GamerZoneSelection)}
+                  onSelect={(sel) => handleRemoveVariant(sel as string)}
                   actionLabel="Remove"
                   actionVariant="destructive"
                 />
               ))}
             </div>
           ) : (
-            <div className="rounded-md border border-dashed border-gray-300 bg-gray-50 p-8 text-center">
+            <div className="rounded-lg border border-gray-200 bg-white p-8 text-center">
               <p className="text-gray-500">
                 No variants selected for {CATEGORIES[activeCategory]}. Use the search above to add variants.
               </p>
@@ -455,28 +561,33 @@ export default function GamerZonePage() {
         </div>
       )}
 
-      {/* All categories overview */}
+      {/* All Categories Overview */}
       {!activeCategory && (
         <div>
-          <h2 className="text-xl font-semibold mb-6">All Categories</h2>
+          <h2 className="text-lg font-semibold text-gray-900 mb-4">All Categories</h2>
           <div className="space-y-8">
             {Object.entries(CATEGORIES).map(([apiKey, displayName]) => (
               <div key={apiKey}>
                 <div className="flex items-center justify-between mb-4">
-                  <h3 className="text-lg font-semibold">
+                  <h3 className="text-base font-semibold text-gray-900">
                     {displayName} ({categorizedVariants[apiKey]?.length || 0})
                   </h3>
-                  <Button variant="outline" onClick={() => setActiveCategory(apiKey)}>
+                  <Button
+                    variant="outline"
+                    className="rounded-lg border-gray-300 text-gray-600 hover:bg-gray-100"
+                    onClick={() => setActiveCategory(apiKey)}
+                    aria-label={`Manage ${displayName} variants`}
+                  >
                     Manage Variants
                   </Button>
                 </div>
                 {categorizedVariants[apiKey]?.length > 0 ? (
-                  <div className="grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
+                  <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
                     {categorizedVariants[apiKey].slice(0, 4).map((selection) => (
                       <VariantCard
                         key={`${selection.productId}-${selection.variantId}`}
                         selection={selection}
-                        onSelect={(sel) => handleSelectVariant(sel as GamerZoneSelection)}
+                        onSelect={(sel) => handleRemoveVariant(sel as string)}
                         actionLabel="Remove"
                         actionVariant="destructive"
                       />
@@ -486,7 +597,8 @@ export default function GamerZonePage() {
                         <Button
                           variant="outline"
                           onClick={() => setActiveCategory(apiKey)}
-                          className="h-full min-h-[200px] w-full border-dashed"
+                          className="h-full min-h-[200px] w-full border-dashed border-gray-300 text-gray-600 hover:bg-gray-100 rounded-lg"
+                          aria-label={`View more ${displayName} variants`}
                         >
                           +{categorizedVariants[apiKey].length - 4} more variants
                         </Button>
@@ -494,7 +606,7 @@ export default function GamerZonePage() {
                     )}
                   </div>
                 ) : (
-                  <div className="rounded-md border border-dashed border-gray-300 bg-gray-50 p-8 text-center">
+                  <div className="rounded-lg border border-gray-200 bg-white p-8 text-center">
                     <p className="text-gray-500">No variants selected for {displayName}.</p>
                   </div>
                 )}
@@ -516,11 +628,20 @@ interface VariantCardProps {
 }
 
 function VariantCard({ selection, onSelect, actionLabel, actionVariant }: VariantCardProps) {
+  const discount = useMemo(() => {
+    const ourPrice = parseFloat(selection.variant.ourPrice);
+    const mrp = parseFloat(selection.variant.mrp);
+    if (mrp > ourPrice) {
+      return (((mrp - ourPrice) / mrp) * 100).toFixed(0);
+    }
+    return null;
+  }, [selection.variant]);
+
   return (
-    <div className="relative group transition-transform hover:scale-[1.02]">
+    <div className="relative group transition-transform hover:scale-[1.02] duration-200">
       <div
         className={cn(
-          'absolute right-3 top-3 z-20 transition-opacity',
+          'absolute right-4 top-4 z-10 transition-opacity',
           actionVariant === 'destructive' ? 'opacity-0 group-hover:opacity-100' : 'opacity-100'
         )}
       >
@@ -532,39 +653,57 @@ function VariantCard({ selection, onSelect, actionLabel, actionVariant }: Varian
             onSelect(actionVariant === 'destructive' ? selection.variantId : selection);
           }}
           className={cn(
-            actionVariant === 'secondary' && 'bg-blue-500 hover:bg-blue-600 text-white',
-            actionVariant === 'destructive' && 'bg-red-500 hover:bg-red-600 text-white'
+            'rounded-lg',
+            actionVariant === 'secondary' && 'bg-blue-600 hover:bg-blue-700 text-black',
+            actionVariant === 'destructive' && 'bg-red-600 hover:bg-red-700 text-white'
           )}
+          aria-label={actionLabel}
         >
           {actionLabel}
         </Button>
       </div>
-      <div className="border rounded-lg bg-white shadow-sm overflow-hidden">
-        <div className="relative w-full aspect-square bg-[#F4F4F4]">
+      <div
+        className="border border-gray-200 rounded-xl bg-white overflow-hidden cursor-pointer"
+        role="button"
+        tabIndex={0}
+        onKeyDown={(e) => {
+          if (e.key === 'Enter' || e.key === ' ') {
+            e.preventDefault();
+            onSelect(actionVariant === 'destructive' ? selection.variantId : selection);
+          }
+        }}
+      >
+        <div className="relative w-full aspect-square bg-gray-50">
           <Image
             src={selection.variant.productImages?.[0]?.url ?? '/placeholder.png'}
-            alt={selection.displayName}
+            alt={selection.variant.productImages?.[0]?.alt ?? selection.displayName}
             fill
             className="object-contain p-6 group-hover:scale-105 transition-transform duration-200"
             sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 33vw"
           />
+          {discount && (
+            <div className="absolute top-4 left-4 bg-red-600 text-white text-xs font-medium px-2 py-1 rounded-full">
+              {discount}% OFF
+            </div>
+          )}
         </div>
         <div className="p-4 space-y-2">
-          <h3 className="text-base font-medium line-clamp-2">{selection.displayName}</h3>
-          <p className="text-sm text-gray-500 line-clamp-2">{selection.product.description || 'No description available'}</p>
+          <h3 className="text-base font-semibold text-gray-900 line-clamp-2">{selection.displayName}</h3>
+          <p className="text-sm text-gray-600 line-clamp-2">{selection.product.description || 'No description available'}</p>
           <div className="flex items-center gap-2">
             {selection.variant.ourPrice && (
-              <span className="text-lg font-bold">
-                ₹{Number(selection.variant.ourPrice).toLocaleString()}
+              <span className="text-lg font-bold text-gray-900">
+                ₹{Number(selection.variant.ourPrice).toLocaleString('en-IN')}
               </span>
             )}
             {selection.variant.mrp &&
               Number(selection.variant.mrp) > Number(selection.variant.ourPrice) && (
                 <span className="text-sm text-gray-500 line-through">
-                  MRP {Number(selection.variant.mrp).toLocaleString()}
+                  ₹{Number(selection.variant.mrp).toLocaleString('en-IN')}
                 </span>
               )}
           </div>
+          <p className="text-xs text-gray-500">SKU: {selection.variant.sku}</p>
         </div>
       </div>
     </div>

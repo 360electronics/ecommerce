@@ -215,7 +215,7 @@ export default function ProductDetailsContent({ className, activeVariant }: Prod
 
     if (!userId) {
       toast.error('Please login to manage wishlist.');
-      router.push('/login');
+      router.push('/signin');
       return;
     }
 
@@ -251,7 +251,7 @@ export default function ProductDetailsContent({ className, activeVariant }: Prod
 
     if (!userId) {
       toast.error('Please login to add to cart.');
-      router.push('/login');
+      router.push('/signin');
       return;
     }
 
@@ -284,7 +284,7 @@ export default function ProductDetailsContent({ className, activeVariant }: Prod
 
     if (!userId) {
       toast.error('Please login to proceed with purchase.');
-      router.push('/login');
+      router.push('/signin');
       return;
     }
 

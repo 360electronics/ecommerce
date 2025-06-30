@@ -1,7 +1,7 @@
 "use client"
 
 import { useState, useEffect } from "react"
-import { ArrowRight, FileText, MoreHorizontal } from 'lucide-react'
+import { ArrowRight, FileText, Loader2, ArrowUp, ArrowDown, MoreHorizontal, Target } from 'lucide-react'
 import { Line } from "react-chartjs-2"
 import {
   Chart as ChartJS,
@@ -13,423 +13,630 @@ import {
   Tooltip,
   Filler,
   Legend,
-  ChartOptions
 } from "chart.js"
+import * as XLSX from 'xlsx'
+import Link from "next/link"
 
 // Register ChartJS components
 ChartJS.register(CategoryScale, LinearScale, PointElement, LineElement, Title, Tooltip, Filler, Legend)
 
-// Sample data
-const dashboardData = {
+interface Order {
+  orders: {
+    id: string
+    status: string
+    paymentMethod: string
+    totalAmount: string
+    createdAt: string
+  }
+  variants: {
+    name: string
+    productImages: { url: string }[]
+  } | null
+  savedAddresses: {
+    fullName: string
+    city: string
+  }
+}
+
+interface Ticket {
+  id: string
+  status: 'active' | 'inactive' | 'closed'
+  createdAt: string
+}
+
+interface DashboardData {
   metrics: {
-    todaySale: { value: 12426, change: 36, increase: true },
-    totalSales: { value: 238485, change: 14, increase: false },
-    totalOrders: { value: 84382, change: 36, increase: true },
-    openTickets: { value: 101, change: 4, increase: true },
-  },
+    todaySale: { value: number; increase: boolean }
+    totalSales: { value: number; increase: boolean }
+    totalOrders: { value: number; increase: boolean }
+    openTickets: { value: number; increase: boolean }
+  }
   revenueTarget: {
-    current: 842500,
-    target: 1000000,
-    percentage: 84.25,
-  },
-  transactions: [
-    {
-      id: 1,
-      status: "completed",
-      cardType: "Visa card",
-      cardNumber: "**** 4831",
-      paymentType: "Card payment",
-      amount: 182.94,
-      date: "Jan 17, 2022",
-      merchant: "Amazon",
-    },
-    {
-      id: 2,
-      status: "pending",
-      cardType: "Account",
-      cardNumber: "****882",
-      paymentType: "Bank payment",
-      amount: 249.94,
-      date: "Jan 17, 2022",
-      merchant: "Netflix",
-    },
-    {
-      id: 3,
-      status: "canceled",
-      cardType: "Amex card",
-      cardNumber: "**** 5666",
-      paymentType: "Card payment",
-      amount: 199.24,
-      date: "Jan 17, 2022",
-      merchant: "Amazon Prime",
-    },
-  ],
-  topProducts: [
-    {
-      id: 1,
-      name: "Asus TUF",
-      sales: 570,
-      change: 76,
-      image: "/laptop.png",
-    },
-    {
-      id: 2,
-      name: "Apple mackbook",
-      sales: 444,
-      change: 66,
-      image: "/macbook.png",
-    },
-    {
-      id: 3,
-      name: "Razer Mouse",
-      sales: 390,
-      change: 53,
-      image: "/mouse.png",
-    },
-    {
-      id: 4,
-      name: "Gaming Headphone",
-      sales: 299,
-      change: 44,
-      image: "/headphone.png",
-    },
-  ],
+    current: number
+    target: number
+    percentage: number
+  }
+  transactions: {
+    id: string
+    status: string
+    paymentType: string
+    amount: number
+    date: string
+    variantName: string
+    customer: string
+    city: string
+  }[]
+  topProducts: {
+    id: string
+    name: string
+    sales: number
+    change: number
+    image: string
+  }[]
   salesData: {
-    labels: ["Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec", "Jan"],
-    datasets: [
-      {
-        label: "This Year",
-        data: [30000, 35000, 32000, 40000, 45591, 50000, 55000, 58000, 56000, 60000, 62000, 65000],
-        borderColor: "rgb(59, 130, 246)",
-        backgroundColor: "rgba(59, 130, 246, 0.1)",
-        borderWidth: 2,
-        fill: true,
-        tension: 0.4,
-        pointBackgroundColor: "rgb(59, 130, 246)",
-        pointBorderColor: "#fff",
-        pointBorderWidth: 2,
-        pointRadius: 0,
-        pointHoverRadius: 4,
-      },
-      {
-        label: "Last Year",
-        data: [25000, 28000, 30000, 35000, 38000, 40000, 42000, 45000, 43000, 47000, 49000, 51000],
-        borderColor: "rgba(99, 102, 241, 0.5)",
-        backgroundColor: "rgba(99, 102, 241, 0.1)",
-        borderWidth: 2,
-        fill: true,
-        tension: 0.4,
-        pointRadius: 0,
-      },
-    ],
-  },
+    labels: string[]
+    datasets: {
+      label: string
+      data: number[]
+      borderColor: string
+      backgroundColor: string
+      borderWidth: number
+      fill: boolean
+      tension: number
+      pointBackgroundColor: string
+      pointBorderColor: string
+      pointBorderWidth: number
+      pointRadius: number | number[]
+      pointHoverRadius: number
+    }[]
+  }
   highlightedMonth: {
-    month: "June 2021",
-    value: 45591,
-  },
+    month: string
+    value: number
+  }
 }
 
 export default function Dashboard() {
   const [timeFilter, setTimeFilter] = useState("12 Months")
-  const [chartData, setChartData] = useState(dashboardData.salesData)
+  const [dashboardData, setDashboardData] = useState<DashboardData | null>(null)
+  const [isLoading, setIsLoading] = useState(true)
+  const [error, setError] = useState<string | null>(null)
+  const [customGoal, setCustomGoal] = useState<number | null>(null)
+  const [isGoalModalOpen, setIsGoalModalOpen] = useState(false)
+  const [goalInput, setGoalInput] = useState<string>("")
 
-  // Fix for the pointRadius issue - create a copy of the data and modify it
+  // Fetch and process data
   useEffect(() => {
-    const juneIndex = dashboardData.salesData.labels.indexOf("Jun")
-    if (juneIndex !== -1) {
-      const newData = JSON.parse(JSON.stringify(dashboardData.salesData))
-      newData.datasets[0].pointRadius = Array(dashboardData.salesData.labels.length).fill(0)
-      newData.datasets[0].pointRadius[juneIndex] = 4
-      setChartData(newData)
-    }
-  }, [])
+    const fetchData = async () => {
+      setIsLoading(true)
+      setError(null)
+      try {
+        // Fetch orders, tickets, and custom goal
+        const [ordersRes, ticketsRes, goalRes] = await Promise.all([
+          fetch('/api/orders'),
+          fetch('/api/tickets'),
+          fetch('/api/goal')
+        ])
+        if (!ordersRes.ok) throw new Error('Failed to fetch orders')
+        if (!ticketsRes.ok) throw new Error('Failed to fetch tickets')
+        if (!goalRes.ok) throw new Error('Failed to fetch goal')
 
-  // Chart options with proper TypeScript types
-  const chartOptions: ChartOptions<'line'> = {
-    responsive: true,
-    maintainAspectRatio: false,
-    plugins: {
-      legend: {
-        display: false,
-      },
-      tooltip: {
-        mode: 'index' as const,
-        intersect: false,
-      },
-    },
-    scales: {
-      x: {
-        grid: {
-          display: false,
-        },
-      },
-      y: {
-        grid: {
-          color: "rgba(0, 0, 0, 0.05)",
-        },
-        ticks: {
-          callback: (value) => `$${Number(value) / 1000}k`,
-        },
-      },
-    },
-    elements: {
-      point: {
-        radius: 0,
-      },
-    },
-    interaction: {
-      mode: 'nearest' as const,
-      axis: 'x' as const,
-      intersect: false,
-    },
+        const { data: orders }: { data: Order[] } = await ordersRes.json()
+        const tickets: Ticket[] = await ticketsRes.json()
+        const { goal }: { goal: number | null } = await goalRes.json()
+
+        // Set custom goal from API if available
+        if (goal !== null) {
+          setCustomGoal(goal)
+        }
+
+        // Process orders for metrics
+        const today = new Date('2025-06-30T00:00:00Z') // June 30, 2025, 00:00 UTC
+        const yesterday = new Date(today)
+        yesterday.setDate(today.getDate() - 1)
+        const currentYear = today.getFullYear()
+        const lastYear = currentYear - 1
+        const lastMonth = new Date(today)
+        lastMonth.setMonth(today.getMonth() - 1)
+
+        // Today's sales
+        const todaySales = orders
+          .filter(order => {
+            const orderDate = new Date(order.orders.createdAt)
+            return orderDate >= today && order.orders.status === 'confirmed'
+          })
+          .reduce((sum, order) => sum + parseFloat(order.orders.totalAmount), 0)
+
+        const yesterdaySales = orders
+          .filter(order => {
+            const orderDate = new Date(order.orders.createdAt)
+            return orderDate >= yesterday && orderDate < today && order.orders.status === 'confirmed'
+          })
+          .reduce((sum, order) => sum + parseFloat(order.orders.totalAmount), 0)
+
+        const todaySalesIncrease = todaySales >= yesterdaySales
+
+        // Total sales (current year)
+        const totalSales = orders
+          .filter(order => {
+            const orderDate = new Date(order.orders.createdAt)
+            return orderDate.getFullYear() === currentYear && order.orders.status === 'confirmed'
+          })
+          .reduce((sum, order) => sum + parseFloat(order.orders.totalAmount), 0)
+
+        const lastYearSales = orders
+          .filter(order => {
+            const orderDate = new Date(order.orders.createdAt)
+            return orderDate.getFullYear() === lastYear && order.orders.status === 'confirmed'
+          })
+          .reduce((sum, order) => sum + parseFloat(order.orders.totalAmount), 0)
+
+        const totalSalesIncrease = totalSales >= lastYearSales
+
+        // Total orders
+        const totalOrders = orders.filter(order => {
+          const orderDate = new Date(order.orders.createdAt)
+          return orderDate.getFullYear() === currentYear
+        }).length
+
+        const lastYearOrders = orders.filter(order => {
+          const orderDate = new Date(order.orders.createdAt)
+          return orderDate.getFullYear() === lastYear
+        }).length
+
+        const totalOrdersIncrease = totalOrders >= lastYearOrders
+
+        // Open tickets
+        const openTickets = tickets.filter(ticket => ticket.status === 'active' || ticket.status === 'inactive').length
+        const lastMonthOpenTickets = tickets.filter(ticket => {
+          const ticketDate = new Date(ticket.createdAt)
+          return ticketDate.getMonth() === lastMonth.getMonth() && ticketDate.getFullYear() === lastMonth.getFullYear() && (ticket.status === 'active' || ticket.status === 'inactive')
+        }).length
+
+        const openTicketsIncrease = openTickets >= lastMonthOpenTickets
+
+        // Dynamic annual goal (150% of last year's sales, unless custom goal is set)
+        const dynamicGoal = lastYearSales * 1.5 || 1000000 // Fallback to 1M if no last year data
+        const annualGoal = customGoal !== null ? customGoal : dynamicGoal
+
+        // Calculate sales by month for chart
+        const salesByMonth: { [key: string]: number } = {}
+        let months: string[] = []
+
+        if (timeFilter === "12 Months") {
+          months = Array.from({ length: 12 }, (_, i) => {
+            const date = new Date(today.getFullYear(), today.getMonth() - i, 1)
+            return date.toLocaleString('default', { month: 'short', year: 'numeric' })
+          }).reverse()
+        } else if (timeFilter === "6 Months") {
+          months = Array.from({ length: 6 }, (_, i) => {
+            const date = new Date(today.getFullYear(), today.getMonth() - i, 1)
+            return date.toLocaleString('default', { month: 'short', year: 'numeric' })
+          }).reverse()
+        } else if (timeFilter === "30 Days") {
+          months = Array.from({ length: 4 }, (_, i) => {
+            const date = new Date(today.getTime() - (i * 7 * 24 * 60 * 60 * 1000))
+            return date.toLocaleString('default', { day: 'numeric', month: 'short' })
+          }).reverse()
+        } else if (timeFilter === "7 Days") {
+          months = Array.from({ length: 7 }, (_, i) => {
+            const date = new Date(today.getTime() - (i * 24 * 60 * 60 * 1000))
+            return date.toLocaleString('default', { day: 'numeric', month: 'short' })
+          }).reverse()
+        }
+
+        orders
+          .filter(order => order.orders.status === 'confirmed')
+          .forEach(order => {
+            const date = new Date(order.orders.createdAt)
+            const month = timeFilter === "12 Months" || timeFilter === "6 Months"
+              ? date.toLocaleString('default', { month: 'short', year: 'numeric' })
+              : date.toLocaleString('default', { day: 'numeric', month: 'short' })
+            salesByMonth[month] = (salesByMonth[month] || 0) + parseFloat(order.orders.totalAmount)
+          })
+
+        const salesData = {
+          labels: months,
+          datasets: [
+            {
+              label: "Sales",
+              data: months.map(month => salesByMonth[month] || 0),
+              borderColor: "rgb(59, 130, 246)",
+              backgroundColor: "rgba(59, 130, 246, 0.1)",
+              borderWidth: 2,
+              fill: true,
+              tension: 0.4,
+              pointBackgroundColor: "rgb(59, 130, 246)",
+              pointBorderColor: "#fff",
+              pointBorderWidth: 2,
+              pointRadius: months.map((month, i) => (month.includes('Jun') ? 4 : 0)),
+              pointHoverRadius: 6,
+            }
+          ]
+        }
+
+        // Calculate top products
+        const productSales: { [key: string]: { sales: number; name: string; image: string } } = {}
+        orders.forEach(order => {
+          if (order.variants) {
+            const productId = order.variants.name.split(' - ')[0]
+            if (!productSales[productId]) {
+              productSales[productId] = {
+                sales: 0,
+                name: order.variants.name.split(' - ')[0],
+                image: order.variants.productImages[0]?.url || '/placeholder.svg'
+              }
+            }
+            productSales[productId].sales += parseFloat(order.orders.totalAmount)
+          }
+        })
+
+        const topProducts = Object.entries(productSales)
+          .map(([id, data]) => ({
+            id,
+            name: data.name,
+            sales: Math.round(data.sales),
+            change: Math.round(Math.random() * 50) + 20, // Placeholder
+            image: data.image
+          }))
+          .sort((a, b) => b.sales - a.sales)
+          .slice(0, 4)
+
+        // Set dashboard data
+        setDashboardData({
+          metrics: {
+            todaySale: { value: todaySales, increase: todaySalesIncrease },
+            totalSales: { value: totalSales, increase: totalSalesIncrease },
+            totalOrders: { value: totalOrders, increase: totalOrdersIncrease },
+            openTickets: { value: openTickets, increase: openTicketsIncrease },
+          },
+          revenueTarget: {
+            current: totalSales,
+            target: annualGoal,
+            percentage: Math.min((totalSales / annualGoal) * 100, 100)
+          },
+          transactions: orders
+            .filter(order => order.variants)
+            .map(order => ({
+              id: order.orders.id,
+              status: order.orders.status,
+              paymentType: order.orders.paymentMethod,
+              amount: parseFloat(order.orders.totalAmount),
+              date: new Date(order.orders.createdAt).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }),
+              variantName: order.variants!.name.split(' - ')[0],
+              customer: order.savedAddresses.fullName,
+              city: order.savedAddresses.city
+            }))
+            .slice(0, 5),
+          topProducts,
+          salesData,
+          highlightedMonth: {
+            month: "June 2025",
+            value: salesByMonth['Jun 2025'] || 56999
+          }
+        })
+      } catch (error) {
+        console.error('Error fetching data:', error)
+        setError('Failed to load dashboard data. Please try again.')
+      } finally {
+        setIsLoading(false)
+      }
+    }
+
+    fetchData()
+  }, [timeFilter, customGoal])
+
+  // Handle goal submission
+  const handleSetGoal = async () => {
+    const amount = parseFloat(goalInput)
+    if (isNaN(amount) || amount <= 0) {
+      alert('Please enter a valid goal amount')
+      return
+    }
+
+    try {
+      const response = await fetch('/api/goal', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ amount })
+      })
+
+      if (!response.ok) throw new Error('Failed to set goal')
+      setCustomGoal(amount)
+      setIsGoalModalOpen(false)
+      setGoalInput("")
+    } catch (error) {
+      console.error('Error setting goal:', error)
+      alert('Failed to set goal. Please try again.')
+    }
+  }
+
+  // Export sales report to Excel
+  const exportToExcel = () => {
+    if (!dashboardData) return
+
+    const salesReport = dashboardData.salesData.labels.map((label, index) => ({
+      Period: label,
+      Sales: dashboardData!.salesData.datasets[0].data[index]
+    }))
+
+    const worksheet = XLSX.utils.json_to_sheet(salesReport)
+    const workbook = XLSX.utils.book_new()
+    XLSX.utils.book_append_sheet(workbook, worksheet, "Sales Report")
+    XLSX.writeFile(workbook, `Sales_Report_${timeFilter.replace(' ', '_')}_${new Date().toISOString().split('T')[0]}.xlsx`)
   }
 
   // Format currency
   const formatCurrency = (value: number) => {
     return new Intl.NumberFormat("en-US", {
       style: "currency",
-      currency: "USD",
+      currency: "INR",
       minimumFractionDigits: 0,
-      maximumFractionDigits: 0,
+      maximumFractionDigits: 0
     }).format(value)
   }
 
-  return (
-    <div className="min-h-screen p-4">
-      {/* Metrics Row */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-4">
-        {/* Today's Sale */}
-        <div className="bg-white rounded-lg p-5 border border-gray-200 shadow-sm">
-          <div className="text-gray-500 text-xs font-medium mb-1">TODAY&apos;S SALE</div>
-          <div className="flex items-center justify-between">
-            <div className="text-2xl font-bold">{formatCurrency(dashboardData.metrics.todaySale.value)}</div>
-            <div
-              className={`text-xs font-medium ${
-                dashboardData.metrics.todaySale.increase ? "text-green-500" : "text-red-500"
-              }`}
-            >
-              {dashboardData.metrics.todaySale.increase ? "+" : "-"}
-              {dashboardData.metrics.todaySale.change}%{" "}
-              {dashboardData.metrics.todaySale.increase ? "↑" : "↓"}
-            </div>
-          </div>
-        </div>
-
-        {/* Total Sales */}
-        <div className="bg-white rounded-lg p-5 border border-gray-200 shadow-sm">
-          <div className="text-gray-500 text-xs font-medium mb-1">TOTAL SALES</div>
-          <div className="flex items-center justify-between">
-            <div className="text-2xl font-bold">{formatCurrency(dashboardData.metrics.totalSales.value)}</div>
-            <div
-              className={`text-xs font-medium ${
-                dashboardData.metrics.totalSales.increase ? "text-green-500" : "text-red-500"
-              }`}
-            >
-              {dashboardData.metrics.totalSales.increase ? "+" : "-"}
-              {dashboardData.metrics.totalSales.change}%{" "}
-              {dashboardData.metrics.totalSales.increase ? "↑" : "↓"}
-            </div>
-          </div>
-        </div>
-
-        {/* Total Orders */}
-        <div className="bg-white rounded-lg p-5 border border-gray-200 shadow-sm">
-          <div className="text-gray-500 text-xs font-medium mb-1">TOTAL ORDERS</div>
-          <div className="flex items-center justify-between">
-            <div className="text-2xl font-bold">{dashboardData.metrics.totalOrders.value.toLocaleString()}</div>
-            <div
-              className={`text-xs font-medium ${
-                dashboardData.metrics.totalOrders.increase ? "text-green-500" : "text-red-500"
-              }`}
-            >
-              {dashboardData.metrics.totalOrders.increase ? "+" : "-"}
-              {dashboardData.metrics.totalOrders.change}%{" "}
-              {dashboardData.metrics.totalOrders.increase ? "↑" : "↓"}
-            </div>
-          </div>
-        </div>
-
-        {/* Open Tickets */}
-        <div className="bg-white rounded-lg p-5 border border-gray-200 shadow-sm">
-          <div className="text-gray-500 text-xs font-medium mb-1">OPEN TICKETS</div>
-          <div className="flex items-center justify-between">
-            <div className="text-2xl font-bold">{dashboardData.metrics.openTickets.value}</div>
-            <div
-              className={`text-xs font-medium ${
-                dashboardData.metrics.openTickets.increase ? "text-red-500" : "text-green-500"
-              }`}
-            >
-              {dashboardData.metrics.openTickets.increase ? "+" : "-"}
-              {dashboardData.metrics.openTickets.change}%{" "}
-              {dashboardData.metrics.openTickets.increase ? "↑" : "↓"}
-            </div>
-          </div>
-        </div>
+  if (isLoading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-gray-100">
+        <Loader2 className="h-10 w-10 animate-spin text-blue-600" />
       </div>
+    )
+  }
 
-      {/* Charts Row */}
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 mb-4">
-        {/* Sales Report */}
-        <div className="bg-white rounded-lg p-5 lg:col-span-2 border border-gray-200 shadow-sm">
-          <div className="flex justify-between items-center mb-5">
-            <h2 className="text-lg font-bold">Sales Report</h2>
-            <div className="flex items-center">
-              <div className="flex space-x-2 mr-3">
-                <button
-                  className={`px-3 py-1 text-xs rounded-md ${
-                    timeFilter === "12 Months"
-                      ? "bg-gray-100 border border-gray-300"
-                      : "text-gray-500 hover:bg-gray-50"
-                  }`}
-                  onClick={() => setTimeFilter("12 Months")}
-                >
-                  12 Months
-                </button>
-                <button
-                  className={`px-3 py-1 text-xs rounded-md ${
-                    timeFilter === "6 Months" ? "bg-gray-100 border border-gray-300" : "text-gray-500 hover:bg-gray-50"
-                  }`}
-                  onClick={() => setTimeFilter("6 Months")}
-                >
-                  6 Months
-                </button>
-                <button
-                  className={`px-3 py-1 text-xs rounded-md ${
-                    timeFilter === "30 Days" ? "bg-gray-100 border border-gray-300" : "text-gray-500 hover:bg-gray-50"
-                  }`}
-                  onClick={() => setTimeFilter("30 Days")}
-                >
-                  30 Days
-                </button>
-                <button
-                  className={`px-3 py-1 text-xs rounded-md ${
-                    timeFilter === "7 Days" ? "bg-gray-100 border border-gray-300" : "text-gray-500 hover:bg-gray-50"
-                  }`}
-                  onClick={() => setTimeFilter("7 Days")}
-                >
-                  7 Days
-                </button>
-              </div>
-              <button className="flex items-center px-3 py-1 text-xs border border-gray-300 rounded-md">
-                <FileText className="h-3 w-3 mr-1" />
-                Export PDF
+  if (error) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-gray-100">
+        <div className="text-red-600 text-lg font-medium">{error}</div>
+      </div>
+    )
+  }
+
+  if (!dashboardData) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-gray-100">
+        <div className="text-gray-600 text-lg font-medium">No data available</div>
+      </div>
+    )
+  }
+
+  return (
+    <div className="min-h-screen">
+      {/* Goal Setting Modal */}
+      {isGoalModalOpen && (
+        <div className="fixed inset-0 bg-black/60 flex items-center justify-center z-50">
+          <div className="bg-white rounded-xl p-6 w-full max-w-md shadow-2xl">
+            <h3 className="text-lg font-bold text-gray-800 mb-4">Set Custom Revenue Goal</h3>
+            <input
+              type="number"
+              value={goalInput}
+              onChange={(e) => setGoalInput(e.target.value)}
+              placeholder="Enter goal amount (INR)"
+              className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 mb-4"
+            />
+            <div className="flex justify-end gap-3">
+              <button
+                onClick={() => setIsGoalModalOpen(false)}
+                className="px-4 py-2 text-gray-600 bg-gray-200 rounded-lg hover:bg-gray-300 transition-colors"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={handleSetGoal}
+                className="px-4 py-2 text-white bg-blue-600 rounded-lg hover:bg-blue-700 transition-colors"
+              >
+                Set Goal
               </button>
             </div>
           </div>
+        </div>
+      )}
 
-          {/* Highlighted Month - Fixed positioning issue */}
-          <div className="relative">
-            <div className="absolute left-[30%] top-0 bg-white border border-gray-200 rounded-md p-2 shadow-sm z-10">
-              <div className="text-xs text-gray-500">{dashboardData.highlightedMonth.month}</div>
-              <div className="text-sm font-bold">{formatCurrency(dashboardData.highlightedMonth.value)}</div>
+      {/* Metrics Row */}
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
+        {Object.entries(dashboardData.metrics).map(([key, metric]) => (
+          <div
+            key={key}
+            className="bg-white rounded-xl p-6 border border-gray-100  transition-all duration-300 transform hover:-translate-y-1"
+          >
+            <div className="text-gray-500 text-sm font-medium uppercase mb-3">
+              {key.replace(/([A-Z])/g, ' $1').trim()}
             </div>
+            <div className="flex items-center justify-between">
+              <div className="text-3xl font-bold text-gray-900">
+                {key === 'totalOrders' || key === 'openTickets' ? metric.value.toLocaleString() : formatCurrency(metric.value)}
+              </div>
+              <div className={metric.increase ? 'text-green-500' : 'text-red-500'}>
+                {metric.increase ? <ArrowUp className="h-6 w-6" /> : <ArrowDown className="h-6 w-6" />}
+              </div>
+            </div>
+          </div>
+        ))}
+      </div>
 
-            {/* Chart */}
-            <div className="h-64 pt-8">
-              <Line data={chartData} options={chartOptions} />
+      {/* Charts Row */}
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-8">
+        {/* Sales Report */}
+        <div className="bg-white rounded-xl border border-gray-100 p-6 lg:col-span-2 ">
+          <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-6 gap-4">
+            <h2 className="text-2xl font-bold text-gray-900">Sales Report</h2>
+            <div className="flex flex-wrap items-center gap-3">
+              {["12 Months", "6 Months", "30 Days", "7 Days"].map(filter => (
+                <button
+                  key={filter}
+                  className={`px-4 py-2 text-sm font-medium rounded-lg transition-colors ${
+                    timeFilter === filter
+                      ? 'bg-blue-600 text-white'
+                      : 'bg-gray-100 text-gray-700 hover:bg-blue-100'
+                  }`}
+                  onClick={() => setTimeFilter(filter)}
+                >
+                  {filter}
+                </button>
+              ))}
+              <button
+                className="flex items-center px-4 py-2 text-sm font-medium text-gray-700 bg-gray-100 rounded-lg hover:bg-blue-100 transition-colors"
+                onClick={exportToExcel}
+              >
+                <FileText className="h-5 w-5 mr-2" />
+                Export to Excel
+              </button>
+            </div>
+          </div>
+          <div className="relative">
+            {/* <div className="absolute left-1/3 top-4 bg-white border border-gray-200 rounded-lg p-4  z-10">
+              <div className="text-sm text-gray-500 font-medium">
+                {dashboardData.highlightedMonth.month}
+              </div>
+              <div className="text-lg font-bold text-gray-900">
+                {formatCurrency(dashboardData.highlightedMonth.value)}
+              </div>
+            </div> */}
+            <div className="h-96 pt-12">
+              <Line
+                data={dashboardData.salesData}
+                options={{
+                  responsive: true,
+                  plugins: {
+                    legend: {
+                      display: true,
+                      position: 'top',
+                      labels: {
+                        color: '#1f2937',
+                        font: { size: 14 }
+                      }
+                    },
+                    tooltip: {
+                      enabled: true,
+                      callbacks: {
+                        label: function(context: any) {
+                          if (typeof context.parsed.y === 'number') {
+                            return `₹${context.parsed.y.toLocaleString()}`;
+                          }
+                          return context.parsed.y;
+                        }
+                      }
+                    },
+                  },
+                  scales: {
+                    x: {
+                      grid: { display: false },
+                      ticks: { color: '#4b5563', font: { size: 12 } }
+                    },
+                    y: {
+                      grid: { color: '#e5e7eb' },
+                      ticks: {
+                        color: '#4b5563',
+                        font: { size: 12 },
+                        callback: function(value: any) {
+                          if (typeof value === 'number') {
+                            return `₹${value.toLocaleString()}`;
+                          }
+                          return value;
+                        }
+                      }
+                    }
+                  }
+                }}
+              />
             </div>
           </div>
         </div>
 
         {/* Revenue Target */}
-        <div className="bg-white rounded-lg p-5 border border-gray-200 shadow-sm">
-          <div className="flex justify-between items-center mb-5">
-            <h2 className="text-lg font-bold">Revenue</h2>
-            <span className="text-blue-500 font-bold text-sm">Target</span>
+        <div className="bg-white rounded-xl p-6 border border-gray-100 ">
+          <div className="flex justify-between items-center mb-6">
+            <h2 className="text-2xl font-bold text-gray-900">Revenue Target</h2>
+            <button
+              onClick={() => setIsGoalModalOpen(true)}
+              className="flex items-center text-blue-600 font-semibold text-sm hover:text-blue-700 transition-colors"
+            >
+              <Target className="h-5 w-5 mr-2" />
+              Set Goal
+            </button>
           </div>
-
-          {/* Gauge Chart */}
-          <div className="flex justify-center mb-5">
-            <div className="relative w-48 h-24">
+          <div className="flex justify-center mb-6">
+            <div className="relative w-64 h-32">
               <svg className="w-full h-full" viewBox="0 0 100 50">
-                {/* Background arc */}
                 <path
                   d="M5,50 A45,45 0 0,1 95,50"
                   fill="none"
-                  stroke="#f3f4f6"
-                  strokeWidth="10"
+                  stroke="#e5e7eb"
+                  strokeWidth="12"
                   strokeLinecap="round"
                 />
-                {/* Foreground arc */}
                 <path
                   d="M5,50 A45,45 0 0,1 95,50"
                   fill="none"
                   stroke="#3b82f6"
-                  strokeWidth="10"
+                  strokeWidth="12"
                   strokeLinecap="round"
                   strokeDasharray={`${dashboardData.revenueTarget.percentage * 0.9}, 100`}
                 />
               </svg>
+              <div className="absolute inset-0 flex items-center justify-center">
+                <span className="text-3xl font-bold text-gray-900">
+                  {dashboardData.revenueTarget.percentage.toFixed(1)}%
+                </span>
+              </div>
             </div>
           </div>
-
-          {/* Revenue Amount */}
           <div className="text-center">
-            <div className="text-2xl font-bold mb-1">{formatCurrency(dashboardData.revenueTarget.current)}</div>
-            <div className="text-xs text-gray-500">
-              <span className="text-green-500 font-medium">{dashboardData.revenueTarget.percentage}%</span> of{" "}
-              {formatCurrency(dashboardData.revenueTarget.target)} target
+            <div className="text-2xl font-bold text-gray-900 mb-2">
+              {formatCurrency(dashboardData.revenueTarget.current)}
+            </div>
+            <div className="text-sm text-gray-600">
+              of {formatCurrency(dashboardData.revenueTarget.target)} goal
             </div>
           </div>
         </div>
       </div>
 
       {/* Bottom Row */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
-        {/* Transactions */}
-        <div className="bg-white rounded-lg p-5 border border-gray-200 shadow-sm">
-          <div className="flex justify-between items-center mb-3">
-            <h2 className="text-lg font-bold">Transactions</h2>
-            <button className="text-blue-500 flex items-center text-xs font-medium">
-              See All Transactions <ArrowRight className="h-3 w-3 ml-1" />
-            </button>
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        {/* Recent Transactions */}
+        <div className="bg-white rounded-xl p-6 border border-gray-100 ">
+          <div className="flex justify-between items-center mb-6">
+            <h2 className="text-2xl font-bold text-gray-900">Recent Transactions</h2>
+            <Link href={'/admin/orders'} className="text-blue-600 flex items-center text-sm font-semibold hover:underline">
+              See All Transactions <ArrowRight className="h-5 w-5 ml-2" />
+            </Link>
           </div>
-          <p className="text-gray-500 text-xs mb-4">Lorem ipsum dolor sit amet, consectetur adipis.</p>
-
-          {/* Transaction List */}
-          <div className="space-y-4">
+          <div className="space-y-6">
             {dashboardData.transactions.map((transaction) => (
-              <div key={transaction.id} className="border-b border-gray-100 pb-4">
-                <div className="flex items-center mb-2">
+              <div key={transaction.id} className="border-b border-gray-200 pb-6">
+                <div className="flex items-center mb-3">
                   <div
-                    className={`w-2 h-2 rounded-full mr-2 ${
-                      transaction.status === "completed"
-                        ? "bg-green-500"
-                        : transaction.status === "pending"
-                        ? "bg-yellow-500"
-                        : "bg-red-500"
+                    className={`w-3 h-3 rounded-full mr-2 ${
+                      transaction.status === 'confirmed' ? 'bg-green-500' :
+                      transaction.status === 'pending' ? 'bg-yellow-500' :
+                      transaction.status === 'cancelled' ? 'bg-red-500' : 'bg-gray-500'
                     }`}
                   ></div>
                   <span
-                    className={`text-xs ${
-                      transaction.status === "completed"
-                        ? "text-green-500"
-                        : transaction.status === "pending"
-                        ? "text-yellow-500"
-                        : "text-red-500"
-                    } capitalize`}
+                    className={`text-sm capitalize font-medium ${
+                      transaction.status === 'confirmed' ? 'text-green-600' :
+                      transaction.status === 'pending' ? 'text-yellow-600' :
+                      transaction.status === 'cancelled' ? 'text-red-600' : 'text-gray-600'
+                    }`}
                   >
                     {transaction.status}
                   </span>
                 </div>
-
-                <div className="flex justify-between">
+                <div className="flex justify-between items-start">
                   <div>
-                    <div className="text-sm font-medium">
-                      {transaction.cardType} {transaction.cardNumber}
-                    </div>
-                    <div className="text-xs text-gray-500">{transaction.paymentType}</div>
+                    <div className="text-sm font-semibold text-gray-900">{transaction.variantName}</div>
+                    <div className="text-xs text-gray-600 mt-1">{transaction.customer} • {transaction.city}</div>
+                    <div className="text-xs text-gray-600 capitalize mt-1">{transaction.paymentType}</div>
                   </div>
                   <div className="text-right">
-                    <div className="text-sm font-medium">${transaction.amount}</div>
-                    <div className="text-xs text-gray-500">{transaction.date}</div>
+                    <div className="text-sm font-semibold text-gray-900">{formatCurrency(transaction.amount)}</div>
+                    <div className="text-xs text-gray-600 mt-1">{transaction.date}</div>
                   </div>
                 </div>
-
-                <div className="flex justify-between items-center mt-2">
-                  <div className="text-xs text-gray-500">{transaction.merchant}</div>
-                  <button className="text-gray-400">
-                    <MoreHorizontal className="h-4 w-4" />
+                <div className="flex justify-end mt-3">
+                  <button className="text-gray-500 hover:text-gray-700 transition-colors">
+                    <MoreHorizontal className="h-5 w-5" />
                   </button>
                 </div>
               </div>
@@ -438,35 +645,31 @@ export default function Dashboard() {
         </div>
 
         {/* Top Products */}
-        <div className="bg-white rounded-lg p-5 border border-gray-200 shadow-sm">
-          <h2 className="text-lg font-bold mb-5">Top Products</h2>
-
-          {/* Product List */}
-          <div className="space-y-4">
+        <div className="bg-white rounded-xl p-6 border border-gray-100 ">
+          <h2 className="text-2xl font-bold text-gray-900 mb-6">Top Products</h2>
+          <div className="space-y-6">
             {dashboardData.topProducts.map((product) => (
               <div key={product.id} className="flex items-center">
-                <div className="w-10 h-10 bg-gray-100 rounded-md flex items-center justify-center mr-3">
+                <div className="w-14 h-14 bg-gray-100 rounded-lg flex items-center justify-center mr-4">
                   <img
-                    src={product.image || "/placeholder.svg"}
+                    src={product.image}
                     alt={product.name}
-                    className="w-7 h-7 object-contain"
-                    onError={(e) => {
-                      ;(e.target as HTMLImageElement).src = "/placeholder.svg"
-                    }}
+                    className="w-10 h-10 object-contain"
+                    onError={(e) => { (e.target as HTMLImageElement).src = '/placeholder.svg' }}
                   />
                 </div>
                 <div className="flex-1">
-                  <div className="text-sm font-medium">{product.name}</div>
-                  <div className="w-full bg-blue-100 h-1.5 rounded-full mt-1">
+                  <div className="text-sm font-semibold text-gray-900">{product.name}</div>
+                  <div className="w-full bg-gray-200 h-2 rounded-full mt-2">
                     <div
-                      className="bg-blue-500 h-1.5 rounded-full"
-                      style={{ width: `${(product.sales / 600) * 100}%` }}
+                      className="bg-blue-600 h-2 rounded-full transition-all duration-300"
+                      style={{ width: `${(product.sales / Math.max(...dashboardData.topProducts.map(p => p.sales))) * 100}%` }}
                     ></div>
                   </div>
                 </div>
                 <div className="text-right">
-                  <div className="text-sm font-medium">{product.sales} Sales</div>
-                  <div className="text-green-500 text-xs">+{product.change}% ↑</div>
+                  <div className="text-sm font-semibold text-gray-900">{formatCurrency(product.sales)}</div>
+                  <div className="text-xs text-green-600 mt-1">+{product.change}% ↑</div>
                 </div>
               </div>
             ))}

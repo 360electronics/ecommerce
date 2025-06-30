@@ -8,6 +8,8 @@ import { Label } from '@/components/ui/label';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Textarea } from '@/components/ui/textarea';
+import { toast, Toaster } from 'react-hot-toast';
+import { ArrowLeft } from 'lucide-react';
 
 // Define types for form and preset data
 type Preset = {
@@ -207,10 +209,10 @@ export default function AddCategoryPage() {
 
       if (!response.ok) {
         const errorData = await response.json();
-        console.error('Error data:', errorData);
         throw new Error(errorData.error || 'Failed to create category');
       }
 
+      toast.success('Category created successfully');
       setFormData({
         name: '',
         slug: '',
@@ -230,245 +232,321 @@ export default function AddCategoryPage() {
     }
   };
 
-  if (loading) return <div>Loading presets...</div>;
-  if (serverError && Object.keys(presets).length === 0) return <div>Error: {serverError}</div>;
+  if (loading) {
+    return (
+      <div className="flex items-center justify-center min-h-screen bg-gray-50">
+        <div className="flex items-center space-x-3">
+          <div className="animate-spin rounded-full h-8 w-8 border-t-2 border-blue-500"></div>
+          <span className="text-gray-600 text-lg">Loading presets...</span>
+        </div>
+      </div>
+    );
+  }
+
+  if (serverError && Object.keys(presets).length === 0) {
+    return (
+      <div className="container mx-auto p-6 bg-gray-50 min-h-screen">
+        <div className="text-red-500 bg-red-50 p-4 rounded-md border border-gray-200">
+          Error: {serverError}
+        </div>
+      </div>
+    );
+  }
 
   return (
-    <div className="container mx-auto p-4">
-      <h1 className="text-2xl font-bold mb-4">Add New Category</h1>
-      {serverError && <div className="text-red-500 mb-4">{serverError}</div>}
-      <form onSubmit={handleSubmit} className="space-y-6">
-        <div>
-          <Label htmlFor="name">Name</Label>
-          <Input
-            id="name"
-            value={formData.name}
-            onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-          />
-          {errors.name && <p className="text-red-500 text-sm">{errors.name}</p>}
+    <div className="container mx-auto p-6 bg-gray-50 min-h-screen">
+      <Toaster position="top-right" />
+      <div className="mb-6 flex items-center justify-between">
+        <div className="flex items-center space-x-3">
+          <Button
+            variant="outline"
+            className="border-gray-200 hover:bg-gray-100"
+            onClick={() => router.push('/admin/categories')}
+            aria-label="Back to categories"
+          >
+            <ArrowLeft className="h-5 w-5" />
+          </Button>
+          <h1 className="text-2xl font-bold text-gray-800">Add New Category</h1>
         </div>
+      </div>
+      <div className="bg-white border border-gray-200 rounded-lg p-6">
+        {serverError && (
+          <div className="text-red-500 bg-red-50 p-4 rounded-md border border-gray-200 mb-6">
+            {serverError}
+          </div>
+        )}
+        <form onSubmit={handleSubmit} className="space-y-6">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+            <div>
+              <Label htmlFor="name" className="text-gray-700">Name</Label>
+              <Input
+                id="name"
+                value={formData.name}
+                onChange={(e) => setFormData({ ...formData, name: e.target.value })}
+                className="border-gray-200 focus:ring-2 focus:ring-blue-500"
+                placeholder="Enter category name"
+              />
+              {errors.name && <p className="text-red-500 text-sm mt-1">{errors.name}</p>}
+            </div>
 
-        <div>
-          <Label htmlFor="slug">Slug</Label>
-          <Input
-            id="slug"
-            value={formData.slug}
-            onChange={(e) => setFormData({ ...formData, slug: e.target.value })}
-          />
-          {errors.slug && <p className="text-red-500 text-sm">{errors.slug}</p>}
-        </div>
+            <div>
+              <Label htmlFor="slug" className="text-gray-700">Slug</Label>
+              <Input
+                id="slug"
+                value={formData.slug}
+                onChange={(e) => setFormData({ ...formData, slug: e.target.value })}
+                className="border-gray-200 focus:ring-2 focus:ring-blue-500"
+                placeholder="Enter category slug"
+              />
+              {errors.slug && <p className="text-red-500 text-sm mt-1">{errors.slug}</p>}
+            </div>
+          </div>
 
-        <div>
-          <Label htmlFor="description">Description</Label>
-          <Textarea
-            id="description"
-            value={formData.description}
-            onChange={(e) => setFormData({ ...formData, description: e.target.value })}
-          />
-        </div>
+          <div>
+            <Label htmlFor="description" className="text-gray-700">Description</Label>
+            <Textarea
+              id="description"
+              value={formData.description}
+              onChange={(e) => setFormData({ ...formData, description: e.target.value })}
+              className="border-gray-200 focus:ring-2 focus:ring-blue-500"
+              placeholder="Enter category description"
+              rows={4}
+            />
+          </div>
 
-        <div>
-          <Label htmlFor="imageUrl">Image URL</Label>
-          <Input
-            id="imageUrl"
-            value={formData.imageUrl}
-            onChange={(e) => setFormData({ ...formData, imageUrl: e.target.value })}
-          />
-        </div>
+          <div>
+            <Label htmlFor="imageUrl" className="text-gray-700">Image URL</Label>
+            <Input
+              id="imageUrl"
+              value={formData.imageUrl}
+              onChange={(e) => setFormData({ ...formData, imageUrl: e.target.value })}
+              className="border-gray-200 focus:ring-2 focus:ring-blue-500"
+              placeholder="Enter image URL"
+            />
+          </div>
 
-        <div>
-          <Label htmlFor="preset">Preset</Label>
-          <Select onValueChange={handlePresetChange} value={formData.preset}>
-            <SelectTrigger>
-              <SelectValue placeholder="Select a preset" />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="">Custom</SelectItem>
-              {Object.values(presets).map((preset) => (
-                <SelectItem key={preset.category.slug} value={preset.category.slug}>
-                  {preset.category.name}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-        </div>
+          <div>
+            <Label htmlFor="preset" className="text-gray-700">Preset</Label>
+            <Select onValueChange={handlePresetChange} value={formData.preset}>
+              <SelectTrigger className="border-gray-200 focus:ring-2 focus:ring-blue-500">
+                <SelectValue placeholder="Select a preset" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="">Custom</SelectItem>
+                {Object.values(presets).map((preset) => (
+                  <SelectItem key={preset.category.slug} value={preset.category.slug}>
+                    {preset.category.name}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
 
-        <div>
-          <Label>Attributes</Label>
-          {formData.attributes.map((attr, index) => (
-            <div key={index} className="border p-4 mb-2 rounded space-y-2">
-              <div>
-                <Label htmlFor={`attribute-name-${index}`}>Name</Label>
-                <Input
-                  id={`attribute-name-${index}`}
-                  value={attr.name}
-                  onChange={(e) => {
-                    const newAttributes = [...formData.attributes];
-                    newAttributes[index].name = e.target.value;
-                    setFormData({ ...formData, attributes: newAttributes });
-                  }}
-                />
-                {errors.attributes?.[index]?.name && (
-                  <p className="text-red-500 text-sm">{errors.attributes[index].name}</p>
-                )}
-              </div>
-
-              <div>
-                <Label htmlFor={`attribute-type-${index}`}>Type</Label>
-                <Select
-                  value={attr.type}
-                  onValueChange={(value) => {
-                    const newAttributes = [...formData.attributes];
-                    newAttributes[index].type = value as 'text' | 'number' | 'boolean' | 'select';
-                    setFormData({ ...formData, attributes: newAttributes });
-                  }}
-                >
-                  <SelectTrigger>
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="text">Text</SelectItem>
-                    <SelectItem value="number">Number</SelectItem>
-                    <SelectItem value="boolean">Boolean</SelectItem>
-                    <SelectItem value="select">Select</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
-
-              {attr.type === 'select' && (
+          <div className="border border-gray-200 p-4 rounded-md">
+            <h2 className="text-lg font-semibold text-gray-800 mb-4">Attributes</h2>
+            {formData.attributes.map((attr, index) => (
+              <div key={index} className="border border-gray-200 p-4 mb-4 rounded-md space-y-4">
                 <div>
-                  <Label htmlFor={`attribute-options-${index}`}>Options (comma-separated)</Label>
+                  <Label htmlFor={`attribute-name-${index}`} className="text-gray-700">Name</Label>
                   <Input
-                    id={`attribute-options-${index}`}
-                    value={attr.options?.join(', ') || ''}
+                    id={`attribute-name-${index}`}
+                    value={attr.name}
                     onChange={(e) => {
-                      const options = e.target.value
-                        .split(',')
-                        .map((opt) => opt.trim())
-                        .filter(Boolean);
                       const newAttributes = [...formData.attributes];
-                      newAttributes[index].options = options;
+                      newAttributes[index].name = e.target.value;
                       setFormData({ ...formData, attributes: newAttributes });
                     }}
-                    placeholder="e.g., Red, Blue, Green"
+                    className="border-gray-200 focus:ring-2 focus:ring-blue-500"
+                    placeholder="Enter attribute name"
+                  />
+                  {errors.attributes?.[index]?.name && (
+                    <p className="text-red-500 text-sm mt-1">{errors.attributes[index].name}</p>
+                  )}
+                </div>
+
+                <div>
+                  <Label htmlFor={`attribute-type-${index}`} className="text-gray-700">Type</Label>
+                  <Select
+                    value={attr.type}
+                    onValueChange={(value) => {
+                      const newAttributes = [...formData.attributes];
+                      newAttributes[index].type = value as 'text' | 'number' | 'boolean' | 'select';
+                      setFormData({ ...formData, attributes: newAttributes });
+                    }}
+                  >
+                    <SelectTrigger className="border-gray-200 focus:ring-2 focus:ring-blue-500">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="text">Text</SelectItem>
+                      <SelectItem value="number">Number</SelectItem>
+                      <SelectItem value="boolean">Boolean</SelectItem>
+                      <SelectItem value="select">Select</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+
+                {attr.type === 'select' && (
+                  <div>
+                    <Label htmlFor={`attribute-options-${index}`} className="text-gray-700">Options (comma-separated)</Label>
+                    <Input
+                      id={`attribute-options-${index}`}
+                      value={attr.options?.join(', ') || ''}
+                      onChange={(e) => {
+                        const options = e.target.value
+                          .split(',')
+                          .map((opt) => opt.trim())
+                          .filter(Boolean);
+                        const newAttributes = [...formData.attributes];
+                        newAttributes[index].options = options;
+                        setFormData({ ...formData, attributes: newAttributes });
+                      }}
+                      className="border-gray-200 focus:ring-2 focus:ring-blue-500"
+                      placeholder="e.g., Red, Blue, Green"
+                    />
+                  </div>
+                )}
+
+                <div>
+                  <Label htmlFor={`attribute-unit-${index}`} className="text-gray-700">Unit (optional)</Label>
+                  <Input
+                    id={`attribute-unit-${index}`}
+                    value={attr.unit || ''}
+                    onChange={(e) => {
+                      const newAttributes = [...formData.attributes];
+                      newAttributes[index].unit = e.target.value || undefined;
+                      setFormData({ ...formData, attributes: newAttributes });
+                    }}
+                    className="border-gray-200 focus:ring-2 focus:ring-blue-500"
+                    placeholder="e.g., GHz, GB"
                   />
                 </div>
-              )}
 
-              <div>
-                <Label htmlFor={`attribute-unit-${index}`}>Unit (optional)</Label>
+                <div className="flex items-center space-x-4">
+                  <div className="flex items-center space-x-2">
+                    <Checkbox
+                      id={`attribute-filterable-${index}`}
+                      checked={attr.isFilterable}
+                      onCheckedChange={(checked) => {
+                        const newAttributes = [...formData.attributes];
+                        newAttributes[index].isFilterable = checked === true;
+                        setFormData({ ...formData, attributes: newAttributes });
+                      }}
+                      aria-label={`Filterable attribute ${index}`}
+                    />
+                    <Label htmlFor={`attribute-filterable-${index}`} className="text-gray-700">Filterable</Label>
+                  </div>
+
+                  <div className="flex items-center space-x-2">
+                    <Checkbox
+                      id={`attribute-required-${index}`}
+                      checked={attr.isRequired}
+                      onCheckedChange={(checked) => {
+                        const newAttributes = [...formData.attributes];
+                        newAttributes[index].isRequired = checked === true;
+                        setFormData({ ...formData, attributes: newAttributes });
+                      }}
+                      aria-label={`Required attribute ${index}`}
+                    />
+                    <Label htmlFor={`attribute-required-${index}`} className="text-gray-700">Required</Label>
+                  </div>
+                </div>
+
+                <Button
+                  type="button"
+                  variant="destructive"
+                  onClick={() => removeAttribute(index)}
+                  className="mt-2"
+                >
+                  Remove Attribute
+                </Button>
+              </div>
+            ))}
+            <Button
+              type="button"
+              variant="outline"
+              onClick={addCustomAttribute}
+              className="border-gray-200 hover:bg-gray-100"
+            >
+              Add Attribute
+            </Button>
+          </div>
+
+          <div className="border border-gray-200 p-4 rounded-md">
+            <h2 className="text-lg font-semibold text-gray-800 mb-4">Subcategories</h2>
+            {formData.subcategories.map((sub, index) => (
+              <div key={index} className="flex items-center space-x-4 mb-4">
                 <Input
-                  id={`attribute-unit-${index}`}
-                  value={attr.unit || ''}
+                  value={sub}
                   onChange={(e) => {
-                    const newAttributes = [...formData.attributes];
-                    newAttributes[index].unit = e.target.value || undefined;
-                    setFormData({ ...formData, attributes: newAttributes });
+                    const newSubcategories = [...formData.subcategories];
+                    newSubcategories[index] = e.target.value;
+                    setFormData({ ...formData, subcategories: newSubcategories });
                   }}
-                  placeholder="e.g., GHz, GB"
+                  className="border-gray-200 focus:ring-2 focus:ring-blue-500"
+                  placeholder="Enter subcategory name"
                 />
+                <Button
+                  type="button"
+                  variant="destructive"
+                  onClick={() => removeSubcategory(index)}
+                >
+                  Remove
+                </Button>
+                {errors.subcategories?.[index] && (
+                  <p className="text-red-500 text-sm">{errors.subcategories[index]}</p>
+                )}
               </div>
+            ))}
+            <Button
+              type="button"
+              variant="outline"
+              onClick={addCustomSubcategory}
+              className="border-gray-200 hover:bg-gray-100"
+            >
+              Add Subcategory
+            </Button>
+          </div>
 
-              <div className="flex items-center space-x-2">
-                <Checkbox
-                  id={`attribute-filterable-${index}`}
-                  checked={attr.isFilterable}
-                  onCheckedChange={(checked) => {
-                    const newAttributes = [...formData.attributes];
-                    newAttributes[index].isFilterable = checked as boolean;
-                    setFormData({ ...formData, attributes: newAttributes });
-                  }}
-                />
-                <Label htmlFor={`attribute-filterable-${index}`}>Filterable</Label>
-              </div>
-
-              <div className="flex items-center space-x-2">
-                <Checkbox
-                  id={`attribute-required-${index}`}
-                  checked={attr.isRequired}
-                  onCheckedChange={(checked) => {
-                    const newAttributes = [...formData.attributes];
-                    newAttributes[index].isRequired = checked as boolean;
-                    setFormData({ ...formData, attributes: newAttributes });
-                  }}
-                />
-                <Label htmlFor={`attribute-required-${index}`}>Required</Label>
-              </div>
-
-              <Button
-                type="button"
-                variant="destructive"
-                onClick={() => removeAttribute(index)}
-              >
-                Remove
-              </Button>
-            </div>
-          ))}
-          <Button type="button" variant="outline" onClick={addCustomAttribute}>
-            Add Attribute
-          </Button>
-        </div>
-
-        <div>
-          <Label>Subcategories</Label>
-          {formData.subcategories.map((sub, index) => (
-            <div key={index} className="flex items-center space-x-2 mb-2">
-              <Input
-                value={sub}
-                onChange={(e) => {
-                  const newSubcategories = [...formData.subcategories];
-                  newSubcategories[index] = e.target.value;
-                  setFormData({ ...formData, subcategories: newSubcategories });
-                }}
-                placeholder="Subcategory name"
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+            <div className="flex items-center space-x-2">
+              <Checkbox
+                id="isActive"
+                checked={formData.isActive}
+                onCheckedChange={(checked) => setFormData({ ...formData, isActive: checked === true })}
+                aria-label="Active category"
               />
-              <Button
-                type="button"
-                variant="destructive"
-                onClick={() => removeSubcategory(index)}
-              >
-                Remove
-              </Button>
-              {errors.subcategories?.[index] && (
-                <p className="text-red-500 text-sm">{errors.subcategories[index]}</p>
-              )}
+              <Label htmlFor="isActive" className="text-gray-700">Active</Label>
             </div>
-          ))}
-          <Button type="button" variant="outline" onClick={addCustomSubcategory}>
-            Add Subcategory
-          </Button>
-        </div>
 
-        <div className="flex items-center space-x-2">
-          <Checkbox
-            id="isActive"
-            checked={formData.isActive}
-            onCheckedChange={(checked) => setFormData({ ...formData, isActive: checked as boolean })}
-          />
-          <Label htmlFor="isActive">Active</Label>
-        </div>
+            <div>
+              <Label htmlFor="displayOrder" className="text-gray-700">Display Order</Label>
+              <Input
+                id="displayOrder"
+                type="number"
+                value={formData.displayOrder}
+                onChange={(e) => setFormData({ ...formData, displayOrder: parseInt(e.target.value) || 0 })}
+                className="border-gray-200 focus:ring-2 focus:ring-blue-500"
+                placeholder="Enter display order"
+              />
+            </div>
+          </div>
 
-        <div>
-          <Label htmlFor="displayOrder">Display Order</Label>
-          <Input
-            id="displayOrder"
-            type="number"
-            value={formData.displayOrder}
-            onChange={(e) => setFormData({ ...formData, displayOrder: parseInt(e.target.value) || 0 })}
-          />
-        </div>
-
-        <div className="flex space-x-2">
-          <Button type="submit">Create Category</Button>
-          <Button
-            type="button"
-            variant="outline"
-            onClick={() => router.push('/admin/categories')}
-          >
-            Cancel
-          </Button>
-        </div>
-      </form>
+          <div className="flex space-x-4">
+            <Button type="submit" className="bg-blue-600 hover:bg-blue-700">
+              Create Category
+            </Button>
+            <Button
+              type="button"
+              variant="outline"
+              onClick={() => router.push('/admin/categories')}
+              className="border-gray-200 hover:bg-gray-100"
+            >
+              Cancel
+            </Button>
+          </div>
+        </form>
+      </div>
     </div>
   );
 }

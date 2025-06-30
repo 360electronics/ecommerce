@@ -8,6 +8,10 @@ import { Label } from '@/components/ui/label';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Textarea } from '@/components/ui/textarea';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Alert, AlertDescription } from '@/components/ui/alert';
+import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
+import { ChevronDown, ChevronUp } from 'lucide-react';
 
 type Preset = {
   category: { id: string; name: string; slug: string };
@@ -70,6 +74,8 @@ export default function EditCategoryPage() {
   const [serverError, setServerError] = useState<string | null>(null);
   const [presets, setPresets] = useState<Record<string, Preset>>({});
   const [loading, setLoading] = useState(true);
+  const [openAttributes, setOpenAttributes] = useState<number[]>([]);
+  const [openSubcategories, setOpenSubcategories] = useState<number[]>([]);
 
   useEffect(() => {
     const fetchData = async () => {
@@ -161,6 +167,7 @@ export default function EditCategoryPage() {
         },
       ],
     });
+    setOpenAttributes([...openAttributes, formData.attributes.length]);
   };
 
   const removeAttribute = (index: number) => {
@@ -175,6 +182,7 @@ export default function EditCategoryPage() {
       }
       return newErrors;
     });
+    setOpenAttributes(openAttributes.filter((i) => i !== index));
   };
 
   const addCustomSubcategory = () => {
@@ -182,6 +190,7 @@ export default function EditCategoryPage() {
       ...formData,
       subcategories: [...formData.subcategories, ''],
     });
+    setOpenSubcategories([...openSubcategories, formData.subcategories.length]);
   };
 
   const removeSubcategory = (index: number) => {
@@ -196,6 +205,7 @@ export default function EditCategoryPage() {
       }
       return newErrors;
     });
+    setOpenSubcategories(openSubcategories.filter((i) => i !== index));
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -221,7 +231,6 @@ export default function EditCategoryPage() {
         attributes: formData.attributes,
         subcategoryNames: cleanedSubcategories,
       };
-      console.log('Submitting PATCH payload:', payload);
 
       const response = await fetch('/api/categories', {
         method: 'PATCH',
@@ -231,7 +240,6 @@ export default function EditCategoryPage() {
 
       if (!response.ok) {
         const errorData = await response.json();
-        console.error('Error data:', errorData);
         throw new Error(errorData.error || 'Failed to update category');
       }
 
@@ -241,236 +249,357 @@ export default function EditCategoryPage() {
     }
   };
 
-  if (loading) return <div>Loading...</div>;
-  if (serverError && !formData.name) return <div>Error: {serverError}</div>;
+  if (loading) {
+    return (
+      <div className="flex items-center justify-center h-screen">
+        <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-blue-500"></div>
+      </div>
+    );
+  }
+
+  if (serverError && !formData.name) {
+    return (
+      <div className="container mx-auto p-4">
+        <Alert variant="destructive">
+          <AlertDescription>{serverError}</AlertDescription>
+        </Alert>
+      </div>
+    );
+  }
 
   return (
-    <div className="container mx-auto p-4">
-      <h1 className="text-2xl font-bold mb-4">Edit Category</h1>
-      {serverError && <div className="text-red-500 mb-4">{serverError}</div>}
-      <form onSubmit={handleSubmit} className="space-y-6">
-        <div>
-          <Label htmlFor="name">Name</Label>
-          <Input
-            id="name"
-            value={formData.name}
-            onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-          />
-          {errors.name && <p className="text-red-500 text-sm">{errors.name}</p>}
-        </div>
-
-        <div>
-          <Label htmlFor="slug">Slug</Label>
-          <Input
-            id="slug"
-            value={formData.slug}
-            onChange={(e) => setFormData({ ...formData, slug: e.target.value })}
-          />
-          {errors.slug && <p className="text-red-500 text-sm">{errors.slug}</p>}
-        </div>
-
-        <div>
-          <Label htmlFor="description">Description</Label>
-          <Textarea
-            id="description"
-            value={formData.description}
-            onChange={(e) => setFormData({ ...formData, description: e.target.value })}
-          />
-        </div>
-
-        <div>
-          <Label htmlFor="imageUrl">Image URL</Label>
-          <Input
-            id="imageUrl"
-            value={formData.imageUrl}
-            onChange={(e) => setFormData({ ...formData, imageUrl: e.target.value })}
-          />
-        </div>
-
-        <div>
-          <Label htmlFor="preset">Preset</Label>
-          <Select onValueChange={handlePresetChange} value={formData.preset}>
-            <SelectTrigger>
-              <SelectValue placeholder="Select a preset" />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="">Custom</SelectItem>
-              {Object.values(presets).map((preset) => (
-                <SelectItem key={preset.category.slug} value={preset.category.slug}>
-                  {preset.category.name}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-        </div>
-
-        <div>
-          <Label>Attributes</Label>
-          {formData.attributes.map((attr, index) => (
-            <div key={index} className="border p-4 mb-2 rounded space-y-2">
+    <div className=" mx-auto p-6 ">
+      <h1 className="text-3xl font-bold mb-6 text-gray-800">Edit Category</h1>
+      {serverError && (
+        <Alert variant="destructive" className="mb-6">
+          <AlertDescription>{serverError}</AlertDescription>
+        </Alert>
+      )}
+      <form onSubmit={handleSubmit} className="space-y-8">
+        <Card>
+          <CardHeader>
+            <CardTitle>Basic Information</CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div>
-                <Label htmlFor={`attribute-name-${index}`}>Name</Label>
+                <Label htmlFor="name" className="text-sm font-medium text-gray-700">
+                  Name <span className="text-red-500">*</span>
+                </Label>
                 <Input
-                  id={`attribute-name-${index}`}
-                  value={attr.name}
-                  onChange={(e) => {
-                    const newAttributes = [...formData.attributes];
-                    newAttributes[index].name = e.target.value;
-                    setFormData({ ...formData, attributes: newAttributes });
-                  }}
+                  id="name"
+                  value={formData.name}
+                  onChange={(e) => setFormData({ ...formData, name: e.target.value })}
+                  className="mt-1"
+                  aria-required="true"
                 />
-                {errors.attributes?.[index]?.name && (
-                  <p className="text-red-500 text-sm">{errors.attributes[index].name}</p>
-                )}
+                {errors.name && <p className="text-red-500 text-sm mt-1">{errors.name}</p>}
               </div>
-
               <div>
-                <Label htmlFor={`attribute-type-${index}`}>Type</Label>
-                <Select
-                  value={attr.type}
-                  onValueChange={(value) => {
-                    const newAttributes = [...formData.attributes];
-                    newAttributes[index].type = value as 'text' | 'number' | 'boolean' | 'select';
-                    setFormData({ ...formData, attributes: newAttributes });
-                  }}
-                >
-                  <SelectTrigger>
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="text">Text</SelectItem>
-                    <SelectItem value="number">Number</SelectItem>
-                    <SelectItem value="boolean">Boolean</SelectItem>
-                    <SelectItem value="select">Select</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
-
-              {attr.type === 'select' && (
-                <div>
-                  <Label htmlFor={`attribute-options-${index}`}>Options (comma-separated)</Label>
-                  <Input
-                    id={`attribute-options-${index}`}
-                    value={attr.options?.join(', ') || ''}
-                    onChange={(e) => {
-                      const options = e.target.value
-                        .split(',')
-                        .map((opt) => opt.trim())
-                        .filter(Boolean);
-                      const newAttributes = [...formData.attributes];
-                      newAttributes[index].options = options;
-                      setFormData({ ...formData, attributes: newAttributes });
-                    }}
-                    placeholder="e.g., Red, Blue, Green"
-                  />
-                </div>
-              )}
-
-              <div>
-                <Label htmlFor={`attribute-unit-${index}`}>Unit (optional)</Label>
+                <Label htmlFor="slug" className="text-sm font-medium text-gray-700">
+                  Slug <span className="text-red-500">*</span>
+                </Label>
                 <Input
-                  id={`attribute-unit-${index}`}
-                  value={attr.unit || ''}
-                  onChange={(e) => {
-                    const newAttributes = [...formData.attributes];
-                    newAttributes[index].unit = e.target.value || undefined;
-                    setFormData({ ...formData, attributes: newAttributes });
-                  }}
-                  placeholder="e.g., GHz, GB"
+                  id="slug"
+                  value={formData.slug}
+                  onChange={(e) => setFormData({ ...formData, slug: e.target.value })}
+                  className="mt-1"
+                  aria-required="true"
                 />
+                {errors.slug && <p className="text-red-500 text-sm mt-1">{errors.slug}</p>}
               </div>
-
-              <div className="flex items-center space-x-2">
-                <Checkbox
-                  id={`attribute-filterable-${index}`}
-                  checked={attr.isFilterable}
-                  onCheckedChange={(checked) => {
-                    const newAttributes = [...formData.attributes];
-                    newAttributes[index].isFilterable = checked as boolean;
-                    setFormData({ ...formData, attributes: newAttributes });
-                  }}
-                />
-                <Label htmlFor={`attribute-filterable-${index}`}>Filterable</Label>
-              </div>
-
-              <div className="flex items-center space-x-2">
-                <Checkbox
-                  id={`attribute-required-${index}`}
-                  checked={attr.isRequired}
-                  onCheckedChange={(checked) => {
-                    const newAttributes = [...formData.attributes];
-                    newAttributes[index].isRequired = checked as boolean;
-                    setFormData({ ...formData, attributes: newAttributes });
-                  }}
-                />
-                <Label htmlFor={`attribute-required-${index}`}>Required</Label>
-              </div>
-
-              <Button
-                type="button"
-                variant="destructive"
-                onClick={() => removeAttribute(index)}
-              >
-                Remove
-              </Button>
             </div>
-          ))}
-          <Button type="button" variant="outline" onClick={addCustomAttribute}>
-            Add Attribute
-          </Button>
-        </div>
-
-        <div>
-          <Label>Subcategories</Label>
-          {formData.subcategories.map((sub, index) => (
-            <div key={index} className="flex items-center space-x-2 mb-2">
-              <Input
-                value={sub}
-                onChange={(e) => {
-                  const newSubcategories = [...formData.subcategories];
-                  newSubcategories[index] = e.target.value;
-                  setFormData({ ...formData, subcategories: newSubcategories });
-                }}
-                placeholder="Subcategory name"
+            <div>
+              <Label htmlFor="description" className="text-sm font-medium text-gray-700">
+                Description
+              </Label>
+              <Textarea
+                id="description"
+                value={formData.description}
+                onChange={(e) => setFormData({ ...formData, description: e.target.value })}
+                className="mt-1"
+                rows={4}
               />
-              <Button
-                type="button"
-                variant="destructive"
-                onClick={() => removeSubcategory(index)}
-              >
-                Remove
-              </Button>
-              {errors.subcategories?.[index] && (
-                <p className="text-red-500 text-sm">{errors.subcategories[index]}</p>
-              )}
             </div>
-          ))}
-          <Button type="button" variant="outline" onClick={addCustomSubcategory}>
-            Add Subcategory
-          </Button>
-        </div>
+            <div>
+              <Label htmlFor="imageUrl" className="text-sm font-medium text-gray-700">
+                Image URL
+              </Label>
+              <Input
+                id="imageUrl"
+                value={formData.imageUrl}
+                onChange={(e) => setFormData({ ...formData, imageUrl: e.target.value })}
+                className="mt-1"
+                placeholder="https://example.com/image.jpg"
+              />
+            </div>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div className="flex items-center space-x-2">
+                <Checkbox
+                  id="isActive"
+                  checked={formData.isActive}
+                  onCheckedChange={(checked) => setFormData({ ...formData, isActive: checked as boolean })}
+                />
+                <Label htmlFor="isActive" className="text-sm font-medium text-gray-700">
+                  Active
+                </Label>
+              </div>
+              <div>
+                <Label htmlFor="displayOrder" className="text-sm font-medium text-gray-700">
+                  Display Order
+                </Label>
+                <Input
+                  id="displayOrder"
+                  type="number"
+                  value={formData.displayOrder}
+                  onChange={(e) => setFormData({ ...formData, displayOrder: parseInt(e.target.value) || 0 })}
+                  className="mt-1"
+                />
+              </div>
+            </div>
+          </CardContent>
+        </Card>
 
-        <div className="flex items-center space-x-2">
-          <Checkbox
-            id="isActive"
-            checked={formData.isActive}
-            onCheckedChange={(checked) => setFormData({ ...formData, isActive: checked as boolean })}
-          />
-          <Label htmlFor="isActive">Active</Label>
-        </div>
+        <Card>
+          <CardHeader>
+            <CardTitle>Preset</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <Label htmlFor="preset" className="text-sm font-medium text-gray-700">
+              Select Preset
+            </Label>
+            <Select onValueChange={handlePresetChange} value={formData.preset}>
+              <SelectTrigger className="mt-1">
+                <SelectValue placeholder="Select a preset" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="">Custom</SelectItem>
+                {Object.values(presets).map((preset) => (
+                  <SelectItem key={preset.category.slug} value={preset.category.slug}>
+                    {preset.category.name}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </CardContent>
+        </Card>
 
-        <div>
-          <Label htmlFor="displayOrder">Display Order</Label>
-          <Input
-            id="displayOrder"
-            type="number"
-            value={formData.displayOrder}
-            onChange={(e) => setFormData({ ...formData, displayOrder: parseInt(e.target.value) || 0 })}
-          />
-        </div>
+        <Card>
+          <CardHeader>
+            <CardTitle>Attributes</CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            {formData.attributes.map((attr, index) => (
+              <Collapsible
+                key={index}
+                open={openAttributes.includes(index)}
+                onOpenChange={(open:any) =>
+                  setOpenAttributes(
+                    open ? [...openAttributes, index] : openAttributes.filter((i) => i !== index)
+                  )
+                }
+              >
+                <CollapsibleTrigger className="flex items-center justify-between w-full p-2 bg-gray-100 rounded-md">
+                  <span className="text-sm font-medium text-gray-700">
+                    {attr.name || `Attribute ${index + 1}`}
+                  </span>
+                  {openAttributes.includes(index) ? (
+                    <ChevronUp className="h-5 w-5" />
+                  ) : (
+                    <ChevronDown className="h-5 w-5" />
+                  )}
+                </CollapsibleTrigger>
+                <CollapsibleContent className="p-4 space-y-4 border rounded-md mt-2">
+                  <div>
+                    <Label htmlFor={`attribute-name-${index}`} className="text-sm font-medium text-gray-700">
+                      Name <span className="text-red-500">*</span>
+                    </Label>
+                    <Input
+                      id={`attribute-name-${index}`}
+                      value={attr.name}
+                      onChange={(e) => {
+                        const newAttributes = [...formData.attributes];
+                        newAttributes[index].name = e.target.value;
+                        setFormData({ ...formData, attributes: newAttributes });
+                      }}
+                    />
+                    {errors.attributes?.[index]?.name && (
+                      <p className="text-red-500 text-sm mt-1">{errors.attributes[index].name}</p>
+                    )}
+                  </div>
+                  <div>
+                    <Label htmlFor={`attribute-type-${index}`} className="text-sm font-medium text-gray-700">
+                      Type
+                    </Label>
+                    <Select
+                      value={attr.type}
+                      onValueChange={(value) => {
+                        const newAttributes = [...formData.attributes];
+                        newAttributes[index].type = value as 'text' | 'number' | 'boolean' | 'select';
+                        setFormData({ ...formData, attributes: newAttributes });
+                      }}
+                    >
+                      <SelectTrigger className="mt-1">
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="text">Text</SelectItem>
+                        <SelectItem value="number">Number</SelectItem>
+                        <SelectItem value="boolean">Boolean</SelectItem>
+                        <SelectItem value="select">Select</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  {attr.type === 'select' && (
+                    <div>
+                      <Label htmlFor={`attribute-options-${index}`} className="text-sm font-medium text-gray-700">
+                        Options (comma-separated)
+                      </Label>
+                      <Input
+                        id={`attribute-options-${index}`}
+                        value={attr.options?.join(', ') || ''}
+                        onChange={(e) => {
+                          const options = e.target.value
+                            .split(',')
+                            .map((opt) => opt.trim())
+                            .filter(Boolean);
+                          const newAttributes = [...formData.attributes];
+                          newAttributes[index].options = options;
+                          setFormData({ ...formData, attributes: newAttributes });
+                        }}
+                        placeholder="e.g., Red, Blue, Green"
+                        className="mt-1"
+                      />
+                    </div>
+                  )}
+                  <div>
+                    <Label htmlFor={`attribute-unit-${index}`} className="text-sm font-medium text-gray-700">
+                      Unit (optional)
+                    </Label>
+                    <Input
+                      id={`attribute-unit-${index}`}
+                      value={attr.unit || ''}
+                      onChange={(e) => {
+                        const newAttributes = [...formData.attributes];
+                        newAttributes[index].unit = e.target.value || undefined;
+                        setFormData({ ...formData, attributes: newAttributes });
+                      }}
+                      placeholder="e.g., GHz, GB"
+                      className="mt-1"
+                    />
+                  </div>
+                  <div className="grid grid-cols-2 gap-4">
+                    <div className="flex items-center space-x-2">
+                      <Checkbox
+                        id={`attribute-filterable-${index}`}
+                        checked={attr.isFilterable}
+                        onCheckedChange={(checked) => {
+                          const newAttributes = [...formData.attributes];
+                          newAttributes[index].isFilterable = checked as boolean;
+                          setFormData({ ...formData, attributes: newAttributes });
+                        }}
+                      />
+                      <Label htmlFor={`attribute-filterable-${index}`} className="text-sm font-medium text-gray-700">
+                        Filterable
+                      </Label>
+                    </div>
+                    <div className="flex items-center space-x-2">
+                      <Checkbox
+                        id={`attribute-required-${index}`}
+                        checked={attr.isRequired}
+                        onCheckedChange={(checked) => {
+                          const newAttributes = [...formData.attributes];
+                          newAttributes[index].isRequired = checked as boolean;
+                          setFormData({ ...formData, attributes: newAttributes });
+                        }}
+                      />
+                      <Label htmlFor={`attribute-required-${index}`} className="text-sm font-medium text-gray-700">
+                        Required
+                      </Label>
+                    </div>
+                  </div>
+                  <Button
+                    type="button"
+                    variant="destructive"
+                    onClick={() => removeAttribute(index)}
+                    className="w-full"
+                  >
+                    Remove Attribute
+                  </Button>
+                </CollapsibleContent>
+              </Collapsible>
+            ))}
+            <Button type="button" variant="outline" onClick={addCustomAttribute} className="w-full mt-2">
+              Add Attribute
+            </Button>
+          </CardContent>
+        </Card>
 
-        <div className="flex space-x-2">
-          <Button type="submit">Update Category</Button>
+        <Card>
+          <CardHeader>
+            <CardTitle>Subcategories</CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            {formData.subcategories.map((sub, index) => (
+              <Collapsible
+                key={index}
+                open={openSubcategories.includes(index)}
+                onOpenChange={(open:any) =>
+                  setOpenSubcategories(
+                    open ? [...openSubcategories, index] : openSubcategories.filter((i) => i !== index)
+                  )
+                }
+              >
+                <CollapsibleTrigger className="flex items-center justify-between w-full p-2 bg-gray-100 rounded-md">
+                  <span className="text-sm font-medium text-gray-700">
+                    {sub || `Subcategory ${index + 1}`}
+                  </span>
+                  {openSubcategories.includes(index) ? (
+                    <ChevronUp className="h-5 w-5" />
+                  ) : (
+                    <ChevronDown className="h-5 w-5" />
+                  )}
+                </CollapsibleTrigger>
+                <CollapsibleContent className="p-4 space-y-4 border rounded-md mt-2">
+                  <div>
+                    <Label htmlFor={`subcategory-${index}`} className="text-sm font-medium text-gray-700">
+                      Subcategory Name <span className="text-red-500">*</span>
+                    </Label>
+                    <div className="flex items-center space-x-2">
+                      <Input
+                        id={`subcategory-${index}`}
+                        value={sub}
+                        onChange={(e) => {
+                          const newSubcategories = [...formData.subcategories];
+                          newSubcategories[index] = e.target.value;
+                          setFormData({ ...formData, subcategories: newSubcategories });
+                        }}
+                        placeholder="Subcategory name"
+                        className="mt-1"
+                        aria-required="true"
+                      />
+                      <Button
+                        type="button"
+                        variant="destructive"
+                        onClick={() => removeSubcategory(index)}
+                      >
+                        Remove
+                      </Button>
+                    </div>
+                    {errors.subcategories?.[index] && (
+                      <p className="text-red-500 text-sm mt-1">{errors.subcategories[index]}</p>
+                    )}
+                  </div>
+                </CollapsibleContent>
+              </Collapsible>
+            ))}
+            <Button type="button" variant="outline" onClick={addCustomSubcategory} className="w-full mt-2">
+              Add Subcategory
+            </Button>
+          </CardContent>
+        </Card>
+
+        <div className="flex justify-end space-x-4">
           <Button
             type="button"
             variant="outline"
@@ -478,6 +607,7 @@ export default function EditCategoryPage() {
           >
             Cancel
           </Button>
+          <Button type="submit">Update Category</Button>
         </div>
       </form>
     </div>

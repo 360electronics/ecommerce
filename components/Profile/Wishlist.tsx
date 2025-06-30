@@ -76,7 +76,7 @@ export default function Wishlist() {
             <h3 className="text-sm font-medium text-yellow-800">Authentication required</h3>
             <p className="text-sm text-yellow-700 mt-1">
               Please{' '}
-              <Link href="/login" className="text-blue-600 hover:underline">
+              <Link href="/signin" className="text-blue-600 hover:underline">
                 log in
               </Link>{' '}
               to view your wishlist.

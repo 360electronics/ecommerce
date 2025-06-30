@@ -8,7 +8,7 @@ import { deleteProducts, fetchProducts } from "@/utils/products.util";
 import toast, { Toaster } from "react-hot-toast";
 import { encodeUUID } from "@/utils/Encryption";
 
-// Core Entity Types (as provided)
+// Core Entity Types (unchanged)
 export type Category = {
   id: string;
   name: string;
@@ -210,7 +210,7 @@ const getProductBrands = (products: CompleteProduct[]): string[] => {
   return [...new Set(products.map((p) => p.brand.name))].sort();
 };
 
-// Updated TableRow interface to match data structure
+// Updated TableRow interface
 interface TableRow {
   productId: string;
   variantId: string;
@@ -230,7 +230,7 @@ interface TableRow {
   stock: number;
   mrp: number;
   ourPrice: number;
-  salePrice?: number | null; // Updated to match ProductVariant
+  salePrice?: number | null;
   productImages: ProductImage[];
   activePromotions: ProductPromotion[];
   priceRange: { min: number; max: number } | null;
@@ -397,18 +397,28 @@ export function ProductsTable() {
           coming_soon: "bg-blue-100 text-blue-800",
           discontinued: "bg-red-100 text-red-800",
         };
+
+        const dotStyles: Record<string, string> = {
+          active: "bg-green-400",
+          inactive: "bg-gray-400",
+          coming_soon: "bg-blue-400",
+          discontinued: "bg-red-400",
+        };
+
         return (
           <span
-            className={`px-2 py-1 rounded-full text-xs font-medium capitalize ${statusStyles[row.status.toLowerCase()]
-              }`}
+            className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium capitalize ${statusStyles[row.status.toLowerCase()]}`}
           >
+            <span
+              className={`w-2 h-2 rounded-full mr-1.5 ${dotStyles[row.status.toLowerCase()]}`}
+            ></span>
             {row.status.replace("_", " ")}
             {row.isInOfferZone && (
               <span className="ml-1 text-purple-500">★</span>
             )}
           </span>
         );
-      },
+      }
     },
   ];
 
@@ -438,12 +448,12 @@ export function ProductsTable() {
         productImages: variant.productImages,
         activePromotions: Array.isArray(product.activePromotions)
           ? product.activePromotions
-              .filter((promo) =>
-                promo.applicableEntityType === "product" ||
-                promo.applicableEntityType === "variant"
-              )
-              .map((p) => p.promotion)
-          : [], // Fallback to empty array if activePromotions is not an array
+            .filter((promo) =>
+              promo.applicableEntityType === "product" ||
+              promo.applicableEntityType === "variant"
+            )
+            .map((p) => p.promotion)
+          : [],
         priceRange: product.priceRange,
         hasMultipleVariants: product.hasMultipleVariants,
       }))
@@ -456,9 +466,6 @@ export function ProductsTable() {
   const handleEditProduct = (rows: TableRow[]) => {
     if (rows.length === 1) {
       router.push(`/admin/products/edit-product/${rows[0].productId}`);
-    } else {
-      const productIds = [...new Set(rows.map((row) => encodeUUID(row.productId)))];
-      router.push(`/admin/products/bulk-edit?ids=${productIds.join(",")}`);
     }
   };
 
@@ -545,8 +552,50 @@ export function ProductsTable() {
   );
 
   return (
-    <div className="container mx-auto p-6 bg-white rounded-lg shadow">
+    <div className=" mx-auto ">
       <Toaster position="top-right" />
+      {/* Header */}
+      <div className="mb-8">
+        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between">
+          <div className="mb-4 sm:mb-0">
+            <h1 className="text-3xl font-bold text-gray-900">Product Management</h1>
+            <p className="mt-2 text-gray-600">Manage your product catalog and settings</p>
+          </div>
+        </div>
+      </div>
+
+      {/* Stats Cards */}
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
+        <div className="bg-white p-6 rounded-xl border border-gray-200   transition-shadow duration-300">
+          <div className="flex items-center">
+            <div className="p-3 bg-blue-100 rounded-lg">
+              <svg className="w-6 h-6 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 11V7a4 4 0 00-8 0v4M5 9h14l1 12H4L5 9z" />
+              </svg>
+            </div>
+            <div className="ml-4">
+              <p className="text-sm font-medium text-gray-600">Total Products</p>
+              <p className="text-2xl font-bold text-gray-900">{products.length}</p>
+            </div>
+          </div>
+        </div>
+        <div className="bg-white p-6 rounded-xl border border-gray-200   transition-shadow duration-300">
+          <div className="flex items-center">
+            <div className="p-3 bg-green-100 rounded-lg">
+              <svg className="w-6 h-6 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+              </svg>
+            </div>
+            <div className="ml-4">
+              <p className="text-sm font-medium text-gray-600">Active Products</p>
+              <p className="text-2xl font-bold text-gray-900">{products.filter(p => p.status === 'active').length}</p>
+            </div>
+          </div>
+        </div>
+       
+      </div>
+
+      {/* Table */}
       <EnhancedTable
         id="products-table"
         data={tableData}
@@ -561,7 +610,6 @@ export function ProductsTable() {
           keys: ["fullName", "shortName", "variantName", "sku", "category", "subcategory", "brand"],
           placeholder: "Search products, variants, or brands...",
         }}
-        // Update the filters prop in EnhancedTable to include customFilters
         filters={{
           enabled: true,
           customFilters: [
@@ -601,7 +649,6 @@ export function ProductsTable() {
           bulkActions: {
             delete: handleBulkDelete,
             export: handleExportProducts,
-            edit: handleEditProduct,
           },
           rowActions: {
             view: handleViewProduct,

@@ -94,13 +94,10 @@ const createProductSchema = z.object({
   ).min(1),
 });
 
-// Input validation schema for PATCH (bulk update)
-const bulkUpdateProductSchema = z.object({
-  status: z.enum(['inactive', 'discontinued']).optional(),
-  delete: z.boolean().default(false),
+// Input validation schema for PATCH (delete selected products)
+const bulkDeleteProductSchema = z.object({
+  ids: z.array(z.string().uuid()).min(1, 'At least one product ID is required'),
 });
-
-
 // GET: Fetch all products with related data
 export async function GET() {
   try {
@@ -373,76 +370,63 @@ export async function DELETE() {
   }
 }
 
-// PATCH: Bulk update or delete incomplete or inactive products
+// PATCH: Delete selected products
 export async function PATCH(req: NextRequest) {
   try {
     const body = await req.json();
-    const validatedData = bulkUpdateProductSchema.parse(body);
+    const validatedData = bulkDeleteProductSchema.parse(body);
 
-    // Identify incomplete products (e.g., no variants or inactive status)
-    const incompleteProducts = await db
-      .select({ id: products.id, variants: variants.id })
+    // Check if provided product IDs exist
+    const existingProducts = await db
+      .select({ id: products.id })
       .from(products)
-      .leftJoin(variants, eq(products.id, variants.productId))
-      .where(
-        and(
-          isNull(variants.id), // No variants
-          eq(products.status, 'active') // Still active
-        )
-      );
+      .where(inArray(products.id, validatedData.ids));
 
-    if (incompleteProducts.length === 0) {
-      return NextResponse.json({ message: 'No incomplete products found' });
+    const foundProductIds = existingProducts.map((p) => p.id);
+    const missingIds = validatedData.ids.filter((id) => !foundProductIds.includes(id));
+
+    if (missingIds.length > 0) {
+      return NextResponse.json(
+        { error: `The following product IDs were not found: ${missingIds.join(', ')}` },
+        { status: 404 }
+      );
     }
 
-    if (validatedData.delete) {
-      // Delete incomplete products and associated images
-      const productIds = incompleteProducts.map((p) => p.id);
-      const variantsToDelete = productIds.length
-        ? await db
+    // Delete associated images from R2
+    const variantsToDelete = validatedData.ids.length
+      ? await db
           .select({ productImages: variants.productImages })
           .from(variants)
-          .where(inArray(variants.productId, productIds))
-        : [];
+          .where(inArray(variants.productId, validatedData.ids))
+      : [];
 
-      const deleteImagePromises = variantsToDelete.flatMap((variant) =>
-        (variant.productImages as { url: string; alt: string; isFeatured: boolean; displayOrder: number }[])
-          .map(async (image) => {
-            const key = extractKeyFromR2Url(image.url);
-            if (key) {
-              try {
-                await deleteFromR2(key);
-              } catch (error) {
-                console.warn(`Failed to delete R2 image with key ${key}:`, error);
-              }
+    const deleteImagePromises = variantsToDelete.flatMap((variant) =>
+      (variant.productImages as { url: string; alt: string; isFeatured: boolean; displayOrder: number }[])
+        .map(async (image) => {
+          const key = extractKeyFromR2Url(image.url);
+          if (key) {
+            try {
+              await deleteFromR2(key);
+            } catch (error) {
+              console.warn(`Failed to delete R2 image with key ${key}:`, error);
             }
-          })
-      );
+          }
+        })
+    );
 
-      await Promise.all(deleteImagePromises);
+    await Promise.all(deleteImagePromises);
 
-      // Delete products
-      await db.delete(products).where(inArray(products.id, productIds));
+    // Delete selected products
+    await db.delete(products).where(inArray(products.id, validatedData.ids));
 
-      return NextResponse.json({
-        message: `${incompleteProducts.length} incomplete products deleted`,
-      });
-    } else {
-      // Update status of incomplete products
-      await db
-        .update(products)
-        .set({ status: validatedData.status || 'inactive', updatedAt: new Date() })
-        .where(inArray(products.id, incompleteProducts.map((p) => p.id)));
-
-      return NextResponse.json({
-        message: `${incompleteProducts.length} incomplete products updated to ${validatedData.status || 'inactive'}`,
-      });
-    }
+    return NextResponse.json({
+      message: `${validatedData.ids.length} selected products deleted`,
+    });
   } catch (error) {
     if (error instanceof z.ZodError) {
       return NextResponse.json({ error: error.errors }, { status: 400 });
     }
-    console.error('Error updating products:', error);
+    console.error('Error deleting products:', error);
     return NextResponse.json({ error: 'Internal Server Error' }, { status: 500 });
   }
 }

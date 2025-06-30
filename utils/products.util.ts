@@ -129,11 +129,10 @@ export async function fetchGamersZoneProducts() {
 }
 
 
-
 export const deleteProducts = async (ids: string[]) => {
   try {
     const res = await fetch('/api/products', {
-      method: 'DELETE',
+      method: 'PATCH',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ ids }),
     });

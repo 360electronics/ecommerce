@@ -67,7 +67,7 @@ const WishlistProductCard: React.FC<ProductCardProps> = ({
 
       if (!isLoggedIn) {
         toast.error('Please login to manage wishlist.');
-        router.push('/login');
+        router.push('/signin');
         return;
       }
 
@@ -102,7 +102,7 @@ const WishlistProductCard: React.FC<ProductCardProps> = ({
 
       if (!isLoggedIn) {
         toast.error('Please login to add to cart.');
-        router.push('/login');
+        router.push('/signin');
         return;
       }
 

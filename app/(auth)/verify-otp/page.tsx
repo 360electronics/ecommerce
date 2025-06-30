@@ -9,13 +9,19 @@ import { cn } from "@/lib/utils";
 import { useAuthStore } from "@/store/auth-store";
 import { useCartStore } from "@/store/cart-store";
 import { useCheckoutStore } from "@/store/checkout-store";
-import { useProfileStore } from "@/store/profile-store";
 import { useWishlistStore } from "@/store/wishlist-store";
+
+interface ImageUrls {
+  default: string;
+  sm?: string;
+  lg?: string;
+}
+
 
 interface Banner {
   id: string;
   title: string;
-  imageUrl: string;
+  imageUrls: ImageUrls;
   type: string;
   active: boolean;
   startDate: string;
@@ -90,7 +96,7 @@ function VerifyOTPContent() {
         ? responseData.data.map((item: any) => ({
           id: item.id,
           title: item.title,
-          imageUrl: item.imageUrl,
+          imageUrls: item.imageUrls,
           type: item.type,
           active: item.status === "active",
           startDate: item.start_date || "",
@@ -272,7 +278,7 @@ function VerifyOTPContent() {
         <div className="text-center">
           <h1 className="text-2xl font-bold text-red-600">Invalid Request</h1>
           <p className="mt-2 text-gray-600">Missing user ID. Please try again.</p>
-          <Link href="/login" className="text-blue-600 hover:underline mt-4 inline-block">
+          <Link href="/signin" className="text-blue-600 hover:underline mt-4 inline-block">
             Back to Login
           </Link>
         </div>
@@ -291,7 +297,7 @@ function VerifyOTPContent() {
         ) : banner ? (
           <Link href={banner.link || "#"} className="block w-full h-full">
             <Image
-              src={banner.imageUrl || "/default-banner.jpg"}
+              src={banner.imageUrls.default || "/default-banner.jpg"}
               alt={banner.title || "Promotional Banner"}
               fill
               sizes="40vw"

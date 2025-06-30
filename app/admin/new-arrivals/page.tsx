@@ -1,12 +1,13 @@
 'use client';
 
 import { useState, useRef, useEffect, useMemo, useCallback } from 'react';
-import { Search, Save, Check, X, AlertCircle } from 'lucide-react';
+import { Search, Save, Check, X, AlertCircle, Star } from 'lucide-react';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { fetchProducts as fetchAllProducts, fetchNewArrivalsProducts } from '@/utils/products.util';
 import Image from 'next/image';
 import { cn } from '@/lib/utils';
+import toast from 'react-hot-toast';
 
 // Types
 interface Product {
@@ -32,7 +33,7 @@ interface NewArrivalsSelection {
   variantId: string;
   product: Product;
   variant: Variant;
-  displayName: string; // Combined product + variant name
+  displayName: string;
 }
 
 export default function NewArrivalsPage() {
@@ -47,6 +48,7 @@ export default function NewArrivalsPage() {
   const searchResultsRef = useRef<HTMLDivElement>(null);
   const searchInputRef = useRef<HTMLInputElement>(null);
   const [allProducts, setAllProducts] = useState<Product[]>([]);
+  const debounceRef = useRef<NodeJS.Timeout | null>(null);
 
   // Fetch initial data
   useEffect(() => {
@@ -72,7 +74,7 @@ export default function NewArrivalsPage() {
       } catch (error) {
         console.error('Error fetching data:', error);
         setError('Failed to load products. Please try again.');
-        alert('Failed to load products. Please try again.');
+        toast.error('Failed to load products. Please try again.');
       } finally {
         setIsFetching(false);
       }
@@ -80,6 +82,20 @@ export default function NewArrivalsPage() {
 
     fetchData();
   }, []);
+
+  // Calculate average discount
+  const avgDiscount = useMemo(() => {
+    if (newArrivalsVariants.length === 0) return 0;
+    const totalDiscount = newArrivalsVariants.reduce((sum, { variant }) => {
+      const ourPrice = parseFloat(variant.ourPrice);
+      const mrp = parseFloat(variant.mrp);
+      if (mrp > ourPrice) {
+        return sum + ((mrp - ourPrice) / mrp) * 100;
+      }
+      return sum;
+    }, 0);
+    return (totalDiscount / newArrivalsVariants.length).toFixed(1);
+  }, [newArrivalsVariants]);
 
   // Filter available variants
   const filteredVariants = useMemo(() => {
@@ -133,97 +149,120 @@ export default function NewArrivalsPage() {
     return () => document.removeEventListener('mousedown', handleClickOutside);
   }, []);
 
-  // Handle search
+  // Handle search with debouncing
   const handleSearch = useCallback((value: string) => {
     setSearchTerm(value);
     setIsLoading(true);
     setShowResults(true);
 
-    const timeout = setTimeout(() => setIsLoading(false), 300);
-    return () => clearTimeout(timeout);
+    if (debounceRef.current) {
+      clearTimeout(debounceRef.current);
+    }
+
+    debounceRef.current = setTimeout(() => {
+      setIsLoading(false);
+    }, 500);
+
+    return () => {
+      if (debounceRef.current) {
+        clearTimeout(debounceRef.current);
+      }
+    };
   }, []);
 
   // Handle variant selection
-  const handleSelectVariant = useCallback(async (selection: NewArrivalsSelection) => {
-    try {
-      setNewArrivalsVariants((prev) => [...prev, selection]);
-      setSearchResults((prev) => prev.filter((v) => v.variantId !== selection.variantId));
-      setIsSaved(false);
-      setSearchTerm('');
-      setShowResults(false);
-      alert('Variant added to New Arrivals');
-    } catch (error) {
-      console.error('Error selecting variant:', error);
-      alert('Failed to add variant');
-    }
-  }, []);
+  const handleSelectVariant = useCallback(
+    async (selection: NewArrivalsSelection) => {
+      try {
+        setNewArrivalsVariants((prev) => [...prev, selection]);
+        setSearchResults((prev) => prev.filter((v) => v.variantId !== selection.variantId));
+        setIsSaved(false);
+        setSearchTerm('');
+        setShowResults(false);
+        toast.success('Variant added to New Arrivals');
+      } catch (error) {
+        console.error('Error selecting variant:', error);
+        toast.error('Failed to add variant');
+      }
+    },
+    []
+  );
 
   // Handle variant removal
-  const handleRemoveVariant = useCallback(async (variantId: string) => {
-    setIsLoading(true);
-    try {
-      const res = await fetch('/api/products/new-arrivals', {
-        method: 'DELETE',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ variantId }),
-      });
+  const handleRemoveVariant = useCallback(
+    async (variantId: string) => {
+      setIsLoading(true);
+      try {
+        const res = await fetch('/api/products/new-arrivals', {
+          method: 'DELETE',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ variantId }),
+        });
 
-      if (!res.ok) throw new Error('Failed to remove variant');
+        if (!res.ok) throw new Error('Failed to remove variant');
 
-      setNewArrivalsVariants((prev) => prev.filter((v) => v.variantId !== variantId));
-      setIsSaved(false);
-      alert('Variant removed from New Arrivals');
-    } catch (error) {
-      console.error('Remove variant error:', error);
-      alert('Failed to remove variant');
-    } finally {
-      setIsLoading(false);
-    }
-  }, []);
+        setNewArrivalsVariants((prev) => prev.filter((v) => v.variantId !== variantId));
+        setIsSaved(false);
+        toast.success('Variant removed from New Arrivals');
+      } catch (error) {
+        console.error('Remove variant error:', error);
+        toast.error('Failed to remove variant');
+      } finally {
+        setIsLoading(false);
+      }
+    },
+    []
+  );
 
   // Handle save
-  const handleSave = useCallback(async () => {
-    setIsLoading(true);
-    try {
-      const variantSelections = newArrivalsVariants.map(({ productId, variantId }) => ({
-        productId,
-        variantId,
-      }));
+  const handleSave = useCallback(
+    async () => {
+      setIsLoading(true);
+      try {
+        const variantSelections = newArrivalsVariants.map(({ productId, variantId }) => ({
+          productId,
+          variantId,
+        }));
 
-      const response = await fetch('/api/products/new-arrivals', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ variantSelections }),
-      });
+        const response = await fetch('/api/products/new-arrivals', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ variantSelections }),
+        });
 
-      if (!response.ok) {
-        const errorData = await response.json();
-        throw new Error(errorData.message || 'Failed to save new arrivals variants');
+        if (!response.ok) {
+          const errorData = await response.json();
+          throw new Error(errorData.message || 'Failed to save New Arrivals variants');
+        }
+
+        setIsSaved(true);
+        toast.success('New Arrivals variants saved successfully');
+        setTimeout(() => setIsSaved(false), 3000);
+      } catch (error) {
+        console.error('Error saving New Arrivals variants:', error);
+        toast.error(error instanceof Error ? error.message : 'Failed to save New Arrivals variants');
+      } finally {
+        setIsLoading(false);
       }
-
-      setIsSaved(true);
-      alert('New Arrivals variants saved successfully');
-      setTimeout(() => setIsSaved(false), 3000);
-    } catch (error) {
-      console.error('Error saving new arrivals variants:', error);
-      alert(error instanceof Error ? error.message : 'Failed to save new arrivals variants');
-    } finally {
-      setIsLoading(false);
-    }
-  }, [newArrivalsVariants]);
+    },
+    [newArrivalsVariants]
+  );
 
   // Clear search
   const clearSearch = useCallback(() => {
     setSearchTerm('');
     setShowResults(false);
+    searchInputRef.current?.focus();
   }, []);
 
   if (isFetching) {
     return (
-      <div className="flex items-center justify-center h-[50vh]">
-        <div className="text-center">
-          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600 mx-auto mb-2"></div>
-          <p>Loading products...</p>
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+        <div className="flex items-center justify-center h-[50vh]">
+          <div className="text-center space-y-4">
+            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600 mx-auto"></div>
+            <p className="text-gray-600">Loading products...</p>
+          </div>
         </div>
       </div>
     );
@@ -231,104 +270,155 @@ export default function NewArrivalsPage() {
 
   if (error) {
     return (
-      <div className="flex items-center justify-center h-[50vh]">
-        <div className="text-center space-y-4">
-          <AlertCircle className="h-12 w-12 text-red-500 mx-auto" />
-          <p className="text-red-600">{error}</p>
-          <Button onClick={() => window.location.reload()}>Retry</Button>
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+        <div className="flex items-center justify-center h-[50vh]">
+          <div className="text-center space-y-4">
+            <AlertCircle className="h-12 w-12 text-red-500 mx-auto" />
+            <p className="text-red-600">{error}</p>
+            <Button
+              onClick={() => window.location.reload()}
+              className="bg-blue-600 text-white hover:bg-blue-700 rounded-lg"
+            >
+              Retry
+            </Button>
+          </div>
         </div>
       </div>
     );
   }
 
   return (
-    <div className="container mx-auto py-8">
-      {/* Success message */}
+    <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+      {/* Header */}
+      <div className="mb-8">
+        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between">
+          <div className="mb-4 sm:mb-0">
+            <h1 className="text-3xl font-bold text-gray-900">New Arrivals Management</h1>
+            <p className="mt-2 text-gray-600">Manage featured variants for New Arrivals</p>
+          </div>
+        </div>
+      </div>
+
+      {/* Stats Cards */}
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6 mb-8">
+        <div className="bg-white p-6 rounded-xl border border-gray-200">
+          <div className="flex items-center">
+            <div className="p-3 bg-blue-100 rounded-lg">
+              <Star className="w-6 h-6 text-blue-600" />
+            </div>
+            <div className="ml-4">
+              <p className="text-sm font-medium text-gray-600">Total Variants</p>
+              <p className="text-2xl font-bold text-gray-900">
+                {allProducts.reduce((sum, p) => sum + p.variants.length, 0)}
+              </p>
+            </div>
+          </div>
+        </div>
+        <div className="bg-white p-6 rounded-xl border border-gray-200">
+          <div className="flex items-center">
+            <div className="p-3 bg-green-100 rounded-lg">
+              <Check className="w-6 h-6 text-green-600" />
+            </div>
+            <div className="ml-4">
+              <p className="text-sm font-medium text-gray-600">New Arrivals Variants</p>
+              <p className="text-2xl font-bold text-gray-900">{newArrivalsVariants.length}</p>
+            </div>
+          </div>
+        </div>
+       
+      </div>
+
+      {/* Success Message */}
       {isSaved && (
-        <div className="mb-6 rounded-md bg-green-50 p-4 text-green-800 flex items-center justify-between">
+        <div className="mb-6 rounded-lg bg-green-50 p-4 text-green-800 flex items-center justify-between border border-green-200">
           <div className="flex items-center">
             <Check className="h-5 w-5 mr-2" />
             New Arrivals variants saved successfully!
           </div>
-          <Button variant="ghost" size="sm" onClick={() => setIsSaved(false)}>
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={() => setIsSaved(false)}
+            className="text-green-600 hover:text-green-800"
+            aria-label="Dismiss success message"
+          >
             <X className="h-4 w-4" />
           </Button>
         </div>
       )}
 
-      {/* Search and save controls */}
-      <div className="mb-8 space-y-4">
-        <div className="flex flex-col sm:flex-row gap-4">
-          <div className="relative flex-1">
-            <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
-            <Input
-              ref={searchInputRef}
-              placeholder="Search variants by name, SKU, ID, or product details"
-              value={searchTerm}
-              onChange={(e) => handleSearch(e.target.value)}
-              onFocus={() => {
-                if (searchTerm.trim()) setShowResults(true);
-              }}
-              className="pl-10 pr-10 py-6"
-              aria-label="Search variants"
-            />
-            {searchTerm && (
-              <button
-                onClick={clearSearch}
-                className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600"
-                aria-label="Clear search"
-              >
-                <X className="h-4 w-4" />
-              </button>
-            )}
-          </div>
-          <Button
-            onClick={handleSave}
-            disabled={newArrivalsVariants.length === 0 || isLoading}
-            className="flex items-center gap-2 bg-blue-600 hover:bg-blue-700"
-            aria-label="Save new arrivals variants"
-          >
-            <Save className="h-4 w-4" />
-            {isLoading ? 'Saving...' : 'Save'}
-          </Button>
+      {/* Search and Save Controls */}
+      <div className="mb-8 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+        <div className="relative max-w-md w-full">
+          <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 h-5 w-5" />
+          <Input
+            ref={searchInputRef}
+            placeholder="Search by name, SKU, ID, or description..."
+            value={searchTerm}
+            onChange={(e) => handleSearch(e.target.value)}
+            onFocus={() => {
+              if (searchTerm.trim()) setShowResults(true);
+            }}
+            className="pl-10 pr-10 rounded-lg border-gray-300 focus:ring-2 focus:ring-blue-500 transition-all duration-200"
+            aria-label="Search variants"
+          />
+          {searchTerm && (
+            <button
+              onClick={clearSearch}
+              className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400 hover:text-gray-600"
+              aria-label="Clear search"
+            >
+              <X className="h-5 w-5" />
+            </button>
+          )}
         </div>
+        <Button
+          onClick={handleSave}
+          disabled={newArrivalsVariants.length === 0 || isLoading}
+          className="bg-blue-600 text-white hover:bg-blue-700 rounded-lg flex items-center gap-2 px-6"
+          aria-label="Save New Arrivals variants"
+        >
+          <Save className="h-5 w-5" />
+          {isLoading ? 'Saving...' : 'Save'}
+        </Button>
       </div>
 
-      {/* Search results */}
+      {/* Search Results */}
       {showResults && (
         <div ref={searchResultsRef} className="mb-8">
           <div className="flex justify-between items-center mb-4">
-            <h3 className="text-lg font-semibold">
+            <h3 className="text-lg font-semibold text-gray-900">
               Search Results {searchResults.length > 0 ? `(${searchResults.length})` : ''}
             </h3>
             <Button
               variant="ghost"
               size="sm"
               onClick={() => setShowResults(false)}
+              className="text-gray-600 hover:text-gray-800"
               aria-label="Close search results"
             >
               Close
             </Button>
           </div>
           {isLoading ? (
-            <div className="rounded-md border border-dashed border-gray-300 bg-gray-50 p-8 text-center">
+            <div className="rounded-lg border border-gray-200 bg-white p-8 text-center">
               <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-blue-600 mx-auto mb-2"></div>
               <p className="text-gray-500">Searching variants...</p>
             </div>
           ) : searchResults.length > 0 ? (
-            <div className="grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-3">
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
               {searchResults.map((selection) => (
                 <VariantCard
                   key={selection.variantId}
                   selection={selection}
                   onSelect={(sel) => handleSelectVariant(sel as NewArrivalsSelection)}
-                  actionLabel="Add"
+                  actionLabel="Add to New Arrivals"
                   actionVariant="secondary"
                 />
               ))}
             </div>
           ) : (
-            <div className="rounded-md border border-dashed border-gray-300 bg-gray-50 p-8 text-center">
+            <div className="rounded-lg border border-gray-200 bg-white p-8 text-center">
               <p className="text-gray-500">
                 {searchTerm.trim()
                   ? 'No variants found or all matching variants are already in New Arrivals.'
@@ -339,25 +429,25 @@ export default function NewArrivalsPage() {
         </div>
       )}
 
-      {/* Current New Arrivals variants */}
+      {/* Current New Arrivals Variants */}
       <div>
-        <h2 className="mb-4 text-lg font-semibold">
+        <h2 className="mb-4 text-lg font-semibold text-gray-900">
           Current New Arrivals Variants ({newArrivalsVariants.length})
         </h2>
         {newArrivalsVariants.length > 0 ? (
-          <div className="grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-3">
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
             {newArrivalsVariants.map((selection) => (
               <VariantCard
                 key={selection.variantId}
                 selection={selection}
-                onSelect={(sel) => handleSelectVariant(sel as NewArrivalsSelection)}
+                onSelect={(sel) => handleRemoveVariant(sel as string)}
                 actionLabel="Remove"
                 actionVariant="destructive"
               />
             ))}
           </div>
         ) : (
-          <div className="rounded-md border border-dashed border-gray-300 bg-gray-50 p-8 text-center">
+          <div className="rounded-lg border border-gray-200 bg-white p-8 text-center">
             <p className="text-gray-500">
               No variants in New Arrivals. Use the search above to add variants.
             </p>
@@ -377,11 +467,20 @@ interface VariantCardProps {
 }
 
 function VariantCard({ selection, onSelect, actionLabel, actionVariant }: VariantCardProps) {
+  const discount = useMemo(() => {
+    const ourPrice = parseFloat(selection.variant.ourPrice);
+    const mrp = parseFloat(selection.variant.mrp);
+    if (mrp > ourPrice) {
+      return (((mrp - ourPrice) / mrp) * 100).toFixed(0);
+    }
+    return null;
+  }, [selection.variant]);
+
   return (
-    <div className="relative group transition-transform hover:scale-[1.02]">
+    <div className="relative group transition-transform hover:scale-[1.02] duration-200">
       <div
         className={cn(
-          'absolute right-3 top-3 z-20 transition-opacity',
+          'absolute right-4 top-4 z-10 transition-opacity',
           actionVariant === 'destructive' ? 'opacity-0 group-hover:opacity-100' : 'opacity-100'
         )}
       >
@@ -393,41 +492,59 @@ function VariantCard({ selection, onSelect, actionLabel, actionVariant }: Varian
             onSelect(actionVariant === 'destructive' ? selection.variantId : selection);
           }}
           className={cn(
-            actionVariant === 'secondary' && 'bg-blue-500 hover:bg-blue-600 text-white',
-            actionVariant === 'destructive' && 'bg-red-500 hover:bg-red-600 text-white'
+            'rounded-lg',
+            actionVariant === 'secondary' && 'bg-blue-600 hover:bg-blue-700 text-black',
+            actionVariant === 'destructive' && 'bg-red-600 hover:bg-red-700 text-white'
           )}
+          aria-label={actionLabel}
         >
           {actionLabel}
         </Button>
       </div>
-      <div className="border rounded-lg bg-white shadow-sm overflow-hidden">
-        <div className="relative w-full aspect-square bg-[#F4F4F4]">
+      <div
+        className="border border-gray-200 rounded-xl bg-white overflow-hidden cursor-pointer"
+        role="button"
+        tabIndex={0}
+        onKeyDown={(e) => {
+          if (e.key === 'Enter' || e.key === ' ') {
+            e.preventDefault();
+            onSelect(actionVariant === 'destructive' ? selection.variantId : selection);
+          }
+        }}
+      >
+        <div className="relative w-full aspect-square bg-gray-50">
           <Image
             src={selection.variant.productImages?.[0]?.url ?? '/placeholder.png'}
-            alt={selection.displayName}
+            alt={selection.variant.productImages?.[0]?.alt ?? selection.displayName}
             fill
             className="object-contain p-6 group-hover:scale-105 transition-transform duration-200"
             sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 33vw"
           />
+          {discount && (
+            <div className="absolute top-4 left-4 bg-red-600 text-white text-xs font-medium px-2 py-1 rounded-full">
+              {discount}% OFF
+            </div>
+          )}
         </div>
         <div className="p-4 space-y-2">
-          <h3 className="text-base font-medium line-clamp-2">{selection.displayName}</h3>
-          <p className="text-sm text-gray-500 line-clamp-2">{selection.product.description || 'No description available'}</p>
+          <h3 className="text-base font-semibold text-gray-900 line-clamp-2">{selection.displayName}</h3>
+          <p className="text-sm text-gray-600 line-clamp-2">{selection.product.description || 'No description available'}</p>
           <div className="flex items-center gap-2">
             {selection.variant.ourPrice && (
-              <span className="text-lg font-bold">
-                ₹{Number(selection.variant.ourPrice).toLocaleString()}
+              <span className="text-lg font-bold text-gray-900">
+                ₹{Number(selection.variant.ourPrice).toLocaleString('en-IN')}
               </span>
             )}
             {selection.variant.mrp &&
               Number(selection.variant.mrp) > Number(selection.variant.ourPrice) && (
                 <span className="text-sm text-gray-500 line-through">
-                  MRP {Number(selection.variant.mrp).toLocaleString()}
+                  ₹{Number(selection.variant.mrp).toLocaleString('en-IN')}
                 </span>
               )}
+            </div>
+            <p className="text-xs text-gray-500">SKU: {selection.variant.sku}</p>
           </div>
         </div>
       </div>
-    </div>
-  );
+    );
 }

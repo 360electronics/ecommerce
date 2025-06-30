@@ -47,13 +47,13 @@ export function TicketCard({ ticket, onClick }: TicketCardProps) {
   const getStatusColor = (status: string) => {
     switch (status) {
       case 'active':
-        return 'bg-blue-100 text-green-600 border-green-300';
+        return 'bg-green-100 text-green-800 border-green-200';
       case 'inactive':
-        return 'bg-red-100 text-red-600 border-red-300';
+        return 'bg-red-100 text-red-800 border-red-200';
       case 'closed':
-        return 'bg-green-100 text-red-600 border-red-300';
+        return 'bg-gray-100 text-gray-800 border-gray-200';
       default:
-        return 'bg-gray-100 text-gray-600 border-gray-300';
+        return 'bg-gray-100 text-gray-800 border-gray-200';
     }
   };
 
@@ -70,7 +70,6 @@ export function TicketCard({ ticket, onClick }: TicketCardProps) {
     }
   };
 
-  // Get the default address or the first address
   const defaultAddress = ticket.addresses.find((addr) => addr.isDefault) || ticket.addresses[0];
 
   const handleClick = (e: React.MouseEvent) => {
@@ -81,58 +80,75 @@ export function TicketCard({ ticket, onClick }: TicketCardProps) {
 
   return (
     <div
-      className="rounded-lg border border-gray-200 bg-white p-4 shadow-sm hover:shadow-md transition-shadow cursor-pointer"
+      className="rounded-xl border border-gray-200 bg-white p-6 shadow-sm hover:shadow-md transition-shadow duration-300 cursor-pointer focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2"
       onClick={handleClick}
       role="button"
+      tabIndex={0}
       aria-label={`View ticket ${ticket.id}`}
+      onKeyDown={(e) => {
+        if (e.key === 'Enter' || e.key === ' ') {
+          e.preventDefault();
+          onClick();
+        }
+      }}
     >
-      <div className="flex items-center justify-between mb-4 w-full">
-        <div className="flex items-center gap-3">
-          <div className="h-10 w-10 rounded-full bg-gray-100 flex items-center justify-center text-lg font-semibold text-blue-600 border border-gray-200">
-            {ticket.customer.name
-              .split(' ')
-              .map((n) => n[0])
-              .join('')
-              .slice(0, 2)
-              .toUpperCase()}
-          </div>
-          <div className="flex flex-col">
-            <span className="font-medium text-sm text-gray-900">{ticket.customer.name}</span>
-            <span className="text-xs text-gray-500">{ticket.customer.email}</span>
-          </div>
-        </div>
+      <div className="flex flex-col items-start gap-2 justify-between">
         <div
           className="bg-gray-100 text-gray-700 px-3 py-1 rounded-md border border-gray-200 text-xs font-mono tracking-wider"
           aria-label={`Ticket ID: ${ticket.id}`}
         >
           #{ticket.id.slice(-6).toUpperCase()}
         </div>
+        <div className="flex items-center gap-3">
+          <Avatar className="h-10 w-10">
+            <AvatarFallback className="bg-gray-100 text-blue-600 font-semibold">
+              {ticket.customer.name
+                .split(' ')
+                .map((n) => n[0])
+                .join('')
+                .slice(0, 2)
+                .toUpperCase()}
+            </AvatarFallback>
+          </Avatar>
+          <div className="flex flex-col">
+            <span className="font-semibold text-gray-900 text-sm">{ticket.customer.name}</span>
+            <span className="text-xs text-gray-500">{ticket.customer.email}</span>
+          </div>
+        </div>
+
       </div>
 
-      <div className="mb-2">
-        <span className="font-medium text-lg capitalize">{ticket.type}</span>
-        <span className=" text-[14px]"> - Issue</span>
+      <div className="py-3">
+        <span className="font-semibold text-lg text-gray-900 capitalize">{ticket.type}</span>
+        <span className="text-sm text-gray-500"> - Issue</span>
       </div>
-      <p className=" text-gray-500 text-base mb-2 line-clamp-3">{ticket.issueDesc}</p>
-
-
-     
+      <p className="text-gray-600 text-sm mb-4 line-clamp-3">{ticket.issueDesc}</p>
 
       {defaultAddress && (
-        <div className="text-gray-600 text-[12px] mb-2">
-          <span className="font-medium">Address:</span>{' '}
+        <div className="text-gray-600 text-xs mb-4">
+          <span className="font-medium">Address: </span>
           {`${defaultAddress.addressLine1}, ${defaultAddress.city}, ${defaultAddress.state} ${defaultAddress.postalCode}, ${defaultAddress.country}`}
         </div>
       )}
 
-      <div className="flex gap-4 justify-between items-center">
+      <div className="flex items-center justify-between">
         <div
-          className={`px-2 py-1 rounded-sm text-xs font-medium border ${getStatusColor(ticket.status)}`}
+          className={`inline-flex items-center px-3 py-1 rounded-full text-xs font-medium border ${getStatusColor(
+            ticket.status,
+          )}`}
           aria-label={`Status: ${ticket.status}`}
         >
+          <span
+            className={`w-2 h-2 rounded-full mr-1.5 ${ticket.status === 'active'
+                ? 'bg-green-400'
+                : ticket.status === 'inactive'
+                  ? 'bg-red-400'
+                  : 'bg-gray-400'
+              }`}
+          ></span>
           {ticket.status.charAt(0).toUpperCase() + ticket.status.slice(1)}
         </div>
-        <div className="text-xs text-blue-600" aria-label={`Created: ${formatDate(ticket.createdAt)}`}>
+        <div className="text-xs text-gray-500" aria-label={`Created: ${formatDate(ticket.createdAt)}`}>
           {formatDate(ticket.createdAt)}
         </div>
       </div>

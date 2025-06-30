@@ -17,3 +17,7 @@ export interface Banner {
     endDate?: string;
     link?: string;
   }
+
+
+
+
