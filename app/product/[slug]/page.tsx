@@ -23,6 +23,7 @@ export default function Page({ params }: { params: Params }) {
         throw new Error(`Failed to fetch product data: ${res.status}`);
       }
       const data: FlattenedProduct = await res.json();
+      console.log("product data", data)
       return data;
     } catch (error) {
       console.error('Error fetching product data:', error);

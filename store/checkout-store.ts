@@ -13,7 +13,7 @@ interface CheckoutItem {
   totalPrice: number;
   createdAt: string;
   updatedAt: string;
-  product: { shortName: string; brand: string; delivery_mode: string };
+  product: { shortName: string; brand: string; deliveryMode: string };
   variant: { name: string; ourPrice: number; mrp: number; productImages: ProductImage[] };
 }
 

@@ -83,13 +83,17 @@ const CheckoutPage: React.FC = () => {
     const fetchCityFromPincode = async () => {
       if (selectedAddressId) {
         const selectedAddress = addresses.find((addr) => addr.id === selectedAddressId)
+        console.log("Selected Address postal code:", selectedAddress?.postalCode)
         if (selectedAddress?.postalCode) {
           try {
             const response = await fetch(`https://api.postalpincode.in/pincode/${selectedAddress.postalCode}`)
             if (!response.ok) throw new Error("Failed to fetch pincode data")
             const data = await response.json()
-            if (data[0]?.Status === "Success" && data[0]?.PostOffice?.[0]?.City) {
-              setSelectedCity(data[0].PostOffice[0].City.toLowerCase())
+            console.log("Postal API Full Response:", data)
+            if (data[0]?.Status === "Success" && data[0]?.PostOffice?.[0]?.District) {
+              const city = data[0].PostOffice[0].District.toLowerCase().trim()
+              setSelectedCity(city)
+              console.log("City from pincode:", city)
             } else {
               setSelectedCity(null)
               // toast.error("Invalid postal code or city not found")
@@ -107,6 +111,36 @@ const CheckoutPage: React.FC = () => {
     fetchCityFromPincode()
   }, [selectedAddressId, addresses])
 
+  // Log checkoutItems to verify deliveryMode
+  useEffect(() => {
+    console.log("Checkout Items:", checkoutItems.map(item => ({
+      productId: item.productId,
+      shortName: item.product.shortName,
+      deliveryMode: item.product.deliveryMode
+    })))
+  }, [checkoutItems])
+
+  // Check if express delivery is available
+  const isExpressAvailable =
+    checkoutItems.length > 0 && // Ensure there are items
+    checkoutItems.every(item => item.product.deliveryMode === "express") &&
+    selectedCity &&
+    ["coimbatore", "chennai", "erode", "madurai"].includes(selectedCity)
+
+  // Reset deliveryMode to standard if express is not available
+  useEffect(() => {
+    if (!isExpressAvailable && deliveryMode === "express") {
+      setDeliveryMode("standard")
+    }
+  }, [isExpressAvailable, deliveryMode])
+
+  console.log("isExpressAvailable Debug:", {
+    hasAllExpressItems: checkoutItems.length > 0 && checkoutItems.every(item => item.product.deliveryMode === "express"),
+    selectedCity,
+    isCityValid: selectedCity && ["coimbatore", "chennai", "erode", "madurai"].includes(selectedCity),
+    isExpressAvailable
+  })
+  console.log("delivery mode:", deliveryMode)
 
   // Handle new address submission
   const handleAddAddress = async (e: React.FormEvent) => {
@@ -182,18 +216,10 @@ const CheckoutPage: React.FC = () => {
     setCouponCode("")
   }
 
-  // Check if express delivery is available
-  const isExpressAvailable =
-    checkoutItems.some(
-      (item) => item.product.delivery_mode === "express" || item.product.delivery_mode === "both"
-    ) &&
-    selectedCity &&
-    ["coimbatore", "chennai", "erode", "madurai"].includes(selectedCity)
-
   // Calculate estimated delivery dates
   const getEstimatedDeliveryDate = (mode: "standard" | "express") => {
-    const today = new Date("2025-06-29T21:33:00+05:30") // Updated to current date and time
-    const daysToAdd = mode === "standard" ? 7 : 2
+    const today = new Date()
+    const daysToAdd = mode === "standard" ? 7 : 1
     const estimatedDate = new Date(today)
     estimatedDate.setDate(today.getDate() + daysToAdd)
     return estimatedDate.toLocaleDateString("en-IN", {
