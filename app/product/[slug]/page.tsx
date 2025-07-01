@@ -1,16 +1,17 @@
 'use client';
 
 import { useEffect, useState } from 'react';
+import { use } from 'react'; // Import React.use
 import UserLayout from '@/components/Layouts/UserLayout';
 import { useProductStore } from '@/store/product-store';
 import toast from 'react-hot-toast';
 import { FlattenedProduct } from '@/types/product';
 import ProductDetailPage from '@/components/Product/ProductDetails/ProductDetailsPage';
 
-type Params = Promise<{slug: string}>;
+type Params = Promise<{ slug: string }>;
 
-export default function Page({ params }: any) {
-  const { slug } = params;
+export default function Page({ params }: { params: Params }) {
+  const { slug } = use(params); // Unwrap params using React.use
   const { product, setProduct, isLoading, setIsLoading, error, setError } = useProductStore();
   const [initialLoad, setInitialLoad] = useState(true);
 

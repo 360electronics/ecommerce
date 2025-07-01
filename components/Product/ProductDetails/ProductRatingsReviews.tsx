@@ -102,7 +102,7 @@ export default function ProductRatingsReviews({ className }: ProductRatingsRevie
         variantId: product.id,
       });
       const url = `/api/reviews/${product.productId}?${query}`;
-      console.log('Fetching reviews from:', url);
+      // console.log('Fetching reviews from:', url);
       const response = await fetch(url, {
         credentials: "include",
       });
@@ -119,7 +119,7 @@ export default function ProductRatingsReviews({ className }: ProductRatingsRevie
         throw new Error(errorData.error || `Failed to fetch reviews (Status: ${response.status})`);
       }
       const data = await response.json();
-      console.log("reviews", data)
+      // console.log("reviews", data)
       setReviews(data.reviews);
       setTotalReviews(data.total);
     } catch (err) {

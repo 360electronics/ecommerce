@@ -49,7 +49,7 @@ export const useCheckoutStore = create<CheckoutState>((set, get) => ({
       });
       if (!response.ok) throw new Error('Failed to fetch checkout items');
       const data = await response.json();
-      console.log('Fetched checkout items:', data); // Log the API response
+      // console.log('Fetched checkout items:', data); // Log the API response
       set({ checkoutItems: data });
     } catch (error) {
       console.error('Error fetching checkout items:', error);

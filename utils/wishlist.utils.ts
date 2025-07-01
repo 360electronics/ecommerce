@@ -14,7 +14,7 @@ export const addToWishlist = async (userId: string, productId: string, variantId
             throw new Error(data.error || 'Failed to add to wishlist');
         }
 
-        console.log(data)
+        // console.log(data)
 
         return {
             success: true,

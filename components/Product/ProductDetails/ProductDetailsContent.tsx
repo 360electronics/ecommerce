@@ -81,24 +81,27 @@ export default function ProductDetailsContent({ className, activeVariant }: Prod
   }, [product, activeVariant.ourPrice, discount]);
 
   // Compute attribute keys and options
-  const attributeKeys = useMemo(() => {
-    if (!product?.productParent?.variants) return [];
+const attributeKeys = useMemo(() => {
+  if (!product?.productParent?.variants) return [];
 
-    const keys = new Set<string>();
-    const valueCounts = new Map<string, Set<string>>();
+  const allowedAttributes = ['processor', 'graphics', 'ram', 'storage'];
+  const keys = new Set<string>();
+  const valueCounts = new Map<string, Set<string>>();
 
-    product.productParent.variants.forEach((variant) => {
-      Object.entries(variant.attributes).forEach(([key, value]) => {
+  product.productParent.variants.forEach((variant) => {
+    Object.entries(variant.attributes).forEach(([key, value]) => {
+      if (allowedAttributes.includes(key.toLowerCase())) {
         keys.add(key);
         if (!valueCounts.has(key)) {
           valueCounts.set(key, new Set<string>());
         }
         valueCounts.get(key)!.add(String(value));
-      });
+      }
     });
+  });
 
-    return Array.from(keys).filter((key) => valueCounts.get(key)!.size > 1);
-  }, [product?.productParent?.variants]);
+  return Array.from(keys).filter((key) => valueCounts.get(key)!.size > 1);
+}, [product?.productParent?.variants]);
 
   const attributeOptions = useMemo(() => {
     if (!product?.productParent?.variants) return {};

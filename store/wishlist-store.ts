@@ -79,7 +79,7 @@ export const useWishlistStore = create<WishlistState>((set, get) => ({
   fetchWishlist: async (force = false) => {
     const { user, isLoggedIn } = useAuthStore.getState();
     if (!isLoggedIn || !user?.id) {
-      console.log('[fetchWishlist] User not logged in, resetting wishlist');
+      // console.log('[fetchWishlist] User not logged in, resetting wishlist');
       set({ wishlist: [], wishlistCount: 0, lastFetched: Date.now() });
       return;
     }
@@ -87,16 +87,16 @@ export const useWishlistStore = create<WishlistState>((set, get) => ({
     const cacheDuration = 10 * 60 * 1000;
     const lastFetched = get().lastFetched;
     if (!force && lastFetched && Date.now() - lastFetched < cacheDuration) {
-      console.log('[fetchWishlist] Cache hit, skipping fetch');
+      // console.log('[fetchWishlist] Cache hit, skipping fetch');
       return;
     }
   
     try {
       set({ isLoading: true, isRefetching: force, errors: { ...get().errors, fetch: undefined } });
       const response = await fetch(`/api/users/wishlist?userId=${user.id}`);
-      console.log('[fetchWishlist] Raw API response:', response);
+      // console.log('[fetchWishlist] Raw API response:', response);
       const data = await fetchWithRetry<WishlistItem[]>(() => fetch(`/api/users/wishlist?userId=${user.id}`));
-      console.log('[fetchWishlist] Fetched data:', data);
+      // console.log('[fetchWishlist] Fetched data:', data);
       const validatedData = Array.isArray(data) ? data : [];
       set({
         wishlist: validatedData,
@@ -105,7 +105,7 @@ export const useWishlistStore = create<WishlistState>((set, get) => ({
         isRefetching: false,
         lastFetched: Date.now(),
       });
-      console.log('[fetchWishlist] State updated:', { wishlist: validatedData, wishlistCount: validatedData.length });
+      // console.log('[fetchWishlist] State updated:', { wishlist: validatedData, wishlistCount: validatedData.length });
     } catch (error) {
       logError('fetchWishlist', error);
       set({
@@ -113,7 +113,7 @@ export const useWishlistStore = create<WishlistState>((set, get) => ({
         isLoading: false,
         isRefetching: false,
       });
-      console.log('[fetchWishlist] Error:', error);
+      // console.log('[fetchWishlist] Error:', error);
     }
   },
   addToWishlist: async (productId, variantId, onSuccess) => {
