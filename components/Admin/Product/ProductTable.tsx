@@ -464,6 +464,7 @@ export function ProductsTable() {
   const handleAddProduct = () => router.push("/admin/products/add-product");
 
   const handleEditProduct = (rows: TableRow[]) => {
+    console.log("Edit action triggered with rows:", rows);
     if (rows.length === 1) {
       router.push(`/admin/products/edit-product/${rows[0].productId}`);
     }
@@ -592,7 +593,7 @@ export function ProductsTable() {
             </div>
           </div>
         </div>
-       
+
       </div>
 
       {/* Table */}
@@ -649,6 +650,7 @@ export function ProductsTable() {
           bulkActions: {
             delete: handleBulkDelete,
             export: handleExportProducts,
+            edit: handleEditProduct,
           },
           rowActions: {
             view: handleViewProduct,

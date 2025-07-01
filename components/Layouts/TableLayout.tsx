@@ -173,7 +173,7 @@ export function EnhancedTable<T extends Record<string, any>>({
       style.textContent = scrollbarHideStyles
       document.head.appendChild(style)
     }
-    return () => {}
+    return () => { }
   }, [])
 
   // Filtering data
@@ -562,7 +562,7 @@ export function EnhancedTable<T extends Record<string, any>>({
         </div>
         {/* Bulk Actions */}
         {selection.enabled && selectedItems.length > 0 && actions?.bulkActions && (
-          <div className="flex flex-wrap gap-3">
+          <div className="flex  gap-3">
             {actions.bulkActions.view && selectedItems.length === 1 && (
               <button
                 onClick={() => actions.bulkActions?.view?.(selectedItems[0])}
@@ -576,7 +576,7 @@ export function EnhancedTable<T extends Record<string, any>>({
             {actions.bulkActions.edit && (
               <button
                 onClick={() => actions.bulkActions?.edit?.(selectedItems)}
-                className="group flex items-center gap-2 px-4 py-2 rounded-xl bg-blue-50 text-blue-600 hover:bg-blue-600 hover:text-white  transition-all duration-300"
+                className="group flex items-center gap-2 px-4 py-2 rounded-xl bg-blue-50 text-blue-600 hover:bg-blue-600 hover:text-white transition-all duration-300"
                 title="Edit"
               >
                 <Edit className="h-5 w-5 text-blue-600 group-hover:text-white transition-transform duration-300 group-hover:rotate-12" />

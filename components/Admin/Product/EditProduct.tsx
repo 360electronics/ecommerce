@@ -9,10 +9,10 @@ import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { DndProvider, useDrag, useDrop } from 'react-dnd';
 import { HTML5Backend } from 'react-dnd-html5-backend';
-import { decodeUUID } from '@/utils/Encryption';
 import { toast } from 'react-hot-toast';
+import { slugify } from '@/utils/slugify';
 
-// Interfaces (unchanged, included for context)
+// Interfaces (unchanged)
 interface Category {
   id: string;
   name: string;
@@ -125,7 +125,7 @@ const deliveryModeOptions = [
   { value: 'pickup', label: 'Pickup' },
 ];
 
-// DraggableSpecSection (unchanged for brevity)
+// DraggableSpecSection (fixed drag-and-drop)
 const DraggableSpecSection = ({
   section,
   index,
@@ -157,7 +157,7 @@ const DraggableSpecSection = ({
     }),
   });
 
-  const [{ isOver, canDrop }] = useDrop({
+  const [{ isOver, canDrop }, drop] = useDrop({
     accept: 'SPEC_SECTION',
     canDrop: (item: DragItem) => !section.isFixed && item.id !== 'general' && item.id !== 'warranty',
     hover: (item: DragItem, monitor) => {
@@ -180,7 +180,7 @@ const DraggableSpecSection = ({
     }),
   });
 
-  // drag(drop(ref));
+  drag(drop(ref));
 
   const borderStyle = isOver && canDrop ? 'border-blue-400' : isOver && !canDrop ? 'border-red-400' : 'border-gray-200';
 
@@ -268,27 +268,7 @@ export default function EditProductPage({ id }: { id: string }) {
     metaTitle: '',
     metaDescription: '',
   });
-  const [variants, setVariants] = useState<Variant[]>([
-    {
-      id: `variant-${Date.now()}`,
-      name: '',
-      sku: '',
-      attributes: {},
-      stock: '0',
-      lowStockThreshold: '5',
-      isBackorderable: false,
-      mrp: '',
-      ourPrice: '',
-      salePrice: '',
-      isOnSale: false,
-      imageFiles: [],
-      existingImages: [],
-      weight: '',
-      weightUnit: 'kg',
-      dimensions: { length: 0, width: 0, height: 0, unit: 'cm' },
-      isDefault: true,
-    },
-  ]);
+  const [variants, setVariants] = useState<Variant[]>([]);
   const [customAttributes, setCustomAttributes] = useState<{ [variantId: string]: CustomAttribute[] }>({});
   const [specSections, setSpecSections] = useState<SpecSection[]>([
     {
@@ -318,12 +298,17 @@ export default function EditProductPage({ id }: { id: string }) {
     [variantId: string]: { main: React.RefObject<HTMLInputElement | null>; additional: (HTMLInputElement | null)[] };
   }>({});
 
-  // Decode ID and handle errors
-  
+  // Decode and validate ID
+ 
 
   // Fetch data
   useEffect(() => {
-    if (!id ) return;
+    if (!id) {
+      console.log("Invalid product ID", id)
+      setError('Invalid product ID');
+      setIsLoading(false);
+      return;
+    }
 
     async function fetchData() {
       try {
@@ -342,7 +327,7 @@ export default function EditProductPage({ id }: { id: string }) {
         setBrands(brandData);
 
         // Fetch product data
-        const productResponse = await fetch(`/api/products/single/${id}`);
+        const productResponse = await fetch(`/api/products/edit/${id}`);
         if (!productResponse.ok) {
           if (productResponse.status === 404) throw new Error('Product not found');
           throw new Error('Failed to fetch product');
@@ -354,13 +339,13 @@ export default function EditProductPage({ id }: { id: string }) {
           shortName: data.shortName || '',
           fullName: data.fullName || '',
           category: data.category?.slug || '',
-          subcategory: data.subcategory?.slug || '',
+          subcategory: data.subcategory?.name || '',
           brand: data.brand?.name || '',
           description: data.description || '',
           status: data.status || 'active',
           isFeatured: data.isFeatured || false,
           deliveryMode: data.deliveryMode || 'standard',
-          tags: Array.isArray(data.tags) ? data.tags.join(', ') : '',
+          tags: Array.isArray(data.tags) ? data.tags.join(', ') : data.tags || '',
           warranty: data.warranty || '',
           metaTitle: data.metaTitle || '',
           metaDescription: data.metaDescription || '',
@@ -381,7 +366,14 @@ export default function EditProductPage({ id }: { id: string }) {
               salePrice: variant.salePrice?.toString() || '',
               isOnSale: variant.isOnSale || false,
               imageFiles: [],
-              existingImages: Array.isArray(variant.productImages) ? variant.productImages : [],
+              existingImages: Array.isArray(variant.productImages)
+                ? variant.productImages.map((img: any, idx: number) => ({
+                    url: img.url,
+                    alt: img.alt || `Image ${idx + 1}`,
+                    isFeatured: img.isFeatured || idx === 0,
+                    displayOrder: img.displayOrder || idx,
+                  }))
+                : [],
               weight: variant.weight?.toString() || '',
               weightUnit: variant.weightUnit || 'kg',
               dimensions: variant.dimensions || { length: 0, width: 0, height: 0, unit: 'cm' },
@@ -412,8 +404,8 @@ export default function EditProductPage({ id }: { id: string }) {
 
         // Set preview URLs for existing images
         const initialPreviewUrls: { [variantId: string]: string[] } = {};
-        fetchedVariants.forEach((variant:any) => {
-          initialPreviewUrls[variant.id] = variant.existingImages.map((img: ProductImage) => img.url);
+        fetchedVariants.forEach((variant: Variant) => {
+          initialPreviewUrls[variant.id] = variant.existingImages.map((img) => img.url);
         });
         setPreviewUrls(initialPreviewUrls);
 
@@ -452,7 +444,7 @@ export default function EditProductPage({ id }: { id: string }) {
                 }))
               : [];
             if (existingSectionIndex >= 0) {
-              newSpecSections[existingSectionIndex].fields = fields;
+              newSpecSections[existingSectionIndex].fields = fields.length > 0 ? fields : newSpecSections[existingSectionIndex].fields;
             } else {
               newSpecSections.push({
                 id: `section-${spec.groupName}-${index}`,
@@ -466,29 +458,6 @@ export default function EditProductPage({ id }: { id: string }) {
         } else {
           setSpecSections(initialSpecSections);
         }
-
-        // Initialize custom attributes
-        const newCustomAttributes: { [variantId: string]: CustomAttribute[] } = {};
-        fetchedVariants.forEach((variant: Variant) => {
-          newCustomAttributes[variant.id] = [];
-          const presetAttrNames = (data.category?.slug && categoryPresets?.[data.category.slug]?.attributes.map(a => a.name)) || [];
-          Object.entries(variant.attributes || {}).forEach(([key, value], index) => {
-            if (!presetAttrNames.includes(key)) {
-              const stringValue = typeof value === 'string' ? value :
-                                 typeof value === 'number' ? value.toString() :
-                                 typeof value === 'boolean' ? value.toString() : '';
-              newCustomAttributes[variant.id].push({
-                name: key,
-                value: stringValue,
-                type: 'text',
-                isRequired: false,
-                isFilterable: false,
-                displayOrder: index + 1,
-              });
-            }
-          });
-        });
-        setCustomAttributes(newCustomAttributes);
       } catch (err) {
         setError(err instanceof Error ? err.message : 'Unknown error');
       } finally {
@@ -498,24 +467,55 @@ export default function EditProductPage({ id }: { id: string }) {
     fetchData();
   }, [id]);
 
-  // Initialize refs (unchanged)
+  // Sync variant attributes with category presets
   useEffect(() => {
-    variants.forEach((variant) => {
-      if (!variantImageInputRefs.current[variant.id]) {
-        variantImageInputRefs.current[variant.id] = {
-          main: React.createRef<HTMLInputElement>(),
-          additional: Array(5).fill(null).map(() => null),
-        };
-      }
-    });
-    Object.keys(variantImageInputRefs.current).forEach((variantId) => {
-      if (!variants.find((v) => v.id === variantId)) {
-        delete variantImageInputRefs.current[variantId];
-      }
-    });
-  }, [variants]);
+    if (!categoryPresets || !product.category) return;
 
-  // Sync product fields (unchanged)
+    setVariants((prev) =>
+      prev.map((variant) => {
+        const presetAttributes = categoryPresets[product.category]?.attributes || [];
+        const initialAttributes: Record<string, string | number | boolean> = {};
+        presetAttributes.forEach((attr) => {
+          if (!(attr.name in variant.attributes)) {
+            initialAttributes[attr.name] = attr.type === 'boolean' ? false : attr.type === 'number' ? 0 : '';
+          }
+        });
+        return {
+          ...variant,
+          attributes: { ...initialAttributes, ...variant.attributes },
+        };
+      })
+    );
+
+    // Initialize custom attributes for new variants
+    const newCustomAttributes = { ...customAttributes };
+    variants.forEach((variant) => {
+      if (!newCustomAttributes[variant.id]) {
+        const presetAttrNames = categoryPresets[product.category]?.attributes.map((a) => a.name) || [];
+        const customAttrs: CustomAttribute[] = [];
+        Object.entries(variant.attributes).forEach(([key, value], index) => {
+          if (!presetAttrNames.includes(key)) {
+            const stringValue =
+              typeof value === 'string' ? value :
+              typeof value === 'number' ? value.toString() :
+              typeof value === 'boolean' ? value.toString() : '';
+            customAttrs.push({
+              name: key,
+              value: stringValue,
+              type: 'text',
+              isRequired: false,
+              isFilterable: false,
+              displayOrder: index + 1,
+            });
+          }
+        });
+        newCustomAttributes[variant.id] = customAttrs;
+      }
+    });
+    setCustomAttributes(newCustomAttributes);
+  }, [categoryPresets, product.category, variants]);
+
+  // Sync product fields
   useEffect(() => {
     setSpecSections((prev) =>
       prev.map((section) => {
@@ -537,7 +537,24 @@ export default function EditProductPage({ id }: { id: string }) {
     );
   }, [product.brand, product.warranty]);
 
-  // Dropdown handling (unchanged)
+  // Initialize refs
+  useEffect(() => {
+    variants.forEach((variant) => {
+      if (!variantImageInputRefs.current[variant.id]) {
+        variantImageInputRefs.current[variant.id] = {
+          main: React.createRef<HTMLInputElement>(),
+          additional: Array(5).fill(null).map(() => null),
+        };
+      }
+    });
+    Object.keys(variantImageInputRefs.current).forEach((variantId) => {
+      if (!variants.find((v) => v.id === variantId)) {
+        delete variantImageInputRefs.current[variantId];
+      }
+    });
+  }, [variants]);
+
+  // Dropdown handling
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
       if (openDropdown && !(event.target as Element).closest('.dropdown-container')) {
@@ -552,7 +569,7 @@ export default function EditProductPage({ id }: { id: string }) {
     setOpenDropdown(openDropdown === dropdownName ? null : dropdownName);
   };
 
-  // Image handling (unchanged)
+  // Image handling
   const fileToBase64 = (file: File): Promise<string> => {
     return new Promise((resolve, reject) => {
       const reader = new FileReader();
@@ -570,8 +587,11 @@ export default function EditProductPage({ id }: { id: string }) {
           variant.id === variantId
             ? {
                 ...variant,
-                imageFiles: [...variant.imageFiles.slice(0, index), file, ...variant.imageFiles.slice(index + 1)],
-                existingImages: [...variant.existingImages.slice(0, index), { url: '', alt: file.name, isFeatured: index === 0, displayOrder: index }, ...variant.existingImages.slice(index + 1)],
+                imageFiles: [
+                  ...variant.imageFiles.slice(0, index),
+                  file,
+                  ...variant.imageFiles.slice(index + 1),
+                ],
               }
             : variant
         )
@@ -593,8 +613,11 @@ export default function EditProductPage({ id }: { id: string }) {
           variant.id === variantId
             ? {
                 ...variant,
-                imageFiles: [...variant.imageFiles.slice(0, index), file, ...variant.imageFiles.slice(index + 1)],
-                existingImages: [...variant.existingImages.slice(0, index), { url: '', alt: file.name, isFeatured: index === 0, displayOrder: index }, ...variant.existingImages.slice(index + 1)],
+                imageFiles: [
+                  ...variant.imageFiles.slice(0, index),
+                  file,
+                  ...variant.imageFiles.slice(index + 1),
+                ],
               }
             : variant
         )
@@ -607,7 +630,25 @@ export default function EditProductPage({ id }: { id: string }) {
     }
   };
 
-  // Variant handling (unchanged)
+  const removeImage = (variantId: string, index: number) => {
+    setVariants((prev) =>
+      prev.map((variant) =>
+        variant.id === variantId
+          ? {
+              ...variant,
+              imageFiles: [...variant.imageFiles.slice(0, index), ...variant.imageFiles.slice(index + 1)],
+              existingImages: [...variant.existingImages.slice(0, index), ...variant.existingImages.slice(index + 1)],
+            }
+          : variant
+      )
+    );
+    setPreviewUrls((prev) => ({
+      ...prev,
+      [variantId]: [...(prev[variantId] || []).slice(0, index), ...(prev[variantId] || []).slice(index + 1)],
+    }));
+  };
+
+  // Variant handling
   const handleVariantChange = (id: string, field: keyof Variant, value: any) => {
     setVariants((prev) =>
       prev.map((variant) => (variant.id === id ? { ...variant, [field]: value } : variant))
@@ -706,14 +747,16 @@ export default function EditProductPage({ id }: { id: string }) {
     });
   };
 
-  // Specification handling (unchanged)
+  // Specification handling
   const handleSpecFieldChange = (sectionId: string, fieldId: string, type: 'label' | 'value', value: string) => {
     setSpecSections((prev) =>
       prev.map((section) =>
         section.id === sectionId
           ? {
               ...section,
-              fields: section.fields.map((field) => (field.id === fieldId ? { ...field, [type]: value } : field)),
+              fields: section.fields.map((field) =>
+                field.id === fieldId ? { ...field, [type]: value } : field
+              ),
             }
           : section
       )
@@ -781,15 +824,15 @@ export default function EditProductPage({ id }: { id: string }) {
     });
   };
 
-  // Form submission (unchanged)
+  // Form submission
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-
+  
     if (!id) {
       toast.error('Invalid product ID');
       return;
     }
-
+  
     // Validations
     if (!product.shortName.trim()) {
       toast.error('Short name is required');
@@ -807,9 +850,9 @@ export default function EditProductPage({ id }: { id: string }) {
       toast.error('Brand is required');
       return;
     }
-
+  
     const presetAttributes = (product.category && categoryPresets?.[product.category]?.attributes) || [];
-
+  
     const validVariants = variants.filter((v) => {
       const requiredAttributesFilled = presetAttributes
         .filter((attr) => attr.isRequired)
@@ -829,34 +872,41 @@ export default function EditProductPage({ id }: { id: string }) {
         requiredAttributesFilled
       );
     });
-
+  
     if (validVariants.length === 0) {
       toast.error('At least one valid variant with all required fields, attributes, and at least one image is required');
       return;
     }
-
+  
     const generalSection = specSections.find((s) => s.id === 'general');
     if (!generalSection?.fields.some((f) => f.label.trim() && f.value.trim())) {
       toast.error('General section requires at least one field');
       return;
     }
-
+  
     const formData = new FormData();
+    formData.append('id', id);
     formData.append('shortName', product.shortName);
     formData.append('fullName', product.fullName);
+    formData.append('slug', slugify(product.fullName));
     formData.append('category', product.category);
-    formData.append('subcategory', product.subcategory || '');
+    formData.append(
+      'subcategory',
+      product.subcategory && categoryPresets && categoryPresets[product.category]
+        ? categoryPresets[product.category].subcategories.find((sub) => sub.name === product.subcategory)?.slug || ''
+        : ''
+    );
     formData.append('brand', product.brand);
     formData.append('description', product.description || '');
     formData.append('status', product.status);
-    formData.append('isFeatured', product.isFeatured.toString());
+    formData.append('isFeatured', product.isFeatured ? 'true' : 'false');
     formData.append('deliveryMode', product.deliveryMode);
     formData.append('tags', product.tags || '');
     formData.append('warranty', product.warranty || '');
     formData.append('metaTitle', product.metaTitle || '');
     formData.append('metaDescription', product.metaDescription || '');
     formData.append('totalStocks', validVariants.reduce((sum, v) => sum + Number(v.stock), 0).toString());
-
+  
     const variantsPayload = validVariants.map((v) => {
       const combinedAttributes = { ...v.attributes };
       customAttributes[v.id]?.forEach((attr) => {
@@ -865,14 +915,16 @@ export default function EditProductPage({ id }: { id: string }) {
         }
       });
       return {
+        id: v.id.startsWith('variant-') ? undefined : v.id,
         name: v.name,
         sku: v.sku,
+        slug: slugify(v.name),
         attributes: combinedAttributes,
         isBackorderable: v.isBackorderable,
         mrp: Number(v.mrp).toString(),
         ourPrice: Number(v.ourPrice).toString(),
-        salePrice: v.salePrice && !isNaN(Number(v.salePrice)) ? Number(v.salePrice).toString() : '',
-        isOnSale: v.isOnSale,
+        stock: Number(v.stock).toString(),
+        lowStockThreshold: Number(v.lowStockThreshold).toString(),
         weight: v.weight && !isNaN(Number(v.weight)) ? Number(v.weight).toString() : '',
         weightUnit: v.weightUnit,
         dimensions: {
@@ -886,13 +938,13 @@ export default function EditProductPage({ id }: { id: string }) {
       };
     });
     formData.append('variants', JSON.stringify(variantsPayload));
-
+  
     validVariants.forEach((v) => {
       v.imageFiles.forEach((file, index) => {
         formData.append(`variantImages_${v.sku}_${index}`, file);
       });
     });
-
+  
     const specificationsPayload = specSections
       .filter((s) => s.fields.some((f) => f.label.trim() && f.value.trim()))
       .map((s) => ({
@@ -902,33 +954,39 @@ export default function EditProductPage({ id }: { id: string }) {
           .map((f) => ({ fieldName: f.label, fieldValue: f.value })),
       }));
     formData.append('specifications', JSON.stringify(specificationsPayload));
-
+  
+    console.log('FormData entries:');
+    for (const [key, value] of formData.entries()) {
+      console.log(`${key}:`, value instanceof File ? value.name : value);
+    }
+  
     try {
-      const res = await fetch(`/api/products/single/${id}`, {
+      const res = await fetch(`/api/products/edit/${id}`, {
         method: 'PUT',
         body: formData,
       });
-
+  
       if (!res.ok) {
         const error = await res.json();
-        throw new Error(error.message || 'Failed to update product');
+        throw new Error(error.message || JSON.stringify(error));
       }
-
+  
       toast.success('Product updated successfully!');
       router.push('/admin/products');
     } catch (error) {
+      console.error('Fetch error:', error);
       toast.error(`Error: ${error instanceof Error ? error.message : 'Unknown error'}`);
     }
   };
- 
-  // if (isLoading) {
-  //   return (
-  //     <div className="flex items-center justify-center p-6">
-  //       <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-gray-900"></div>
-  //       <span className="ml-2">Loading product data...</span>
-  //     </div>
-  //   );
-  // }
+
+  if (isLoading) {
+    return (
+      <div className="flex items-center justify-center p-6">
+        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-gray-900"></div>
+        <span className="ml-2">Loading product data...</span>
+      </div>
+    );
+  }
 
   if (error) {
     return (
@@ -1041,7 +1099,7 @@ export default function EditProductPage({ id }: { id: string }) {
                         key={subcat.slug}
                         className="cursor-pointer px-4 py-2 text-sm hover:bg-gray-100"
                         onClick={() => {
-                          setProduct({ ...product, subcategory: subcat.slug });
+                          setProduct({ ...product, subcategory: subcat.name });
                           setOpenDropdown(null);
                         }}
                       >
@@ -1275,23 +1333,7 @@ export default function EditProductPage({ id }: { id: string }) {
                               />
                               <button
                                 type="button"
-                                onClick={() => {
-                                  setVariants((prev) =>
-                                    prev.map((v) =>
-                                      v.id === variant.id
-                                        ? {
-                                            ...v,
-                                            imageFiles: [...v.imageFiles.slice(0, 0), ...v.imageFiles.slice(1)],
-                                            existingImages: [...v.existingImages.slice(0, 0), ...v.existingImages.slice(1)],
-                                          }
-                                        : v
-                                    )
-                                  );
-                                  setPreviewUrls((prev) => ({
-                                    ...prev,
-                                    [variant.id]: [...(prev[variant.id] || []).slice(0, 0), ...(prev[variant.id] || []).slice(1)],
-                                  }));
-                                }}
+                                onClick={() => removeImage(variant.id, 0)}
                                 className="absolute right-2 top-2 rounded-full bg-white p-1 shadow-md"
                               >
                                 <X className="h-4 w-4" />
@@ -1338,23 +1380,7 @@ export default function EditProductPage({ id }: { id: string }) {
                                 />
                                 <button
                                   type="button"
-                                  onClick={() => {
-                                    setVariants((prev) =>
-                                      prev.map((v) =>
-                                        v.id === variant.id
-                                          ? {
-                                              ...v,
-                                              imageFiles: [...v.imageFiles.slice(0, index + 1), ...v.imageFiles.slice(index + 2)],
-                                              existingImages: [...v.existingImages.slice(0, index + 1), ...v.existingImages.slice(index + 2)],
-                                            }
-                                          : v
-                                      )
-                                    );
-                                    setPreviewUrls((prev) => ({
-                                      ...prev,
-                                      [variant.id]: [...(prev[variant.id] || []).slice(0, index + 1), ...(prev[variant.id] || []).slice(index + 2)],
-                                    }));
-                                  }}
+                                  onClick={() => removeImage(variant.id, index + 1)}
                                   className="absolute right-2 top-2 rounded-full bg-white p-1 shadow-md"
                                 >
                                   <X className="h-4 w-4" />
@@ -1388,6 +1414,7 @@ export default function EditProductPage({ id }: { id: string }) {
                       </div>
                     </div>
                   </div>
+
                   {/* Variant Fields */}
                   <div className="grid grid-cols-1 gap-6 md:grid-cols-2">
                     <div>
@@ -1575,7 +1602,8 @@ export default function EditProductPage({ id }: { id: string }) {
                             <ChevronDown className="h-4 w-4 opacity-50" />
                           </button>
                           {openDropdown === `dimensionUnit-${variant.id}` && (
-                            <div className="absolute z-10 mt-1 w-full rounded-md border bg-white shadow-lg">
+                            <div className=" Strip long lines for better readability
+                            absolute z-10 mt-1 w-full rounded-md border bg-white shadow-lg">
                               {['cm', 'in', 'mm'].map((unit) => (
                                 <div
                                   key={unit}

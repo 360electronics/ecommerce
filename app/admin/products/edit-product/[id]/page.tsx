@@ -1,5 +1,4 @@
 import EditProductPage from '@/components/Admin/Product/EditProduct'
-import { encodeUUID } from '@/utils/Encryption';
 
 type Params = Promise<{id: string}>;
 
