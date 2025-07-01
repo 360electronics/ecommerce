@@ -1,9 +1,47 @@
 import { db } from "@/db/drizzle"
-import { orders, orderItems } from "@/db/schema"
+import { orders, orderItems, variants, savedAddresses } from "@/db/schema"
 import { eq } from "drizzle-orm"
 import { NextRequest, NextResponse } from "next/server"
 
 type Params = Promise<{ id: string }>;
+
+interface ErrorResponse {
+  message: string;
+  error: string;
+}
+
+export async function GET(request: Request, { params }: { params: Params }) {
+  const { id: orderId } = await params; // Access orderId correctly
+
+  try {
+    const order = await db
+      .select({
+        orders: orders,
+        orderItems: orderItems,
+        variants: variants,
+        savedAddresses: savedAddresses,
+      })
+      .from(orders)
+      .where(eq(orders.id, orderId)) // Filter by orderId
+      .leftJoin(orderItems, eq(orders.id, orderItems.orderId))
+      .leftJoin(variants, eq(variants.id, orderItems.variantId))
+      .leftJoin(savedAddresses, eq(savedAddresses.id, orders.addressId));
+
+    return NextResponse.json({
+      success: true,
+      data: order,
+    });
+  } catch (error) {
+    console.error("[ORDER_GET_ERROR]", error);
+    return NextResponse.json(
+      {
+        message: "Failed to fetch order",
+        error: error instanceof Error ? error.message : String(error),
+      },
+      { status: 500 }
+    );
+  }
+}
 
 export async function PATCH(request: NextRequest, { params }: { params: Params }) {
   try {
