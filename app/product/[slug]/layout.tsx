@@ -6,7 +6,7 @@ const Layout = ({ children }: { children: React.ReactNode }) => {
       {children}
 
       {/* Mobile-only bottom bar */}
-      <div className='fixed bottom-0 w-screen h-[6vh] pt-[1px] bg-white grid grid-cols-2 gap-2 px-3 shadow-md md:hidden'>
+      <div className='fixed bottom-0 w-screen h-[6vh] pt-[1px] bg-white hidden grid-cols-2 gap-2 px-3 shadow-md md:hidden'>
         {/* <button className="px-4 py-2 bg-gray-200  font-medium">Add to Cart</button>
         <button className="px-4 py-2 bg-blue-600 text-white  font-medium">Buy Now</button> */}
         <button

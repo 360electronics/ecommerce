@@ -97,7 +97,7 @@ export default function ProductImageGallery({ activeVariant }: ProductImageGalle
       </div>
 
       {/* Thumbnails */}
-      <div className="flex flex-col">
+      <div className="flex flex-row md:flex-col gap-2 overflow-x-auto w-full md:w-auto">
         {activeVariant.productImages.map((image: ProductImage, index: number) => (
           <button
             key={image.url + index}
