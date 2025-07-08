@@ -99,7 +99,7 @@ const ProductListing = ({ category, searchQuery }: { category?: string; searchQu
 
                     if (category && category.toLowerCase() !== 'all') {
                         filtered = filtered.filter((product) =>
-                            product.category.toLowerCase().includes(category.toLowerCase())
+                            product.category.name.toLowerCase().includes(category.toLowerCase())
                         );
                     }
 
@@ -108,7 +108,7 @@ const ProductListing = ({ category, searchQuery }: { category?: string; searchQu
                         const queryWords = sanitizedQuery.split(/\s+/).filter(word => word.length > 0);
                         filtered = filtered.filter((product: FlattenedProduct) => {
                             const name = product.name.toLowerCase();
-                            const category = product.category.toLowerCase();
+                            const category = product.category.name.toLowerCase();
                             const brand = product.brand?.name.toLowerCase() || '';
                             const description = product.description?.toLowerCase() || '';
                             const tags = product.tags.join(' ').toLowerCase();
