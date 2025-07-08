@@ -1,5 +1,5 @@
 'use client';
-import { useEffect, useState, useMemo } from 'react';
+import { useEffect, useState, useMemo, useRef } from 'react';
 import ProductImageGallery from './ProductImageGallery';
 import ProductDetailsContent from './ProductDetailsContent';
 import ProductSpecifications from './ProductSpecifications';
@@ -8,6 +8,8 @@ import ProductZoomOverlay from './ProductZoomOverlay';
 import { useProductStore } from '@/store/product-store';
 import { FlattenedProduct, ProductVariant } from '@/types/product';
 import ProductRatingsReviews from './ProductRatingsReviews';
+import SimilarProducts from './SimilarProducts';
+import ProductSpecsSideImages from './ProductSpecsSideImages';
 
 interface ProductDetailPageProps {
   product: FlattenedProduct;
@@ -16,6 +18,8 @@ interface ProductDetailPageProps {
 export default function ProductDetailPage({ product }: ProductDetailPageProps) {
   const { setProduct, selectedAttributes } = useProductStore();
   const [isClient, setIsClient] = useState(false);
+  const specificationsRef = useRef<HTMLDivElement>(null); // Reference to ProductSpecifications
+  const detailsContentRef = useRef<HTMLDivElement>(null); // Reference to ProductDetailsContent
 
   useEffect(() => {
     setIsClient(true);
@@ -28,6 +32,8 @@ export default function ProductDetailPage({ product }: ProductDetailPageProps) {
     }
     setProduct(product);
   }, [product, setProduct]);
+
+
 
   const activeVariant = useMemo((): ProductVariant => {
     if (!product?.productParent?.variants?.length) {
@@ -67,7 +73,7 @@ export default function ProductDetailPage({ product }: ProductDetailPageProps) {
     { name: 'Home', path: '/' },
     {
       name: product.category || 'Category',
-      path: `/category/${(product.category || 'unknown').toLowerCase().replace(/[^a-z0-9]+/g, '-')}`,
+      path: `/category/${(product.category.name || 'unknown').toLowerCase().replace(/[^a-z0-9]+/g, '-')}`,
     },
     { name: product.name || 'Product', path: '' },
   ], [product.category, product.name]);
@@ -101,23 +107,30 @@ export default function ProductDetailPage({ product }: ProductDetailPageProps) {
   }
 
   return (
-    <div className="mx-auto  pb-16 w-full">
-      <Breadcrumbs breadcrumbs={breadcrumbItems} className="my-6 hidden md:block" />
+    <div className="mx-auto pb-16 w-full">
+      <Breadcrumbs breadcrumbs={breadcrumbItems as any} className="my-6 hidden md:block" />
       <div
-        className="flex flex-col md:flex-row  w-full relative space-x-10"
+        className="flex flex-col md:flex-row w-full relative space-x-10"
         role="region"
         aria-label="Product details"
       >
         <div className="w-full md:w-auto relative">
           <ProductImageGallery activeVariant={activeVariant} />
         </div>
-        <div className=" relative">
+        <div className="relative">
           <ProductZoomOverlay activeVariant={activeVariant} className="hidden lg:block" />
-          <ProductDetailsContent activeVariant={activeVariant} />
+          <div ref={detailsContentRef} className="w-full overflow-y-auto h-[70dvh] hide-scrollbar">
+            <ProductDetailsContent activeVariant={activeVariant} />
+          </div>
         </div>
       </div>
-      <ProductSpecifications className="mb-12" />
+      <div ref={specificationsRef} className=' flex gap-10 relative'>
+        <ProductSpecifications className="py-20 max-w-5xl" />
+
+        <ProductSpecsSideImages />
+      </div>
       <ProductRatingsReviews />
+      <SimilarProducts product={product as any} />
     </div>
   );
 }

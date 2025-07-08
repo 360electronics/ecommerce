@@ -55,7 +55,7 @@ export default function ProductSpecifications({ className }: ProductSpecificatio
 
   return (
     <div className={`${className}`}>
-      <h2 className="md:text-4xl text-lg md:font-bold font-medium mb-4">Description</h2>
+      <h2 className="md:text-4xl text-lg md:font-bold font-medium mb-4 ">Description</h2>
       <div className="border rounded-lg p-6 bg-gray-100">
         <h2 className="md:text-xl md:font-bold font-medium mb-4">Product Features & Specification</h2>
         <p className="text-gray-600 mb-8 text-sm md:text-base">Specifications Of {product.name}</p>

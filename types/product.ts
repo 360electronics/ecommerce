@@ -246,6 +246,8 @@ export interface RatingDistribution {
   count: number;
 }
 
+
+
 export interface FlattenedProduct {
   attributes: any;
   id: string;
@@ -267,7 +269,7 @@ export interface FlattenedProduct {
   weight?: string;
   createdAt: string | Date;
   updatedAt: string | Date;
-  category: string;
+  category: Category;
   brand?: { id: string; name: string; slug: string };
   averageRating: string;
   totalStocks: string;
