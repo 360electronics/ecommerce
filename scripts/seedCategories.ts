@@ -160,7 +160,7 @@ const computerCategoryPresets: Record<
 };
 
 // Initialize database connection for Neon HTTP
-const sql = neon('postgresql://neondb_owner:npg_g8t6oRqCKOWj@ep-orange-credit-a5tovk1v-pooler.us-east-2.aws.neon.tech/360electronics?sslmode=require');
+const sql = neon('postgresql://neondb_owner:npg_nPvBRUd4j7lI@ep-wild-voice-a1wu0vsb-pooler.ap-southeast-1.aws.neon.tech/360electronics?sslmode=require&channel_binding=require');
 const db = drizzle(sql, { schema: { categories, attributeTemplates, subcategories } });
 
 async function seedCategories() {
