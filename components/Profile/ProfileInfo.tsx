@@ -320,7 +320,7 @@ export default function ProfileInfo() {
                 </button>
                 <button
                   onClick={handleSaveProfile}
-                  className="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 disabled:opacity-50"
+                  className="px-4 py-2 bg-gradient-to-r from-[#ff6b00] to-[#ff9f00] hover:to-primary-hover rounded-lg text-white disabled:opacity-50"
                   disabled={isSaving}
                   aria-label="Save profile changes"
                 >

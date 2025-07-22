@@ -5,9 +5,9 @@
 
 :root {
   /* Brand Color */
-  --primary: #2874F0;
-  --primary-hover: #1a5ed9;
-  --primary-light: #e6f0fe;
+  --primary: #ff6b00;
+  --primary-hover: #cd5703;
+  --primary-light: #fdf5f0;
 
   /* Complementary Colors */
   --secondary: oklch(0.97 0 0);

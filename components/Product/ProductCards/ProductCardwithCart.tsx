@@ -190,7 +190,7 @@ const ProductCardwithCart: React.FC<ProductCardProps> = ({
         <button
           onClick={handleCartClick}
           className={cn(
-            'absolute right-2 bottom-0 z-10 p-2 rounded-full transition-colors bg-black text-white hover:bg-gray-800',
+            'absolute right-2 bottom-0 z-10 p-2 rounded-full transition-colors bg-primary text-white hover:bg-primary-hover',
             (isAdding || isLoading) && 'opacity-50 cursor-not-allowed'
           )}
           disabled={isAdding || isLoading}

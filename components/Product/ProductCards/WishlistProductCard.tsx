@@ -160,7 +160,7 @@ const WishlistProductCard: React.FC<ProductCardProps> = ({
   return (
     <Link
       href={`/product/${slug}`}
-      className={cn('w-full rounded-lg cursor-pointer focus:outline-none focus:ring-2 focus:ring-blue-500', className)}
+      className={cn('w-full rounded-lg cursor-pointer', className)}
       aria-label={`View details for ${name}`}
     >
       <div className="relative">

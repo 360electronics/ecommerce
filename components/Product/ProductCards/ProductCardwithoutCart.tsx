@@ -144,7 +144,7 @@ const ProductCardwithoutCart: React.FC<ProductCardProps> = ({
     <Link
       href={`/product/${slug}`}
       className={cn(
-        ' rounded-lg cursor-pointer focus:outline-none focus:ring-2 focus:ring-blue-500',
+        ' rounded-lg cursor-pointer ',
         className
       )}
       aria-label={`View details for ${name}`}

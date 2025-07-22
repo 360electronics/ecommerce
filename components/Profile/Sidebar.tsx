@@ -89,7 +89,7 @@ export default function Sidebar() {
               href={item.path}
               className={`flex items-center w-full px-6 py-3 text-left font-medium transition ${
                 pathname === item.path
-                  ? 'text-blue-600 bg-blue-50 border-l-4 border-blue-600'
+                  ? 'text-primary bg-primary-light border-l-4 border-primary'
                   : 'text-gray-600 hover:text-black hover:bg-gray-50'
               }`}
               onClick={() => setIsMobileMenuOpen(false)}

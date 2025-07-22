@@ -242,6 +242,7 @@ const DraggableSpecSection = ({
   );
 };
 
+
 export default function AddProductPage() {
   const router = useRouter();
   const [product, setProduct] = useState({

@@ -234,7 +234,7 @@ export async function PUT(req: NextRequest) {
       return NextResponse.json({ error: `Product with ID '${productId}' not found` }, { status: 404 });
     }
 
-    // Update product
+    // Update product (stock and status are always updatable)
     const [updatedProduct] = await db
       .update(products)
       .set({
@@ -272,12 +272,12 @@ export async function PUT(req: NextRequest) {
       .map((v: any) => v.id)
       .filter((id: string | undefined) => id && !id.startsWith('variant-'));
 
-    // Check for variants with dependent order_items
+    // Identify variants to delete (dependency check only for deletion)
     const variantsToDelete = existingVariants.filter((v) => !submittedVariantIds.includes(v.id));
     const nonDeletableVariants: string[] = [];
 
     if (variantsToDelete.length > 0) {
-      // Query order_items to check for dependencies
+      // Check for dependencies in order_items to prevent deletion
       const orderItemss = await db
         .select({ variantId: orderItems.variantId })
         .from(orderItems)
@@ -290,18 +290,17 @@ export async function PUT(req: NextRequest) {
 
       const dependentVariantIds = new Set(orderItemss.map((item) => item.variantId));
 
-      // Filter out variants that cannot be deleted
+      // Delete variants that have no dependencies
       for (const variant of variantsToDelete) {
-        if (dependentVariantIds.has(variant.id)) {
-          nonDeletableVariants.push(variant.id);
-        } else {
-          // Delete variants that have no dependencies
+        if (!dependentVariantIds.has(variant.id)) {
           await db.delete(variants).where(eq(variants.id, variant.id));
+        } else {
+          nonDeletableVariants.push(variant.id);
         }
       }
     }
 
-    // Process variants
+    // Process variants (stock, prices, and status are always updatable)
     const updatedVariants = [];
     for (const variantData of validatedData.variants) {
       // Handle image uploads for this variant
@@ -338,7 +337,7 @@ export async function PUT(req: NextRequest) {
       const finalProductImages = [...existingImages, ...uploadedImages];
 
       if (variantData.id && !variantData.id.startsWith('variant-')) {
-        // Update existing variant
+        // Update existing variant (stock, prices, and status are always updated)
         const [updatedVariant] = await db
           .update(variants)
           .set({
@@ -397,7 +396,7 @@ export async function PUT(req: NextRequest) {
         {
           product: updatedProduct,
           variants: updatedVariants,
-          warning: `Some variants could not be deleted because they are referenced in existing orders: ${nonDeletableVariants.join(', ')}`,
+          warning: `Some variants could not be deleted due to existing order dependencies: ${nonDeletableVariants.join(', ')}`,
         },
         { status: 200 }
       );
