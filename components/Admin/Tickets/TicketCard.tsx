@@ -101,7 +101,7 @@ export function TicketCard({ ticket, onClick }: TicketCardProps) {
         </div>
         <div className="flex items-center gap-3">
           <Avatar className="h-10 w-10">
-            <AvatarFallback className="bg-gray-100 text-blue-600 font-semibold">
+            <AvatarFallback className="bg-gray-100 text-primary font-semibold">
               {ticket.customer.name
                 .split(' ')
                 .map((n) => n[0])

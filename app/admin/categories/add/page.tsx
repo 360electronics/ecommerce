@@ -236,7 +236,7 @@ export default function AddCategoryPage() {
     return (
       <div className="flex items-center justify-center min-h-screen bg-gray-50">
         <div className="flex items-center space-x-3">
-          <div className="animate-spin rounded-full h-8 w-8 border-t-2 border-blue-500"></div>
+          <div className="animate-spin rounded-full h-8 w-8 border-t-2 border-primary"></div>
           <span className="text-gray-600 text-lg">Loading presets...</span>
         </div>
       </div>
@@ -283,7 +283,7 @@ export default function AddCategoryPage() {
                 id="name"
                 value={formData.name}
                 onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-                className="border-gray-200 focus:ring-2 focus:ring-blue-500"
+                className="border-gray-200 focus:ring-2 focus:ring-primary"
                 placeholder="Enter category name"
               />
               {errors.name && <p className="text-red-500 text-sm mt-1">{errors.name}</p>}
@@ -295,7 +295,7 @@ export default function AddCategoryPage() {
                 id="slug"
                 value={formData.slug}
                 onChange={(e) => setFormData({ ...formData, slug: e.target.value })}
-                className="border-gray-200 focus:ring-2 focus:ring-blue-500"
+                className="border-gray-200 focus:ring-2 focus:ring-primary"
                 placeholder="Enter category slug"
               />
               {errors.slug && <p className="text-red-500 text-sm mt-1">{errors.slug}</p>}
@@ -308,7 +308,7 @@ export default function AddCategoryPage() {
               id="description"
               value={formData.description}
               onChange={(e) => setFormData({ ...formData, description: e.target.value })}
-              className="border-gray-200 focus:ring-2 focus:ring-blue-500"
+              className="border-gray-200 focus:ring-2 focus:ring-primary"
               placeholder="Enter category description"
               rows={4}
             />
@@ -320,7 +320,7 @@ export default function AddCategoryPage() {
               id="imageUrl"
               value={formData.imageUrl}
               onChange={(e) => setFormData({ ...formData, imageUrl: e.target.value })}
-              className="border-gray-200 focus:ring-2 focus:ring-blue-500"
+              className="border-gray-200 focus:ring-2 focus:ring-primary"
               placeholder="Enter image URL"
             />
           </div>
@@ -328,7 +328,7 @@ export default function AddCategoryPage() {
           <div>
             <Label htmlFor="preset" className="text-gray-700">Preset</Label>
             <Select onValueChange={handlePresetChange} value={formData.preset}>
-              <SelectTrigger className="border-gray-200 focus:ring-2 focus:ring-blue-500">
+              <SelectTrigger className="border-gray-200 focus:ring-2 focus:ring-primary">
                 <SelectValue placeholder="Select a preset" />
               </SelectTrigger>
               <SelectContent>
@@ -356,7 +356,7 @@ export default function AddCategoryPage() {
                       newAttributes[index].name = e.target.value;
                       setFormData({ ...formData, attributes: newAttributes });
                     }}
-                    className="border-gray-200 focus:ring-2 focus:ring-blue-500"
+                    className="border-gray-200 focus:ring-2 focus:ring-primary"
                     placeholder="Enter attribute name"
                   />
                   {errors.attributes?.[index]?.name && (
@@ -374,7 +374,7 @@ export default function AddCategoryPage() {
                       setFormData({ ...formData, attributes: newAttributes });
                     }}
                   >
-                    <SelectTrigger className="border-gray-200 focus:ring-2 focus:ring-blue-500">
+                    <SelectTrigger className="border-gray-200 focus:ring-2 focus:ring-primary">
                       <SelectValue />
                     </SelectTrigger>
                     <SelectContent>
@@ -401,7 +401,7 @@ export default function AddCategoryPage() {
                         newAttributes[index].options = options;
                         setFormData({ ...formData, attributes: newAttributes });
                       }}
-                      className="border-gray-200 focus:ring-2 focus:ring-blue-500"
+                      className="border-gray-200 focus:ring-2 focus:ring-primary"
                       placeholder="e.g., Red, Blue, Green"
                     />
                   </div>
@@ -417,7 +417,7 @@ export default function AddCategoryPage() {
                       newAttributes[index].unit = e.target.value || undefined;
                       setFormData({ ...formData, attributes: newAttributes });
                     }}
-                    className="border-gray-200 focus:ring-2 focus:ring-blue-500"
+                    className="border-gray-200 focus:ring-2 focus:ring-primary"
                     placeholder="e.g., GHz, GB"
                   />
                 </div>
@@ -483,7 +483,7 @@ export default function AddCategoryPage() {
                     newSubcategories[index] = e.target.value;
                     setFormData({ ...formData, subcategories: newSubcategories });
                   }}
-                  className="border-gray-200 focus:ring-2 focus:ring-blue-500"
+                  className="border-gray-200 focus:ring-2 focus:ring-primary"
                   placeholder="Enter subcategory name"
                 />
                 <Button
@@ -526,14 +526,14 @@ export default function AddCategoryPage() {
                 type="number"
                 value={formData.displayOrder}
                 onChange={(e) => setFormData({ ...formData, displayOrder: parseInt(e.target.value) || 0 })}
-                className="border-gray-200 focus:ring-2 focus:ring-blue-500"
+                className="border-gray-200 focus:ring-2 focus:ring-primary"
                 placeholder="Enter display order"
               />
             </div>
           </div>
 
           <div className="flex space-x-4">
-            <Button type="submit" className="bg-blue-600 hover:bg-blue-700">
+            <Button type="submit" className="bg-gradient-to-r from-[#ff6b00] to-[#ff9f00] hover:to-primary-hover">
               Create Category
             </Button>
             <Button

@@ -578,7 +578,7 @@ const PromotionalBannersPage: React.FC = () => {
               </picture>
             )}
             {isVideo && (
-              <div className="absolute top-2 left-2 bg-blue-600 text-white text-xs font-medium px-2 py-1 rounded-full">
+              <div className="absolute top-2 left-2 bg-primary text-white text-xs font-medium px-2 py-1 rounded-full">
                 Video
               </div>
             )}
@@ -860,7 +860,7 @@ const PromotionalBannersPage: React.FC = () => {
         <Button
           type="submit"
           disabled={isLoading || Object.values(imageErrors).some((error) => error)}
-          className="bg-blue-600 text-white hover:bg-blue-700 rounded-lg"
+          className="bg-gradient-to-r from-[#ff6b00] to-[#ff9f00] hover:to-primary-hover text-white rounded-lg"
           aria-label="Submit new banner"
         >
           {isLoading ? (
@@ -919,7 +919,7 @@ const PromotionalBannersPage: React.FC = () => {
           </div>
           <Button
             onClick={handleAddBanner}
-            className="bg-blue-600 text-white hover:bg-blue-700 rounded-lg flex items-center gap-2 px-6"
+            className="bg-gradient-to-r from-[#ff6b00] to-[#ff9f00] hover:to-primary-hover text-white rounded-lg flex items-center gap-2 px-6"
             aria-label="Add new banner"
           >
             <PlusCircle className="h-5 w-5" />

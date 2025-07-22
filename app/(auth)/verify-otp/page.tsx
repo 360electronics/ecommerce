@@ -331,7 +331,7 @@ function VerifyOTPContent() {
           </div>
 
           {/* Title */}
-          <h1 className="text-2xl md:text-3xl font-bold text-center text-blue-600">
+          <h1 className="text-2xl md:text-3xl font-bold text-center text-primary">
             Verify OTP
           </h1>
 
@@ -375,7 +375,7 @@ function VerifyOTPContent() {
                     }}
                     className={cn(
                       "w-12 h-12 text-center text-lg font-medium border rounded-md",
-                      "focus:outline-none focus:ring-2 focus:ring-blue-500",
+                      "focus:outline-none focus:ring-2 focus:ring-primary",
                       "placeholder-gray-400",
                       error && "border-red-500"
                     )}
@@ -399,9 +399,9 @@ function VerifyOTPContent() {
               disabled={loading}
               className={cn(
                 "w-full py-3 px-4 rounded-md font-medium text-white",
-                "bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500",
+                "bg-gradient-to-r from-[#ff6b00] to-[#ff9f00] hover:to-primary-hover ",
                 "transition duration-300",
-                loading && "bg-blue-400 cursor-not-allowed"
+                loading && "bg-primary cursor-not-allowed"
               )}
             >
               {loading ? (
@@ -475,7 +475,7 @@ function VerifyOTPContent() {
           {/* Back to Login */}
           <div className="text-center text-sm text-gray-600">
             <p>
-              <Link href="/signin" className="text-blue-600 font-semibold hover:underline">
+              <Link href="/signin" className="text-primary font-semibold hover:underline">
                 Back to Sign In
               </Link>
             </p>

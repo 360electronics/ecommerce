@@ -241,12 +241,12 @@ export default function Dashboard() {
             {
               label: "Sales",
               data: months.map(month => salesByMonth[month] || 0),
-              borderColor: "rgb(59, 130, 246)",
-              backgroundColor: "rgba(59, 130, 246, 0.1)",
+              borderColor: "#ff6b00",
+              backgroundColor: "#ff6b00",
               borderWidth: 2,
               fill: true,
               tension: 0.4,
-              pointBackgroundColor: "rgb(59, 130, 246)",
+              pointBackgroundColor: "#ff6b00",
               pointBorderColor: "#fff",
               pointBorderWidth: 2,
               pointRadius: months.map((month, i) => (month.includes('Jun') ? 4 : 0)),
@@ -379,7 +379,7 @@ export default function Dashboard() {
   if (isLoading) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-gray-100">
-        <Loader2 className="h-10 w-10 animate-spin text-blue-600" />
+        <Loader2 className="h-10 w-10 animate-spin text-primary" />
       </div>
     )
   }
@@ -423,7 +423,7 @@ export default function Dashboard() {
               </button>
               <button
                 onClick={handleSetGoal}
-                className="px-4 py-2 text-white bg-blue-600 rounded-lg hover:bg-blue-700 transition-colors"
+                className="px-4 py-2 text-white bg-gradient-to-r from-[#ff6b00] to-[#ff9f00] hover:to-primary-hover rounded-lg transition-colors"
               >
                 Set Goal
               </button>
@@ -466,8 +466,8 @@ export default function Dashboard() {
                   key={filter}
                   className={`px-4 py-2 text-sm font-medium rounded-lg transition-colors ${
                     timeFilter === filter
-                      ? 'bg-blue-600 text-white'
-                      : 'bg-gray-100 text-gray-700 hover:bg-blue-100'
+                      ? 'bg-gradient-to-r from-[#ff6b00] to-[#ff9f00] hover:to-primary-hover text-white'
+                      : 'bg-gray-100 text-gray-700 hover:bg-primary-light'
                   }`}
                   onClick={() => setTimeFilter(filter)}
                 >
@@ -475,7 +475,7 @@ export default function Dashboard() {
                 </button>
               ))}
               <button
-                className="flex items-center px-4 py-2 text-sm font-medium text-gray-700 bg-gray-100 rounded-lg hover:bg-blue-100 transition-colors"
+                className="flex items-center px-4 py-2 text-sm font-medium text-gray-700 bg-gray-100 rounded-lg hover:bg-primary-light transition-colors"
                 onClick={exportToExcel}
               >
                 <FileText className="h-5 w-5 mr-2" />
@@ -502,7 +502,7 @@ export default function Dashboard() {
                       display: true,
                       position: 'top',
                       labels: {
-                        color: '#1f2937',
+                        color: '#ff6b00',
                         font: { size: 14 }
                       }
                     },
@@ -549,7 +549,7 @@ export default function Dashboard() {
             <h2 className="text-2xl font-bold text-gray-900">Revenue Target</h2>
             <button
               onClick={() => setIsGoalModalOpen(true)}
-              className="flex items-center text-blue-600 font-semibold text-sm hover:text-blue-700 transition-colors"
+              className="flex items-center text-primary font-semibold text-sm hover:text-primary-hover transition-colors"
             >
               <Target className="h-5 w-5 mr-2" />
               Set Goal
@@ -568,7 +568,7 @@ export default function Dashboard() {
                 <path
                   d="M5,50 A45,45 0 0,1 95,50"
                   fill="none"
-                  stroke="#3b82f6"
+                  stroke="#ff6b00"
                   strokeWidth="12"
                   strokeLinecap="round"
                   strokeDasharray={`${dashboardData.revenueTarget.percentage * 0.9}, 100`}
@@ -598,7 +598,7 @@ export default function Dashboard() {
         <div className="bg-white rounded-xl p-6 border border-gray-100 ">
           <div className="flex justify-between items-center mb-6">
             <h2 className="text-2xl font-bold text-gray-900">Recent Transactions</h2>
-            <Link href={'/admin/orders'} className="text-blue-600 flex items-center text-sm font-semibold hover:underline">
+            <Link href={'/admin/orders'} className="text-primary flex items-center text-sm font-semibold hover:underline">
               See All Transactions <ArrowRight className="h-5 w-5 ml-2" />
             </Link>
           </div>
@@ -662,7 +662,7 @@ export default function Dashboard() {
                   <div className="text-sm font-semibold text-gray-900">{product.name}</div>
                   <div className="w-full bg-gray-200 h-2 rounded-full mt-2">
                     <div
-                      className="bg-blue-600 h-2 rounded-full transition-all duration-300"
+                      className="bg-primary h-2 rounded-full transition-all duration-300"
                       style={{ width: `${(product.sales / Math.max(...dashboardData.topProducts.map(p => p.sales))) * 100}%` }}
                     ></div>
                   </div>

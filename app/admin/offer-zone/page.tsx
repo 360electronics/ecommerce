@@ -375,7 +375,7 @@ export default function OfferZonePage() {
         <Button
           onClick={handleSave}
           disabled={offerZoneVariants.length === 0 || isLoading}
-          className="bg-blue-600 text-white hover:bg-blue-700 rounded-lg flex items-center gap-2 px-6"
+          className="bg-gradient-to-r from-[#ff6b00] to-[#ff9f00] hover:to-primary-hover text-white rounded-lg flex items-center gap-2 px-6"
           aria-label="Save offer zone variants"
         >
           <Save className="h-5 w-5" />
@@ -402,7 +402,7 @@ export default function OfferZonePage() {
           </div>
           {isLoading ? (
             <div className="rounded-lg border border-gray-200 bg-white p-8 text-center shadow-sm">
-              <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-blue-600 mx-auto mb-2"></div>
+              <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-primary mx-auto mb-2"></div>
               <p className="text-gray-500">Searching variants...</p>
             </div>
           ) : searchResults.length > 0 ? (
@@ -493,7 +493,7 @@ function VariantCard({ selection, onSelect, actionLabel, actionVariant }: Varian
           }}
           className={cn(
             'rounded-lg ',
-            actionVariant === 'secondary' && 'bg-blue-400 hover:bg-blue-500 text-black',
+            actionVariant === 'secondary' && 'bg-primary hover:bg-primary-hover text-black',
             actionVariant === 'destructive' && 'bg-red-600 hover:bg-red-700 text-white'
           )}
           aria-label={actionLabel}

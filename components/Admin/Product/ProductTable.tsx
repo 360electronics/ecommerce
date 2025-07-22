@@ -285,7 +285,7 @@ export function ProductsTable() {
           <span className="font-medium">{row.fullName}</span>
           <span className="text-sm text-gray-500">{row.shortName}</span>
           {row.hasMultipleVariants && (
-            <span className="text-xs text-blue-500">Multiple Variants</span>
+            <span className="text-xs text-primary">Multiple Variants</span>
           )}
         </div>
       ),
@@ -537,7 +537,7 @@ export function ProductsTable() {
     <div className="text-red-600 p-4 bg-red-50 rounded-md">
       {error}
       <button
-        className="ml-4 text-blue-600 underline"
+        className="ml-4 text-primary underline"
         onClick={() => window.location.reload()}
       >
         Retry

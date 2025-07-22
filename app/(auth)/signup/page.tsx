@@ -215,7 +215,7 @@ function SignupForm({ referralCode = "" }) {
           </div>
 
           {/* Title */}
-          <h1 className="text-2xl md:text-3xl font-bold text-center text-blue-600">
+          <h1 className="text-2xl md:text-3xl font-bold text-center text-primary">
             Sign Up
           </h1>
 
@@ -246,7 +246,7 @@ function SignupForm({ referralCode = "" }) {
                 onChange={handleChange}
                 className={cn(
                   "w-full px-4 py-3 border rounded-md text-gray-900",
-                  "focus:outline-none focus:ring-2 focus:ring-blue-500",
+                  "focus:outline-none focus:ring-2 focus:ring-primary",
                   "placeholder-gray-400",
                   error && "border-red-500"
                 )}
@@ -278,7 +278,7 @@ function SignupForm({ referralCode = "" }) {
                 onChange={handleChange}
                 className={cn(
                   "w-full px-4 py-3 border rounded-md text-gray-900",
-                  "focus:outline-none focus:ring-2 focus:ring-blue-500",
+                  "focus:outline-none focus:ring-2 focus:ring-primary",
                   "placeholder-gray-400",
                   error && "border-red-500"
                 )}
@@ -310,7 +310,7 @@ function SignupForm({ referralCode = "" }) {
                 onChange={handleChange}
                 className={cn(
                   "w-full px-4 py-3 border rounded-md text-gray-900",
-                  "focus:outline-none focus:ring-2 focus:ring-blue-500",
+                  "focus:outline-none focus:ring-2 focus:ring-primary",
                   "placeholder-gray-400",
                   error && "border-red-500"
                 )}
@@ -342,7 +342,7 @@ function SignupForm({ referralCode = "" }) {
                 onChange={handleChange}
                 className={cn(
                   "w-full px-4 py-3 border rounded-md text-gray-900",
-                  "focus:outline-none focus:ring-2 focus:ring-blue-500",
+                  "focus:outline-none focus:ring-2 focus:ring-primary",
                   "placeholder-gray-400",
                   error && "border-red-500"
                 )}
@@ -374,7 +374,7 @@ function SignupForm({ referralCode = "" }) {
                 onChange={handleChange}
                 className={cn(
                   "w-full px-4 py-3 border rounded-md text-gray-900",
-                  "focus:outline-none focus:ring-2 focus:ring-blue-500",
+                  "focus:outline-none focus:ring-2 focus:ring-primary",
                   "placeholder-gray-400",
                   error && error.includes("Referral code") && "border-red-500"
                 )}
@@ -395,9 +395,9 @@ function SignupForm({ referralCode = "" }) {
               disabled={loading}
               className={cn(
                 "w-full py-3 px-4 rounded-md font-medium text-white",
-                "bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500",
+                "bg-gradient-to-r from-[#ff6b00] to-[#ff9f00] hover:to-primary-hover ",
                 "transition duration-300",
-                loading && "bg-blue-400 cursor-not-allowed"
+                loading && "bg-primary cursor-not-allowed"
               )}
             >
               {loading ? (
@@ -434,7 +434,7 @@ function SignupForm({ referralCode = "" }) {
               Already have an account?{" "}
               <Link
                 href="/signin"
-                className="text-blue-600 font-semibold hover:underline"
+                className="text-primary font-semibold hover:underline"
               >
                 Sign In
               </Link>
@@ -444,11 +444,11 @@ function SignupForm({ referralCode = "" }) {
           {/* Terms and Privacy */}
           <div className="text-center text-xs text-gray-500">
             By signing up, you agree to our{" "}
-            <Link href="/terms" className="text-blue-600 hover:underline">
+            <Link href="/terms" className="text-primary hover:underline">
               Terms of Use
             </Link>{" "}
             and{" "}
-            <Link href="/privacy" className="text-blue-600 hover:underline">
+            <Link href="/privacy" className="text-primary hover:underline">
               Privacy Policy
             </Link>.
           </div>
@@ -471,7 +471,7 @@ export default function SignupPage() {
     <Suspense fallback={
       <div className="flex min-h-screen bg-gray-50 items-center justify-center">
         <div className="text-center">
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-500 mx-auto"></div>
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary mx-auto"></div>
           <p className="mt-4 text-gray-600">Loading...</p>
         </div>
       </div>

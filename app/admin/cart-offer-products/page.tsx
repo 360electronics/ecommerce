@@ -291,7 +291,7 @@ export default function CartOfferProductsPage() {
         </div>
         <Button
           onClick={toggleAddForm}
-          className="bg-blue-600 hover:bg-blue-700 text-white rounded-lg flex items-center gap-2 px-6"
+          className="bg-gradient-to-r from-[#ff6b00] to-[#ff9f00] hover:to-primary-hover text-white rounded-lg flex items-center gap-2 px-6"
           aria-label={isAddFormOpen ? 'Hide add product form' : 'Add new product'}
         >
           {isAddFormOpen ? <Minus className="h-5 w-5" /> : <Plus className="h-5 w-5" />}
@@ -326,7 +326,7 @@ export default function CartOfferProductsPage() {
                   onChange={(e) => setFormData({ ...formData, productName: e.target.value })}
                   placeholder="Enter product name"
                   required
-                  className="mt-1 rounded-lg border-gray-300 focus:ring-2 focus:ring-blue-500 text-base"
+                  className="mt-1 rounded-lg border-gray-300 focus:ring-2 focus:ring-primary text-base"
                   aria-required="true"
                 />
               </div>
@@ -338,7 +338,7 @@ export default function CartOfferProductsPage() {
                   value={formData.range}
                   onValueChange={(value) => setFormData({ ...formData, range: value })}
                 >
-                  <SelectTrigger className="mt-1 rounded-lg border-gray-300 focus:ring-2 focus:ring-blue-500 text-base">
+                  <SelectTrigger className="mt-1 rounded-lg border-gray-300 focus:ring-2 focus:ring-primary text-base">
                     <SelectValue placeholder="Select range" />
                   </SelectTrigger>
                   <SelectContent>
@@ -362,7 +362,7 @@ export default function CartOfferProductsPage() {
                   onChange={(e) => setFormData({ ...formData, ourPrice: e.target.value })}
                   placeholder="Enter price"
                   required
-                  className="mt-1 rounded-lg border-gray-300 focus:ring-2 focus:ring-blue-500 text-base"
+                  className="mt-1 rounded-lg border-gray-300 focus:ring-2 focus:ring-primary text-base"
                   aria-required="true"
                 />
               </div>
@@ -378,7 +378,7 @@ export default function CartOfferProductsPage() {
                   placeholder="Enter quantity"
                   min="1"
                   required
-                  className="mt-1 rounded-lg border-gray-300 focus:ring-2 focus:ring-blue-500 text-base"
+                  className="mt-1 rounded-lg border-gray-300 focus:ring-2 focus:ring-primary text-base"
                   aria-required="true"
                 />
               </div>
@@ -389,7 +389,7 @@ export default function CartOfferProductsPage() {
                 <div
                   className={cn(
                     'mt-1 border-2 border-dashed rounded-xl p-6 text-center transition-colors',
-                    isDragging ? 'border-blue-500 bg-blue-50' : 'border-gray-300 bg-gray-50'
+                    isDragging ? 'border-primary bg-primary-light' : 'border-gray-300 bg-gray-50'
                   )}
                   onDragOver={handleDragOver}
                   onDragLeave={handleDragLeave}
@@ -452,7 +452,7 @@ export default function CartOfferProductsPage() {
                 </Button>
                 <Button
                   type="submit"
-                  className="bg-blue-600 hover:bg-blue-700 text-white rounded-lg flex items-center gap-2"
+                  className="bg-gradient-to-r from-[#ff6b00] to-[#ff9f00] hover:to-primary-hover text-white rounded-lg flex items-center gap-2"
                   disabled={loading || !!imageError}
                   aria-label="Add product"
                 >
@@ -472,7 +472,7 @@ export default function CartOfferProductsPage() {
             variant={activeCategory === null ? 'default' : 'ghost'}
             className={cn(
               'px-4 py-2 text-sm font-medium rounded-full flex items-center gap-2',
-              activeCategory === null ? 'bg-blue-600 text-white hover:bg-blue-700' : 'text-gray-600 hover:bg-blue-50'
+              activeCategory === null ? 'bg-primary text-white hover:bg-primary-hover' : 'text-gray-600 hover:bg-primary-light'
             )}
             onClick={() => setActiveCategory(null)}
             aria-selected={activeCategory === null}
@@ -487,7 +487,7 @@ export default function CartOfferProductsPage() {
               variant={activeCategory === apiKey ? 'default' : 'ghost'}
               className={cn(
                 'px-4 py-2 text-sm font-medium rounded-full flex items-center gap-2',
-                activeCategory === apiKey ? 'bg-blue-600 text-white hover:bg-blue-700' : 'text-gray-600 hover:bg-blue-50'
+                activeCategory === apiKey ? 'bg-primary text-white hover:bg-primary-hover' : 'text-gray-600 hover:bg-primary-light'
               )}
               onClick={() => setActiveCategory(activeCategory === apiKey ? null : apiKey)}
               aria-selected={activeCategory === apiKey}
@@ -515,7 +515,7 @@ export default function CartOfferProductsPage() {
                 <div
                   key={product.id}
                   className={cn(
-                    'group relative bg-white rounded-2xl border border-gray-200 hover:border-blue-500 hover:scale-[1.02] transition-all duration-300',
+                    'group relative bg-white rounded-2xl border border-gray-200 hover:border-primary hover:scale-[1.02] transition-all duration-300',
                   )}
                 >
                   <button
@@ -533,7 +533,7 @@ export default function CartOfferProductsPage() {
                       className="object-cover group-hover:scale-105 group-hover:bg-black/10 transition-all duration-300"
                       sizes={index % 5 === 0 ? '(max-width: 768px) 100vw, 50vw' : '(max-width: 768px) 100vw, (max-width: 1024px) 50vw, 25vw'}
                     />
-                    <div className="absolute top-2 left-2 flex items-center gap-1 px-2 py-1 bg-blue-100 text-blue-800 text-xs font-medium rounded-full">
+                    <div className="absolute top-2 left-2 flex items-center gap-1 px-2 py-1 bg-primary-light text-primary text-xs font-medium rounded-full">
                       <Package className="h-3 w-3" />
                       {CATEGORIES[product.range]}
                     </div>
@@ -580,7 +580,7 @@ export default function CartOfferProductsPage() {
                   <Button
                     variant="outline"
                     onClick={() => setActiveCategory(apiKey)}
-                    className="rounded-lg text-blue-600 border-blue-600 hover:bg-blue-50"
+                    className="rounded-lg text-primary border-primary hover:bg-primary-light"
                     aria-label={`Manage products in ${displayName}`}
                   >
                     Manage Products
@@ -592,7 +592,7 @@ export default function CartOfferProductsPage() {
                       <div
                         key={product.id}
                         className={cn(
-                          'group relative bg-white rounded-2xl border border-gray-200 hover:border-blue-500 hover:scale-[1.02] transition-all duration-300',
+                          'group relative bg-white rounded-2xl border border-gray-200 hover:border-primary hover:scale-[1.02] transition-all duration-300',
                          
                         )}
                       >
@@ -604,7 +604,7 @@ export default function CartOfferProductsPage() {
                             className="object-cover group-hover:scale-105 group-hover:bg-black/10 transition-all duration-300"
                             sizes={index % 5 === 0 ? '(max-width: 768px) 100vw, 50vw' : '(max-width: 768px) 100vw, (max-width: 1024px) 50vw, 25vw'}
                           />
-                          <div className="absolute top-2 left-2 flex items-center gap-1 px-2 py-1 bg-blue-100 text-blue-800 text-xs font-medium rounded-full">
+                          <div className="absolute top-2 left-2 flex items-center gap-1 px-2 py-1 bg-primary-light text-primary text-xs font-medium rounded-full">
                             <Package className="h-3 w-3" />
                             {CATEGORIES[product.range]}
                           </div>
@@ -625,7 +625,7 @@ export default function CartOfferProductsPage() {
                         <Button
                           variant="outline"
                           onClick={() => setActiveCategory(apiKey)}
-                          className="h-full min-h-[320px] w-full border-dashed rounded-2xl text-blue-600 border-blue-600 hover:bg-blue-50"
+                          className="h-full min-h-[320px] w-full border-dashed rounded-2xl text-primary border-primary hover:bg-primary-light"
                           aria-label={`View ${categorizedProducts[apiKey].length - 4} more products in ${displayName}`}
                         >
                           +{categorizedProducts[apiKey].length - 4} more products
