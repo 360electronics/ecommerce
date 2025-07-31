@@ -34,20 +34,7 @@ function SearchPageContent() {
     return (
         <UserLayout>
             <div className="mx-auto pt-4 pb-10">
-                {/* <div className="w-full h-48 bg-gray-100 rounded-lg mb-8 overflow-hidden relative">
-                    <div className="absolute inset-0 bg-gradient-to-r from-black/70 to-transparent flex items-center">
-                        <div className="px-8 text-white">
-                            <h2 className="text-2xl font-bold mb-2">
-                                {query ? `Search Results for "${query}"` : 'Search Products'}
-                            </h2>
-                            <p className="text-sm text-gray-200 max-w-md">
-                                {query
-                                    ? `Browse our products matching your search for "${query}"`
-                                    : "Find exactly what you're looking for in our extensive catalog"}
-                            </p>
-                        </div>
-                    </div>
-                </div> */}
+               
                 <ProductListing searchQuery={query} />
             </div>
         </UserLayout>

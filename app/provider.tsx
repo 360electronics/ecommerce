@@ -14,7 +14,7 @@ export const refetchWishlist = async () => {
   const { fetchWishlist } = useWishlistStore.getState();
   try {
     if (isLoggedIn && user?.id) {
-      await fetchWishlist(true);
+      await fetchWishlist(true); // Keep force=true for explicit refetch
     }
   } catch (error) {
     logError('refetchWishlist', error);
@@ -27,7 +27,7 @@ export const refetchCart = async () => {
   try {
     if (isLoggedIn && user?.id) {
       await fetchCart();
-      console.log("refetch success for cart")
+      console.log('refetch success for cart');
     }
   } catch (error) {
     logError('refetchCart', error);
@@ -41,7 +41,6 @@ export const StoreProvider = ({ children }: { children: ReactNode }) => {
   const { fetchCheckoutItems } = useCheckoutStore();
   const { fetchHomeData } = useHomeStore();
   const { fetchProfileData, fetchOrders, fetchReferrals, fetchTickets } = useProfileStore();
-  const { fetchWishlist } = useWishlistStore();
 
   useWishlistAuthSync();
 
@@ -59,7 +58,7 @@ export const StoreProvider = ({ children }: { children: ReactNode }) => {
             fetchOrders(user.id, true, abortControllerRef.current.signal),
             fetchReferrals(user.id, true, abortControllerRef.current.signal),
             fetchTickets(user.id, true, abortControllerRef.current.signal),
-            fetchWishlist(true),
+            // Removed fetchWishlist from here
           ]);
 
           results.forEach((result, index) => {
@@ -69,7 +68,6 @@ export const StoreProvider = ({ children }: { children: ReactNode }) => {
           });
         }
 
-        // Fetch home data only if on home page
         if (typeof window !== 'undefined' && window.location.pathname === '/') {
           await fetchHomeData();
         }
@@ -83,7 +81,7 @@ export const StoreProvider = ({ children }: { children: ReactNode }) => {
     return () => {
       abortControllerRef.current?.abort();
     };
-  }, [fetchAuthStatus, fetchCart, fetchCheckoutItems, fetchHomeData, fetchProfileData, fetchOrders, fetchReferrals, fetchTickets, fetchWishlist, isLoggedIn, user?.id]);
+  }, [fetchAuthStatus, fetchCart, fetchCheckoutItems, fetchHomeData, fetchProfileData, fetchOrders, fetchReferrals, fetchTickets, isLoggedIn, user?.id]);
 
   return <>{children}</>;
 };

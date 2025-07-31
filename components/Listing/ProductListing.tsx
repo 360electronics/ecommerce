@@ -29,15 +29,16 @@ const flattenProductVariants = (products: CompleteProduct[]): FlattenedProduct[]
                     ...variant,
                     id: variant.id,
                     productId: product.id,
-                    category: product.category.name,
+                    category: product.category?.name || '',
+                    subcategory: product.subcategory?.name || '',
                     brand: product.brand,
-                    averageRating: product.averageRating.toString(),
+                    averageRating: product.averageRating?.toString() || '0',
                     tags: Array.isArray(product.tags)
                         ? product.tags
                         : typeof product.tags === 'string'
                             ? (product.tags as string).split(',').map((tag: string) => tag.trim())
                             : [],
-                    totalStocks: variant.stock.toString(),
+                    totalStocks: variant.stock?.toString() || '0',
                     createdAt: safeToISOString(variant.createdAt),
                     updatedAt: safeToISOString(variant.updatedAt),
                     color: variant.attributes?.color as string | undefined,
@@ -45,8 +46,8 @@ const flattenProductVariants = (products: CompleteProduct[]): FlattenedProduct[]
                     description: product.description || '',
                     productParent: product,
                     material: variant.attributes?.material as string | undefined,
-                    mrp: variant.mrp.toString(),
-                    ourPrice: variant.ourPrice.toString()
+                    mrp: variant.mrp?.toString() || '0',
+                    ourPrice: variant.ourPrice?.toString() || '0'
                 } as unknown as FlattenedProduct);
             });
         } else {
@@ -57,8 +58,8 @@ const flattenProductVariants = (products: CompleteProduct[]): FlattenedProduct[]
                 name: product.shortName || 'Unnamed Product',
                 mrp: product.defaultVariant?.mrp?.toString() || '0',
                 ourPrice: product.defaultVariant?.ourPrice?.toString() || '0',
-                stock: product.totalStocks.toString(),
-                slug: product.slug,
+                stock: product.totalStocks?.toString() || '0',
+                slug: product.slug || '',
                 sku: product.defaultVariant?.sku || '',
                 tags: Array.isArray(product.tags)
                     ? product.tags
@@ -67,10 +68,11 @@ const flattenProductVariants = (products: CompleteProduct[]): FlattenedProduct[]
                         : [],
                 createdAt: safeToISOString(product.createdAt),
                 updatedAt: safeToISOString(product.updatedAt),
-                category: product.category.name,
+                category: product.category?.name || '',
+                subcategory: product.subcategory?.name || '',
                 brand: product.brand,
-                averageRating: product.averageRating.toString(),
-                totalStocks: product.totalStocks.toString(),
+                averageRating: product.averageRating?.toString() || '0',
+                totalStocks: product.totalStocks?.toString() || '0',
                 description: product.description || '',
             } as unknown as FlattenedProduct);
         }
@@ -81,7 +83,6 @@ const flattenProductVariants = (products: CompleteProduct[]): FlattenedProduct[]
 
 const ProductListing = ({ category, searchQuery }: { category?: string; searchQuery?: string }) => {
     const [originalProducts, setOriginalProducts] = useState<FlattenedProduct[]>([]);
-    const [products, setProducts] = useState<FlattenedProduct[]>([]);
     const [filteredProducts, setFilteredProducts] = useState<FlattenedProduct[]>([]);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState<string | null>(null);
@@ -90,6 +91,9 @@ const ProductListing = ({ category, searchQuery }: { category?: string; searchQu
     const [productsPerPage] = useState(9);
     const searchParams = useSearchParams();
 
+    // Get subcategory from URL params
+    const subcategory = searchParams.get('subcategory');
+
     // Memoized debounced filter function
     const debouncedApplyFilters = useMemo(
         () =>
@@ -97,33 +101,39 @@ const ProductListing = ({ category, searchQuery }: { category?: string; searchQu
                 (productsList: FlattenedProduct[], filters: Record<string, any>, sortOpt: string, query: string) => {
                     let filtered = [...productsList];
 
+                    // Apply category filter with exact matching
                     if (category && category.toLowerCase() !== 'all') {
                         filtered = filtered.filter((product) =>
-                            product.category.name.toLowerCase().includes(category.toLowerCase())
+                            product.category && (product.category as unknown as string).toLowerCase() === category.toLowerCase()
                         );
                     }
 
+                    // Apply subcategory filter if provided
+                    if (subcategory && subcategory.toLowerCase() !== 'all') {
+                        filtered = filtered.filter((product) =>
+                            product.subcategory && (product.subcategory as unknown as string).toLowerCase() === subcategory.toLowerCase()
+                        );
+                    }
+
+                    // Apply search query filter
                     if (query?.trim()) {
                         const sanitizedQuery = DOMPurify.sanitize(query.trim()).toLowerCase();
                         const queryWords = sanitizedQuery.split(/\s+/).filter(word => word.length > 0);
                         filtered = filtered.filter((product: FlattenedProduct) => {
-                            const name = product.name.toLowerCase();
-                            const category = product.category.name.toLowerCase();
-                            const brand = product.brand?.name.toLowerCase() || '';
-                            const description = product.description?.toLowerCase() || '';
-                            const tags = product.tags.join(' ').toLowerCase();
+                            const searchableText = [
+                                product.name || '',
+                                product.category || '',
+                                product.subcategory || '',
+                                product.brand?.name || '',
+                                product.description || '',
+                                Array.isArray(product.tags) ? product.tags.join(' ') : ''
+                            ].join(' ').toLowerCase();
 
-                            return queryWords.every(
-                                (word) =>
-                                    name.includes(word) ||
-                                    category.includes(word) ||
-                                    brand.includes(word) ||
-                                    description.includes(word) ||
-                                    tags.includes(word)
-                            );
+                            return queryWords.every(word => searchableText.includes(word));
                         });
                     }
 
+                    // Apply price range filter
                     if (filters.ourPrice) {
                         const minPrice = Number(filters.ourPrice.min) || 0;
                         const maxPrice = Number(filters.ourPrice.max) || Infinity;
@@ -133,24 +143,28 @@ const ProductListing = ({ category, searchQuery }: { category?: string; searchQu
                         });
                     }
 
+                    // Apply color filter
                     if (filters.color?.length > 0) {
                         filtered = filtered.filter((product) =>
                             product.color && filters.color.includes(product.color)
                         );
                     }
 
+                    // Apply storage filter
                     if (filters.storage?.length > 0) {
                         filtered = filtered.filter((product) =>
                             product.storage && filters.storage.includes(product.storage)
                         );
                     }
 
+                    // Apply brand filter
                     if (filters.brand?.length > 0) {
                         filtered = filtered.filter((product) =>
                             product.brand && filters.brand.includes(product.brand.name)
                         );
                     }
 
+                    // Apply rating filter
                     if (filters.rating?.length > 0) {
                         const minRating = Math.min(...filters.rating.map((r: string) => parseInt(r)));
                         filtered = filtered.filter((product) => {
@@ -158,6 +172,7 @@ const ProductListing = ({ category, searchQuery }: { category?: string; searchQu
                         });
                     }
 
+                    // Apply stock filter
                     if (filters.inStock) {
                         filtered = filtered.filter((product) => Number(product.totalStocks) > 0);
                     }
@@ -171,6 +186,7 @@ const ProductListing = ({ category, searchQuery }: { category?: string; searchQu
                         }
                     });
 
+                    // Apply sorting
                     const sorted = [...filtered];
                     switch (sortOpt.toLowerCase()) {
                         case 'ourprice-low-high':
@@ -199,7 +215,7 @@ const ProductListing = ({ category, searchQuery }: { category?: string; searchQu
                 },
                 300
             ),
-        [category, searchQuery]
+        [category, subcategory, searchQuery]
     );
 
     useEffect(() => {
@@ -208,7 +224,7 @@ const ProductListing = ({ category, searchQuery }: { category?: string; searchQu
         };
     }, [debouncedApplyFilters]);
 
-    // Compute filter options based on filteredProducts
+    // Compute filter options based on ALL products, not just filtered ones
     const filterOptions = useMemo(() => {
         const options = {
             colors: new Set<string>(),
@@ -219,7 +235,23 @@ const ProductListing = ({ category, searchQuery }: { category?: string; searchQu
             attributes: {} as { [key: string]: Set<string> },
         };
 
-        filteredProducts.forEach((product) => {
+        // Use originalProducts for filter options to show all available options
+        let productsForOptions = originalProducts;
+
+        // If we have category/subcategory filters, apply them to get relevant filter options
+        if (category && category.toLowerCase() !== 'all') {
+            productsForOptions = productsForOptions.filter((product) =>
+                product.category && (product.category as unknown as string).toLowerCase() === category.toLowerCase()
+            );
+        }
+
+        if (subcategory && subcategory.toLowerCase() !== 'all') {
+            productsForOptions = productsForOptions.filter((product) =>
+                product.subcategory && (product.subcategory as unknown as string).toLowerCase() === subcategory.toLowerCase()
+            );
+        }
+
+        productsForOptions.forEach((product) => {
             if (product.color) options.colors.add(product.color);
             if (product.brand?.name) options.brands.add(product.brand.name);
             if (product.storage) options.storageOptions.add(product.storage);
@@ -243,9 +275,9 @@ const ProductListing = ({ category, searchQuery }: { category?: string; searchQu
         });
 
         return {
-            colors: Array.from(options.colors),
-            brands: Array.from(options.brands),
-            storageOptions: Array.from(options.storageOptions),
+            colors: Array.from(options.colors).sort(),
+            brands: Array.from(options.brands).sort(),
+            storageOptions: Array.from(options.storageOptions).sort(),
             priceRange: {
                 min: options.minPrice === Infinity ? 0 : Math.floor(options.minPrice),
                 max: options.maxPrice === 0 ? 1000 : Math.ceil(options.maxPrice),
@@ -254,9 +286,9 @@ const ProductListing = ({ category, searchQuery }: { category?: string; searchQu
                 Object.entries(options.attributes).map(([key, valueSet]) => [key, Array.from(valueSet).sort()])
             ),
         };
-    }, [filteredProducts]);
+    }, [originalProducts, category, subcategory]);
 
-    // Fetch products only when category or searchQuery changes
+    // Fetch products only once on component mount
     useEffect(() => {
         const fetchAllProducts = async () => {
             setLoading(true);
@@ -272,8 +304,6 @@ const ProductListing = ({ category, searchQuery }: { category?: string; searchQu
 
                 const flattenedProducts = flattenProductVariants(productData);
                 setOriginalProducts(flattenedProducts);
-                setProducts(flattenedProducts);
-                setFilteredProducts(flattenedProducts);
                 const endTime = performance.now();
                 console.log(`Product fetch took ${endTime - startTime}ms`);
             } catch (err) {
@@ -286,11 +316,11 @@ const ProductListing = ({ category, searchQuery }: { category?: string; searchQu
         };
 
         fetchAllProducts();
-    }, [category, searchQuery]);
+    }, []); // Remove category and searchQuery dependencies to prevent unnecessary refetches
 
-    // Apply filters when searchParams or sortOption change
+    // Apply filters when dependencies change
     useEffect(() => {
-        if (products.length === 0) return;
+        if (originalProducts.length === 0) return;
 
         const filters: Record<string, any> = {};
         const maxPrice = searchParams.get('maxPrice');
@@ -314,8 +344,8 @@ const ProductListing = ({ category, searchQuery }: { category?: string; searchQu
             filters.inStock = true;
         }
 
-        debouncedApplyFilters(products, filters, sortOption, searchQuery || '');
-    }, [searchParams, sortOption, products, filterOptions, debouncedApplyFilters, searchQuery]);
+        debouncedApplyFilters(originalProducts, filters, sortOption, searchQuery || '');
+    }, [searchParams, sortOption, originalProducts, filterOptions, debouncedApplyFilters, searchQuery, category, subcategory]);
 
     const displayedProducts = useMemo(() => {
         const indexOfLastProduct = currentPage * productsPerPage;
@@ -324,7 +354,7 @@ const ProductListing = ({ category, searchQuery }: { category?: string; searchQu
     }, [currentPage, filteredProducts, productsPerPage]);
 
     const handleFilterChange = (filters: Record<string, any>) => {
-        debouncedApplyFilters(products, filters, sortOption, searchQuery || '');
+        debouncedApplyFilters(originalProducts, filters, sortOption, searchQuery || '');
     };
 
     const handleSortChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
@@ -402,8 +432,30 @@ const ProductListing = ({ category, searchQuery }: { category?: string; searchQu
         return buttons;
     };
 
+    // Helper function to get display text for category/subcategory
+    const getDisplayText = () => {
+        const parts = [];
+        if (filteredProducts.length > 0) {
+            parts.push(`${filteredProducts.length} ${filteredProducts.length === 1 ? 'Product' : 'Products'}`);
+        }
+
+        if (category && category !== 'all') {
+            parts.push(`in ${DOMPurify.sanitize(category)}`);
+        }
+
+        if (subcategory && subcategory !== 'all') {
+            parts.push(`> ${DOMPurify.sanitize(subcategory)}`);
+        }
+
+        if (searchQuery?.trim()) {
+            parts.push(`for "${DOMPurify.sanitize(searchQuery)}"`);
+        }
+
+        return parts.join(' ');
+    };
+
     return (
-        <div className=" mx-auto " role="main">
+        <div className="mx-auto" role="main">
             <div className="flex flex-col md:flex-row gap-6">
                 {!loading && filteredProducts.length > 0 && (
                     <aside className="w-full md:w-1/4 flex">
@@ -413,11 +465,10 @@ const ProductListing = ({ category, searchQuery }: { category?: string; searchQu
                             onFilterChange={handleFilterChange}
                             filterOptions={filterOptions}
                         />
-                        <div className=" items-center flex md:hidden justify-center text-center w-full ">
-                            
+                        <div className="items-center flex md:hidden justify-center text-center w-full">
                             <select
                                 id="sort"
-                                className="text-sm border-y border-l w-full border-gray-300 text-center flex items-center justify-center  p-4 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                                className="text-sm border-y border-l w-full border-gray-300 text-center flex items-center justify-center p-4 focus:outline-none focus:ring-2 focus:ring-blue-500"
                                 value={sortOption}
                                 onChange={handleSortChange}
                                 aria-label="Sort products"
@@ -434,14 +485,12 @@ const ProductListing = ({ category, searchQuery }: { category?: string; searchQu
 
                 <main className={`w-full ${filteredProducts.length > 0 ? 'md:w-3/4' : 'md:w-full'}`}>
                     <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-6 pb-4 border-b border-gray-200">
-                        <div className=" text-sm md:text-lg font-medium text-gray-800 mb-4 sm:mb-0">
-                            {filteredProducts.length} {filteredProducts.length === 1 ? 'Product' : 'Products'}
-                            {category ? ` in ${DOMPurify.sanitize(category)}` : ''}
-                            {searchQuery ? ` for "${DOMPurify.sanitize(searchQuery)}"` : ''}
+                        <div className="text-sm md:text-lg font-medium text-gray-800 mb-4 sm:mb-0">
+                            {getDisplayText()}
                         </div>
 
-                        <div className=" items-center hidden md:flex">
-                            <label htmlFor="sort" className="  text-sm text-gray-600 mr-2">
+                        <div className="items-center hidden md:flex">
+                            <label htmlFor="sort" className="text-sm text-gray-600 mr-2">
                                 Sort by:
                             </label>
                             <select
@@ -466,7 +515,7 @@ const ProductListing = ({ category, searchQuery }: { category?: string; searchQu
                             <button
                                 onClick={() => {
                                     setError(null);
-                                    fetchProducts();
+                                    // Retry logic would need to be implemented here
                                 }}
                                 className="px-4 py-2 bg-blue-500 text-white rounded hover:bg-blue-600"
                             >

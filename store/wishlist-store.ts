@@ -79,24 +79,25 @@ export const useWishlistStore = create<WishlistState>((set, get) => ({
   fetchWishlist: async (force = false) => {
     const { user, isLoggedIn } = useAuthStore.getState();
     if (!isLoggedIn || !user?.id) {
-      // console.log('[fetchWishlist] User not logged in, resetting wishlist');
+      console.log('[fetchWishlist] User not logged in, resetting wishlist');
       set({ wishlist: [], wishlistCount: 0, lastFetched: Date.now() });
       return;
     }
-  
-    const cacheDuration = 10 * 60 * 1000;
+
+    const cacheDuration = 10 * 60 * 1000; // 10 minutes
     const lastFetched = get().lastFetched;
     if (!force && lastFetched && Date.now() - lastFetched < cacheDuration) {
-      // console.log('[fetchWishlist] Cache hit, skipping fetch');
+      console.log('[fetchWishlist] Cache hit, skipping fetch');
       return;
     }
-  
+
     try {
+      console.log('[fetchWishlist] Fetching wishlist for user:', user.id);
       set({ isLoading: true, isRefetching: force, errors: { ...get().errors, fetch: undefined } });
-      const response = await fetch(`/api/users/wishlist?userId=${user.id}`);
-      // console.log('[fetchWishlist] Raw API response:', response);
-      const data = await fetchWithRetry<WishlistItem[]>(() => fetch(`/api/users/wishlist?userId=${user.id}`));
-      // console.log('[fetchWishlist] Fetched data:', data);
+      const data = await fetchWithRetry<WishlistItem[]>(() =>
+        fetch(`/api/users/wishlist?userId=${user.id}`, { credentials: 'include' })
+      );
+      console.log('[fetchWishlist] Fetched data:', data);
       const validatedData = Array.isArray(data) ? data : [];
       set({
         wishlist: validatedData,
@@ -105,7 +106,7 @@ export const useWishlistStore = create<WishlistState>((set, get) => ({
         isRefetching: false,
         lastFetched: Date.now(),
       });
-      // console.log('[fetchWishlist] State updated:', { wishlist: validatedData, wishlistCount: validatedData.length });
+      console.log('[fetchWishlist] State updated:', { wishlistCount: validatedData.length });
     } catch (error) {
       logError('fetchWishlist', error);
       set({
@@ -113,7 +114,7 @@ export const useWishlistStore = create<WishlistState>((set, get) => ({
         isLoading: false,
         isRefetching: false,
       });
-      // console.log('[fetchWishlist] Error:', error);
+      console.log('[fetchWishlist] Error:', error);
     }
   },
   addToWishlist: async (productId, variantId, onSuccess) => {
@@ -128,7 +129,10 @@ export const useWishlistStore = create<WishlistState>((set, get) => ({
       return false;
     }
 
-    if (get().isInWishlist(productId, variantId)) return true;
+    if (get().isInWishlist(productId, variantId)) {
+      console.log('[addToWishlist] Item already in wishlist:', { productId, variantId });
+      return true;
+    }
 
     set(
       produce((state: WishlistState) => {
@@ -154,6 +158,7 @@ export const useWishlistStore = create<WishlistState>((set, get) => ({
           state.lastFetched = Date.now();
         })
       );
+      console.log('[addToWishlist] Success:', { productId, variantId });
       onSuccess?.();
       return true;
     } catch (error) {
@@ -164,6 +169,7 @@ export const useWishlistStore = create<WishlistState>((set, get) => ({
           state.isLoading = false;
         })
       );
+      console.log('[addToWishlist] Error:', error);
       return false;
     }
   },
@@ -175,7 +181,10 @@ export const useWishlistStore = create<WishlistState>((set, get) => ({
     }
 
     const itemToRemove = get().wishlist.find((item) => item.productId === productId && item.variantId === variantId);
-    if (!itemToRemove) return true;
+    if (!itemToRemove) {
+      console.log('[removeFromWishlist] Item not in wishlist:', { productId, variantId });
+      return true;
+    }
 
     set(
       produce((state: WishlistState) => {
@@ -199,6 +208,7 @@ export const useWishlistStore = create<WishlistState>((set, get) => ({
           state.isLoading = false;
         })
       );
+      console.log('[removeFromWishlist] Success:', { productId, variantId });
       onSuccess?.();
       return true;
     } catch (error) {
@@ -213,32 +223,51 @@ export const useWishlistStore = create<WishlistState>((set, get) => ({
           state.isLoading = false;
         })
       );
+      console.log('[removeFromWishlist] Error:', error);
       return false;
     }
   },
   refreshWishlist: async () => {
+    console.log('[refreshWishlist] Triggered');
     set({ isRefetching: true });
     await get().fetchWishlist(true);
   },
-  reset: () => set(INITIAL_STATE),
+  reset: () => {
+    console.log('[resetWishlist] Resetting wishlist state');
+    set(INITIAL_STATE);
+  },
 }));
 
 export const useWishlistAuthSync = () => {
   useEffect(() => {
-    const unsubscribe = useAuthStore.subscribe((state) => {
-      if (!state.isLoggedIn) {
-        useWishlistStore.getState().reset();
-      } else {
-        useWishlistStore.getState().fetchWishlist(true);
+    const { isLoggedIn, user } = useAuthStore.getState();
+    const { fetchWishlist, reset } = useWishlistStore.getState();
+
+    // Initial fetch if logged in
+    if (isLoggedIn && user?.id) {
+      console.log('[useWishlistAuthSync] Initial fetch for logged-in user:', user.id);
+      fetchWishlist(); // No force=true to respect cache
+    } else {
+      console.log('[useWishlistAuthSync] User not logged in, resetting wishlist');
+      reset();
+    }
+
+    // Subscribe to auth state changes
+    const unsubscribe = useAuthStore.subscribe((state, prevState) => {
+      if (state.isLoggedIn !== prevState.isLoggedIn) {
+        if (state.isLoggedIn && state.user?.id) {
+          console.log('[useWishlistAuthSync] Auth state changed to logged in, fetching wishlist');
+          fetchWishlist(); // No force=true to respect cache
+        } else {
+          console.log('[useWishlistAuthSync] Auth state changed to logged out, resetting wishlist');
+          reset();
+        }
       }
     });
-    return () => unsubscribe();
-  }, []);
 
-  useEffect(() => {
-    const { isLoggedIn } = useAuthStore.getState();
-    if (isLoggedIn) {
-      useWishlistStore.getState().fetchWishlist(true);
-    }
+    return () => {
+      console.log('[useWishlistAuthSync] Unsubscribing from auth store');
+      unsubscribe();
+    };
   }, []);
 };

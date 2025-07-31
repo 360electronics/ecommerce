@@ -1,4 +1,5 @@
-'use client'
+'use client';
+
 import React, { useState, useEffect, useRef } from 'react';
 import Image from 'next/image';
 import LocationPicker from './Header/LocationPicker';
@@ -219,7 +220,6 @@ const Header = ({ isCategory = true }: HeaderProps) => {
   };
 
   const handleMouseLeaveAttribute = (event: React.MouseEvent) => {
-    // Only clear hoveredAttribute if leaving the entire attribute options area
     if (attributeRef.current && !attributeRef.current.contains(event.relatedTarget as Node)) {
       setHoveredAttribute(null);
     }
@@ -228,8 +228,7 @@ const Header = ({ isCategory = true }: HeaderProps) => {
   return (
     <>
       <header
-        className={`w-full bg-white pt-2 px-4 md:px-12 fixed top-0 left-0 z-50 transition-all duration-300 ${isScrolled ? 'shadow-md' : ''
-          }`}
+        className={`w-full bg-white pt-2 px-4 md:px-12 fixed top-0 left-0 z-50 transition-all duration-300 ${isScrolled ? 'shadow-md' : ''}`}
       >
         <div className="mx-auto flex items-center justify-between gap-2">
           <div className="flex items-center">
@@ -332,7 +331,7 @@ const Header = ({ isCategory = true }: HeaderProps) => {
                           {category.subCategories.map((subCat) => (
                             <Link
                               key={subCat.id}
-                              href={`/category/${category.slug}/${subCat.slug}`}
+                              href={`/category/${category.slug}?subcategory=${subCat.slug}`}
                               className="block py-1 text-sm text-gray-600 hover:text-primary"
                               onClick={closeMenu}
                             >
@@ -357,8 +356,7 @@ const Header = ({ isCategory = true }: HeaderProps) => {
                                   {attrName.replace('_', ' ')}
                                   <ChevronDown
                                     size={14}
-                                    className={`ml-1 transform ${hoveredAttribute === attrName ? 'rotate-180' : ''
-                                      }`}
+                                    className={`ml-1 transform ${hoveredAttribute === attrName ? 'rotate-180' : ''}`}
                                   />
                                 </button>
                                 {hoveredAttribute === attrName && (
@@ -414,7 +412,7 @@ const Header = ({ isCategory = true }: HeaderProps) => {
 
         {/* Desktop Categories Row with Full-Screen Hover Dropdown */}
         {isCategory && (
-          <div className="hidden md:block z-40  bg-white">
+          <div className="hidden md:block z-40 bg-white">
             <div className="w-full flex items-center justify-center">
               <ul className="flex justify-between w-full space-x-8 py-2 relative">
                 <li>
@@ -453,15 +451,17 @@ const Header = ({ isCategory = true }: HeaderProps) => {
             {/* Full-Screen Dropdown */}
             {hoveredCategory && (
               <div
-                className="fixed left-0 right-0 top-26 bg-black/30 shadow-lg z-[100] "
-
+                className="fixed left-0 right-0 top-26 bg-black/30 shadow-lg z-[100]"
               >
-                <div onMouseEnter={() => {
-                  if (dropdownTimeoutRef.current) {
-                    clearTimeout(dropdownTimeoutRef.current);
-                  }
-                }}
-                  onMouseLeave={handleMouseLeaveCategory} className="max-w-[90%] bg-white mx-auto p-6 flex flex-row gap-12 h-[calc(100vh-6rem)] overflow-y-auto">
+                <div
+                  onMouseEnter={() => {
+                    if (dropdownTimeoutRef.current) {
+                      clearTimeout(dropdownTimeoutRef.current);
+                    }
+                  }}
+                  onMouseLeave={handleMouseLeaveCategory}
+                  className="max-w-[90%] bg-white mx-auto p-6 flex flex-row gap-12 h-[calc(100vh-6rem)] overflow-y-auto"
+                >
                   {categories
                     .filter((category) => category.name === hoveredCategory)
                     .map((category) => (
@@ -474,7 +474,7 @@ const Header = ({ isCategory = true }: HeaderProps) => {
                               {category.subCategories.map((subCat) => (
                                 <li key={subCat.id}>
                                   <Link
-                                    href={`/category/${category.slug}/${subCat.slug}`}
+                                    href={`/category/${category.slug}?subcategory=${subCat.slug}`}
                                     className="block text-sm text-gray-600 hover:text-primary py-1 transition-colors"
                                     onClick={() => setHoveredCategory(null)}
                                   >

@@ -270,6 +270,7 @@ export interface FlattenedProduct {
   createdAt: string | Date;
   updatedAt: string | Date;
   category: Category;
+  subcategory: Subcategory
   brand?: { id: string; name: string; slug: string };
   averageRating: string;
   totalStocks: string;
