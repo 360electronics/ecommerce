@@ -237,7 +237,7 @@ export default function Help() {
 
             <Button
               onClick={() => setIsModalOpen(true)}
-              className="flex items-center justify-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 transition w-full sm:w-auto"
+              className="flex items-center justify-center gap-2 px-4 py-2 bg-gradient-to-r from-[#ff6b00] to-[#ff9f00] hover:to-primary-hover rounded-lg text-white transition w-full sm:w-auto"
               aria-label="Create new ticket"
             >
               <FaPlus size={16} /> New Ticket
@@ -280,7 +280,7 @@ export default function Help() {
                       <button
                         key={ticket.id}
                         onClick={() => handleTicketSelect(ticket)}
-                        className={`w-full p-4 text-left cursor-pointer hover:bg-gray-50 transition ${selectedTicket?.id === ticket.id ? 'bg-blue-50 border-l-4 border-blue-500' : ''
+                        className={`w-full p-4 text-left cursor-pointer hover:bg-gray-50 transition ${selectedTicket?.id === ticket.id ? 'bg-primary-light border-l-4 border-primary' : ''
                           }`}
                         aria-label={`Select ticket: ${getTicketTypeLabel(ticket.type)}`}
                       >
@@ -383,7 +383,7 @@ export default function Help() {
                       </Button>
                       <Button
                         type="submit"
-                        className="px-4 bg-blue-600 text-white py-2 rounded-md hover:bg-blue-700 transition flex items-center gap-2"
+                        className="px-4 bg-gradient-to-r from-[#ff6b00] to-[#ff9f00] hover:to-primary-hover rounded-lg text-white py-2 transition flex items-center gap-2"
                         disabled={!newReply.trim() || isSubmitting}
                         aria-label="Send reply"
                       >
@@ -420,7 +420,7 @@ export default function Help() {
                 <p className="mb-4">Select a ticket from the list or create a new one to get started.</p>
                 <Button
                   onClick={() => setIsModalOpen(true)}
-                  className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 transition"
+                  className="flex items-center gap-2 px-4 py-2 bg-gradient-to-r from-[#ff6b00] to-[#ff9f00] hover:to-primary-hover rounded-lg text-white transition"
                   aria-label="Create new ticket"
                 >
                   <FaPlus size={16} /> New Ticket
@@ -498,7 +498,7 @@ export default function Help() {
                   </button>
                   <button
                     type="submit"
-                    className="px-4 bg-blue-600 text-white py-2 rounded-full hover:bg-blue-700 transition flex items-center gap-2 text-base"
+                    className="px-4 bg-gradient-to-r from-[#ff6b00] to-[#ff9f00] hover:to-primary-hover rounded-lg text-white py-2 transition flex items-center gap-2 text-base"
                     disabled={isSubmitting}
                     aria-label="Submit ticket"
                   >

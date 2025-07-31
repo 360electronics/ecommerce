@@ -500,7 +500,7 @@ export function EnhancedTable<T extends Record<string, any>>({
     return (
       customization.loadingState || (
         <div className="flex items-center justify-center p-12 bg-white rounded-xl ">
-          <div className="h-10 w-10 animate-spin rounded-full border-4 border-blue-600 border-t-transparent"></div>
+          <div className="h-10 w-10 animate-spin rounded-full border-4 border-primary border-t-transparent"></div>
         </div>
       )
     )
@@ -531,7 +531,7 @@ export function EnhancedTable<T extends Record<string, any>>({
                 <input
                   type="text"
                   placeholder={search.placeholder || "Search entries..."}
-                  className="w-full pl-10 pr-4 py-2.5 text-sm rounded-xl border border-gray-200 focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white  transition-all duration-300 placeholder-gray-500"
+                  className="w-full pl-10 pr-4 py-2.5 text-sm rounded-xl border border-gray-200 focus:outline-none focus:ring-2 focus:ring-primary bg-white  transition-all duration-300 placeholder-gray-500"
                   value={searchTerm}
                   onChange={(e) => handleSearch(e.target.value)}
                 />
@@ -539,7 +539,7 @@ export function EnhancedTable<T extends Record<string, any>>({
             )}
             {actions?.onAdd && (
               <button
-                className="flex items-center gap-2 px-4 py-2.5 bg-blue-600 text-white rounded-xl hover:bg-blue-700 transition-all duration-300  text-sm font-medium"
+                className="flex items-center gap-2 px-4 py-2.5 bg-gradient-to-r from-[#ff6b00] to-[#ff9f00] text-white rounded-xl hover:to-primary-hover transition-all duration-300  text-sm font-medium"
                 onClick={actions.onAdd}
               >
                 <svg
@@ -566,7 +566,7 @@ export function EnhancedTable<T extends Record<string, any>>({
             {actions.bulkActions.view && selectedItems.length === 1 && (
               <button
                 onClick={() => actions.bulkActions?.view?.(selectedItems[0])}
-                className="group flex items-center gap-2 px-4 py-2 rounded-xl bg-gray-100 hover:bg-blue-600 hover:text-white  transition-all duration-300"
+                className="group flex items-center gap-2 px-4 py-2 rounded-xl bg-gray-100 hover:bg-primary hover:text-white  transition-all duration-300"
                 title="View"
               >
                 <Eye className="h-5 w-5 text-gray-600 group-hover:text-white transition-transform duration-300 group-hover:scale-110" />
@@ -576,10 +576,10 @@ export function EnhancedTable<T extends Record<string, any>>({
             {actions.bulkActions.edit && (
               <button
                 onClick={() => actions.bulkActions?.edit?.(selectedItems)}
-                className="group flex items-center gap-2 px-4 py-2 rounded-xl bg-blue-50 text-blue-600 hover:bg-blue-600 hover:text-white transition-all duration-300"
+                className="group flex items-center gap-2 px-4 py-2 rounded-xl bg-blue-50 text-primary hover:bg-primary hover:text-white transition-all duration-300"
                 title="Edit"
               >
-                <Edit className="h-5 w-5 text-blue-600 group-hover:text-white transition-transform duration-300 group-hover:rotate-12" />
+                <Edit className="h-5 w-5 text-primary group-hover:text-white transition-transform duration-300 group-hover:rotate-12" />
                 <span className="text-sm font-medium">Edit</span>
               </button>
             )}
@@ -628,7 +628,7 @@ export function EnhancedTable<T extends Record<string, any>>({
               className={cn(
                 "px-4 py-2 text-sm rounded-lg font-medium transition-all duration-300",
                 activeFilter === "All"
-                  ? "bg-blue-600 text-white "
+                  ? "bg-primary text-white "
                   : "text-gray-600 hover:bg-gray-100"
               )}
             >
@@ -675,7 +675,7 @@ export function EnhancedTable<T extends Record<string, any>>({
                         type="checkbox"
                         checked={paginatedData.length > 0 && selectedItems.length === paginatedData.length}
                         onChange={toggleAllSelection}
-                        className="h-4 w-4 rounded border-gray-300 text-blue-600 focus:ring-blue-500 cursor-pointer"
+                        className="h-4 w-4 rounded border-gray-300 text-primary focus:ring-primary cursor-pointer"
                         aria-label="Select all"
                       />
                     </div>
@@ -689,7 +689,7 @@ export function EnhancedTable<T extends Record<string, any>>({
                       onClick={() => column.sortable && handleSort(column.key)}
                       className={cn(
                         "py-4 px-6",
-                        column.sortable && sorting.enabled ? "cursor-pointer hover:bg-blue-50 transition-colors duration-200" : "",
+                        column.sortable && sorting.enabled ? "cursor-pointer hover:bg-primary-light transition-colors duration-200" : "",
                         column.align === "right" && "text-right",
                         column.align === "left" && "text-left",
                         column.align === "center" && "text-center",
@@ -713,9 +713,9 @@ export function EnhancedTable<T extends Record<string, any>>({
                       className={cn(
                         "border-b border-gray-200 transition-colors duration-200",
                         onRowClick && "cursor-pointer",
-                        isSelected && "bg-blue-50",
+                        isSelected && "bg-primary-light",
                         customization.zebraStriping && index % 2 === 1 && "bg-gray-50",
-                        customization.rowHoverEffect && "hover:bg-blue-50/50",
+                        customization.rowHoverEffect && "hover:bg-primary-light/50",
                         getRowClassName(item),
                       )}
                       onClick={(e) => handleRowClick(item, e)}
@@ -729,7 +729,7 @@ export function EnhancedTable<T extends Record<string, any>>({
                               onChange={() => toggleItemSelection(item)}
                               onClick={(e) => e.stopPropagation()}
                               disabled={isDisabled}
-                              className="h-4 w-4 rounded border-gray-300 text-blue-600 focus:ring-blue-500 cursor-pointer"
+                              className="h-4 w-4 rounded border-gray-300 text-primary focus:ring-primary cursor-pointer"
                             />
                           </div>
                         </TableCell>
@@ -794,7 +794,7 @@ export function EnhancedTable<T extends Record<string, any>>({
         >
           <div className="flex items-center gap-3 text-sm font-medium text-gray-600">
             <span>Showing</span>
-            <span className="px-3 py-1 bg-blue-50 text-blue-600 rounded-full">
+            <span className="px-3 py-1 bg-primary-light text-primary rounded-full">
               {Math.min((currentPage - 1) * pageSize + 1, filteredData.length)} -{" "}
               {Math.min(currentPage * pageSize, filteredData.length)}
             </span>
@@ -809,8 +809,8 @@ export function EnhancedTable<T extends Record<string, any>>({
                 className={cn(
                   "w-10 h-10 rounded-full transition-all duration-300",
                   currentPage === page
-                    ? "bg-blue-600 text-white  hover:bg-blue-700"
-                    : "text-gray-600 hover:bg-blue-100"
+                    ? "bg-primary text-white  hover:bg-primary-hover"
+                    : "text-gray-600 hover:bg-primary-light"
                 )}
                 onClick={() => handlePageChange(page)}
               >
@@ -828,8 +828,8 @@ export function EnhancedTable<T extends Record<string, any>>({
                   className={cn(
                     "px-4 py-2 text-sm rounded-lg font-medium transition-all duration-300",
                     pageSize === size
-                      ? "bg-blue-600 text-white "
-                      : "text-gray-600 hover:bg-blue-100"
+                      ? "bg-primary text-white "
+                      : "text-gray-600 hover:bg-primary-light"
                   )}
                 >
                   {size}

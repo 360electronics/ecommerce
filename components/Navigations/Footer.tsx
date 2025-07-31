@@ -92,22 +92,22 @@ const Footer = () => {
   // Feature data
   const features = [
     {
-      icon: <Image src="/footer/truck-bolt.svg" alt="Fast Delivery" width={24} height={24} />,
+      icon: <Image src="/footer/truck-bolts.svg" alt="Fast Delivery" width={24} height={24} />,
       title: 'Fast Delivery',
       description: 'Fast & reliable delivery options',
     },
     {
-      icon: <Image src="/footer/digital-payment.svg" alt="Online payment" width={24} height={24} />,
+      icon: <Image src="/footer/digital-payments.svg" alt="Online payment" width={24} height={24} />,
       title: 'Online Payment',
       description: '100% secure & shop with confidence',
     },
     {
-      icon: <Image src="/footer/shield-check.svg" alt="Warranty" width={24} height={24} />,
+      icon: <Image src="/footer/shield-checks.svg" alt="Warranty" width={24} height={24} />,
       title: 'Extended Warranty',
       description: 'Extended protection for peace of mind',
     },
     {
-      icon: <Image src="/footer/user-headset.svg" alt="Customer Support" width={24} height={24} />,
+      icon: <Image src="/footer/user-headsets.svg" alt="Customer Support" width={24} height={24} />,
       title: 'Customer Support',
       description: 'Expert help available 24/7',
     },
@@ -197,7 +197,7 @@ const Footer = () => {
                     id="email"
                     type="email"
                     placeholder="Enter Email Address"
-                    className="w-full px-4 py-3 bg-transparent border border-gray-600 rounded focus:outline-none focus:border-blue-500 text-white"
+                    className="w-full px-4 py-3 bg-transparent border border-gray-600 rounded focus:outline-none focus:border-primary text-white"
                     required
                     aria-describedby="email-error"
                     value={email}
@@ -228,7 +228,7 @@ const Footer = () => {
                 </div>
                 <button
                   onClick={handleNewsletterSubmit}
-                  className="w-full py-3 bg-blue-500 hover:bg-blue-600 text-white font-medium rounded transition duration-200"
+                  className="w-full py-3 bg-gradient-to-r from-[#ff6b00] to-[#ff9f00] hover:to-primary-hover text-white font-medium rounded transition duration-200"
                   aria-label="Subscribe to newsletter"
                 >
                   Subscribe
@@ -258,7 +258,7 @@ const Footer = () => {
               </div>
               
               <div className="flex items-start">
-                <FaLocationDot className="text-blue-500 mt-1 mr-2 flex-shrink-0" />
+                <FaLocationDot className="text-primary mt-1 mr-2 flex-shrink-0" />
                 <address className="not-italic text-sm text-gray-300">
                   {locations[selectedLocation].address.map((line, i) => (
                     <React.Fragment key={i}>

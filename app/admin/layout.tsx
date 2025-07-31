@@ -138,14 +138,14 @@ export default function Layout({ children }: AdminLayoutProps) {
                     href={item.path}
                     className={`flex items-center rounded-md px-3 py-2 text-sm font-medium transition-colors ${
                       isActive
-                        ? 'bg-blue-100 text-blue-600'
+                        ? 'bg-primary-light text-primary'
                         : 'text-gray-600 hover:bg-gray-100 hover:text-gray-900'
-                    } focus:outline-none focus:ring-2 focus:ring-blue-500`}
+                    } focus:outline-none focus:ring-2 focus:ring-primary`}
                     aria-current={isActive ? 'page' : undefined}
                   >
                     <item.icon
                       className={`mr-3 h-5 w-5 ${
-                        isActive ? 'text-blue-600' : 'text-gray-500'
+                        isActive ? 'text-primary' : 'text-gray-500'
                       }`}
                       aria-hidden="true"
                     />
@@ -159,7 +159,7 @@ export default function Layout({ children }: AdminLayoutProps) {
           {/* Logout Button */}
           <div className="p-4">
             <button
-              className="flex w-full items-center justify-center rounded-md border border-gray-300 px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-blue-500"
+              className="flex w-full items-center justify-center rounded-md border border-gray-300 px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-primary"
               onClick={() => alert('Logout functionality not implemented')}
             >
               <LogOut className="mr-2 h-4 w-4" aria-hidden="true" />
@@ -177,7 +177,7 @@ export default function Layout({ children }: AdminLayoutProps) {
             <div className="flex items-center">
               <button
                 onClick={() => setSidebarOpen(!sidebarOpen)}
-                className="mr-2 rounded-md p-2 text-gray-500 hover:bg-gray-100 focus:outline-none focus:ring-2 focus:ring-blue-500 lg:hidden"
+                className="mr-2 rounded-md p-2 text-gray-500 hover:bg-gray-100 focus:outline-none focus:ring-2 focus:ring-primary lg:hidden"
                 aria-label="Toggle sidebar"
               >
                 <Menu className="h-6 w-6" />

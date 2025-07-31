@@ -259,7 +259,7 @@ export default function TicketsPage() {
               variant={filter === status ? 'default' : 'outline'}
               className={`px-4 py-2 rounded-lg text-sm font-medium capitalize transition-all duration-200 ${
                 filter === status
-                  ? 'bg-blue-600 text-white hover:bg-blue-700'
+                  ? 'bg-primary text-white hover:bg-primary-hover'
                   : 'bg-white text-gray-700 border-gray-300 hover:bg-gray-50'
               }`}
             >

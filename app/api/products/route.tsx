@@ -83,9 +83,9 @@ const createProductSchema = z.object({
       weightUnit: z.string().max(10).default('kg'),
       dimensions: z
         .object({
-          length: z.number().positive(),
-          width: z.number().positive(),
-          height: z.number().positive(),
+          length: z.number().optional().default(0),
+          width: z.number().optional().default(0),
+          height: z.number().optional().default(0),
           unit: z.string(),
         })
         .optional(),

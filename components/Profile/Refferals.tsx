@@ -94,7 +94,7 @@ export default function Referrals() {
       <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-8">
         <div className="rounded-lg p-4 border border-gray-200">
           <div className="flex items-center">
-            <Users className="h-8 w-8 text-blue-500" />
+            <Users className="h-8 w-8 text-orange-500" />
             <div className="ml-4">
               <p className="text-sm font-medium text-gray-500">Total Referrals</p>
               <p className="text-2xl font-bold text-gray-900">{referrals.stats.totalReferrals}</p>
@@ -145,7 +145,7 @@ export default function Referrals() {
       {!errors.referrals && (
         <>
           <div className="bg-white sm:rounded-lg overflow-hidden border border-gray-200 mb-8">
-            <div className="px-4 py-5 sm:px-6 bg-blue-50 border-b border-gray-200">
+            <div className="px-4 py-5 sm:px-6 bg-orange-50 border-b border-gray-200">
               <h3 className="text-lg font-medium text-gray-900">Your Referral Link</h3>
               <p className="mt-1 text-sm text-gray-600">
                 Share this link with friends. When they sign up, you&apos;ll both receive rewards!
@@ -155,13 +155,13 @@ export default function Referrals() {
               <div className="flex flex-col sm:flex-row space-y-2 sm:space-y-0 sm:space-x-2">
                 <input
                   type="text"
-                  className="flex-1 block w-full min-w-0 border px-2 border-gray-300 rounded-md -sm focus:ring-blue-500 focus:border-blue-500 sm:text-sm"
+                  className="flex-1 block w-full min-w-0 border px-2 border-gray-300 rounded-md -sm "
                   value={referrals.referralLink}
                   readOnly
                 />
                 <button
                   onClick={handleCopyLink}
-                  className="inline-flex items-center px-4 py-2 border border-transparent -sm text-sm font-medium rounded-md text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
+                  className="inline-flex items-center px-4 py-2 border border-transparent -sm text-sm font-medium rounded-md text-white bg-gradient-to-r from-[#ff6b00] to-[#ff9f00] hover:to-primary-hover "
                 >
                   {copied ? (
                     <>
@@ -183,7 +183,7 @@ export default function Referrals() {
                     <button
                       key={platform}
                       onClick={() => handleShare(platform as 'facebook' | 'twitter' | 'whatsapp' | 'email')}
-                      className="inline-flex items-center text-sm font-medium rounded-md text-gray-700 cursor-pointer focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
+                      className="inline-flex items-center text-sm font-medium rounded-md text-gray-700 cursor-pointer "
                       aria-label={`Share referral link on ${platform}`}
                     >
                       <Image
@@ -245,7 +245,7 @@ export default function Referrals() {
                       {!coupon.isUsed && (
                         <a
                           href="/shop"
-                          className="inline-flex items-center px-3 py-2 border border-transparent text-sm leading-4 font-medium rounded-md text-white bg-green-600 hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-green-500"
+                          className="inline-flex items-center px-3 py-2 border border-transparent text-sm leading-4 font-medium rounded-md text-white bg-gradient-to-r from-[#ff6b00] to-[#ff9f00] hover:to-primary-hover "
                         >
                           Use Now
                         </a>
@@ -350,59 +350,59 @@ export default function Referrals() {
             </div>
           </div>
 
-          <div className="mt-8 bg-blue-50 rounded-lg p-6 border border-blue-100">
-            <h3 className="text-lg font-medium text-blue-900">How Our Referral Program Works</h3>
+          <div className="mt-8 bg-orange-50 rounded-lg p-6 border border-orange-100">
+            <h3 className="text-lg font-medium text-orange-900">How Our Referral Program Works</h3>
             <div className="mt-4 space-y-4">
               <div className="flex">
                 <div className="flex-shrink-0">
-                  <div className="flex items-center justify-center h-8 w-8 rounded-full bg-blue-200 text-blue-600 font-medium">
+                  <div className="flex items-center justify-center h-8 w-8 rounded-full bg-orange-200 text-orange-600 font-medium">
                     1
                   </div>
                 </div>
                 <div className="ml-4">
-                  <p className="text-sm font-medium text-blue-900">Share your unique referral link</p>
-                  <p className="mt-1 text-sm text-blue-700">
+                  <p className="text-sm font-medium text-orange-900">Share your unique referral link</p>
+                  <p className="mt-1 text-sm text-orange-700">
                     Copy your personal referral link and share it with friends and family.
                   </p>
                 </div>
               </div>
               <div className="flex">
                 <div className="flex-shrink-0">
-                  <div className="flex items-center justify-center h-8 w-8 rounded-full bg-blue-200 text-blue-600 font-medium">
+                  <div className="flex items-center justify-center h-8 w-8 rounded-full bg-orange-200 text-orange-600 font-medium">
                     2
                   </div>
                 </div>
                 <div className="ml-4">
-                  <p className="text-sm font-medium text-blue-900">Friends sign up using your link</p>
-                  <p className="mt-1 text-sm text-blue-700">
+                  <p className="text-sm font-medium text-orange-900">Friends sign up using your link</p>
+                  <p className="mt-1 text-sm text-orange-700">
                     When someone uses your link to create an account, they&apos;re added to your referrals.
                   </p>
                 </div>
               </div>
               <div className="flex">
                 <div className="flex-shrink-0">
-                  <div className="flex items-center justify-center h-8 w-8 rounded-full bg-blue-200 text-blue-600 font-medium">
+                  <div className="flex items-center justify-center h-8 w-8 rounded-full bg-orange-200 text-orange-600 font-medium">
                     3
                   </div>
                 </div>
                 <div className="ml-4">
-                  <p className="text-sm font-medium text-blue-900">
+                  <p className="text-sm font-medium text-orange-900">
                     Earn rewards when they complete a purchase
                   </p>
-                  <p className="mt-1 text-sm text-blue-700">
+                  <p className="mt-1 text-sm text-orange-700">
                     After your referred friend makes their first purchase, you&apos;ll receive a ₹100 coupon.
                   </p>
                 </div>
               </div>
               <div className="flex">
                 <div className="flex-shrink-0">
-                  <div className="flex items-center justify-center h-8 w-8 rounded-full bg-blue-200 text-blue-600 font-medium">
+                  <div className="flex items-center justify-center h-8 w-8 rounded-full bg-orange-200 text-orange-600 font-medium">
                     4
                   </div>
                 </div>
                 <div className="ml-4">
-                  <p className="text-sm font-medium text-blue-900">Use your coupons on your next purchase</p>
-                  <p className="mt-1 text-sm text-blue-700">
+                  <p className="text-sm font-medium text-orange-900">Use your coupons on your next purchase</p>
+                  <p className="mt-1 text-sm text-orange-700">
                     Apply your earned coupons during checkout for a ₹100 discount.
                   </p>
                 </div>
@@ -411,7 +411,7 @@ export default function Referrals() {
             <div className="mt-6 text-center">
               <a
                 href="/referral-terms"
-                className="inline-flex items-center text-sm font-medium text-blue-600 hover:text-blue-500"
+                className="inline-flex items-center text-sm font-medium text-orange-600 hover:text-orange-500"
               >
                 View full terms and conditions
                 <ExternalLink className="ml-1 h-4 w-4" />

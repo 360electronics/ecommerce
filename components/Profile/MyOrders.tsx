@@ -227,7 +227,7 @@ export default function Orders() {
           <div className="mt-6">
             <Link
               href="/category/all"
-              className="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
+              className="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md text-white bg-gradient-to-r from-[#ff6b00] to-[#ff9f00] hover:to-primary-hover "
               aria-label="Browse products"
             >
               Browse products

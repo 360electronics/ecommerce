@@ -243,6 +243,7 @@ const DraggableSpecSection = ({
   );
 };
 
+
 export default function AddProductPage() {
   const router = useRouter();
   const [product, setProduct] = useState({
@@ -1089,10 +1090,10 @@ export default function AddProductPage() {
                               className="flex h-full w-full cursor-pointer flex-col items-center justify-center"
                               onClick={() => variantImageInputRefs.current[variant.id]?.main.current?.click()}
                             >
-                              <div className="flex h-12 w-12 items-center justify-center rounded-full bg-blue-100 text-blue-600">
+                              <div className="flex h-12 w-12 items-center justify-center rounded-full bg-primary-light text-primary">
                                 <Plus className="h-6 w-6" />
                               </div>
-                              <p className="mt-2 text-sm font-medium text-blue-600">Upload Main Image</p>
+                              <p className="mt-2 text-sm font-medium text-primary">Upload Main Image</p>
                               <p className="text-xs text-gray-500">or drop a file</p>
                             </div>
                           )}
@@ -1157,10 +1158,10 @@ export default function AddProductPage() {
                                 className="flex h-full w-full cursor-pointer flex-col items-center justify-center"
                                 onClick={() => variantImageInputRefs.current[variant.id]?.additional[index]?.click()}
                               >
-                                <div className="flex h-8 w-8 items-center justify-center rounded-full bg-blue-100 text-blue-600">
+                                <div className="flex h-8 w-8 items-center justify-center rounded-full bg-primary-light text-primary">
                                   <Plus className="h-4 w-4" />
                                 </div>
-                                <p className="mt-1 text-xs font-medium text-blue-600">Upload Image</p>
+                                <p className="mt-1 text-xs font-medium text-primary">Upload Image</p>
                                 <p className="text-[10px] text-gray-500">or drop a file</p>
                               </div>
                             )}
@@ -1549,7 +1550,7 @@ export default function AddProductPage() {
           </div>
 
           <div className="flex justify-center">
-            <Button type="submit" className="w-[40%] rounded-full">
+            <Button type="submit" className="w-[40%] rounded-full bg-gradient-to-r from-[#ff6b00] to-[#ff9f00] hover:to-primary-hover">
               Add Product
             </Button>
           </div>

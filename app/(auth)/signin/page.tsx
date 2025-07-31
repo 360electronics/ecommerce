@@ -173,7 +173,7 @@ export default function LoginPage() {
           </div>
 
           {/* Title */}
-          <h1 className="text-2xl md:text-3xl font-bold text-center text-blue-600">
+          <h1 className="text-2xl md:text-3xl font-bold text-center text-primary">
             Sign In
           </h1>
 
@@ -225,9 +225,9 @@ export default function LoginPage() {
               disabled={loading}
               className={cn(
                 "w-full py-3 px-4 rounded-md font-medium text-white",
-                "bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500",
+                "bg-gradient-to-r from-[#ff6b00] to-[#ff9f00] hover:to-primary-hover ",
                 "transition duration-300",
-                loading && "bg-blue-400 cursor-not-allowed"
+                loading && "bg-primary cursor-not-allowed"
               )}
             >
               {loading ? (
@@ -264,7 +264,7 @@ export default function LoginPage() {
               Don&apos;t have an account?{" "}
               <Link
                 href="/signup"
-                className="text-blue-600 font-semibold hover:underline"
+                className="text-primary font-semibold hover:underline"
               >
                 Sign Up
               </Link>
@@ -274,11 +274,11 @@ export default function LoginPage() {
           {/* Terms and Privacy */}
           <div className="text-center text-xs text-gray-500">
             By continuing, you agree to our{" "}
-            <Link href="/terms" className="text-blue-600 hover:underline">
+            <Link href="/terms" className="text-primary hover:underline">
               Terms of Use
             </Link>{" "}
             and{" "}
-            <Link href="/privacy" className="text-blue-600 hover:underline">
+            <Link href="/privacy" className="text-primary hover:underline">
               Privacy Policy
             </Link>.
           </div>

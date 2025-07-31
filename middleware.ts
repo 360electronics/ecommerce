@@ -10,7 +10,7 @@ const nonAuthRoutes = ["/signin", "/signup"];
 export async function middleware(request: NextRequest) {
   const { pathname } = request.nextUrl;
   
-
+  
   // Get authToken from cookies
   const token = request.cookies.get("authToken")?.value;
 
@@ -53,14 +53,14 @@ export async function middleware(request: NextRequest) {
   }
 
   // Case 2: User tries to access admin routes without being an admin
-  // if (adminRoutes.some((route) => pathname.startsWith(route))) {
-  //   if (!isAuthenticated) {
-  //     return redirectToSignIn(request);
-  //   }
-  //   if (!isAdmin) {
-  //     return redirectToHome(request);
-  //   }
-  // }
+  if (adminRoutes.some((route) => pathname.startsWith(route))) {
+    if (!isAuthenticated) {
+      return redirectToSignIn(request);
+    }
+    if (!isAdmin) {
+      return redirectToHome(request);
+    }
+  }
 
   // Case 3: Authenticated user tries to access sign in or sign up pages
   if (

@@ -321,7 +321,7 @@ const Header = ({ isCategory = true }: HeaderProps) => {
                     <div key={category.id} className="mb-4">
                       <Link
                         href={`/category/${category.slug}`}
-                        className="block py-2 text-gray-700 hover:text-blue-600 font-medium"
+                        className="block py-2 text-gray-700 hover:text-primary font-medium"
                         onClick={closeMenu}
                       >
                         {category.name}
@@ -333,7 +333,7 @@ const Header = ({ isCategory = true }: HeaderProps) => {
                             <Link
                               key={subCat.id}
                               href={`/category/${category.slug}/${subCat.slug}`}
-                              className="block py-1 text-sm text-gray-600 hover:text-blue-600"
+                              className="block py-1 text-sm text-gray-600 hover:text-primary"
                               onClick={closeMenu}
                             >
                               {subCat.name}
@@ -349,7 +349,7 @@ const Header = ({ isCategory = true }: HeaderProps) => {
                             .map(([attrName, values]) => (
                               <div key={attrName} className="py-1">
                                 <button
-                                  className="text-sm text-gray-600 hover:text-blue-600 flex items-center"
+                                  className="text-sm text-gray-600 hover:text-primary flex items-center"
                                   onClick={() =>
                                     setHoveredAttribute(hoveredAttribute === attrName ? null : attrName)
                                   }
@@ -367,7 +367,7 @@ const Header = ({ isCategory = true }: HeaderProps) => {
                                       <Link
                                         key={value}
                                         href={`/category/${category.slug}?${attrName}=${encodeURIComponent(value)}`}
-                                        className="block text-xs text-gray-500 hover:text-blue-600 py-0.5"
+                                        className="block text-xs text-gray-500 hover:text-primary py-0.5"
                                         onClick={closeMenu}
                                       >
                                         {value}
@@ -388,21 +388,21 @@ const Header = ({ isCategory = true }: HeaderProps) => {
                 <h3 className="font-bold text-lg mb-3">Help & Support</h3>
                 <Link
                   href="/contact"
-                  className="block py-2 text-gray-700 hover:text-blue-600"
+                  className="block py-2 text-gray-700 hover:text-primary"
                   onClick={closeMenu}
                 >
                   Contact Us
                 </Link>
                 <Link
                   href="/faq"
-                  className="block py-2 text-gray-700 hover:text-blue-600"
+                  className="block py-2 text-gray-700 hover:text-primary"
                   onClick={closeMenu}
                 >
                   FAQ
                 </Link>
                 <Link
                   href="/returns"
-                  className="block py-2 text-gray-700 hover:text-blue-600"
+                  className="block py-2 text-gray-700 hover:text-primary"
                   onClick={closeMenu}
                 >
                   Returns & Refunds
@@ -420,7 +420,7 @@ const Header = ({ isCategory = true }: HeaderProps) => {
                 <li>
                   <Link
                     href="/category/all"
-                    className="text-sm font-medium text-gray-800 hover:text-blue-600 transition-colors"
+                    className="text-sm font-medium text-gray-800 hover:text-primary transition-colors"
                   >
                     All Categories
                   </Link>
@@ -437,7 +437,7 @@ const Header = ({ isCategory = true }: HeaderProps) => {
                     >
                       <Link
                         href={`/category/${category.slug}`}
-                        className="text-sm font-medium text-gray-800 hover:text-blue-600 transition-colors flex items-center"
+                        className="text-sm font-medium text-gray-800 hover:text-primary transition-colors flex items-center"
                       >
                         {category.name}
                         {(category.subCategories.length > 0 || Object.keys(category.attributeValues).length > 0) && (
@@ -475,7 +475,7 @@ const Header = ({ isCategory = true }: HeaderProps) => {
                                 <li key={subCat.id}>
                                   <Link
                                     href={`/category/${category.slug}/${subCat.slug}`}
-                                    className="block text-sm text-gray-600 hover:text-blue-600 py-1 transition-colors"
+                                    className="block text-sm text-gray-600 hover:text-primary py-1 transition-colors"
                                     onClick={() => setHoveredCategory(null)}
                                   >
                                     {subCat.name}
@@ -502,7 +502,7 @@ const Header = ({ isCategory = true }: HeaderProps) => {
                                     onMouseEnter={() => handleMouseEnterAttribute(attrName)}
                                   >
                                     <button
-                                      className="text-sm text-gray-600 hover:text-blue-600 transition-colors capitalize"
+                                      className="text-sm text-gray-600 hover:text-primary transition-colors capitalize"
                                       onMouseLeave={handleMouseLeaveAttribute}
                                     >
                                       {attrName.replace('_', ' ')}
@@ -516,7 +516,7 @@ const Header = ({ isCategory = true }: HeaderProps) => {
                                   <li key={value} className="py-1">
                                     <Link
                                       href={`/category/${category.slug}?${hoveredAttribute}=${encodeURIComponent(value)}`}
-                                      className="block text-sm text-gray-600 hover:text-blue-600 transition-colors cursor-pointer"
+                                      className="block text-sm text-gray-600 hover:text-primary transition-colors cursor-pointer"
                                       onClick={() => setHoveredCategory(null)}
                                     >
                                       {value}

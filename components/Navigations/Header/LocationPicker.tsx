@@ -186,7 +186,7 @@ const LocationPicker: React.FC<LocationPickerProps> = ({ isMobile = false }) => 
                         <div className="mb-4 p-3 bg-gray-50 rounded-lg">
                             <p className="text-sm text-gray-600">Current location:</p>
                             <div className="flex items-center mt-1">
-                                <MapPin size={18} className="text-blue-500 mr-2" />
+                                <MapPin size={18} className="text-primary mr-2" />
                                 <p className="font-medium">{district} {pincode && `- ${pincode}`}</p>
                             </div>
                         </div>
@@ -211,7 +211,7 @@ const LocationPicker: React.FC<LocationPickerProps> = ({ isMobile = false }) => 
                         
                         <button 
                             type="submit"
-                            className="w-full bg-blue-600 text-white py-3 rounded-lg font-medium text-base"
+                            className="w-full bg-primary text-white py-3 rounded-lg font-medium text-base"
                             disabled={loading}
                         >
                             {loading ? 'Applying...' : 'Apply'}
@@ -220,7 +220,7 @@ const LocationPicker: React.FC<LocationPickerProps> = ({ isMobile = false }) => 
                     
                     <div className="border-t border-gray-200 pt-4 mt-auto">
                         <button 
-                            className="flex items-center justify-center w-full py-3 border border-blue-600 text-blue-600 rounded-lg font-medium"
+                            className="flex items-center justify-center w-full py-3 border border-primary text-primary rounded-lg font-medium"
                             onClick={handleDetectLocation}
                             disabled={loading}
                         >
@@ -239,14 +239,14 @@ const LocationPicker: React.FC<LocationPickerProps> = ({ isMobile = false }) => 
                 className={`flex items-center text-gray-700 ${isMobile ? 'text-base w-full justify-start' : 'text-sm'}`}
                 onClick={toggleLocationModal}
             >
-                <MapPin size={isMobile ? 18 : 20} className="text-blue-500 mr-2" />
+                <MapPin size={isMobile ? 18 : 20} className="text-primary mr-2" />
                 <div className="flex flex-col items-start">
                     {loading ? (
                         <span className="text-xs">Loading location...</span>
                     ) : (
                         <div className=' flex gap-1 md:flex-col text-start'>
                             <span className="text-[10px] md:text-xs font-medium max-w-[150px] truncate">{location || 'Select Location'} {pincode && `- ${pincode}`}</span>
-                            <span className="text-[10px] text-blue-500 underline">
+                            <span className="text-[10px] text-primary underline">
                                 {location ? 'Change Location' : 'Set Location'}
                             </span>
                         </div>
@@ -291,7 +291,7 @@ const LocationPicker: React.FC<LocationPickerProps> = ({ isMobile = false }) => 
                             </button>
                             <button 
                                 type="submit"
-                                className="bg-blue-500 text-white px-3 py-1 rounded text-sm"
+                                className="bg-primary text-white px-3 py-1 rounded text-sm"
                                 disabled={loading}
                             >
                                 {loading ? 'Applying...' : 'Apply'}
@@ -301,7 +301,7 @@ const LocationPicker: React.FC<LocationPickerProps> = ({ isMobile = false }) => 
                     
                     <div className="mt-4 border-t pt-3">
                         <button 
-                            className="text-blue-500 text-sm flex items-center"
+                            className="text-primary text-sm flex items-center"
                             onClick={handleDetectLocation}
                             disabled={loading}
                         >
