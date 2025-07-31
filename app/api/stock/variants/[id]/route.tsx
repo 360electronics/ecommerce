@@ -3,12 +3,14 @@ import { eq } from 'drizzle-orm';
 import { db } from '@/db/drizzle';
 import { variants } from '@/db/schema';
 
+type Params = { variantId: string };
+
 export async function GET(
   request: Request,
-  { params }: { params: { id: string } }
+  context: { params: Promise<Params> }
 ) {
   try {
-    const variantId = params.id;
+    const {variantId} =await context.params;
 
     if (!variantId) {
       return NextResponse.json(
@@ -18,7 +20,7 @@ export async function GET(
     }
 
     const variant = await db
-      .select({ stock: variants.stock })
+      .select({ stock: variants.stock }) 
       .from(variants)
       .where(eq(variants.id, variantId))
       .limit(1);
