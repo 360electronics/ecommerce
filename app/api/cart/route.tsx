@@ -261,42 +261,42 @@ export async function PATCH(req: NextRequest) {
   }
 }
 
-export async function DELETE_OFFER(req: NextRequest) {
-  try {
-    const { userId, cartItemId } = await req.json();
+// export async function DELETE_OFFER(req: NextRequest) {
+//   try {
+//     const { userId, cartItemId } = await req.json();
 
-    if (!userId || !cartItemId) {
-      return NextResponse.json(
-        { error: 'Missing required fields' },
-        { status: 400 }
-      );
-    }
+//     if (!userId || !cartItemId) {
+//       return NextResponse.json(
+//         { error: 'Missing required fields' },
+//         { status: 400 }
+//       );
+//     }
 
-    const updatedCartItem = await db
-      .update(cart)
-      .set({
-        cartOfferProductId: null,
-        updatedAt: new Date(),
-      })
-      .where(and(eq(cart.id, cartItemId), eq(cart.userId, userId)))
-      .returning();
+//     const updatedCartItem = await db
+//       .update(cart)
+//       .set({
+//         cartOfferProductId: null,
+//         updatedAt: new Date(),
+//       })
+//       .where(and(eq(cart.id, cartItemId), eq(cart.userId, userId)))
+//       .returning();
 
-    if (updatedCartItem.length === 0) {
-      return NextResponse.json(
-        { error: 'Cart item not found' },
-        { status: 404 }
-      );
-    }
+//     if (updatedCartItem.length === 0) {
+//       return NextResponse.json(
+//         { error: 'Cart item not found' },
+//         { status: 404 }
+//       );
+//     }
 
-    return NextResponse.json(
-      { message: 'Offer product removed successfully' },
-      { status: 200 }
-    );
-  } catch (error) {
-    console.error('Error in DELETE_OFFER /api/cart/offer:', error);
-    return NextResponse.json(
-      { error: 'Internal server error' },
-      { status: 500 }
-    );
-  }
-}
+//     return NextResponse.json(
+//       { message: 'Offer product removed successfully' },
+//       { status: 200 }
+//     );
+//   } catch (error) {
+//     console.error('Error in DELETE_OFFER /api/cart/offer:', error);
+//     return NextResponse.json(
+//       { error: 'Internal server error' },
+//       { status: 500 }
+//     );
+//   }
+// }
