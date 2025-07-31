@@ -228,7 +228,7 @@ const Header = ({ isCategory = true }: HeaderProps) => {
   return (
     <>
       <header
-        className={`w-full bg-white pt-2 px-4 md:px-12 fixed top-0 left-0 z-50 transition-all duration-300 ${isScrolled ? 'shadow-md' : ''}`}
+        className={`w-full bg-white pt-3 px-4 md:px-12 fixed top-0 left-0 z-50 transition-all duration-300 ${isScrolled ? 'shadow-md' : ''}`}
       >
         <div className="mx-auto flex items-center justify-between gap-2">
           <div className="flex items-center">
@@ -241,7 +241,7 @@ const Header = ({ isCategory = true }: HeaderProps) => {
             </button>
             <Link href="/" className="flex-shrink-0">
               <Image
-                src="/logo/360.svg"
+                src="/logo/logo.png"
                 alt="Computer 360 Logo"
                 width={150}
                 height={150}

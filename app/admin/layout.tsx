@@ -109,7 +109,7 @@ export default function Layout({ children }: AdminLayoutProps) {
           <div className="flex items-center justify-between px-4 py-4">
             <div className="flex-1 text-center">
               <Image
-                src="/logo/360.svg"
+                src="/logo/logo.png"
                 alt="Computer Garage Logo"
                 width={200}
                 height={50}
