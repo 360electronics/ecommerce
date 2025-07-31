@@ -10,6 +10,7 @@ import { Textarea } from '@/components/ui/textarea';
 import { DndProvider, useDrag, useDrop } from 'react-dnd';
 import { HTML5Backend } from 'react-dnd-html5-backend';
 import { slugify } from '@/utils/slugify';
+import SearchableDropdown from '@/components/Reusable/SearchableDropdown';
 
 // Define interfaces based on the GET route response
 interface Category {
@@ -307,6 +308,7 @@ export default function AddProductPage() {
     [variantId: string]: { main: React.RefObject<HTMLInputElement | null>; additional: (HTMLInputElement | null)[] };
   }>({});
   const [previewUrls, setPreviewUrls] = useState<{ [variantId: string]: string[] }>({});
+
 
   // Fetch category presets and brands
   useEffect(() => {
@@ -822,32 +824,17 @@ export default function AddProductPage() {
                 Category
               </label>
               <div className="relative dropdown-container">
-                <button
-                  type="button"
-                  className="flex w-full items-center justify-between rounded-md border border-input bg-background px-3 py-2 text-sm"
-                  onClick={() => toggleDropdown('category')}
-                >
-                  <span>
-                    {(product.category && categoryPresets[product.category]?.category.name) || 'Select Category'}
-                  </span>
-                  <ChevronDown className="h-4 w-4 opacity-50" />
-                </button>
-                {openDropdown === 'category' && (
-                  <div className="absolute z-10 mt-1 w-full rounded-md border bg-white shadow-lg">
-                    {Object.keys(categoryPresets).map((catSlug) => (
-                      <div
-                        key={catSlug}
-                        className="cursor-pointer px-4 py-2 text-sm hover:bg-gray-100"
-                        onClick={() => {
-                          setProduct({ ...product, category: catSlug, subcategory: '' });
-                          setOpenDropdown(null);
-                        }}
-                      >
-                        {categoryPresets[catSlug].category.name}
-                      </div>
-                    ))}
-                  </div>
-                )}
+
+                <SearchableDropdown
+                  id="category"
+                  value={product.category}
+                  onChange={(value) => setProduct({ ...product, category: value, subcategory: '' })}
+                  options={Object.keys(categoryPresets).map((key) => ({
+                    value: key,
+                    label: categoryPresets[key].category.name,
+                  }))}
+                  placeholder="Select Category"
+                />
               </div>
             </div>
             <div>
@@ -855,30 +842,20 @@ export default function AddProductPage() {
                 Subcategory
               </label>
               <div className="relative dropdown-container">
-                <button
-                  type="button"
-                  className="flex w-full items-center justify-between rounded-md border border-input bg-background px-3 py-2 text-sm"
-                  onClick={() => toggleDropdown('subcategory')}
-                >
-                  <span>{product.subcategory || 'Select Subcategory'}</span>
-                  <ChevronDown className="h-4 w-4 opacity-50" />
-                </button>
-                {openDropdown === 'subcategory' && product.category && (
-                  <div className="absolute z-10 mt-1 w-full rounded-md border bg-white shadow-lg">
-                    {categoryPresets[product.category]?.subcategories.map((subcat) => (
-                      <div
-                        key={subcat.slug}
-                        className="cursor-pointer px-4 py-2 text-sm hover:bg-gray-100"
-                        onClick={() => {
-                          setProduct({ ...product, subcategory: subcat.name });
-                          setOpenDropdown(null);
-                        }}
-                      >
-                        {subcat.name}
-                      </div>
-                    ))}
-                  </div>
-                )}
+                <SearchableDropdown
+                  id="subcategory"
+                  value={product.subcategory}
+                  onChange={(value) => setProduct({ ...product, subcategory: value })}
+                  options={
+                    product.category && categoryPresets[product.category]
+                      ? categoryPresets[product.category].subcategories.map((subcat: any) => ({
+                          value: subcat.id,
+                          label: subcat.name,
+                        }))
+                      : []
+                  }
+                  placeholder="Select Sub Category"
+                />
               </div>
             </div>
             <div>
@@ -887,36 +864,20 @@ export default function AddProductPage() {
               </label>
               <div className="flex items-center space-x-2">
                 <div className="relative dropdown-container flex-1">
-                  <button
-                    type="button"
-                    className="flex w-full items-center justify-between rounded-md border border-input bg-background px-3 py-2 text-sm"
-                    onClick={() => toggleDropdown('brand')}
-                  >
-                    <span>
-                      {product.brand
-                        ? brands.find((b) => b.name === product.brand)?.name || 'Select Brand'
-                        : 'Select Brand'}
-                    </span>
-                    <ChevronDown className="h-4 w-4 opacity-50" />
-                  </button>
-                  {openDropdown === 'brand' && (
-                    <div className="absolute z-10 mt-1 w-full rounded-md border bg-white shadow-lg">
-                      {brands
-                        .filter((brand) => brand.isActive) // Only show active brands
-                        .map((brand) => (
-                          <div
-                            key={brand.id}
-                            className="cursor-pointer px-4 py-2 text-sm hover:bg-gray-100"
-                            onClick={() => {
-                              setProduct({ ...product, brand: brand.name });
-                              setOpenDropdown(null);
-                            }}
-                          >
-                            {brand.name}
-                          </div>
-                        ))}
-                    </div>
-                  )}
+                <SearchableDropdown
+                  id="brand"
+                  value={product.brand}
+                  onChange={(value) => setProduct({ ...product, brand: value })}
+                  options={
+                    Array.isArray(brands)
+                      ? brands.map((brand: any) => ({
+                          value: brand.id,
+                          label: brand.name,
+                        }))
+                      : []
+                  }
+                  placeholder="Select Brand"
+                />
                 </div>
                 <Button
                   type="button"
