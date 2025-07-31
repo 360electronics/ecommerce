@@ -6,9 +6,12 @@ import { fetchWithRetry, logError, AppError } from './store-utils';
 import { ProductImage } from '@/types/product';
 
 interface CheckoutItem {
+  [x: string]: any;
   userId: string;
   productId: string;
   variantId: string;
+  cartOfferProductId: string;
+  offerProduct: any;
   quantity: number;
   totalPrice: number;
   createdAt: string;

@@ -7,11 +7,15 @@ import { useAuthStore } from './auth-store';
 import { ProductImage, ProductVariant } from '@/types/product';
 import { useRouter } from 'next/navigation';
 
-// Utility to generate unique temporary IDs
 const generateTempId = () => `temp-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
 
 interface CartItem {
-  offerProduct?: any;
+  offerProduct?: {
+    id: string;
+    productName: string;
+    productImage: string;
+    ourPrice: string;
+  };
   id: string;
   userId: string;
   productId: string;
@@ -129,7 +133,8 @@ export const useCartStore = create<CartState>((set, get) => ({
               ourPrice: item.variant.ourPrice ?? '0',
               mrp: item.variant.mrp ?? item.variant.ourPrice ?? '0',
             },
-            offerProductPrice: item.cartOfferProductId ? item.offerProductPrice : undefined,
+            offerProductPrice: item.cartOfferProductId ? item.offerProductPrice ?? '0' : undefined,
+            offerProduct: item.cartOfferProductId ? item.offerProduct : undefined,
           }))
         : [];
       set({ cartItems: sanitizedItems, lastFetched: Date.now(), error: null, loading: false });
@@ -155,11 +160,11 @@ export const useCartStore = create<CartState>((set, get) => ({
       logError('addToCart', new Error('Cart operation in progress'));
       throw new Error('Cart operation in progress');
     }
+    
 
     const sanitizedQuantity = sanitizeQuantity(quantity);
     const tempId = generateTempId();
 
-    // Optimistic update
     set(
       produce((state: CartState) => {
         state.error = null;
@@ -228,12 +233,10 @@ export const useCartStore = create<CartState>((set, get) => ({
           }),
         })
       );
-      // Force fetchCart to sync with server
       set({ lastFetched: null });
       await get().fetchCart();
     } catch (error) {
       logError('addToCart', error);
-      // Revert optimistic update
       set(
         produce((state: CartState) => {
           const existingItem = state.cartItems.find(
@@ -533,7 +536,6 @@ export const useCartStore = create<CartState>((set, get) => ({
 
   getCartSubtotal: () =>
     get().cartItems.reduce((total, item) => {
-      // Skip temporary items to avoid incorrect calculations
       if (item.id.startsWith('temp-')) return total;
       const price = Number(item.variant.ourPrice) || 0;
       const offerPrice = Number(item.offerProductPrice) || 0;
@@ -549,7 +551,12 @@ export const useCartStore = create<CartState>((set, get) => ({
   },
 
   getItemCount: () =>
-    get().cartItems.reduce((count, item) => (item.id.startsWith('temp-') ? count : count + item.quantity), 0),
+    get().cartItems.reduce((count, item) => {
+      if (item.id.startsWith('temp-')) return count;
+      const countRegular = item.quantity;
+      const countOffer = item.cartOfferProductId ? item.quantity : 0;
+      return count + countRegular + countOffer;
+    }, 0),
 
   getSavings: () =>
     get().cartItems.reduce((total, item) => {

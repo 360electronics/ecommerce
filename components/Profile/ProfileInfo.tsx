@@ -16,6 +16,7 @@ interface Address {
   state: string;
   postalCode: string;
   country: string;
+  gst: string;
   addressType: 'home' | 'work' | 'other';
 }
 
@@ -37,6 +38,7 @@ export default function ProfileInfo() {
     state: '',
     postalCode: '',
     country: '',
+    gst: '',
     addressType: 'home' as 'home' | 'work' | 'other',
   });
   const [isSaving, setIsSaving] = useState(false);
@@ -89,6 +91,26 @@ export default function ProfileInfo() {
     setError(null);
     setSuccess(null);
 
+    // Validate required fields (excluding gst)
+    const requiredFields: (keyof typeof newAddress)[] = [
+      'fullName',
+      'phoneNumber',
+      'addressLine1',
+      'city',
+      'state',
+      'postalCode',
+      'country',
+    ];
+    const missingFields = requiredFields.filter((field) => !newAddress[field]?.trim());
+    if (missingFields.length > 0) {
+      const errorMessage = `Please fill in all required fields: ${missingFields
+        .map((field) => field.replace(/([A-Z])/g, ' $1'))
+        .join(', ')}`;
+      setError(errorMessage);
+      toast.error(errorMessage);
+      return;
+    }
+
     const addressData = { ...newAddress, userId: user?.id };
     const isEditing = !!editingAddress;
     const url = isEditing ? `/api/users/addresses/${editingAddress?.id}` : '/api/users/addresses';
@@ -117,6 +139,7 @@ export default function ProfileInfo() {
         state: '',
         postalCode: '',
         country: '',
+        gst: '', // Reset to empty string
         addressType: 'home',
       });
       setEditingAddress(null);
@@ -146,6 +169,7 @@ export default function ProfileInfo() {
       state: '',
       postalCode: '',
       country: '',
+      gst: '',
       addressType: 'home',
     });
   };
@@ -246,6 +270,7 @@ export default function ProfileInfo() {
                       {addr.city}, {addr.state} {addr.postalCode}
                     </p>
                     <p className="text-sm text-gray-600">{addr.country}</p>
+                    <p className="text-sm text-gray-600">{addr.gst}</p>
                     <p className="text-sm text-gray-500 capitalize mt-1">{addr.addressType}</p>
                   </div>
                   <button
@@ -357,10 +382,12 @@ export default function ProfileInfo() {
                 'state',
                 'postalCode',
                 'country',
+                'gst',
               ].map((field) => (
                 <div key={field}>
                   <label className="block text-sm font-medium text-gray-700 capitalize">
                     {field.replace(/([A-Z])/g, ' $1')}
+                    {field === 'gst' || field === 'addressLine2' ? ' (optional)' : ''}
                   </label>
                   <input
                     type="text"

@@ -153,7 +153,7 @@ export const uploadCartOffProductImageToR2 = async (
 ) => {
   try {
 
-    const key = `cart-val-off/${type}/${fileName}`;
+    const key = `cart-off/${type}/${fileName}`;
     
     const command = new PutObjectCommand({
       Bucket: process.env.R2_BUCKET_NAME!,

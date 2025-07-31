@@ -49,14 +49,26 @@ const CartPage: React.FC = () => {
 
   // Calculate totals including offer products
   const calculateTotals = () => {
-    const subtotal = cartItems.reduce((sum, item) => {
+    // Calculate subtotal for regular products
+    const regularProductsSubtotal = cartItems.reduce((sum, item) => {
+      if (item.id.startsWith('temp-')) return sum;
       const itemPrice = Number(item.variant.ourPrice) || 0;
-      const offerPrice = item.cartOfferProductId ? Number(item.offerProduct?.ourPrice) || 0 : 0;
-      return sum + (itemPrice + offerPrice) * item.quantity;
+      return sum + itemPrice * item.quantity;
     }, 0);
 
+    // Calculate offer products total (only one offer product allowed)
+    const offerProductsTotal = cartItems.reduce((sum, item) => {
+      if (item.id.startsWith('temp-') || !item.cartOfferProductId) return sum;
+      const offerPrice = Number(item.offerProductPrice) || 0;
+      return sum + offerPrice; // Single offer product, quantity is always 1
+    }, 0);
+
+    // Total subtotal including both regular and offer products
+    const subtotal = regularProductsSubtotal + offerProductsTotal;
+
     const savings = cartItems.reduce((sum, item) => {
-      const originalPrice = Number(item.variant.mrp) || 0;
+      if (item.id.startsWith('temp-')) return sum;
+      const originalPrice = Number(item.variant.mrp) || Number(item.variant.ourPrice) || 0;
       const ourPrice = Number(item.variant.ourPrice) || 0;
       return sum + (originalPrice - ourPrice) * item.quantity;
     }, 0);
@@ -67,13 +79,29 @@ const CartPage: React.FC = () => {
         : (subtotal * (coupon.value || 0)) / 100
       : 0;
 
-    const shippingAmount = subtotal > 500 ? 0 : cartItems.reduce((sum, item) => sum + 50 * item.quantity, 0);
+    const shippingAmount = subtotal > 500 ? 0 : cartItems.reduce((sum, item) => sum + 50 * (item.cartOfferProductId ? 1 : item.quantity), 0);
     const grandTotal = subtotal - discountAmount;
 
-    return { subtotal, savings, discountAmount, shippingAmount, grandTotal };
+    return { 
+      subtotal, 
+      regularProductsSubtotal, 
+      offerProductsTotal, 
+      savings, 
+      discountAmount, 
+      shippingAmount, 
+      grandTotal 
+    };
   };
 
-  const { subtotal, savings, discountAmount, shippingAmount, grandTotal } = calculateTotals();
+  const { 
+    subtotal, 
+    regularProductsSubtotal, 
+    offerProductsTotal, 
+    savings, 
+    discountAmount, 
+    shippingAmount, 
+    grandTotal 
+  } = calculateTotals();
 
   // Format numbers safely
   const formatCurrency = (value: number | null | undefined): string => {
@@ -84,25 +112,34 @@ const CartPage: React.FC = () => {
     });
   };
 
-  // Determine eligible range based on cart subtotal
-  const getEligibleRange = (subtotal: number): string | null => {
-    if (subtotal >= 25000) return '25000';
-    if (subtotal >= 10000) return '10000';
-    if (subtotal >= 5000) return '5000';
-    if (subtotal >= 1000) return '1000';
+  // Calculate cart value including offer products for eligibility
+  const getCartValueForOffers = () => {
+    return cartItems.reduce((sum, item) => {
+      if (item.id.startsWith('temp-')) return sum;
+      const itemPrice = Number(item.variant.ourPrice) || 0;
+      const offerPrice = item.cartOfferProductId ? Number(item.offerProductPrice) || 0 : 0;
+      return sum + itemPrice * item.quantity + offerPrice;
+    }, 0);
+  };
+
+  // Determine eligible range based on cart subtotal INCLUDING offer products
+  const getEligibleRange = (cartValue: number): string | null => {
+    if (cartValue >= 25000) return '25000';
+    if (cartValue >= 10000) return '10000';
+    if (cartValue >= 5000) return '5000';
+    if (cartValue >= 1000) return '1000';
     return null;
   };
 
-  const eligibleRange = getEligibleRange(subtotal);
+  const cartValueForOffers = getCartValueForOffers();
+  const eligibleRange = getEligibleRange(cartValueForOffers);
 
-  // Check if cart has at least one regular product
   const hasRegularProduct = cartItems.some((item) => !item.cartOfferProductId);
   const hasOfferProductInCart = cartItems.some((item) => item.cartOfferProductId);
 
-  // Fetch offer products with fallback to lower ranges
   useEffect(() => {
     const fetchOfferProducts = async () => {
-      if (!eligibleRange || !hasRegularProduct) {
+      if (!eligibleRange || !hasRegularProduct || hasOfferProductInCart) {
         setOfferProducts([]);
         setEffectiveRange(null);
         return;
@@ -143,9 +180,8 @@ const CartPage: React.FC = () => {
     };
 
     fetchOfferProducts();
-  }, [eligibleRange, hasRegularProduct]);
+  }, [eligibleRange, hasRegularProduct, hasOfferProductInCart]);
 
-  // Handle adding an offer product
   const handleAddOfferProduct = async (offerProduct: CartOfferProduct) => {
     if (!isLoggedIn || !user?.id) {
       toast.error('Please log in to add offer products');
@@ -157,8 +193,11 @@ const CartPage: React.FC = () => {
       return;
     }
 
-   
-    // Select the first regular cart item
+    if (hasOfferProductInCart) {
+      toast.error('Only one offer product can be added to the cart');
+      return;
+    }
+
     const regularItem = cartItems.find((item) => !item.cartOfferProductId);
     if (!regularItem) {
       toast.error('No regular product found in cart');
@@ -171,6 +210,39 @@ const CartPage: React.FC = () => {
     } catch (error) {
       console.error('Error adding offer product:', error);
       toast.error('Failed to add offer product');
+    }
+  };
+
+  const handleRemoveOfferProduct = async (cartItemId: string) => {
+    if (!isLoggedIn || !user?.id) {
+      toast.error('Please log in to remove offer products');
+      return;
+    }
+
+    setIsUpdating(cartItemId);
+    try {
+      const response = await fetch('/api/cart/offer', {
+        method: 'DELETE',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          userId: user.id,
+          cartItemId: cartItemId,
+        }),
+      });
+
+      if (!response.ok) {
+        throw new Error('Failed to remove offer product');
+      }
+
+      await useCartStore.getState().fetchCart();
+      toast.success('Offer product removed from cart');
+    } catch (error) {
+      console.error('Error removing offer product:', error);
+      toast.error('Failed to remove offer product');
+    } finally {
+      setIsUpdating(null);
     }
   };
 
@@ -210,8 +282,8 @@ const CartPage: React.FC = () => {
     try {
       for (const item of cartItems) {
         const itemPrice = Number(item.variant.ourPrice) || 0;
-        const offerPrice = item.cartOfferProductId ? Number(item.offerProduct?.ourPrice) || 0 : 0;
-        const totalPrice = (itemPrice + offerPrice) * item.quantity;
+        const offerPrice = item.cartOfferProductId ? Number(item.offerProductPrice) || 0 : 0;
+        const totalPrice = item.cartOfferProductId ? (itemPrice * item.quantity + offerPrice) : (itemPrice * item.quantity);
         if (isNaN(totalPrice)) {
           throw new Error(`Invalid price for item ${item.productId}`);
         }
@@ -220,7 +292,7 @@ const CartPage: React.FC = () => {
           productId: item.productId,
           variantId: item.variantId,
           totalPrice,
-          quantity: item.quantity,
+          quantity: item.cartOfferProductId ? 1 : item.quantity, // Offer product quantity is always 1
           cartOfferProductId: item.cartOfferProductId,
         });
       }
@@ -269,7 +341,6 @@ const CartPage: React.FC = () => {
     { name: 'Cart', path: '/cart' },
   ];
 
-  // Map range to display name
   const rangeDisplayNames: Record<string, string> = {
     '1000': 'Above ₹1,000',
     '5000': 'Above ₹5,000',
@@ -289,7 +360,7 @@ const CartPage: React.FC = () => {
 
   return (
     <UserLayout>
-      <div className="mx-auto ">
+      <div className="mx-auto">
         <Breadcrumbs breadcrumbs={breadcrumbItems} />
         <h1 className="text-2xl font-bold text-gray-900 my-6 nohemi-bold">
           Shopping Cart ({getItemCount()} {getItemCount() === 1 ? 'item' : 'items'})
@@ -299,7 +370,7 @@ const CartPage: React.FC = () => {
           <div className="flex flex-col items-center justify-center min-h-[400px] text-center">
             <div className="text-5xl mb-4">🛒</div>
             <h2 className="text-2xl font-semibold text-gray-900 mb-2">Your cart is empty</h2>
-            <p className="text-gray-600 mb-6">Looks like you haven’t added any items yet.</p>
+            <p className="text-gray-600 mb-6">Looks like you haven't added any items yet.</p>
             <Link
               href="/"
               className="bg-blue-600 text-white px-6 py-3 rounded-full hover:bg-blue-700 transition-colors text-base font-medium"
@@ -310,9 +381,13 @@ const CartPage: React.FC = () => {
           </div>
         ) : (
           <div className="flex flex-col lg:flex-row gap-8">
-            {/* Cart Items and Offer Products */}
             <div className="flex-1">
-              {/* Cart Items */}
+              <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 mb-6">
+                <p className="text-sm text-blue-800">
+                  Current Cart Value: <span className="font-semibold">{formatCurrency(cartValueForOffers)}</span>
+                </p>
+              </div>
+
               <div className="space-y-4 mb-8">
                 {cartItems.map((item) => (
                   <div key={item.id} className="bg-white border border-gray-200 rounded-lg p-4">
@@ -323,10 +398,22 @@ const CartPage: React.FC = () => {
                       handleRemoveFromCart={handleRemoveFromCart}
                     />
                     {item.cartOfferProductId && item.offerProduct && (
-                      <div className="mt-4 border-t pt-4">
-                        <h4 className="text-sm font-semibold text-gray-700 mb-2">Included Offer Product:</h4>
+                      <div className="mt-4 border-t pt-4 bg-green-50 rounded-lg p-3">
+                        <div className="flex items-center justify-between mb-2">
+                          <h4 className="text-sm font-semibold text-green-700">✅ Offer Product Added:</h4>
+                          <button
+                            onClick={() => handleRemoveOfferProduct(item.id)}
+                            disabled={isUpdating === item.id}
+                            className="text-red-500 hover:text-red-700 transition-colors p-1"
+                            title="Remove offer product"
+                          >
+                            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                            </svg>
+                          </button>
+                        </div>
                         <div className="flex items-center gap-4">
-                          <div className="relative w-20 h-20">
+                          <div className="relative w-16 h-16">
                             <Image
                               src={item.offerProduct.productImage || '/placeholder.png'}
                               alt={item.offerProduct.productName}
@@ -334,10 +421,10 @@ const CartPage: React.FC = () => {
                               className="object-cover rounded-md"
                             />
                           </div>
-                          <div>
+                          <div className="flex-1">
                             <p className="text-sm font-medium text-gray-900">{item.offerProduct.productName}</p>
-                            <p className="text-sm text-gray-600">Price: {formatCurrency(Number(item.offerProduct.ourPrice))}</p>
-                            <p className="text-sm text-green-600">Offer Product</p>
+                            <p className="text-sm text-green-600 font-semibold">+{formatCurrency(Number(item.offerProductPrice))}</p>
+                            <p className="text-xs text-gray-500">Offer product (1 unit)</p>
                           </div>
                         </div>
                       </div>
@@ -346,21 +433,20 @@ const CartPage: React.FC = () => {
                 ))}
               </div>
 
-              {/* Offer Products Section */}
-              {effectiveRange && hasRegularProduct && (
+              {effectiveRange && hasRegularProduct && !hasOfferProductInCart && (
                 <div className="bg-white border border-gray-200 rounded-lg p-6">
                   <h2 className="text-xl font-semibold text-gray-900 mb-4 nohemi-bold">
-                    Eligible Offer Products ({rangeDisplayNames[effectiveRange] || 'Offers'} - Cart Value: {formatCurrency(subtotal)})
+                    Eligible Offer Products ({rangeDisplayNames[effectiveRange] || 'Offers'} - Cart Value: {formatCurrency(cartValueForOffers)})
                   </h2>
                   {isFetchingOffers ? (
                     <p className="text-gray-600">Loading offer products...</p>
                   ) : offerProducts.length > 0 ? (
                     <div>
-                      <p className="text-sm text-gray-600 mb TWITTER_X_ID mb-4">
-                        Add an offer product to your cart:
+                      <p className="text-sm text-gray-600 mb-4">
+                        Add one offer product to your cart:
                       </p>
                       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-                        {offerProducts.map((product) =>(
+                        {offerProducts.map((product) => (
                           <div
                             key={product.id}
                             className="relative bg-white border border-gray-200 rounded-lg p-4"
@@ -397,14 +483,12 @@ const CartPage: React.FC = () => {
               )}
             </div>
 
-            {/* Order Summary */}
             <div className="lg:w-1/3">
               <div className="bg-white border border-gray-200 rounded-lg p-6 sticky top-4">
                 <h2 className="text-xl font-semibold text-gray-900 mb-4 nohemi-bold">
                   Order Summary
                 </h2>
                 <div className="space-y-4">
-                  {/* Coupon Section */}
                   <div>
                     <label htmlFor="coupon" className="block text-sm font-medium text-gray-700 mb-1">
                       Coupon Code
@@ -460,23 +544,21 @@ const CartPage: React.FC = () => {
                     )}
                   </div>
 
-                  {/* Order Totals */}
                   <div className="space-y-2">
                     <div className="flex justify-between text-sm">
-                      <span className="text-gray-600">Price ({getItemCount()} items)</span>
-                      <span className="text-gray-900">{formatCurrency(subtotal)}</span>
+                      <span className="text-gray-600">Regular Products ({cartItems.filter(item => !item.cartOfferProductId).reduce((sum, item) => sum + item.quantity, 0)} items)</span>
+                      <span className="text-gray-900">{formatCurrency(regularProductsSubtotal)}</span>
                     </div>
-                    {cartItems.some(item => item.cartOfferProductId) && (
+                    {offerProductsTotal > 0 && (
                       <div className="flex justify-between text-sm">
-                        <span className="text-gray-600">Offer Products</span>
-                        <span className="text-gray-900">
-                          {formatCurrency(cartItems.reduce((sum, item) => 
-                            item.cartOfferProductId ? sum + (Number(item.offerProduct?.ourPrice) || 0) * item.quantity : sum, 
-                            0
-                          ))}
-                        </span>
+                        <span className="text-gray-600">Offer Product (1 item)</span>
+                        <span className="text-green-600">+{formatCurrency(offerProductsTotal)}</span>
                       </div>
                     )}
+                    <div className="flex justify-between text-sm font-medium border-t pt-2">
+                      <span className="text-gray-700">Subtotal</span>
+                      <span className="text-gray-900">{formatCurrency(subtotal)}</span>
+                    </div>
                     <div className="flex justify-between text-sm">
                       <span className="text-gray-600">Delivery Charges</span>
                       <span className="text-gray-900">{formatCurrency(shippingAmount)}</span>
@@ -484,7 +566,7 @@ const CartPage: React.FC = () => {
                     {savings > 0 && (
                       <div className="flex justify-between text-sm">
                         <span className="text-gray-600">You Save</span>
-                        <span className="text-green-600">{formatCurrency(savings)}</span>
+                        <span className="text-green-600">-{formatCurrency(savings)}</span>
                       </div>
                     )}
                     {discountAmount > 0 && (
@@ -494,7 +576,7 @@ const CartPage: React.FC = () => {
                       </div>
                     )}
                     <div className="flex justify-between text-lg font-semibold text-gray-900 pt-2 border-t border-gray-200">
-                      <span>Total</span>
+                      <span>Total Amount</span>
                       <span>{formatCurrency(grandTotal + shippingAmount)}</span>
                     </div>
                   </div>

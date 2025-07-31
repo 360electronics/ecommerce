@@ -119,8 +119,8 @@ const ProductCardwithoutCart: React.FC<ProductCardProps> = ({
   const discount = providedDiscount ?? calculateDiscount();
 
   const renderRating = useCallback((): JSX.Element | null => {
-    if (typeof rating !== 'number' || isNaN(rating) || rating < 0 || rating > 5) return null;
-
+    if (typeof rating !== 'number' || isNaN(rating) || rating <= 3 || rating > 5) return null;
+  
     const stars = Array(5)
       .fill(0)
       .map((_, index) => (
@@ -131,7 +131,7 @@ const ProductCardwithoutCart: React.FC<ProductCardProps> = ({
           ★
         </span>
       ));
-
+  
     return (
       <div className="flex items-center">
         <span className="mr-1 font-medium text-[10px] sm:text-sm">{rating.toFixed(1)}</span>

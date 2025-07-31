@@ -125,7 +125,7 @@ const deliveryModeOptions = [
   { value: 'pickup', label: 'Pickup' },
 ];
 
-// DraggableSpecSection (fixed drag-and-drop)
+// DraggableSpecSection (unchanged)
 const DraggableSpecSection = ({
   section,
   index,
@@ -298,13 +298,10 @@ export default function EditProductPage({ id }: { id: string }) {
     [variantId: string]: { main: React.RefObject<HTMLInputElement | null>; additional: (HTMLInputElement | null)[] };
   }>({});
 
-  // Decode and validate ID
- 
-
   // Fetch data
   useEffect(() => {
     if (!id) {
-      console.log("Invalid product ID", id)
+      console.log("Invalid product ID", id);
       setError('Invalid product ID');
       setIsLoading(false);
       return;
@@ -351,34 +348,37 @@ export default function EditProductPage({ id }: { id: string }) {
           metaDescription: data.metaDescription || '',
         });
 
-        // Set variants
+        // Set variants with robust image handling
         const fetchedVariants = Array.isArray(data.variants) && data.variants.length > 0
-          ? data.variants.map((variant: any, index: number) => ({
-              id: `variant-${Date.now()}-${index}`,
-              name: variant.name || '',
-              sku: variant.sku || '',
-              attributes: variant.attributes || {},
-              stock: variant.stock?.toString() || '0',
-              lowStockThreshold: variant.lowStockThreshold?.toString() || '5',
-              isBackorderable: variant.isBackorderable || false,
-              mrp: variant.mrp?.toString() || '',
-              ourPrice: variant.ourPrice?.toString() || '',
-              salePrice: variant.salePrice?.toString() || '',
-              isOnSale: variant.isOnSale || false,
-              imageFiles: [],
-              existingImages: Array.isArray(variant.productImages)
+          ? data.variants.map((variant: any, index: number) => {
+              const images = Array.isArray(variant.productImages)
                 ? variant.productImages.map((img: any, idx: number) => ({
-                    url: img.url,
+                    url: img.url || '',
                     alt: img.alt || `Image ${idx + 1}`,
                     isFeatured: img.isFeatured || idx === 0,
                     displayOrder: img.displayOrder || idx,
                   }))
-                : [],
-              weight: variant.weight?.toString() || '',
-              weightUnit: variant.weightUnit || 'kg',
-              dimensions: variant.dimensions || { length: 0, width: 0, height: 0, unit: 'cm' },
-              isDefault: variant.isDefault || index === 0,
-            }))
+                : [];
+              return {
+                id: variant.id || `variant-${Date.now()}-${index}`,
+                name: variant.name || '',
+                sku: variant.sku || '',
+                attributes: variant.attributes || {},
+                stock: variant.stock?.toString() || '0',
+                lowStockThreshold: variant.lowStockThreshold?.toString() || '5',
+                isBackorderable: variant.isBackorderable || false,
+                mrp: variant.mrp?.toString() || '',
+                ourPrice: variant.ourPrice?.toString() || '',
+                salePrice: variant.salePrice?.toString() || '',
+                isOnSale: variant.isOnSale || false,
+                imageFiles: [],
+                existingImages: images,
+                weight: variant.weight?.toString() || '',
+                weightUnit: variant.weightUnit || 'kg',
+                dimensions: variant.dimensions || { length: 0, width: 0, height: 0, unit: 'cm' },
+                isDefault: variant.isDefault || index === 0,
+              };
+            })
           : [
               {
                 id: `variant-${Date.now()}`,
@@ -405,7 +405,9 @@ export default function EditProductPage({ id }: { id: string }) {
         // Set preview URLs for existing images
         const initialPreviewUrls: { [variantId: string]: string[] } = {};
         fetchedVariants.forEach((variant: Variant) => {
-          initialPreviewUrls[variant.id] = variant.existingImages.map((img) => img.url);
+          initialPreviewUrls[variant.id] = variant.existingImages
+            .sort((a, b) => a.displayOrder - b.displayOrder)
+            .map((img) => img.url);
         });
         setPreviewUrls(initialPreviewUrls);
 
@@ -483,6 +485,8 @@ export default function EditProductPage({ id }: { id: string }) {
         return {
           ...variant,
           attributes: { ...initialAttributes, ...variant.attributes },
+          // Preserve existingImages
+          existingImages: variant.existingImages,
         };
       })
     );
@@ -513,7 +517,7 @@ export default function EditProductPage({ id }: { id: string }) {
       }
     });
     setCustomAttributes(newCustomAttributes);
-  }, [categoryPresets, product.category, variants]);
+  }, [categoryPresets, product.category]);
 
   // Sync product fields
   useEffect(() => {
@@ -592,6 +596,11 @@ export default function EditProductPage({ id }: { id: string }) {
                   file,
                   ...variant.imageFiles.slice(index + 1),
                 ],
+                existingImages: [
+                  ...variant.existingImages.slice(0, index),
+                  { url: '', alt: `Image ${index + 1}`, isFeatured: index === 0, displayOrder: index },
+                  ...variant.existingImages.slice(index + 1),
+                ],
               }
             : variant
         )
@@ -599,7 +608,11 @@ export default function EditProductPage({ id }: { id: string }) {
       const previewUrl = await fileToBase64(file);
       setPreviewUrls((prev) => ({
         ...prev,
-        [variantId]: [...(prev[variantId] || []).slice(0, index), previewUrl, ...(prev[variantId] || []).slice(index + 1)],
+        [variantId]: [
+          ...(prev[variantId] || []).slice(0, index),
+          previewUrl,
+          ...(prev[variantId] || []).slice(index + 1),
+        ],
       }));
     }
   };
@@ -618,6 +631,11 @@ export default function EditProductPage({ id }: { id: string }) {
                   file,
                   ...variant.imageFiles.slice(index + 1),
                 ],
+                existingImages: [
+                  ...variant.existingImages.slice(0, index),
+                  { url: '', alt: `Image ${index + 1}`, isFeatured: index === 0, displayOrder: index },
+                  ...variant.existingImages.slice(index + 1),
+                ],
               }
             : variant
         )
@@ -625,7 +643,11 @@ export default function EditProductPage({ id }: { id: string }) {
       const previewUrl = await fileToBase64(file);
       setPreviewUrls((prev) => ({
         ...prev,
-        [variantId]: [...(prev[variantId] || []).slice(0, index), previewUrl, ...(prev[variantId] || []).slice(index + 1)],
+        [variantId]: [
+          ...(prev[variantId] || []).slice(0, index),
+          previewUrl,
+          ...(prev[variantId] || []).slice(index + 1),
+        ],
       }));
     }
   };
@@ -732,6 +754,10 @@ export default function EditProductPage({ id }: { id: string }) {
       ...prev,
       [newVariantId]: [],
     }));
+    setPreviewUrls((prev) => ({
+      ...prev,
+      [newVariantId]: [],
+    }));
   };
 
   const removeVariant = (id: string) => {
@@ -744,6 +770,11 @@ export default function EditProductPage({ id }: { id: string }) {
       const newCustom = { ...prev };
       delete newCustom[id];
       return newCustom;
+    });
+    setPreviewUrls((prev) => {
+      const newPreviews = { ...prev };
+      delete newPreviews[id];
+      return newPreviews;
     });
   };
 
@@ -827,12 +858,12 @@ export default function EditProductPage({ id }: { id: string }) {
   // Form submission
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-  
+
     if (!id) {
       toast.error('Invalid product ID');
       return;
     }
-  
+
     // Validations
     if (!product.shortName.trim()) {
       toast.error('Short name is required');
@@ -850,9 +881,9 @@ export default function EditProductPage({ id }: { id: string }) {
       toast.error('Brand is required');
       return;
     }
-  
+
     const presetAttributes = (product.category && categoryPresets?.[product.category]?.attributes) || [];
-  
+
     const validVariants = variants.filter((v) => {
       const requiredAttributesFilled = presetAttributes
         .filter((attr) => attr.isRequired)
@@ -872,18 +903,18 @@ export default function EditProductPage({ id }: { id: string }) {
         requiredAttributesFilled
       );
     });
-  
+
     if (validVariants.length === 0) {
       toast.error('At least one valid variant with all required fields, attributes, and at least one image is required');
       return;
     }
-  
+
     const generalSection = specSections.find((s) => s.id === 'general');
     if (!generalSection?.fields.some((f) => f.label.trim() && f.value.trim())) {
       toast.error('General section requires at least one field');
       return;
     }
-  
+
     const formData = new FormData();
     formData.append('id', id);
     formData.append('shortName', product.shortName);
@@ -906,7 +937,7 @@ export default function EditProductPage({ id }: { id: string }) {
     formData.append('metaTitle', product.metaTitle || '');
     formData.append('metaDescription', product.metaDescription || '');
     formData.append('totalStocks', validVariants.reduce((sum, v) => sum + Number(v.stock), 0).toString());
-  
+
     const variantsPayload = validVariants.map((v) => {
       const combinedAttributes = { ...v.attributes };
       customAttributes[v.id]?.forEach((attr) => {
@@ -935,16 +966,17 @@ export default function EditProductPage({ id }: { id: string }) {
         },
         isDefault: v.isDefault,
         existingImages: v.existingImages,
+        productImages: v.existingImages, // Ensure productImages is included for compatibility
       };
     });
     formData.append('variants', JSON.stringify(variantsPayload));
-  
+
     validVariants.forEach((v) => {
       v.imageFiles.forEach((file, index) => {
         formData.append(`variantImages_${v.sku}_${index}`, file);
       });
     });
-  
+
     const specificationsPayload = specSections
       .filter((s) => s.fields.some((f) => f.label.trim() && f.value.trim()))
       .map((s) => ({
@@ -954,25 +986,25 @@ export default function EditProductPage({ id }: { id: string }) {
           .map((f) => ({ fieldName: f.label, fieldValue: f.value })),
       }));
     formData.append('specifications', JSON.stringify(specificationsPayload));
-  
+
     console.log('FormData entries:');
     for (const [key, value] of formData.entries()) {
       console.log(`${key}:`, value instanceof File ? value.name : value);
     }
-  
+
     try {
       const res = await fetch(`/api/products/edit/${id}`, {
         method: 'PUT',
         body: formData,
       });
-  
+
       if (!res.ok) {
         const error = await res.json();
         throw new Error(error.message || JSON.stringify(error));
       }
-  
-      toast.success('Product updated successfully!');
+
       router.push('/admin/products');
+      toast.success('Product updated successfully!');
     } catch (error) {
       console.error('Fetch error:', error);
       toast.error(`Error: ${error instanceof Error ? error.message : 'Unknown error'}`);
@@ -1602,8 +1634,7 @@ export default function EditProductPage({ id }: { id: string }) {
                             <ChevronDown className="h-4 w-4 opacity-50" />
                           </button>
                           {openDropdown === `dimensionUnit-${variant.id}` && (
-                            <div className=" Strip long lines for better readability
-                            absolute z-10 mt-1 w-full rounded-md border bg-white shadow-lg">
+                            <div className="absolute z-10 mt-1 w-full rounded-md border bg-white shadow-lg">
                               {['cm', 'in', 'mm'].map((unit) => (
                                 <div
                                   key={unit}

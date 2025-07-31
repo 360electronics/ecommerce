@@ -132,7 +132,7 @@ const SearchBar: React.FC<SearchProps> = ({
         <div ref={categoryDropdownRef} className="relative hidden  md:block">
           <button
             type="button"
-            className="flex items-center justify-between cursor-pointer bg-black px-3 py-2.5 text-sm text-white rounded-l-full  transition-colors"
+            className="flex items-center justify-between cursor-pointer bg-primary px-3 py-2.5 text-sm text-white rounded-l-full  transition-colors"
             onClick={() => setShowCategories(!showCategories)}
             aria-haspopup="listbox"
             aria-expanded={showCategories}
@@ -182,7 +182,7 @@ const SearchBar: React.FC<SearchProps> = ({
         {/* Search Button */}
         <button
           type="submit"
-          className="flex cursor-pointer items-center justify-center bg-black/90 hover:bg-black text-white px-4 py-2 md:py-2.5 rounded-r-full  transition-colors"
+          className="flex cursor-pointer items-center justify-center bg-primary hover:bg-primary-hover text-white px-4 py-2 md:py-2.5 rounded-r-full  transition-colors"
           aria-label="Search"
         >
           <Search size={20} />

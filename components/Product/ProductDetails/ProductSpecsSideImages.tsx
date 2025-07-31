@@ -10,12 +10,6 @@ const ProductSpecsSideImages = () => {
       <div>
         <Image src={'/sidebanner2.jpeg'} alt='Side Banner' width={300} height={450} className=' rounded-lg' />
       </div>
-      <div>
-        <Image src={'/sidebanner1.jpeg'} alt='Side Banner' width={300} height={450} className=' rounded-lg' />
-      </div>
-      <div>
-        <Image src={'/sidebanner2.jpeg'} alt='Side Banner' width={300} height={450} className=' rounded-lg' />
-      </div>
     </div>
   )
 }

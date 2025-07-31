@@ -6,7 +6,6 @@ import Image from "next/image";
 import { EnhancedTable, type ColumnDefinition } from "@/components/Layouts/TableLayout";
 import { deleteProducts, fetchProducts } from "@/utils/products.util";
 import toast, { Toaster } from "react-hot-toast";
-import { encodeUUID } from "@/utils/Encryption";
 
 // Core Entity Types (unchanged)
 export type Category = {
@@ -471,7 +470,7 @@ export function ProductsTable() {
   };
 
   const handleViewProduct = (row: TableRow) => {
-    router.push(`/product/${encodeUUID(row.productId)}/${row.slug}`);
+    router.push(`/product/${row.slug}`);
   };
 
   const handleDeleteProduct = async (row: TableRow) => {
@@ -664,9 +663,10 @@ export function ProductsTable() {
           stickyHeader: true
         }}
         onRowClick={(row) => {
-          router.push(`/product/${encodeUUID(row.productId)}/${row.slug}`);
+          router.push(`/product/${row.slug}`);
         }}
       />
     </div>
   );
 }
+

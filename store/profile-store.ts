@@ -15,6 +15,7 @@ interface Address {
   state: string;
   postalCode: string;
   country: string;
+  gst: string;
   addressType: 'home' | 'work' | 'other';
 }
 

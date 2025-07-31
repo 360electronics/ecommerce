@@ -55,7 +55,7 @@ export async function GET(req: NextRequest) {
 
     if (userOrders.length === 0) {
       console.log("No orders found for user:", userId);
-      return NextResponse.json({ message: "No orders found" }, { status: 404 });
+      return NextResponse.json([], { status: 200 }); // Return empty array instead of 404
     }
 
     // Group order items and their products/variants by order

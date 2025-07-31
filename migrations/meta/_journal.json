@@ -8,6 +8,13 @@
       "when": 1751864961289,
       "tag": "0000_sleepy_captain_stacy",
       "breakpoints": true
+    },
+    {
+      "idx": 1,
+      "version": "7",
+      "when": 1753961457804,
+      "tag": "0001_dark_tarantula",
+      "breakpoints": true
     }
   ]
 }

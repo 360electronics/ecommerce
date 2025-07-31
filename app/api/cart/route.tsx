@@ -1,8 +1,7 @@
 import { db } from '@/db/drizzle';
-import { cart, products, variants } from '@/db/schema';
+import { cart, cart_offer_products, products, variants } from '@/db/schema';
 import { and, eq } from 'drizzle-orm';
 import { NextRequest, NextResponse } from 'next/server';
-
 
 export async function GET(req: Request) {
   try {
@@ -19,21 +18,31 @@ export async function GET(req: Request) {
         userId: cart.userId,
         productId: cart.productId,
         variantId: cart.variantId,
+        cartOfferProductId: cart.cartOfferProductId,
         quantity: cart.quantity,
         createdAt: cart.createdAt,
         updatedAt: cart.updatedAt,
         product: products,
         variant: variants,
+        offerProduct: {
+          id: cart_offer_products.id,
+          productName: cart_offer_products.productName,
+          productImage: cart_offer_products.productImage,
+          ourPrice: cart_offer_products.ourPrice,
+        },
+        offerProductPrice: cart_offer_products.ourPrice,
       })
       .from(cart)
       .innerJoin(variants, eq(cart.variantId, variants.id))
       .innerJoin(products, eq(cart.productId, products.id))
+      .leftJoin(cart_offer_products, eq(cart.cartOfferProductId, cart_offer_products.id))
       .where(eq(cart.userId, userId));
 
-    // Sanitize quantities
     const sanitizedItems = cartItems.map((item) => ({
       ...item,
       quantity: Number.isNaN(Number(item.quantity)) || item.quantity <= 0 ? 1 : item.quantity,
+      offerProductPrice: item.cartOfferProductId ? item.offerProductPrice ?? '0' : undefined,
+      offerProduct: item.cartOfferProductId ? item.offerProduct : undefined,
     }));
 
     return NextResponse.json(sanitizedItems, { status: 200 });
@@ -47,7 +56,6 @@ export async function GET(req: Request) {
   }
 }
 
-// POST /api/cart - Add or update item in cart
 export async function POST(req: NextRequest) {
   try {
     const { userId, productId, variantId, quantity } = await req.json();
@@ -125,7 +133,6 @@ export async function POST(req: NextRequest) {
   }
 }
 
-// PUT /api/cart - Update cart item quantity
 export async function PUT(req: NextRequest) {
   try {
     const { userId, cartItemId, quantity } = await req.json();
@@ -161,7 +168,7 @@ export async function PUT(req: NextRequest) {
     );
   }
 }
-// DELETE /api/cart - Remove item from cart
+
 export async function DELETE(req: NextRequest) {
   try {
     const { userId, productId, variantId } = await req.json();
@@ -197,6 +204,96 @@ export async function DELETE(req: NextRequest) {
     );
   } catch (error) {
     console.error('Error in DELETE /api/cart:', error);
+    return NextResponse.json(
+      { error: 'Internal server error' },
+      { status: 500 }
+    );
+  }
+}
+
+export async function PATCH(req: NextRequest) {
+  try {
+    const { userId, cartItemId, cartOfferProductId, offerPrice } = await req.json();
+
+    if (!userId || !cartItemId || !cartOfferProductId || !offerPrice) {
+      return NextResponse.json(
+        { error: 'Missing or invalid required fields' },
+        { status: 400 }
+      );
+    }
+
+    const offerProductExists = await db
+      .select({ id: cart_offer_products.id })
+      .from(cart_offer_products)
+      .where(eq(cart_offer_products.id, cartOfferProductId))
+      .limit(1);
+
+    if (offerProductExists.length === 0) {
+      return NextResponse.json(
+        { error: 'Offer product not found' },
+        { status: 404 }
+      );
+    }
+
+    const updatedCartItem = await db
+      .update(cart)
+      .set({
+        cartOfferProductId,
+        updatedAt: new Date(),
+      })
+      .where(and(eq(cart.id, cartItemId), eq(cart.userId, userId)))
+      .returning();
+
+    if (updatedCartItem.length === 0) {
+      return NextResponse.json(
+        { error: 'Cart item not found' },
+        { status: 404 }
+      );
+    }
+
+    return NextResponse.json(updatedCartItem[0], { status: 200 });
+  } catch (error) {
+    console.error('Error in PATCH /api/cart:', error);
+    return NextResponse.json(
+      { error: 'Internal server error' },
+      { status: 500 }
+    );
+  }
+}
+
+export async function DELETE_OFFER(req: NextRequest) {
+  try {
+    const { userId, cartItemId } = await req.json();
+
+    if (!userId || !cartItemId) {
+      return NextResponse.json(
+        { error: 'Missing required fields' },
+        { status: 400 }
+      );
+    }
+
+    const updatedCartItem = await db
+      .update(cart)
+      .set({
+        cartOfferProductId: null,
+        updatedAt: new Date(),
+      })
+      .where(and(eq(cart.id, cartItemId), eq(cart.userId, userId)))
+      .returning();
+
+    if (updatedCartItem.length === 0) {
+      return NextResponse.json(
+        { error: 'Cart item not found' },
+        { status: 404 }
+      );
+    }
+
+    return NextResponse.json(
+      { message: 'Offer product removed successfully' },
+      { status: 200 }
+    );
+  } catch (error) {
+    console.error('Error in DELETE_OFFER /api/cart/offer:', error);
     return NextResponse.json(
       { error: 'Internal server error' },
       { status: 500 }

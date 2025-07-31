@@ -32,6 +32,7 @@ export const savedAddresses = pgTable(
     state: varchar("state", { length: 100 }).notNull(),
     postalCode: varchar("postal_code", { length: 20 }).notNull(),
     country: varchar("country", { length: 100 }).notNull(),
+    gst: varchar("gst", { length: 100 }),
     addressType: varchar("address_type", {
       enum: ["home", "work", "other"],
     }).default("home").notNull(),

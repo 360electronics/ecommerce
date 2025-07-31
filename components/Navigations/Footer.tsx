@@ -77,9 +77,10 @@ const Footer = () => {
     {
       name: "Chennai",
       address: [
-        "Ascendas IT Park, 3rd Floor,",
-        "Taramani Road, Taramani,",
-        "Chennai, Tamil Nadu 600113"
+        "No 8 B, 3 Rd Street ",
+        "Suramaniya Bharathi Nagar,",
+        "Tirumullaivayal,",
+        "Chennai - 600062"
       ]
     }
   ];
@@ -114,19 +115,19 @@ const Footer = () => {
   ];
 
   const categoryLinks = [
-    { href: '/laptops', label: 'Laptops' },
-    { href: '/monitors', label: 'Monitors' },
-    { href: '/mouse-keyboards', label: 'Mouse & Keyboards' },
-    { href: '/headphones-joystick', label: 'Headphones & Joystick' },
-    { href: '/steering-chair', label: 'Steering & Chair' },
+    { href: '/category/laptops', label: 'Laptops' },
+    { href: '/category/monitors', label: 'Monitors' },
+    { href: '/category/accessories', label: 'Mouse & Keyboards' },
+    { href: '/category/processors', label: 'Processors' },
+    { href: '/category/graphics-card', label: 'Graphics Card' },
   ];
 
   const accountLinks = [
-    { href: '/account', label: 'My Account' },
-    { href: '/order-history', label: 'Order History' },
-    { href: '/track-order', label: 'Track Order' },
-    { href: '/favourites', label: 'Favourites' },
-    { href: '/help', label: 'Help Center' },
+    { href: '/profile/info', label: 'My Account' },
+    { href: '/profile/orders', label: 'Order History' },
+    { href: '/profile/wishlist', label: 'Favourites' },
+    { href: '/profile/referals', label: 'Referrals' },
+    { href: '/profile/help', label: 'Help Center' },
   ];
 
   const socialLinks = [

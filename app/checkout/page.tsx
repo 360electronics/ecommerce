@@ -1,45 +1,46 @@
-"use client"
+"use client";
 
-import React, { useState, useEffect } from "react"
-import { useRouter } from "next/navigation"
-import UserLayout from "@/components/Layouts/UserLayout"
-import CheckoutLayout from "@/components/Layouts/CheckoutLayout"
-import toast from "react-hot-toast"
-import { Plus, Check, Truck, CreditCard, Loader2 } from "lucide-react"
-import Script from "next/script"
-import { useAuthStore } from "@/store/auth-store"
-import { useCheckoutStore } from "@/store/checkout-store"
-import { useCartStore } from "@/store/cart-store"
+import React, { useState, useEffect } from "react";
+import { useRouter } from "next/navigation";
+import UserLayout from "@/components/Layouts/UserLayout";
+import CheckoutLayout from "@/components/Layouts/CheckoutLayout";
+import toast from "react-hot-toast";
+import { Plus, Check, Truck, CreditCard, Loader2 } from "lucide-react";
+import Script from "next/script";
+import { useAuthStore } from "@/store/auth-store";
+import { useCheckoutStore } from "@/store/checkout-store";
+import { useCartStore } from "@/store/cart-store";
 
 interface Address {
-  id: string
-  fullName: string
-  phoneNumber: string
-  addressLine1: string
-  addressLine2?: string
-  city: string
-  state: string
-  postalCode: string
-  country: string
-  addressType: "home" | "work" | "other"
-  isDefault: boolean
+  id: string;
+  fullName: string;
+  phoneNumber: string;
+  addressLine1: string;
+  addressLine2?: string;
+  city: string;
+  state: string;
+  postalCode: string;
+  country: string;
+  addressType: "home" | "work" | "other";
+  isDefault: boolean;
 }
 
-const CheckoutPage: React.FC = () => {
-  const { isLoggedIn, isLoading, user } = useAuthStore()
-  const { checkoutItems, fetchCheckoutItems, clearCheckout } = useCheckoutStore()
-  const { coupon, couponStatus, applyCoupon, removeCoupon, markCouponUsed, clearCoupon } = useCartStore()
-  const router = useRouter()
 
-  const [addresses, setAddresses] = useState<Address[]>([])
-  const [selectedAddressId, setSelectedAddressId] = useState<string | null>(null)
-  const [showAddressForm, setShowAddressForm] = useState(false)
-  const [deliveryMode, setDeliveryMode] = useState<"standard" | "express">("standard")
-  const [paymentMethod, setPaymentMethod] = useState<"razorpay">("razorpay")
-  const [isSubmitting, setIsSubmitting] = useState(false)
-  const [isProcessingPayment, setIsProcessingPayment] = useState(false)
-  const [couponCode, setCouponCode] = useState("")
-  const [selectedCity, setSelectedCity] = useState<string | null>(null)
+const CheckoutPage: React.FC = () => {
+  const { isLoggedIn, isLoading, user } = useAuthStore();
+  const { checkoutItems, fetchCheckoutItems, clearCheckout } = useCheckoutStore();
+  const { coupon, couponStatus, applyCoupon, removeCoupon, markCouponUsed, clearCoupon } = useCartStore();
+  const router = useRouter();
+
+  const [addresses, setAddresses] = useState<Address[]>([]);
+  const [selectedAddressId, setSelectedAddressId] = useState<string | null>(null);
+  const [showAddressForm, setShowAddressForm] = useState(false);
+  const [deliveryMode, setDeliveryMode] = useState<"standard" | "express">("standard");
+  const [paymentMethod, setPaymentMethod] = useState<"razorpay">("razorpay");
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [isProcessingPayment, setIsProcessingPayment] = useState(false);
+  const [couponCode, setCouponCode] = useState("");
+  const [selectedCity, setSelectedCity] = useState<string | null>(null);
 
   // New address form state
   const [newAddress, setNewAddress] = useState({
@@ -51,9 +52,10 @@ const CheckoutPage: React.FC = () => {
     state: "",
     postalCode: "",
     country: "India",
+    gst: "",
     addressType: "home" as "home" | "work" | "other",
     isDefault: false,
-  })
+  });
 
   // Fetch addresses
   useEffect(() => {
@@ -63,88 +65,68 @@ const CheckoutPage: React.FC = () => {
           const response = await fetch(`/api/users/addresses?userId=${user.id}`, {
             headers: { "Content-Type": "application/json" },
             credentials: "include",
-          })
-          if (!response.ok) throw new Error("Failed to fetch addresses")
-          const data: Address[] = await response.json()
-          setAddresses(data)
-          const defaultAddress = data.find((addr) => addr.isDefault)
-          setSelectedAddressId(defaultAddress ? defaultAddress.id : data[0]?.id || null)
+          });
+          if (!response.ok) throw new Error("Failed to fetch addresses");
+          const data: Address[] = await response.json();
+          setAddresses(data);
+          const defaultAddress = data.find((addr) => addr.isDefault);
+          setSelectedAddressId(defaultAddress ? defaultAddress.id : data[0]?.id || null);
         } catch (error) {
-          console.error("Error fetching addresses:", error)
-          // toast.error("Failed to fetch addresses")
+          console.error("Error fetching addresses:", error);
+          toast.error("Failed to fetch addresses");
         }
-      }
-      fetchAddresses()
+      };
+      fetchAddresses();
     }
-  }, [isLoggedIn, user?.id])
+  }, [isLoggedIn, user?.id]);
 
   // Fetch city for selected address postal code
   useEffect(() => {
     const fetchCityFromPincode = async () => {
       if (selectedAddressId) {
-        const selectedAddress = addresses.find((addr) => addr.id === selectedAddressId)
-        console.log("Selected Address postal code:", selectedAddress?.postalCode)
+        const selectedAddress = addresses.find((addr) => addr.id === selectedAddressId);
         if (selectedAddress?.postalCode) {
           try {
-            const response = await fetch(`https://api.postalpincode.in/pincode/${selectedAddress.postalCode}`)
-            if (!response.ok) throw new Error("Failed to fetch pincode data")
-            const data = await response.json()
-            console.log("Postal API Full Response:", data)
+            const response = await fetch(`https://api.postalpincode.in/pincode/${selectedAddress.postalCode}`);
+            if (!response.ok) throw new Error("Failed to fetch pincode data");
+            const data = await response.json();
             if (data[0]?.Status === "Success" && data[0]?.PostOffice?.[0]?.District) {
-              const city = data[0].PostOffice[0].District.toLowerCase().trim()
-              setSelectedCity(city)
-              console.log("City from pincode:", city)
+              const city = data[0].PostOffice[0].District.toLowerCase().trim();
+              setSelectedCity(city);
             } else {
-              setSelectedCity(null)
-              // toast.error("Invalid postal code or city not found")
+              setSelectedCity(null);
+              toast.error("Invalid postal code or city not found");
             }
           } catch (error) {
-            console.error("Error fetching city from pincode:", error)
-            setSelectedCity(null)
-            // toast.error("Failed to verify postal code")
+            console.error("Error fetching city from pincode:", error);
+            setSelectedCity(null);
+            toast.error("Failed to verify postal code");
           }
         } else {
-          setSelectedCity(null)
+          setSelectedCity(null);
         }
       }
-    }
-    fetchCityFromPincode()
-  }, [selectedAddressId, addresses])
-
-  // Log checkoutItems to verify deliveryMode
-  useEffect(() => {
-    console.log("Checkout Items:", checkoutItems.map(item => ({
-      productId: item.productId,
-      shortName: item.product.shortName,
-      deliveryMode: item.product.deliveryMode
-    })))
-  }, [checkoutItems])
+    };
+    fetchCityFromPincode();
+  }, [selectedAddressId, addresses]);
 
   // Check if express delivery is available
   const isExpressAvailable =
-    checkoutItems.length > 0 && // Ensure there are items
-    checkoutItems.every(item => item.product.deliveryMode === "express") &&
+    checkoutItems.length > 0 &&
+    checkoutItems.every((item) => item.product.deliveryMode === "express") &&
     selectedCity &&
-    ["coimbatore", "chennai", "erode", "madurai"].includes(selectedCity)
+    ["coimbatore", "chennai", "erode", "madurai"].includes(selectedCity);
 
   // Reset deliveryMode to standard if express is not available
   useEffect(() => {
     if (!isExpressAvailable && deliveryMode === "express") {
-      setDeliveryMode("standard")
+      setDeliveryMode("standard");
     }
-  }, [isExpressAvailable, deliveryMode])
-
-  console.log("isExpressAvailable Debug:", {
-    hasAllExpressItems: checkoutItems.length > 0 && checkoutItems.every(item => item.product.deliveryMode === "express"),
-    selectedCity,
-    isCityValid: selectedCity && ["coimbatore", "chennai", "erode", "madurai"].includes(selectedCity),
-    isExpressAvailable
-  })
-  console.log("delivery mode:", deliveryMode)
+  }, [isExpressAvailable, deliveryMode]);
 
   // Handle new address submission
   const handleAddAddress = async (e: React.FormEvent) => {
-    e.preventDefault()
+    e.preventDefault();
     if (
       !newAddress.fullName ||
       !newAddress.phoneNumber ||
@@ -153,8 +135,8 @@ const CheckoutPage: React.FC = () => {
       !newAddress.state ||
       !newAddress.postalCode
     ) {
-      toast.error("Please fill all required fields")
-      return
+      toast.error("Please fill all required fields");
+      return;
     }
 
     try {
@@ -166,15 +148,15 @@ const CheckoutPage: React.FC = () => {
           userId: user!.id,
           ...newAddress,
         }),
-      })
+      });
       if (!response.ok) {
-        const errorData = await response.json()
-        throw new Error(errorData.error || "Failed to save address")
+        const errorData = await response.json();
+        throw new Error(errorData.error || "Failed to save address");
       }
-      const savedAddress: Address = await response.json()
-      setAddresses([...addresses, savedAddress])
-      setSelectedAddressId(savedAddress.id)
-      setShowAddressForm(false)
+      const savedAddress: Address = await response.json();
+      setAddresses([...addresses, savedAddress]);
+      setSelectedAddressId(savedAddress.id);
+      setShowAddressForm(false);
       setNewAddress({
         fullName: "",
         phoneNumber: "",
@@ -184,90 +166,136 @@ const CheckoutPage: React.FC = () => {
         state: "",
         postalCode: "",
         country: "India",
+        gst: "",
         addressType: "home",
         isDefault: false,
-      })
-      toast.success("Address added successfully")
+      });
+      toast.success("Address added successfully");
     } catch (error: any) {
-      console.error("Error adding address:", error)
-      toast.error(error.message || "Failed to save address")
+      console.error("Error adding address:", error);
+      toast.error(error.message || "Failed to save address");
     }
-  }
+  };
 
   // Handle cancel checkout
   const handleCancelCheckout = async () => {
     try {
-      await clearCheckout(user!.id)
-      toast.success("Checkout cancelled")
-      router.push("/")
+      await clearCheckout(user!.id);
+      toast.success("Checkout cancelled");
+      router.push("/");
     } catch (error) {
-      console.error("Error cancelling checkout:", error)
-      toast.error("Failed to cancel checkout")
+      console.error("Error cancelling checkout:", error);
+      toast.error("Failed to cancel checkout");
     }
-  }
+  };
 
   // Handle apply coupon
   const handleApplyCoupon = async () => {
     if (!couponCode) {
-      toast.error("Please enter a coupon code")
-      return
+      toast.error("Please enter a coupon code");
+      return;
     }
-    await applyCoupon(couponCode)
-    setCouponCode("")
-  }
+    await applyCoupon(couponCode);
+    const { couponStatus: status, coupon } = useCartStore.getState();
+    if (status === "applied" && coupon) {
+      toast.success(`Coupon ${coupon.code} applied (${coupon.type === 'amount' ? formatCurrency(coupon.value) : `${coupon.value}%`})`);
+    } else if (status === "invalid") {
+      toast.error("Invalid coupon code");
+    } else if (status === "invalid_amount") {
+      toast.error("Coupon has an invalid discount value");
+    } else if (status === "expired") {
+      toast.error("Coupon has expired");
+    } else if (status === "used") {
+      toast.error("Coupon has already been used");
+    }
+    setCouponCode("");
+  };
 
   // Calculate estimated delivery dates
   const getEstimatedDeliveryDate = (mode: "standard" | "express") => {
-    const today = new Date()
-    const daysToAdd = mode === "standard" ? 7 : 1
-    const estimatedDate = new Date(today)
-    estimatedDate.setDate(today.getDate() + daysToAdd)
+    const today = new Date();
+    const daysToAdd = mode === "standard" ? 7 : 1;
+    const estimatedDate = new Date(today);
+    estimatedDate.setDate(today.getDate() + daysToAdd);
     return estimatedDate.toLocaleDateString("en-IN", {
       weekday: "short",
       day: "numeric",
       month: "short",
-    })
-  }
+    });
+  };
 
   // Calculate totals
   const calculateTotals = () => {
-    const subtotal = checkoutItems.reduce(
-      (sum, item) => sum + Number(item.variant.ourPrice) * item.quantity,
-      0
-    )
-    const savings = checkoutItems.reduce(
-      (total, item) =>
-        total + (Number(item.variant.mrp) - Number(item.variant.ourPrice)) * item.quantity,
-      0
-    )
+    // Calculate subtotal for regular products
+    const regularProductsSubtotal = checkoutItems.reduce((sum, item) => {
+      const itemPrice = Number(item.variant.ourPrice) || 0;
+      return sum + itemPrice * item.quantity;
+    }, 0);
+
+    // Calculate offer products total (only one offer product allowed, quantity is always 1)
+    const offerProductsTotal = checkoutItems.reduce((sum, item) => {
+      if (!item.cartOfferProductId ) return sum;
+      const offerPrice = Number(item.offerProduct.ourPrice) || 0;
+      return sum + offerPrice; // Quantity is always 1 for offer products
+    }, 0);
+
+    // Total subtotal including both regular and offer products
+    const subtotal = regularProductsSubtotal + offerProductsTotal;
+
+    // Calculate savings for regular products
+    const savings = checkoutItems.reduce((total, item) => {
+      if (item.cartOfferProductId) return total; // No savings on offer products
+      const mrp = Number(item.variant.mrp) || Number(item.variant.ourPrice) || 0;
+      const ourPrice = Number(item.variant.ourPrice) || 0;
+      return total + (mrp - ourPrice) * item.quantity;
+    }, 0);
+
+    // Calculate coupon discount
     const discountAmount =
       coupon && couponStatus === "applied"
         ? coupon.type === "amount"
-          ? coupon.value
-          : (subtotal * coupon.value) / 100
-        : 0
+          ? coupon.value || 0
+          : (subtotal * (coupon.value || 0)) / 100
+        : 0;
+
+    // Calculate shipping amount
     const shippingAmount =
       subtotal > 500 && deliveryMode === "standard"
         ? 0
         : checkoutItems.reduce(
-            (sum, item) => sum + (deliveryMode === "standard" ? 50 : 79) * item.quantity,
+            (sum, item) =>
+              sum +
+              (deliveryMode === "standard" ? 50 : 79) *
+              (item.cartOfferProductId ? 1 : item.quantity), // Offer product counts as 1 item
             0
-          )
-    const grandTotal = Math.max(0, subtotal - discountAmount) + shippingAmount
-    return { subtotal, savings, discountAmount, shippingAmount, grandTotal }
-  }
+          );
 
-  const { subtotal, savings, discountAmount, shippingAmount, grandTotal } = calculateTotals()
+    const grandTotal = Math.max(0, subtotal - discountAmount) + shippingAmount;
+
+    return { subtotal, regularProductsSubtotal, offerProductsTotal, savings, discountAmount, shippingAmount, grandTotal };
+  };
+
+  const { subtotal, regularProductsSubtotal, offerProductsTotal, savings, discountAmount, shippingAmount, grandTotal } =
+    calculateTotals();
+
+  // Format currency
+  const formatCurrency = (value: number): string => {
+    return value.toLocaleString("en-IN", {
+      style: "currency",
+      currency: "INR",
+      minimumFractionDigits: 0,
+    });
+  };
 
   // Handle Razorpay payment
   const initiateRazorpayPayment = async (order: {
-    id: string
-    totalAmount: number
-    razorpayOrderId?: string
+    id: string;
+    totalAmount: number;
+    razorpayOrderId?: string;
   }) => {
     try {
-      const shortOrderId = order.id.slice(0, 36)
-      const receipt = `ord_${shortOrderId}`
+      const shortOrderId = order.id.slice(0, 36);
+      const receipt = `ord_${shortOrderId}`;
 
       const response = await fetch("/api/razorpay/create-order", {
         method: "POST",
@@ -277,17 +305,17 @@ const CheckoutPage: React.FC = () => {
           currency: "INR",
           receipt: receipt,
         }),
-      })
+      });
 
       if (!response.ok) {
-        const errorData = await response.json()
-        throw new Error(errorData.error || "Failed to create Razorpay order")
+        const errorData = await response.json();
+        throw new Error(errorData.error || "Failed to create Razorpay order");
       }
 
-      const { razorpayOrderId } = await response.json()
+      const { razorpayOrderId } = await response.json();
 
       if (!process.env.NEXT_PUBLIC_RAZORPAY_KEY_ID) {
-        throw new Error("Razorpay key is not configured")
+        throw new Error("Razorpay key is not configured");
       }
 
       const options = {
@@ -298,12 +326,12 @@ const CheckoutPage: React.FC = () => {
         description: "Order Payment",
         order_id: razorpayOrderId,
         handler: async (response: {
-          razorpay_payment_id: string
-          razorpay_order_id: string
-          razorpay_signature: string
+          razorpay_payment_id: string;
+          razorpay_order_id: string;
+          razorpay_signature: string;
         }) => {
           try {
-            setIsProcessingPayment(true)
+            setIsProcessingPayment(true);
             const verifyResponse = await fetch("/api/razorpay/verify-payment", {
               method: "POST",
               headers: { "Content-Type": "application/json" },
@@ -314,10 +342,10 @@ const CheckoutPage: React.FC = () => {
                 orderId: order.id,
                 userId: user!.id,
               }),
-            })
+            });
 
             if (!verifyResponse.ok) {
-              throw new Error("Payment verification failed")
+              throw new Error("Payment verification failed");
             }
 
             const updateResponse = await fetch("/api/orders/update-status", {
@@ -328,25 +356,25 @@ const CheckoutPage: React.FC = () => {
                 status: "confirmed",
                 paymentStatus: "paid",
               }),
-            })
+            });
 
             if (!updateResponse.ok) {
-              throw new Error("Failed to update order status")
+              throw new Error("Failed to update order status");
             }
 
             if (coupon && coupon.code && couponStatus === "applied") {
-              await markCouponUsed(coupon.code)
+              await markCouponUsed(coupon.code);
             }
 
-            clearCoupon()
-            await clearCheckout(user!.id)
-            toast.success("Payment successful!")
-            router.push("/profile?tab=orders")
+            clearCoupon();
+            await clearCheckout(user!.id);
+            toast.success("Payment successful!");
+            router.push("/profile?tab=orders");
           } catch (error) {
-            console.error("Payment verification error:", error)
-            toast.error("Payment verification failed")
+            console.error("Payment verification error:", error);
+            toast.error("Payment verification failed");
           } finally {
-            setIsProcessingPayment(false)
+            setIsProcessingPayment(false);
           }
         },
         prefill: {
@@ -360,14 +388,14 @@ const CheckoutPage: React.FC = () => {
         theme: {
           color: "#2563eb",
         },
-      }
+      };
 
-      const razorpay = new (window as any).Razorpay(options)
-      razorpay.open()
+      const razorpay = new (window as any).Razorpay(options);
+      razorpay.open();
 
       razorpay.on("payment.failed", async (response: any) => {
-        console.error("Payment failed:", response.error)
-        toast.error("Payment failed. Please try again.")
+        console.error("Payment failed:", response.error);
+        toast.error("Payment failed. Please try again.");
         await fetch("/api/orders/update-payment-status", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
@@ -375,31 +403,31 @@ const CheckoutPage: React.FC = () => {
             orderId: order.id,
             paymentStatus: "failed",
           }),
-        })
-        setIsProcessingPayment(false)
-      })
+        });
+        setIsProcessingPayment(false);
+      });
 
-      return razorpayOrderId
+      return razorpayOrderId;
     } catch (error: any) {
-      console.error("Error initiating Razorpay payment:", error)
-      toast.error(error.message || "Failed to initiate payment")
-      setIsProcessingPayment(false)
-      return null
+      console.error("Error initiating Razorpay payment:", error);
+      toast.error(error.message || "Failed to initiate payment");
+      setIsProcessingPayment(false);
+      return null;
     }
-  }
+  };
 
   // Handle order confirmation
   const handleConfirmOrder = async () => {
     if (!selectedAddressId) {
-      toast.error("Please select a delivery address")
-      return
+      toast.error("Please select a delivery address");
+      return;
     }
     if (!checkoutItems.length) {
-      toast.error("Your checkout is empty")
-      return
+      toast.error("Your checkout is empty");
+      return;
     }
 
-    setIsSubmitting(true)
+    setIsSubmitting(true);
     try {
       const order = {
         userId: user!.id,
@@ -415,31 +443,32 @@ const CheckoutPage: React.FC = () => {
         orderItems: checkoutItems.map((item) => ({
           productId: item.productId,
           variantId: item.variantId,
-          quantity: item.quantity,
-          unitPrice: item.variant.ourPrice,
+          quantity: item.cartOfferProductId ? 1 : item.quantity, // Offer product quantity is always 1
+          unitPrice: Number(item.variant.ourPrice) || 0,
+          cartOfferProductId: item.cartOfferProductId,
         })),
-      }
+      };
 
       const response = await fetch("/api/orders", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(order),
-      })
+      });
 
       if (!response.ok) {
-        throw new Error("Failed to create order")
+        throw new Error("Failed to create order");
       }
 
-      const createdOrder = await response.json()
+      const createdOrder = await response.json();
 
       if (paymentMethod === "razorpay") {
         const razorpayOrderId = await initiateRazorpayPayment({
           id: createdOrder.id,
           totalAmount: grandTotal,
-        })
+        });
 
         if (!razorpayOrderId) {
-          throw new Error("Failed to initiate Razorpay payment")
+          throw new Error("Failed to initiate Razorpay payment");
         }
 
         await fetch("/api/orders/update-razorpay-order-id", {
@@ -449,10 +478,10 @@ const CheckoutPage: React.FC = () => {
             orderId: createdOrder.id,
             razorpayOrderId,
           }),
-        })
+        });
       } else {
         if (coupon && coupon.code && couponStatus === "applied") {
-          await markCouponUsed(coupon.code)
+          await markCouponUsed(coupon.code);
         }
         await fetch("/api/orders/update-status", {
           method: "POST",
@@ -462,19 +491,19 @@ const CheckoutPage: React.FC = () => {
             status: "confirmed",
             paymentStatus: "pending",
           }),
-        })
-        clearCoupon()
-        await clearCheckout(user!.id)
-        toast.success("Order placed successfully!")
-        router.push("/orders")
+        });
+        clearCoupon();
+        await clearCheckout(user!.id);
+        toast.success("Order placed successfully!");
+        router.push("/orders");
       }
     } catch (error) {
-      console.error("Error placing order:", error)
-      toast.error("Failed to place order")
+      console.error("Error placing order:", error);
+      toast.error("Failed to place order");
     } finally {
-      setIsSubmitting(false)
+      setIsSubmitting(false);
     }
-  }
+  };
 
   if (isLoading) {
     return (
@@ -483,7 +512,7 @@ const CheckoutPage: React.FC = () => {
           <p className="text-center text-gray-600 text-lg">Loading checkout...</p>
         </div>
       </UserLayout>
-    )
+    );
   }
 
   return (
@@ -673,6 +702,18 @@ const CheckoutPage: React.FC = () => {
                         />
                       </div>
                       <div>
+                        <label htmlFor="gst" className="block text-sm font-medium text-gray-700">
+                          GST (Optional)
+                        </label>
+                        <input
+                          id="gst"
+                          type="text"
+                          value={newAddress.gst}
+                          onChange={(e) => setNewAddress({ ...newAddress, gst: e.target.value })}
+                          className="mt-1 w-full border border-gray-300 rounded-md px-4 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                        />
+                      </div>
+                      <div>
                         <label htmlFor="addressType" className="block text-sm font-medium text-gray-700">
                           Address Type
                         </label>
@@ -810,21 +851,38 @@ const CheckoutPage: React.FC = () => {
                 <div className="space-y-4">
                   <div className="space-y-4">
                     {checkoutItems.map((item) => (
-                      <div key={item.variantId} className="flex gap-4">
-                        <img
-                          src={item.variant.productImages[0].url || "/placeholder.png"}
-                          alt={item.product.shortName}
-                          className="w-16 h-16 object-contain rounded-md"
-                        />
-                        <div className="flex-1">
-                          <p className="text-sm font-medium text-gray-900">
-                            {item.product.shortName}
-                          </p>
-                          <p className="text-sm text-gray-600">Qty: {item.quantity}</p>
-                          <p className="text-sm font-medium text-gray-900">
-                            ₹{(Number(item.variant.ourPrice) * item.quantity)}
-                          </p>
+                      <div key={item.id} className="space-y-2">
+                        <div className="flex gap-4">
+                          <img
+                            src={item.variant.productImages[0]?.url || "/placeholder.png"}
+                            alt={item.product.shortName}
+                            className="w-16 h-16 object-contain rounded-md"
+                          />
+                          <div className="flex-1">
+                            <p className="text-sm font-medium text-gray-900">{item.product.shortName}</p>
+                            <p className="text-sm text-gray-600">Qty: {item.quantity}</p>
+                            <p className="text-sm font-medium text-gray-900">
+                              {formatCurrency(Number(item.variant.ourPrice) * item.quantity)}
+                            </p>
+                          </div>
                         </div>
+                        {item.cartOfferProductId && item.offerProduct && (
+                          <div className="flex gap-4 pl-4 border-l-2 border-green-200">
+                            <img
+                              src={item.offerProduct.productImage || "/placeholder.png"}
+                              alt={item.offerProduct.productName}
+                              className="w-12 h-12 object-contain rounded-md"
+                            />
+                            <div className="flex-1">
+                              <p className="text-sm font-medium text-gray-900">{item.offerProduct.productName}</p>
+                              <p className="text-sm text-gray-600">Qty: 1</p>
+                              <p className="text-sm font-medium text-green-600">
+                                +{formatCurrency(Number(item.offerProductPrice))}
+                              </p>
+                              <p className="text-xs text-gray-500">Offer product</p>
+                            </div>
+                          </div>
+                        )}
                       </div>
                     ))}
                   </div>
@@ -865,7 +923,7 @@ const CheckoutPage: React.FC = () => {
                         <p className="text-sm text-green-600 mt-2">
                           Coupon {coupon.code} applied (
                           {coupon.type === "amount"
-                            ? `₹${coupon.value}`
+                            ? formatCurrency(coupon.value)
                             : `${coupon.value}%`}
                           )
                         </p>
@@ -885,33 +943,51 @@ const CheckoutPage: React.FC = () => {
                     <div className="space-y-2">
                       <div className="flex justify-between text-sm">
                         <span className="text-gray-600">
-                          Price ({checkoutItems.reduce((sum, item) => sum + item.quantity, 0)} items)
+                          Regular Products (
+                          {checkoutItems.reduce(
+                            (sum, item) => sum + (item.cartOfferProductId ? 0 : item.quantity),
+                            0
+                          )}{" "}
+                          items)
                         </span>
-                        <span className="text-gray-900">₹{subtotal}</span>
+                        <span className="text-gray-900">{formatCurrency(regularProductsSubtotal)}</span>
+                      </div>
+                      {offerProductsTotal > 0 && (
+                        <div className="flex justify-between text-sm">
+                          <span className="text-gray-600">
+                            Offer Product (
+                            {checkoutItems.reduce(
+                              (sum, item) => sum + (item.cartOfferProductId ? 1 : 0),
+                              0
+                            )}{" "}
+                            item)
+                          </span>
+                          <span className="text-green-600">+{formatCurrency(offerProductsTotal)}</span>
+                        </div>
+                      )}
+                      <div className="flex justify-between text-sm font-medium border-t pt-2">
+                        <span className="text-gray-700">Subtotal</span>
+                        <span className="text-gray-900">{formatCurrency(subtotal)}</span>
                       </div>
                       <div className="flex justify-between text-sm">
                         <span className="text-gray-600">Delivery Charges</span>
-                        <span className="text-gray-900">₹{shippingAmount}</span>
+                        <span className="text-gray-900">{formatCurrency(shippingAmount)}</span>
                       </div>
                       {savings > 0 && (
                         <div className="flex justify-between text-sm">
                           <span className="text-gray-600">You Save</span>
-                          <span className="text-green-600">₹{savings}</span>
+                          <span className="text-green-600">-{formatCurrency(savings)}</span>
                         </div>
                       )}
                       {discountAmount > 0 && (
                         <div className="flex justify-between text-sm">
-                          <span className="text-gray-600">
-                            Coupon Discount ({coupon?.code})
-                          </span>
-                          <span className="text-green-600">
-                            -₹{discountAmount}
-                          </span>
+                          <span className="text-gray-600">Coupon Discount ({coupon?.code})</span>
+                          <span className="text-green-600">-{formatCurrency(discountAmount)}</span>
                         </div>
                       )}
                       <div className="flex justify-between text-lg font-semibold text-gray-900 pt-2 border-t border-gray-200">
                         <span>Total</span>
-                        <span>₹{grandTotal}</span>
+                        <span>{formatCurrency(grandTotal)}</span>
                       </div>
                     </div>
                   </div>
@@ -947,7 +1023,7 @@ const CheckoutPage: React.FC = () => {
         </div>
       </CheckoutLayout>
     </>
-  )
-}
+  );
+};
 
-export default CheckoutPage
+export default CheckoutPage;

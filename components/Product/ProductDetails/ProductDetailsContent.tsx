@@ -455,7 +455,7 @@ export default function ProductDetailsContent({ className, activeVariant }: Prod
   }, [handleVariantNavigation]);
 
   const increaseQuantity = () => {
-    if (activeVariant.stock >= quantity + 1 || activeVariant.isBackorderable) {
+    if (quantity < 10 && (activeVariant.stock >= quantity + 1 || activeVariant.isBackorderable)) {
       setQuantity(quantity + 1);
     }
   };
@@ -613,7 +613,7 @@ export default function ProductDetailsContent({ className, activeVariant }: Prod
           onClick={increaseQuantity}
           className="p-1 rounded-full hover:bg-gray-100 disabled:opacity-50 transition-colors"
           aria-label="Increase quantity"
-          disabled={activeVariant.stock < quantity + 1 && !activeVariant.isBackorderable}
+          disabled={(quantity >= 10) || (activeVariant.stock < quantity + 1 && !activeVariant.isBackorderable)}
         >
           <Plus className="h-4 w-4" />
         </button>

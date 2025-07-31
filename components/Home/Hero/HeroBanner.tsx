@@ -211,7 +211,7 @@ const HeroBanner: React.FC = () => {
               <div className="absolute inset-0 flex items-center justify-between px-6">
                 <button
                   onClick={goToPrevSlide}
-                  className="bg-black bg-opacity-40 hover:bg-opacity-60 text-white p-3 rounded-full transition-all duration-300"
+                  className="bg-primary bg-opacity-40 hover:bg-opacity-60 text-white p-3 rounded-full transition-all duration-300"
                   aria-label="Previous slide"
                 >
                   <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
@@ -220,7 +220,7 @@ const HeroBanner: React.FC = () => {
                 </button>
                 <button
                   onClick={goToNextSlide}
-                  className="bg-black bg-opacity-40 hover:bg-opacity-60 text-white p-3 rounded-full transition-all duration-300"
+                  className="bg-primary bg-opacity-40 hover:bg-opacity-60 text-white p-3 rounded-full transition-all duration-300"
                   aria-label="Next slide"
                 >
                   <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">

@@ -79,7 +79,7 @@ export const useWishlistStore = create<WishlistState>((set, get) => ({
   fetchWishlist: async (force = false) => {
     const { user, isLoggedIn } = useAuthStore.getState();
     if (!isLoggedIn || !user?.id) {
-      console.log('[fetchWishlist] User not logged in, resetting wishlist');
+      // console.log('[fetchWishlist] User not logged in, resetting wishlist');
       set({ wishlist: [], wishlistCount: 0, lastFetched: Date.now() });
       return;
     }
@@ -92,12 +92,12 @@ export const useWishlistStore = create<WishlistState>((set, get) => ({
     }
 
     try {
-      console.log('[fetchWishlist] Fetching wishlist for user:', user.id);
+      // console.log('[fetchWishlist] Fetching wishlist for user:', user.id);
       set({ isLoading: true, isRefetching: force, errors: { ...get().errors, fetch: undefined } });
       const data = await fetchWithRetry<WishlistItem[]>(() =>
         fetch(`/api/users/wishlist?userId=${user.id}`, { credentials: 'include' })
       );
-      console.log('[fetchWishlist] Fetched data:', data);
+      // console.log('[fetchWishlist] Fetched data:', data);
       const validatedData = Array.isArray(data) ? data : [];
       set({
         wishlist: validatedData,
@@ -106,7 +106,7 @@ export const useWishlistStore = create<WishlistState>((set, get) => ({
         isRefetching: false,
         lastFetched: Date.now(),
       });
-      console.log('[fetchWishlist] State updated:', { wishlistCount: validatedData.length });
+      // console.log('[fetchWishlist] State updated:', { wishlistCount: validatedData.length });
     } catch (error) {
       logError('fetchWishlist', error);
       set({
@@ -245,7 +245,7 @@ export const useWishlistAuthSync = () => {
 
     // Initial fetch if logged in
     if (isLoggedIn && user?.id) {
-      console.log('[useWishlistAuthSync] Initial fetch for logged-in user:', user.id);
+      // console.log('[useWishlistAuthSync] Initial fetch for logged-in user:', user.id);
       fetchWishlist(); // No force=true to respect cache
     } else {
       console.log('[useWishlistAuthSync] User not logged in, resetting wishlist');
@@ -256,7 +256,7 @@ export const useWishlistAuthSync = () => {
     const unsubscribe = useAuthStore.subscribe((state, prevState) => {
       if (state.isLoggedIn !== prevState.isLoggedIn) {
         if (state.isLoggedIn && state.user?.id) {
-          console.log('[useWishlistAuthSync] Auth state changed to logged in, fetching wishlist');
+          // console.log('[useWishlistAuthSync] Auth state changed to logged in, fetching wishlist');
           fetchWishlist(); // No force=true to respect cache
         } else {
           console.log('[useWishlistAuthSync] Auth state changed to logged out, resetting wishlist');
