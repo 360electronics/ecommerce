@@ -219,9 +219,9 @@ const Footer = () => {
                     I agree to the{' '}
                     <Link href="/privacy" className="underline hover:text-white transition-colors duration-200">
                       Privacy Policy
-                    </Link>{' '}
+                    </Link>{''}
                     and{' '}
-                    <Link href="/terms" className="underline hover:text-white transition-colors duration-200">
+                    <Link href="/terms-and-conditions" className="underline hover:text-white transition-colors duration-200">
                       Terms & Conditions
                     </Link>
                     .
