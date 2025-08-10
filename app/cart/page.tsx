@@ -14,11 +14,9 @@ import { useCheckoutStore } from '@/store/checkout-store';
 import { useCartStore } from '@/store/cart-store';
 import { CartItem } from '@/store/cart-store';
 
-interface CartPageProps {
-  initialCartItems: CartItem[];
-}
 
-const CartPage: React.FC<CartPageProps> = ({ initialCartItems }) => {
+
+const CartPage: React.FC = ({ initialCartItems }:any) => {
   const {
     cartItems,
     coupon,
