@@ -10,8 +10,6 @@ import Script from "next/script";
 import { useAuthStore } from "@/store/auth-store";
 import { useCheckoutStore } from "@/store/checkout-store";
 import { useCartStore } from "@/store/cart-store";
-// @ts-ignore
-import { load } from "@cashfreepayments/cashfree-js";
 
 interface Address {
   id: string;
