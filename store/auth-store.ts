@@ -27,18 +27,25 @@ export const useAuthStore = create<AuthState>()(
       fetchAuthStatus: async () => {
         const { isLoading } = get();
         if (isLoading) return;
-
+      
         try {
           set({ isLoading: true, error: null });
           const data = await fetchWithRetry<{ isAuthenticated: boolean; user: User | null }>(
             () => fetch('/api/auth/status', { credentials: 'include' })
           );
-          set({ isLoggedIn: data.isAuthenticated, user: data.user, isLoading: false });
+      
+          set({
+            isLoggedIn: data.isAuthenticated,
+            user: data.user,
+            isLoading: false,
+            error: data.isAuthenticated ? null : null // Don't set error if just logged out
+          });
         } catch (error) {
           logError('fetchAuthStatus', error);
           set({ isLoggedIn: false, user: null, isLoading: false, error: error as AppError });
         }
       },
+      
       setAuth: (isLoggedIn, user) => set({ isLoggedIn, user, isLoading: false, error: null }),
       logout: async () => {
         try {

@@ -1,94 +1,31 @@
 'use client';
 
-import React, { useState, useEffect, useMemo, memo } from 'react';
+import React, { useState, useEffect, useMemo, memo, useRef } from 'react';
 import DynamicFilter from '@/components/Filter/DynamicFilter';
 import ProductCard from '@/components/Product/ProductCards/ProductCardwithCart';
 import { useSearchParams } from 'next/navigation';
 import DOMPurify from 'isomorphic-dompurify';
 import debounce from 'lodash/debounce';
-import { CompleteProduct, FlattenedProduct } from '@/types/product';
-import { fetchProducts } from '@/utils/products.util';
-
-// Helper function to safely convert to ISO string
-const safeToISOString = (dateValue: Date | string | undefined | null): string => {
-    if (!dateValue) return new Date().toISOString();
-    if (dateValue instanceof Date) return dateValue.toISOString();
-    const parsedDate = new Date(dateValue);
-    return isNaN(parsedDate.getTime()) ? new Date().toISOString() : parsedDate.toISOString();
-};
+import { FlattenedProduct } from '@/types/product';
 
 const MemoizedProductCard = memo(ProductCard);
 
-const flattenProductVariants = (products: CompleteProduct[]): FlattenedProduct[] => {
-    const flattened: FlattenedProduct[] = [];
-
-    products.forEach(product => {
-        if (Array.isArray(product.variants) && product.variants.length > 0) {
-            product.variants.forEach(variant => {
-                flattened.push({
-                    ...variant,
-                    id: variant.id,
-                    productId: product.id,
-                    category: product.category?.name || '',
-                    subcategory: product.subcategory?.name || '',
-                    brand: product.brand,
-                    averageRating: product.averageRating?.toString() || '0',
-                    tags: Array.isArray(product.tags)
-                        ? product.tags
-                        : typeof product.tags === 'string'
-                            ? (product.tags as string).split(',').map((tag: string) => tag.trim())
-                            : [],
-                    totalStocks: variant.stock?.toString() || '0',
-                    createdAt: safeToISOString(variant.createdAt),
-                    updatedAt: safeToISOString(variant.updatedAt),
-                    color: variant.attributes?.color as string | undefined,
-                    storage: variant.attributes?.storage as string | undefined,
-                    description: product.description || '',
-                    productParent: product,
-                    material: variant.attributes?.material as string | undefined,
-                    mrp: variant.mrp?.toString() || '0',
-                    ourPrice: variant.ourPrice?.toString() || '0'
-                } as unknown as FlattenedProduct);
-            });
-        } else {
-            flattened.push({
-                ...product,
-                id: product.id,
-                productId: product.id,
-                name: product.shortName || 'Unnamed Product',
-                mrp: product.defaultVariant?.mrp?.toString() || '0',
-                ourPrice: product.defaultVariant?.ourPrice?.toString() || '0',
-                stock: product.totalStocks?.toString() || '0',
-                slug: product.slug || '',
-                sku: product.defaultVariant?.sku || '',
-                tags: Array.isArray(product.tags)
-                    ? product.tags
-                    : typeof product.tags === 'string'
-                        ? (product.tags as string).split(',').map((tag: string) => tag.trim())
-                        : [],
-                createdAt: safeToISOString(product.createdAt),
-                updatedAt: safeToISOString(product.updatedAt),
-                category: product.category?.name || '',
-                subcategory: product.subcategory?.name || '',
-                brand: product.brand,
-                averageRating: product.averageRating?.toString() || '0',
-                totalStocks: product.totalStocks?.toString() || '0',
-                description: product.description || '',
-            } as unknown as FlattenedProduct);
-        }
-    });
-
-    return flattened;
-};
-
-const ProductListing = ({ category, searchQuery }: { category?: string; searchQuery?: string }) => {
-    const [originalProducts, setOriginalProducts] = useState<FlattenedProduct[]>([]);
+const ProductListing = ({ 
+  category, 
+  searchQuery, 
+  initialProducts = [] 
+}: { 
+  category?: string; 
+  searchQuery?: string; 
+  initialProducts?: FlattenedProduct[]; 
+}) => {
+    const [originalProducts] = useState<FlattenedProduct[]>(initialProducts);
     const [filteredProducts, setFilteredProducts] = useState<FlattenedProduct[]>([]);
-    const [loading, setLoading] = useState(true);
+    const [loading, setLoading] = useState(false); // Data is pre-fetched, so no initial loading
     const [error, setError] = useState<string | null>(null);
     const [sortOption, setSortOption] = useState('featured');
     const [currentPage, setCurrentPage] = useState(1);
-    const [productsPerPage] = useState(9);
+    const [productsPerPage] = useState(50);
     const searchParams = useSearchParams();
 
     // Get subcategory from URL params
@@ -288,36 +225,6 @@ const ProductListing = ({ category, searchQuery }: { category?: string; searchQu
         };
     }, [originalProducts, category, subcategory]);
 
-    // Fetch products only once on component mount
-    useEffect(() => {
-        const fetchAllProducts = async () => {
-            setLoading(true);
-            setError(null);
-
-            try {
-                const startTime = performance.now();
-                const productData: CompleteProduct[] = await fetchProducts();
-
-                if (!productData || productData.length === 0) {
-                    throw new Error('No product data received');
-                }
-
-                const flattenedProducts = flattenProductVariants(productData);
-                setOriginalProducts(flattenedProducts);
-                const endTime = performance.now();
-                console.log(`Product fetch took ${endTime - startTime}ms`);
-            } catch (err) {
-                const errorMessage = err instanceof Error ? err.message : 'Failed to load products. Please try again later.';
-                setError(errorMessage);
-                console.error('Error fetching products:', err);
-            } finally {
-                setLoading(false);
-            }
-        };
-
-        fetchAllProducts();
-    }, []); // Remove category and searchQuery dependencies to prevent unnecessary refetches
-
     // Apply filters when dependencies change
     useEffect(() => {
         if (originalProducts.length === 0) return;
@@ -454,11 +361,21 @@ const ProductListing = ({ category, searchQuery }: { category?: string; searchQu
         return parts.join(' ');
     };
 
+    const asideRef = useRef<HTMLDivElement>(null);
+    const mainRef = useRef<HTMLElement>(null);
+
+    useEffect(() => {
+        if (mainRef.current && asideRef.current) {
+            const mainHeight = mainRef.current.offsetHeight;
+            asideRef.current.style.maxHeight = `${mainHeight}px`;
+        }
+    }, [filteredProducts, currentPage, loading, error, sortOption, searchParams]);
+
     return (
         <div className="mx-auto" role="main">
             <div className="flex flex-col md:flex-row gap-6">
                 {!loading && filteredProducts.length > 0 && (
-                    <aside className="w-full md:w-1/4 flex">
+                    <aside ref={asideRef} className="w-full md:w-1/4 flex overflow-y-auto">
                         <DynamicFilter
                             products={filteredProducts}
                             category={category}
@@ -483,7 +400,7 @@ const ProductListing = ({ category, searchQuery }: { category?: string; searchQu
                     </aside>
                 )}
 
-                <main className={`w-full ${filteredProducts.length > 0 ? 'md:w-3/4' : 'md:w-full'}`}>
+                <main ref={mainRef} className={`w-full ${filteredProducts.length > 0 ? 'md:w-3/4' : 'md:w-full'}`}>
                     <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-6 pb-4 border-b border-gray-200">
                         <div className="text-sm md:text-lg font-medium text-gray-800 mb-4 sm:mb-0">
                             {getDisplayText()}
@@ -541,11 +458,11 @@ const ProductListing = ({ category, searchQuery }: { category?: string; searchQu
                     ) : (
                         <>
                             <div className="grid grid-cols-2 lg:grid-cols-3 gap-6">
-                                {displayedProducts.map((product) => (
+                                {displayedProducts.map((product,index) => (
                                     <MemoizedProductCard
                                         productId={product.productId}
                                         variantId={product.id}
-                                        key={product.id || product.sku}
+                                        key={index}
                                         slug={product.slug}
                                         name={product.name}
                                         image={

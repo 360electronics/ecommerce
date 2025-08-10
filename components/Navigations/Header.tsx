@@ -78,38 +78,41 @@ const Header = ({ isCategory = true }: HeaderProps) => {
   const [hoveredCategory, setHoveredCategory] = useState<string | null>(null);
   const [hoveredAttribute, setHoveredAttribute] = useState<string | null>(null);
   const [categories, setCategories] = useState<Category[]>([]);
-  const [isLoading, setIsLoading] = useState(true);
+  const [hasFetched, setHasFetched] = useState(false);
   const router = useRouter();
   const menuRef = useRef<HTMLDivElement>(null);
   const dropdownTimeoutRef = useRef<NodeJS.Timeout | null>(null);
   const attributeRef = useRef<HTMLDivElement>(null);
 
-  // Fetch and cache data
+ 
+  
   useEffect(() => {
-    const fetchData = async () => {
+    if (typeof window !== "undefined") {
       const cachedData = sessionStorage.getItem(CACHE_KEY);
-      const now = Date.now();
       if (cachedData) {
         const { data, timestamp } = JSON.parse(cachedData);
+        const now = Date.now();
         if (now - timestamp < CACHE_DURATION) {
           setCategories(data);
-          setIsLoading(false);
-          return;
+          setHasFetched(true);
+          return; // Don't fetch if cache is valid
         }
       }
-
+    }
+  
+    const fetchData = async () => {
       try {
         const [categoryResponse, productResponse] = await Promise.all([
           fetch('/api/categories'),
           fetch('/api/products'),
         ]);
-
+  
         if (!categoryResponse.ok) throw new Error('Failed to fetch categories');
         if (!productResponse.ok) throw new Error('Failed to fetch products');
-
+  
         const categoryData: CategoryResponse = await categoryResponse.json();
         const productData: Product[] = await productResponse.json();
-
+  
         const attributeValuesMap: { [categoryId: string]: { [key: string]: Set<string> } } = {};
         productData.forEach((product) => {
           const categoryId = product.categoryId;
@@ -125,32 +128,35 @@ const Header = ({ isCategory = true }: HeaderProps) => {
             });
           });
         });
-
+  
         const categoryList = Object.values(categoryData).map(({ category, attributes, subcategories }) => ({
           ...category,
           attributes,
           subCategories: subcategories,
           attributeValues: attributeValuesMap[category.id]
             ? Object.fromEntries(
-              Object.entries(attributeValuesMap[category.id]).map(([key, valueSet]) => [
-                key,
-                Array.from(valueSet).sort(),
-              ])
-            )
+                Object.entries(attributeValuesMap[category.id]).map(([key, valueSet]) => [
+                  key,
+                  Array.from(valueSet).sort(),
+                ])
+              )
             : {},
         }));
-
+  
         setCategories(categoryList);
-        sessionStorage.setItem(CACHE_KEY, JSON.stringify({ data: categoryList, timestamp: now }));
-        setIsLoading(false);
+        if (typeof window !== "undefined") {
+          sessionStorage.setItem(CACHE_KEY, JSON.stringify({ data: categoryList, timestamp: Date.now() }));
+        }
+        setHasFetched(true);
       } catch (error) {
         console.error('Error fetching data:', error);
-        setIsLoading(false);
+        setHasFetched(true);
       }
     };
-
+  
     fetchData();
   }, []);
+  
 
   // Handle scroll effect
   useEffect(() => {
@@ -313,8 +319,8 @@ const Header = ({ isCategory = true }: HeaderProps) => {
               </div>
 
               <div className="py-4 border-b border-gray-200">
-                {isLoading ? (
-                  <p className="text-gray-600">Loading...</p>
+                {hasFetched && categories.length === 0 ? (
+                  <p className="text-gray-600">No categories available</p>
                 ) : (
                   categories.map((category) => (
                     <div key={category.id} className="mb-4">
@@ -420,12 +426,10 @@ const Header = ({ isCategory = true }: HeaderProps) => {
                     href="/category/all"
                     className="text-sm font-medium text-gray-800 hover:text-primary transition-colors"
                   >
-                    All Categories
+                    All
                   </Link>
                 </li>
-                {isLoading ? (
-                  <li className="text-sm text-gray-600">Loading...</li>
-                ) : (
+                {hasFetched && categories.length === 0 ? null : (
                   categories.map((category) => (
                     <li
                       key={category.id}

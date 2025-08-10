@@ -1,6 +1,6 @@
 {
   "name": "360electronics",
-  "version": "0.1.0",
+  "version": "1.5.0",
   "private": true,
   "scripts": {
     "dev": "next dev --turbopack",
@@ -11,14 +11,17 @@
   "dependencies": {
     "@auth/drizzle-adapter": "^1.8.0",
     "@aws-sdk/client-s3": "^3.787.0",
+    "@cashfreepayments/cashfree-js": "^1.0.5",
     "@neondatabase/serverless": "^1.0.0",
     "@radix-ui/react-collapsible": "^1.1.11",
     "@radix-ui/react-label": "^2.1.6",
+    "@radix-ui/react-separator": "^1.1.7",
     "@tabler/icons-react": "^3.34.1",
     "@tanstack/react-query": "^5.75.7",
     "@types/js-cookie": "^3.0.6",
     "2factor": "^1.0.6",
     "axios": "^1.9.0",
+    "cashfree-pg": "^5.0.8",
     "chart.js": "^4.4.9",
     "class-variance-authority": "^0.7.1",
     "clsx": "^2.1.1",
@@ -29,6 +32,7 @@
     "drizzle-orm": "^0.43.1",
     "formidable": "^3.5.4",
     "framer-motion": "^12.23.12",
+    "fuse.js": "^7.1.0",
     "hashids": "^2.3.0",
     "html2pdf.js": "^0.10.3",
     "immer": "^10.1.1",

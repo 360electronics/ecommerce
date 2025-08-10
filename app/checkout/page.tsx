@@ -10,6 +10,8 @@ import Script from "next/script";
 import { useAuthStore } from "@/store/auth-store";
 import { useCheckoutStore } from "@/store/checkout-store";
 import { useCartStore } from "@/store/cart-store";
+// @ts-ignore
+import { load } from "@cashfreepayments/cashfree-js";
 
 interface Address {
   id: string;
@@ -36,7 +38,7 @@ const CheckoutPage: React.FC = () => {
   const [selectedAddressId, setSelectedAddressId] = useState<string | null>(null);
   const [showAddressForm, setShowAddressForm] = useState(false);
   const [deliveryMode, setDeliveryMode] = useState<"standard" | "express">("standard");
-  const [paymentMethod, setPaymentMethod] = useState<"razorpay">("razorpay");
+  const [paymentMethod, setPaymentMethod] = useState<"cashfree">("cashfree");
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isProcessingPayment, setIsProcessingPayment] = useState(false);
   const [couponCode, setCouponCode] = useState("");
@@ -234,7 +236,7 @@ const CheckoutPage: React.FC = () => {
 
     // Calculate offer products total (only one offer product allowed, quantity is always 1)
     const offerProductsTotal = checkoutItems.reduce((sum, item) => {
-      if (!item.cartOfferProductId ) return sum;
+      if (!item.cartOfferProductId) return sum;
       const offerPrice = Number(item.offerProduct.ourPrice) || 0;
       return sum + offerPrice; // Quantity is always 1 for offer products
     }, 0);
@@ -263,12 +265,12 @@ const CheckoutPage: React.FC = () => {
       subtotal > 500 && deliveryMode === "standard"
         ? 0
         : checkoutItems.reduce(
-            (sum, item) =>
-              sum +
-              (deliveryMode === "standard" ? 50 : 79) *
-              (item.cartOfferProductId ? 1 : item.quantity), // Offer product counts as 1 item
-            0
-          );
+          (sum, item) =>
+            sum +
+            (deliveryMode === "standard" ? 50 : 79) *
+            (item.cartOfferProductId ? 1 : item.quantity), // Offer product counts as 1 item
+          0
+        );
 
     const grandTotal = Math.max(0, subtotal - discountAmount) + shippingAmount;
 
@@ -287,134 +289,67 @@ const CheckoutPage: React.FC = () => {
     });
   };
 
-  // Handle Razorpay payment
-  const initiateRazorpayPayment = async (order: {
-    id: string;
-    totalAmount: number;
-    razorpayOrderId?: string;
-  }) => {
-    try {
-      const shortOrderId = order.id.slice(0, 36);
-      const receipt = `ord_${shortOrderId}`;
 
-      const response = await fetch("/api/razorpay/create-order", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          amount: Math.round(grandTotal * 100),
-          currency: "INR",
-          receipt: receipt,
-        }),
-      });
 
-      if (!response.ok) {
-        const errorData = await response.json();
-        throw new Error(errorData.error || "Failed to create Razorpay order");
-      }
+  // Handle Cashfree payment
+  async function initiateCashfreePayment({ id, totalAmount }: { id: string; totalAmount: number }) {
 
-      const { razorpayOrderId } = await response.json();
-
-      if (!process.env.NEXT_PUBLIC_RAZORPAY_KEY_ID) {
-        throw new Error("Razorpay key is not configured");
-      }
-
-      const options = {
-        key: process.env.NEXT_PUBLIC_RAZORPAY_KEY_ID,
-        amount: Math.round(grandTotal * 100),
-        currency: "INR",
-        name: "360 Electronics",
-        description: "Order Payment",
-        order_id: razorpayOrderId,
-        handler: async (response: {
-          razorpay_payment_id: string;
-          razorpay_order_id: string;
-          razorpay_signature: string;
-        }) => {
-          try {
-            setIsProcessingPayment(true);
-            const verifyResponse = await fetch("/api/razorpay/verify-payment", {
-              method: "POST",
-              headers: { "Content-Type": "application/json" },
-              body: JSON.stringify({
-                razorpay_payment_id: response.razorpay_payment_id,
-                razorpay_order_id: response.razorpay_order_id,
-                razorpay_signature: response.razorpay_signature,
-                orderId: order.id,
-                userId: user!.id,
-              }),
-            });
-
-            if (!verifyResponse.ok) {
-              throw new Error("Payment verification failed");
-            }
-
-            const updateResponse = await fetch("/api/orders/update-status", {
-              method: "POST",
-              headers: { "Content-Type": "application/json" },
-              body: JSON.stringify({
-                orderId: order.id,
-                status: "confirmed",
-                paymentStatus: "paid",
-              }),
-            });
-
-            if (!updateResponse.ok) {
-              throw new Error("Failed to update order status");
-            }
-
-            if (coupon && coupon.code && couponStatus === "applied") {
-              await markCouponUsed(coupon.code);
-            }
-
-            clearCoupon();
-            await clearCheckout(user!.id);
-            toast.success("Payment successful!");
-            router.push("/profile?tab=orders");
-          } catch (error) {
-            console.error("Payment verification error:", error);
-            toast.error("Payment verification failed");
-          } finally {
-            setIsProcessingPayment(false);
-          }
-        },
-        prefill: {
-          name: user?.firstName + " " + user?.lastName || "",
-          email: user?.email || "",
-          contact: addresses.find((addr) => addr.id === selectedAddressId)?.phoneNumber || "",
-        },
-        notes: {
-          order_id: order.id,
-        },
-        theme: {
-          color: "#2563eb",
-        },
-      };
-
-      const razorpay = new (window as any).Razorpay(options);
-      razorpay.open();
-
-      razorpay.on("payment.failed", async (response: any) => {
-        console.error("Payment failed:", response.error);
-        toast.error("Payment failed. Please try again.");
-        await fetch("/api/orders/update-payment-status", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            orderId: order.id,
-            paymentStatus: "failed",
-          }),
-        });
-        setIsProcessingPayment(false);
-      });
-
-      return razorpayOrderId;
-    } catch (error: any) {
-      console.error("Error initiating Razorpay payment:", error);
-      toast.error(error.message || "Failed to initiate payment");
-      setIsProcessingPayment(false);
-      return null;
+    const selectedAddress = addresses.find(addr => addr.id === selectedAddressId);
+    if (!selectedAddress) {
+      throw new Error("No address selected");
     }
-  };
+
+    const res = await fetch("/api/cashfree/create-order", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        orderId: `order_${id}`,
+        orderAmount: totalAmount,
+        customerName: selectedAddress.fullName,
+        customerEmail: user?.email,
+        customerPhone: selectedAddress.phoneNumber,
+      }),
+    });
+
+    const data = await res.json();
+    console.log(data)
+    if (!res.ok) return null;
+
+    // Load SDK
+    if (!(window as any).Cashfree) {
+      await new Promise((resolve) => {
+        const script = document.createElement("script");
+        script.src = "https://sdk.cashfree.com/js/ui/2.0.0/cashfree.js";
+        script.onload = resolve;
+        document.body.appendChild(script);
+      });
+    }
+
+    const cashfree = new (window as any).Cashfree({ mode: "sandbox" }); 
+    cashfree.checkout({
+      paymentSessionId: data.payment_session_id,
+      redirectTarget: '_self',
+      theme: {
+        color: {
+          primary: "#ff6b00", 
+          primaryHover: "#cd5703",
+          text: "#1F2937",
+          background: "#FFFFFF"
+        },
+        mode: "light", // or "dark"
+        branding: {
+          primaryColor: "#ff6b00",
+          backgroundColor: "#FFFFFF",
+          textColor: "#1F2937",
+          merchantName: "360 Electronics : No.1 Seller in South India",
+          merchantLogo: "https://360electronics.in/logo/logo.png", 
+        }
+      }
+    });
+
+    return data.orderId;
+  }
+
 
   // Handle order confirmation
   const handleConfirmOrder = async () => {
@@ -438,7 +373,7 @@ const CheckoutPage: React.FC = () => {
         shippingAmount,
         deliveryMode,
         paymentMethod,
-        status: paymentMethod === "razorpay" ? "pending" : "confirmed",
+        status: paymentMethod === "cashfree" ? "pending" : "confirmed",
         paymentStatus: "pending",
         orderItems: checkoutItems.map((item) => ({
           productId: item.productId,
@@ -455,30 +390,27 @@ const CheckoutPage: React.FC = () => {
         body: JSON.stringify(order),
       });
 
+      console.log(response.ok)
+
       if (!response.ok) {
         throw new Error("Failed to create order");
       }
 
       const createdOrder = await response.json();
 
-      if (paymentMethod === "razorpay") {
-        const razorpayOrderId = await initiateRazorpayPayment({
+
+      if (paymentMethod === "cashfree") {
+        const cashfreeOrderId = await initiateCashfreePayment({
           id: createdOrder.id,
           totalAmount: grandTotal,
         });
 
-        if (!razorpayOrderId) {
-          throw new Error("Failed to initiate Razorpay payment");
-        }
+        await clearCheckout(user!.id);
 
-        await fetch("/api/orders/update-razorpay-order-id", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            orderId: createdOrder.id,
-            razorpayOrderId,
-          }),
-        });
+
+        if (!cashfreeOrderId) {
+          throw new Error("Failed to initiate Cashfree payment");
+        }
       } else {
         if (coupon && coupon.code && couponStatus === "applied") {
           await markCouponUsed(coupon.code);
@@ -493,9 +425,7 @@ const CheckoutPage: React.FC = () => {
           }),
         });
         clearCoupon();
-        await clearCheckout(user!.id);
-        toast.success("Order placed successfully!");
-        router.push("/orders");
+
       }
     } catch (error) {
       console.error("Error placing order:", error);
@@ -504,6 +434,10 @@ const CheckoutPage: React.FC = () => {
       setIsSubmitting(false);
     }
   };
+
+
+
+
 
   if (isLoading) {
     return (
@@ -517,7 +451,7 @@ const CheckoutPage: React.FC = () => {
 
   return (
     <>
-      <Script src="https://checkout.razorpay.com/v1/checkout.js" strategy="lazyOnload" />
+      <Script src="https://sdk.cashfree.com/js/v3/cashfree.js" strategy="lazyOnload" />
       <CheckoutLayout>
         <div className="mx-auto px-4 sm:px-6 lg:px-8 py-8">
           <h1 className="text-3xl font-bold text-gray-900 mb-8">Checkout</h1>
@@ -526,7 +460,7 @@ const CheckoutPage: React.FC = () => {
           {isProcessingPayment && (
             <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
               <div className="bg-white rounded-lg p-6 flex flex-col items-center space-y-4">
-                <Loader2 className="animate-spin h-8 w-8 text-blue-600" />
+                <Loader2 className="animate-spin h-8 w-8 text-primary" />
                 <p className="text-lg font-medium text-gray-900">
                   Please wait, processing your order...
                 </p>
@@ -544,7 +478,7 @@ const CheckoutPage: React.FC = () => {
                     <p className="text-gray-600 mb-4">No saved addresses found.</p>
                     <button
                       onClick={() => setShowAddressForm(true)}
-                      className="inline-flex items-center gap-2 bg-blue-600 text-white px-6 py-2 rounded-md hover:bg-blue-700 transition-colors"
+                      className="inline-flex items-center gap-2 bg-primary text-white px-6 py-2 rounded-md hover:bg-primary-HOVER transition-colors"
                     >
                       <Plus size={20} /> Add New Address
                     </button>
@@ -555,11 +489,10 @@ const CheckoutPage: React.FC = () => {
                       {addresses.map((address) => (
                         <div
                           key={address.id}
-                          className={`border relative rounded-lg p-4 cursor-pointer transition-all duration-200 ${
-                            selectedAddressId === address.id
-                              ? "border-blue-600 bg-blue-50"
-                              : "border-gray-200 hover:border-blue-300"
-                          }`}
+                          className={`border relative rounded-lg p-4 cursor-pointer transition-all duration-200 ${selectedAddressId === address.id
+                              ? "border-primary bg-primary-LIGHT"
+                              : "border-gray-200 hover:border-secondary"
+                            }`}
                           onClick={() => setSelectedAddressId(address.id)}
                         >
                           <div className="flex items-start justify-between">
@@ -573,11 +506,11 @@ const CheckoutPage: React.FC = () => {
                               </p>
                               <p className="text-sm text-gray-600 capitalize">{address.addressType}</p>
                               {address.isDefault && (
-                                <p className="text-sm text-blue-600 font-medium">Default</p>
+                                <p className="text-sm text-primary font-medium">Default</p>
                               )}
                             </div>
                             {selectedAddressId === address.id && (
-                              <Check className="text-blue-600 h-5 w-5" />
+                              <Check className="text-primary h-5 w-5" />
                             )}
                           </div>
                         </div>
@@ -586,7 +519,7 @@ const CheckoutPage: React.FC = () => {
                     {!showAddressForm && (
                       <button
                         onClick={() => setShowAddressForm(true)}
-                        className="inline-flex items-center gap-2 text-blue-600 hover:text-blue-800"
+                        className="inline-flex items-center gap-2 text-primary hover:text-primary-HOVER"
                       >
                         <Plus size={20} /> Add New Address
                       </button>
@@ -607,7 +540,7 @@ const CheckoutPage: React.FC = () => {
                           type="text"
                           value={newAddress.fullName}
                           onChange={(e) => setNewAddress({ ...newAddress, fullName: e.target.value })}
-                          className="mt-1 w-full border border-gray-300 rounded-md px-4 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                          className="mt-1 w-full border border-gray-300 rounded-md px-4 py-2 focus:outline-none focus:ring-2 focus:ring-primary-LIGHT0"
                           required
                         />
                       </div>
@@ -620,7 +553,7 @@ const CheckoutPage: React.FC = () => {
                           type="tel"
                           value={newAddress.phoneNumber}
                           onChange={(e) => setNewAddress({ ...newAddress, phoneNumber: e.target.value })}
-                          className="mt-1 w-full border border-gray-300 rounded-md px-4 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                          className="mt-1 w-full border border-gray-300 rounded-md px-4 py-2 focus:outline-none focus:ring-2 focus:ring-primary-LIGHT0"
                           required
                         />
                       </div>
@@ -633,7 +566,7 @@ const CheckoutPage: React.FC = () => {
                           type="text"
                           value={newAddress.addressLine1}
                           onChange={(e) => setNewAddress({ ...newAddress, addressLine1: e.target.value })}
-                          className="mt-1 w-full border border-gray-300 rounded-md px-4 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                          className="mt-1 w-full border border-gray-300 rounded-md px-4 py-2 focus:outline-none focus:ring-2 focus:ring-primary-LIGHT0"
                           required
                         />
                       </div>
@@ -646,7 +579,7 @@ const CheckoutPage: React.FC = () => {
                           type="text"
                           value={newAddress.addressLine2}
                           onChange={(e) => setNewAddress({ ...newAddress, addressLine2: e.target.value })}
-                          className="mt-1 w-full border border-gray-300 rounded-md px-4 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                          className="mt-1 w-full border border-gray-300 rounded-md px-4 py-2 focus:outline-none focus:ring-2 focus:ring-primary-LIGHT0"
                         />
                       </div>
                       <div>
@@ -658,7 +591,7 @@ const CheckoutPage: React.FC = () => {
                           type="text"
                           value={newAddress.city}
                           onChange={(e) => setNewAddress({ ...newAddress, city: e.target.value })}
-                          className="mt-1 w-full border border-gray-300 rounded-md px-4 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                          className="mt-1 w-full border border-gray-300 rounded-md px-4 py-2 focus:outline-none focus:ring-2 focus:ring-primary-LIGHT0"
                           required
                         />
                       </div>
@@ -671,7 +604,7 @@ const CheckoutPage: React.FC = () => {
                           type="text"
                           value={newAddress.state}
                           onChange={(e) => setNewAddress({ ...newAddress, state: e.target.value })}
-                          className="mt-1 w-full border border-gray-300 rounded-md px-4 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                          className="mt-1 w-full border border-gray-300 rounded-md px-4 py-2 focus:outline-none focus:ring-2 focus:ring-primary-LIGHT0"
                           required
                         />
                       </div>
@@ -684,7 +617,7 @@ const CheckoutPage: React.FC = () => {
                           type="text"
                           value={newAddress.postalCode}
                           onChange={(e) => setNewAddress({ ...newAddress, postalCode: e.target.value })}
-                          className="mt-1 w-full border border-gray-300 rounded-md px-4 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                          className="mt-1 w-full border border-gray-300 rounded-md px-4 py-2 focus:outline-none focus:ring-2 focus:ring-primary-LIGHT0"
                           required
                         />
                       </div>
@@ -697,7 +630,7 @@ const CheckoutPage: React.FC = () => {
                           type="text"
                           value={newAddress.country}
                           onChange={(e) => setNewAddress({ ...newAddress, country: e.target.value })}
-                          className="mt-1 w-full border border-gray-300 rounded-md px-4 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                          className="mt-1 w-full border border-gray-300 rounded-md px-4 py-2 focus:outline-none focus:ring-2 focus:ring-primary-LIGHT0"
                           required
                         />
                       </div>
@@ -710,7 +643,7 @@ const CheckoutPage: React.FC = () => {
                           type="text"
                           value={newAddress.gst}
                           onChange={(e) => setNewAddress({ ...newAddress, gst: e.target.value })}
-                          className="mt-1 w-full border border-gray-300 rounded-md px-4 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                          className="mt-1 w-full border border-gray-300 rounded-md px-4 py-2 focus:outline-none focus:ring-2 focus:ring-primary-LIGHT0"
                         />
                       </div>
                       <div>
@@ -723,7 +656,7 @@ const CheckoutPage: React.FC = () => {
                           onChange={(e) =>
                             setNewAddress({ ...newAddress, addressType: e.target.value as "home" | "work" | "other" })
                           }
-                          className="mt-1 w-full border border-gray-300 rounded-md px-4 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                          className="mt-1 w-full border border-gray-300 rounded-md px-4 py-2 focus:outline-none focus:ring-2 focus:ring-primary-LIGHT0"
                         >
                           <option value="home">Home</option>
                           <option value="work">Work</option>
@@ -736,7 +669,7 @@ const CheckoutPage: React.FC = () => {
                           type="checkbox"
                           checked={newAddress.isDefault}
                           onChange={(e) => setNewAddress({ ...newAddress, isDefault: e.target.checked })}
-                          className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
+                          className="h-4 w-4 text-primary focus:ring-primary-LIGHT0 border-gray-300 rounded"
                         />
                         <label htmlFor="isDefault" className="ml-2 block text-sm text-gray-700">
                           Set as default
@@ -746,7 +679,7 @@ const CheckoutPage: React.FC = () => {
                     <div className="flex gap-4">
                       <button
                         type="submit"
-                        className="bg-blue-600 text-white px-6 py-2 rounded-md hover:bg-blue-700 transition-colors"
+                        className="bg-primary text-white px-6 py-2 rounded-md hover:bg-primary-HOVER transition-colors"
                       >
                         Save Address
                       </button>
@@ -767,11 +700,10 @@ const CheckoutPage: React.FC = () => {
                 <h2 className="text-xl font-semibold text-gray-900 mb-4">Delivery Mode</h2>
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                   <div
-                    className={`border relative rounded-lg p-4 cursor-pointer transition-all duration-200 ${
-                      deliveryMode === "standard"
-                        ? "border-blue-600 bg-blue-50"
-                        : "border-gray-200 hover:border-blue-300"
-                    }`}
+                    className={`border relative rounded-lg p-4 cursor-pointer transition-all duration-200 ${deliveryMode === "standard"
+                        ? "border-primary bg-primary-LIGHT"
+                        : "border-gray-200 hover:border-secondary"
+                      }`}
                     onClick={() => setDeliveryMode("standard")}
                   >
                     <div className="flex items-center gap-3">
@@ -787,16 +719,15 @@ const CheckoutPage: React.FC = () => {
                       </div>
                     </div>
                     {deliveryMode === "standard" && (
-                      <Check className="absolute right-4 top-4 text-blue-600 h-5 w-5" />
+                      <Check className="absolute right-4 top-4 text-primary h-5 w-5" />
                     )}
                   </div>
                   {isExpressAvailable && (
                     <div
-                      className={`border relative rounded-lg p-4 cursor-pointer transition-all duration-200 ${
-                        deliveryMode === "express"
-                          ? "border-blue-600 bg-blue-50"
-                          : "border-gray-200 hover:border-blue-300"
-                      }`}
+                      className={`border relative rounded-lg p-4 cursor-pointer transition-all duration-200 ${deliveryMode === "express"
+                          ? "border-primary bg-primary-LIGHT"
+                          : "border-gray-200 hover:border-secondary"
+                        }`}
                       onClick={() => setDeliveryMode("express")}
                     >
                       <div className="flex items-center gap-3">
@@ -810,7 +741,7 @@ const CheckoutPage: React.FC = () => {
                         </div>
                       </div>
                       {deliveryMode === "express" && (
-                        <Check className="absolute right-4 top-4 text-blue-600 h-5 w-5" />
+                        <Check className="absolute right-4 top-4 text-primary h-5 w-5" />
                       )}
                     </div>
                   )}
@@ -822,22 +753,21 @@ const CheckoutPage: React.FC = () => {
                 <h2 className="text-xl font-semibold text-gray-900 mb-4">Payment Method</h2>
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                   <div
-                    className={`border relative rounded-lg p-4 cursor-pointer transition-all duration-200 ${
-                      paymentMethod === "razorpay"
-                        ? "border-blue-600 bg-blue-50"
-                        : "border-gray-200 hover:border-blue-300"
-                    }`}
-                    onClick={() => setPaymentMethod("razorpay")}
+                    className={`border relative rounded-lg p-4 cursor-pointer transition-all duration-200 ${paymentMethod === "cashfree"
+                        ? "border-primary bg-primary-LIGHT"
+                        : "border-gray-200 hover:border-secondary"
+                      }`}
+                    onClick={() => setPaymentMethod("cashfree")}
                   >
                     <div className="flex items-center gap-3">
                       <CreditCard className="h-6 w-6 text-gray-600" />
                       <div>
-                        <p className="text-gray-900 font-medium">Pay with Razorpay</p>
+                        <p className="text-gray-900 font-medium">Pay with Cashfree</p>
                         <p className="text-sm text-gray-500">Secure online payment with UPI/Card</p>
                       </div>
                     </div>
-                    {paymentMethod === "razorpay" && (
-                      <Check className="absolute right-4 top-4 text-blue-600 h-5 w-5" />
+                    {paymentMethod === "cashfree" && (
+                      <Check className="absolute right-4 top-4 text-primary h-5 w-5" />
                     )}
                   </div>
                 </div>
@@ -900,7 +830,7 @@ const CheckoutPage: React.FC = () => {
                           value={couponCode}
                           onChange={(e) => setCouponCode(e.target.value)}
                           placeholder="Enter coupon code"
-                          className="flex-1 border border-gray-300 rounded-md px-4 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                          className="flex-1 border border-gray-300 rounded-md px-4 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary-LIGHT0"
                           disabled={couponStatus === "applied"}
                         />
                         {coupon && couponStatus === "applied" ? (
@@ -913,7 +843,7 @@ const CheckoutPage: React.FC = () => {
                         ) : (
                           <button
                             onClick={handleApplyCoupon}
-                            className="bg-blue-600 text-white px-4 py-2 rounded-md hover:bg-blue-700 transition-colors text-sm font-medium"
+                            className="bg-primary text-white px-4 py-2 rounded-md hover:bg-primary-HOVER transition-colors text-sm font-medium"
                           >
                             Apply
                           </button>
@@ -995,7 +925,7 @@ const CheckoutPage: React.FC = () => {
                   <div className="mt-6 space-y-3">
                     <button
                       onClick={handleConfirmOrder}
-                      className="w-full bg-blue-600 text-white py-3 rounded-md hover:bg-blue-700 transition-colors disabled:opacity-50 flex items-center justify-center"
+                      className="w-full bg-primary text-white py-3 rounded-md hover:bg-primary-HOVER transition-colors disabled:opacity-50 flex items-center justify-center"
                       disabled={isSubmitting || isProcessingPayment || !selectedAddressId || checkoutItems.length === 0}
                     >
                       {isSubmitting ? (

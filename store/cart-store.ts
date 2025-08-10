@@ -5,11 +5,10 @@ import { produce } from 'immer';
 import { fetchWithRetry, logError, debounce, AppError } from './store-utils';
 import { useAuthStore } from './auth-store';
 import { ProductImage, ProductVariant } from '@/types/product';
-import { useRouter } from 'next/navigation';
 
 const generateTempId = () => `temp-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
 
-interface CartItem {
+export interface CartItem {
   offerProduct?: {
     id: string;
     productName: string;
@@ -76,6 +75,7 @@ interface CartState {
   lastFetched: number | null;
   loading: boolean;
   reset: () => void;
+  initializeCart: (items: CartItem[]) => void; // New action
   fetchCart: () => Promise<void>;
   addToCart: (
     productId: string,
@@ -110,16 +110,31 @@ export const useCartStore = create<CartState>((set, get) => ({
 
   reset: () => set({ cartItems: [], coupon: null, couponStatus: 'none', error: null, lastFetched: null, loading: false }),
 
+  initializeCart: (items: CartItem[]) => {
+    set({
+      cartItems: items.map((item) => ({
+        ...item,
+        quantity: sanitizeQuantity(item.quantity),
+        variant: {
+          ...item.variant,
+          ourPrice: item.variant.ourPrice ?? '0',
+          mrp: item.variant.mrp ?? item.variant.ourPrice ?? '0',
+        },
+        offerProductPrice: item.cartOfferProductId ? item.offerProductPrice ?? '0' : undefined,
+        offerProduct: item.cartOfferProductId ? item.offerProduct : undefined,
+      })),
+      lastFetched: Date.now(),
+      error: null,
+      loading: false,
+    });
+  },
+
   fetchCart: async () => {
     const { user, isLoggedIn } = useAuthStore.getState();
     if (!isLoggedIn || !user?.id) {
       set({ cartItems: [], lastFetched: Date.now(), loading: false });
       return;
     }
-
-    const cacheDuration = 10 * 60 * 1000;
-    const lastFetched = get().lastFetched;
-    if (lastFetched && Date.now() - lastFetched < cacheDuration && !get().loading) return;
 
     try {
       set({ loading: true });
@@ -160,7 +175,6 @@ export const useCartStore = create<CartState>((set, get) => ({
       logError('addToCart', new Error('Cart operation in progress'));
       throw new Error('Cart operation in progress');
     }
-    
 
     const sanitizedQuantity = sanitizeQuantity(quantity);
     const tempId = generateTempId();

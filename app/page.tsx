@@ -1,6 +1,9 @@
-
+// app/page.tsx
 import UserLayout from '@/components/Layouts/UserLayout';
 import HomeContent from '@/components/Home/HomeContent';
+import { fetchWithRetry } from '@/store/store-utils';
+import { Banner } from '@/types/banner';
+import { Product } from '@/store/types';
 
 // Metadata for SEO
 export const metadata = {
@@ -14,11 +17,51 @@ export const metadata = {
   },
 };
 
+async function fetchHomeData() {
+  try {
+    const [bannerResponse, featuredProducts, newArrivals, gamersZoneProducts, brandProducts] = await Promise.all([
+      fetchWithRetry<{ data: Banner[] }>(() => fetch(`${process.env.NEXT_PUBLIC_API_BASE_URL}/api/banner`)).then((res) => res?.data || []),
+      fetchWithRetry<Product[]>(() => fetch(`${process.env.NEXT_PUBLIC_API_BASE_URL}/api/products/offer-zone`)).then((res) => res || []),
+      fetchWithRetry<Product[]>(() => fetch(`${process.env.NEXT_PUBLIC_API_BASE_URL}/api/products/new-arrivals`)).then((res) => res || []),
+      fetchWithRetry<{
+        consoles: Product[];
+        accessories: Product[];
+        laptops: Product[];
+        'steering-chairs': Product[];
+      }>(() => fetch(`${process.env.NEXT_PUBLIC_API_BASE_URL}/api/products/gamers-zone`)).then((res) => ({
+        consoles: res?.consoles || [],
+        accessories: res?.accessories || [],
+        laptops: res?.laptops || [],
+        'steering-chairs': res?.['steering-chairs'] || [],
+      })),
+      fetchWithRetry<Product[]>(() => fetch(`${process.env.NEXT_PUBLIC_API_BASE_URL}/api/products`)).then((res) => res || []),
+    ]);
 
-export default function Home() {
+    return {
+      banners: bannerResponse,
+      featuredProducts,
+      newArrivals,
+      gamersZoneProducts,
+      brandProducts,
+    };
+  } catch (error) {
+    console.error('[fetchHomeData] Error fetching data:', error);
+    return {
+      banners: [],
+      featuredProducts: [],
+      newArrivals: [],
+      gamersZoneProducts: { consoles: [], accessories: [], laptops: [], 'steering-chairs': [] },
+      brandProducts: [],
+    };
+  }
+}
+
+export default async function Home() {
+  const initialData = await fetchHomeData();
+
   return (
     <UserLayout>
-      <HomeContent />
+      <HomeContent initialData={initialData} />
     </UserLayout>
   );
 }

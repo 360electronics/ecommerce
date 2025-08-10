@@ -1,3 +1,4 @@
+// components/Home/HomeContent.tsx
 'use client';
 
 import { useEffect } from 'react';
@@ -9,15 +10,37 @@ import HeroBanner from '@/components/Home/Hero/HeroBanner';
 import NewArrivals from '@/components/Home/NewArrivals/NewArrivals';
 import { useHomeStore } from '@/store/home-store';
 
-export default function HomeContent() {
-  const { fetchHomeData, isLoading, error, banners, featuredProducts, newArrivals, gamersZoneProducts, brandProducts } = useHomeStore();
+interface HomeState {
+  banners: any[];
+  featuredProducts: any[];
+  newArrivals: any[];
+  gamersZoneProducts: {
+    consoles: any[];
+    accessories: any[];
+    laptops: any[];
+    'steering-chairs': any[];
+  };
+  brandProducts: any[];
+}
+
+export default function HomeContent({ initialData }: { initialData: HomeState }) {
+  const { fetchHomeData, setInitialData, isLoading, error, banners, featuredProducts, newArrivals, gamersZoneProducts, brandProducts } = useHomeStore();
 
   useEffect(() => {
-    // Fetch data on initial component mount only
-    fetchHomeData();
-  }, [fetchHomeData]);
+    // Initialize store with server-fetched data
+    setInitialData(initialData);
+    // Only fetch if no data is available or cache is stale
+    if (
+      !initialData.banners.length &&
+      !initialData.featuredProducts.length &&
+      !initialData.newArrivals.length &&
+      !Object.values(initialData.gamersZoneProducts).some(arr => arr.length) &&
+      !initialData.brandProducts.length
+    ) {
+      fetchHomeData();
+    }
+  }, [fetchHomeData, setInitialData, initialData]);
 
-  // Check if we have any data to display
   const hasData = banners.length > 0 ||
     featuredProducts.length > 0 ||
     newArrivals.length > 0 ||
@@ -26,16 +49,12 @@ export default function HomeContent() {
 
   return (
     <>
-
-      <>
-        <HeroBanner />
-        <FeaturedProducts />
-        <OfferZoneCTA />
-        <NewArrivals />
-        <GamersZone />
-        <TopTierBrands />
-      </>
-
+      <HeroBanner />
+      <FeaturedProducts />
+      <OfferZoneCTA />
+      <NewArrivals />
+      <GamersZone />
+      <TopTierBrands />
     </>
   );
 }

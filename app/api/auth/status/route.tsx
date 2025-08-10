@@ -41,8 +41,8 @@ export async function GET(request: Request) {
 
     if (!token) {
       return NextResponse.json<AuthStatusResponse>(
-        { isAuthenticated: false, user: null, error: "No token provided" },
-        { status: 401 }
+        { isAuthenticated: false, user: null },
+        { status: 200 } // OK, just not logged in
       );
     }
 
@@ -54,6 +54,16 @@ export async function GET(request: Request) {
         { status: 401 }
       );
     }
+
+
+    
+    if (!payload) {
+      return NextResponse.json<AuthStatusResponse>(
+        { isAuthenticated: false, user: null },
+        { status: 200 } // OK, just not logged in
+      );
+    }
+    
 
     // Query auth_tokens table for token
     const tokenRecord = await db

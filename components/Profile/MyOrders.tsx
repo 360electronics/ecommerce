@@ -90,18 +90,7 @@ export default function Orders() {
         <span className="text-2xl text-gray-500 nohemi-bold">({orders.length})</span>
       </div>
 
-      {errors.orders && (
-        <div className="bg-red-50 border border-red-200 rounded-md p-4 mb-6">
-          <div className="flex">
-            <AlertCircle className="h-5 w-5 text-red-400" />
-            <div className="ml-3">
-              <h3 className="text-sm font-medium text-red-800">Error</h3>
-              <p className="text-sm text-red-700 mt-1">{errors.orders?.message || String(errors.orders)}</p>
-            </div>
-          </div>
-        </div>
-      )}
-
+     
       {orders.length > 0 ? (
         <div className="mt-6 space-y-6">
           {orders.map((order) => (

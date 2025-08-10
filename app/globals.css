@@ -10,7 +10,7 @@
   --primary-light: #fdf5f0;
 
   /* Complementary Colors */
-  --secondary: oklch(0.97 0 0);
+  --secondary: #ff9c55;
   --accent: oklch(0.97 0 0);
   --offer: #ff0606;
 

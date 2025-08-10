@@ -1,14 +1,20 @@
 "use client"
 
-import { useState, useEffect } from "react"
+import type React from "react"
+
+import { useEffect, useMemo, useState } from "react"
 import { useRouter, useParams } from "next/navigation"
 import Link from "next/link"
 import jsPDF from "jspdf"
 import autoTable from "jspdf-autotable"
-import ProfileLayout from "@/components/Layouts/ProfileLayout"
+import { ArrowLeft, Download, PackageCheck, Truck, CheckCircle2, BadgeCheck, CreditCard, Receipt } from "lucide-react"
 
-// Define Order type
-interface Order {
+import ProfileLayout from "@/components/Layouts/ProfileLayout"
+import { Button } from "@/components/ui/button"
+import { Badge } from "@/components/ui/badge"
+import { Separator } from "@/components/ui/separator"
+
+type Order = {
   id: string
   customer: string
   email: string
@@ -55,44 +61,27 @@ export default function OrderDetailsPage() {
   const router = useRouter()
   const params = useParams()
   const orderId = params.id as string
+
   const [order, setOrder] = useState<Order | null>(null)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
+  const [generatingPDF, setGeneratingPDF] = useState(false)
 
-  // Status steps for tracking
   const statusSteps = [
-    { 
-      id: "confirmed", 
-      label: "Order Confirmed",
-      icon: "M9 12l2 2 4-4",
-      description: "We've received your order"
-    },
-    { 
-      id: "shipped", 
-      label: "Shipped",
-      icon: "M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z",
-      description: "Your order is on the way"
-    },
-    { 
-      id: "delivered", 
-      label: "Delivered",
-      icon: "M5 13l4 4L19 7",
-      description: "Order delivered successfully"
-    },
-  ]
+    { id: "confirmed", label: "Order Confirmed", icon: PackageCheck, description: "We've received your order" },
+    { id: "shipped", label: "Shipped", icon: Truck, description: "Your order is on the way" },
+    { id: "delivered", label: "Delivered", icon: CheckCircle2, description: "Delivered successfully" },
+  ] as const
 
-  // Fetch order details
   useEffect(() => {
     const fetchOrder = async () => {
       try {
         setLoading(true)
         const response = await fetch(`/api/orders/${orderId}`)
         const result = await response.json()
-
         if (!result.success || !result.data || result.data.length === 0) {
           throw new Error(result.message || "Order not found")
         }
-
         const apiOrder = result.data[0]
         const transformedOrder: Order = {
           id: apiOrder.orders.id,
@@ -101,9 +90,9 @@ export default function OrderDetailsPage() {
           date: new Date(apiOrder.orders.createdAt).toISOString().split("T")[0],
           status: apiOrder.orders.status,
           payment: apiOrder.orders.paymentStatus,
-          total: parseFloat(apiOrder.orders.totalAmount),
+          total: Number.parseFloat(apiOrder.orders.totalAmount),
           items: Array.isArray(apiOrder.orderItems) ? apiOrder.orderItems.length : apiOrder.orderItems ? 1 : 0,
-          discountAmount: parseFloat(apiOrder.orders.discountAmount) || 0,
+          discountAmount: Number.parseFloat(apiOrder.orders.discountAmount) || 0,
           shippingMethod: apiOrder.orders.deliveryMode.charAt(0).toUpperCase() + apiOrder.orders.deliveryMode.slice(1),
           address: {
             fullName: apiOrder.savedAddresses.fullName,
@@ -130,32 +119,31 @@ export default function OrderDetailsPage() {
                 },
               }))
             : apiOrder.orderItems
-            ? [
-                {
-                  id: apiOrder.orderItems.id,
-                  productId: apiOrder.orderItems.productId,
-                  variantId: apiOrder.orderItems.variantId,
-                  quantity: apiOrder.orderItems.quantity,
-                  unitPrice: apiOrder.orderItems.unitPrice,
-                  variant: {
-                    name: apiOrder.variants.name,
-                    sku: apiOrder.variants.sku,
-                    productImages: apiOrder.variants.productImages,
+              ? [
+                  {
+                    id: apiOrder.orderItems.id,
+                    productId: apiOrder.orderItems.productId,
+                    variantId: apiOrder.orderItems.variantId,
+                    quantity: apiOrder.orderItems.quantity,
+                    unitPrice: apiOrder.orderItems.unitPrice,
+                    variant: {
+                      name: apiOrder.variants.name,
+                      sku: apiOrder.variants.sku,
+                      productImages: apiOrder.variants.productImages,
+                    },
                   },
-                },
-              ]
-            : [],
+                ]
+              : [],
           coupon: apiOrder.orders.couponId
             ? {
                 code: apiOrder.orders.couponCode || "Unknown",
                 type: apiOrder.orders.discountAmount !== "0.00" ? "amount" : "percentage",
-                value: parseFloat(apiOrder.orders.discountAmount) || 5,
+                value: Number.parseFloat(apiOrder.orders.discountAmount) || 5,
                 couponId: apiOrder.orders.couponId,
                 couponType: apiOrder.orders.couponCode === "RED360" ? "special" : "individual",
               }
             : null,
         }
-
         setOrder(transformedOrder)
         setError(null)
       } catch (err) {
@@ -165,183 +153,159 @@ export default function OrderDetailsPage() {
         setLoading(false)
       }
     }
-
-    if (orderId) {
-      fetchOrder()
-    }
+    if (orderId) fetchOrder()
   }, [orderId])
 
-  // Handle PDF generation with jsPDF and jspdf-autotable
-  const handleGeneratePDF = () => {
-    if (!order) return
+  const subtotal = useMemo(() => {
+    if (!order) return 0
+    const itemsTotal = order.itemsDetails.reduce((sum, i) => sum + Number.parseFloat(i.unitPrice) * i.quantity, 0)
+    return Math.max(itemsTotal, 0)
+  }, [order])
 
-    const doc = new jsPDF({
-      orientation: "portrait",
-      unit: "mm",
-      format: "a4",
-    })
-
-    
-
-    // Fonts & Setup
-    const leftMargin = 20
-    const rightMargin = 190
-    const pageHeight = 297 // A4 height in mm
-    const bottomMargin = 20 // Margin from bottom for footer
-
-    doc.setFont("helvetica", "normal")
-
-    // Logo (replace with your actual SVG logo URL or inline SVG string)
-    const logoSvgUrl = "https://raw.githubusercontent.com/mrdoob/three.js/master/examples/textures/svg/logo.svg" // Placeholder SVG URL
-    doc.addSvgAsImage(logoSvgUrl, leftMargin, 10, 50, 15) // SVG logo at top-left, 50mm wide, 15mm tall
-
-    // Header
-    doc.setFontSize(18)
-    doc.text("INVOICE", leftMargin, 35)
-    doc.setFontSize(10)
-    doc.text("360 Electronics Pvt Ltd.", rightMargin, 20, { align: "right" })
-    doc.text("Coimbatore, Tamil Nadu - 641107", rightMargin, 26, { align: "right" })
-    doc.text("360electronicspvtltd@gmail.com", rightMargin, 32, { align: "right" })
-
-    // Order Info
-    doc.setFontSize(12)
-    doc.text(`Order ID: ${order.id}`, leftMargin, 45)
-    doc.text(`Date: ${order.date}`, leftMargin, 51)
-
-    // Line separator
-    doc.setLineWidth(0.5)
-    doc.line(leftMargin, 57, rightMargin, 57)
-
-    // Bill To
-    doc.setFontSize(12)
-    doc.text("BILL TO", leftMargin, 65)
-    doc.setFontSize(10)
-    const addressYStart = 71
-    doc.text(order.address.fullName, leftMargin, addressYStart)
-    doc.text(
-      `${order.address.addressLine1}${order.address.addressLine2 ? `, ${order.address.addressLine2}` : ""}`,
-      leftMargin,
-      addressYStart + 6
-    )
-    doc.text(
-      `${order.address.city}, ${order.address.state} ${order.address.postalCode}`,
-      leftMargin,
-      addressYStart + 12
-    )
-    doc.text(order.address.country, leftMargin, addressYStart + 18)
-    doc.text(`Phone: ${order.address.phoneNumber}`, leftMargin, addressYStart + 24)
-    doc.text(`Email: ${order.email || "N/A"}`, leftMargin, addressYStart + 30)
-
-    // Order Summary
-    doc.setFontSize(12)
-    doc.text("ORDER SUMMARY", rightMargin, 65, { align: "right" })
-    doc.setFontSize(10)
-    const summaryY = 71
-    doc.text(`Status: ${capitalize(order.status)}`, rightMargin, summaryY, { align: "right" })
-    doc.text(`Payment: ${capitalize(order.payment)}`, rightMargin, summaryY + 6, { align: "right" })
-    doc.text(`Shipping: ${order.shippingMethod}`, rightMargin, summaryY + 12, { align: "right" })
-    if (order.coupon) {
-      const discountText =
-        order.coupon.type === "percentage"
-          ? `${order.coupon.value}%`
-          : `₹${order.coupon.value}`
-      doc.text(`Coupon: ${order.coupon.code} (${discountText})`, rightMargin, summaryY + 18, {
-        align: "right",
-      })
-    }
-
-    // Items Table
-    const tableHeaders = ["Product", "SKU", "Qty", "Unit Price", "Total"]
-    const tableData = order.itemsDetails.map((item) => [
-      item.variant.name,
-      item.variant.sku,
-      item.quantity.toString(),
-      formatINR(item.unitPrice),
-      formatINR(parseFloat(item.unitPrice) * item.quantity),
-    ])
-
-    autoTable(doc, {
-      startY: 110,
-      head: [tableHeaders],
-      body: tableData,
-      styles: {
-        fontSize: 10,
-        cellPadding: 4,
-        textColor: 20,
-        overflow: "linebreak",
-      },
-      headStyles: {
-        fillColor: [100, 100, 100],
-        textColor: [255, 255, 255],
-        fontStyle: "bold",
-        halign: "center",
-      },
-      alternateRowStyles: {
-        fillColor: [245, 245, 245],
-      },
-      columnStyles: {
-        0: { cellWidth: 70, halign: "left" },
-        1: { cellWidth: 30, halign: "center" },
-        2: { cellWidth: 20, halign: "center" },
-        3: { cellWidth: 30, halign: "right" },
-        4: { cellWidth: 30, halign: "right" },
-      },
-      margin: { left: leftMargin, right: leftMargin },
-    })
-
-    // Totals
-    const finalY = (doc as any).lastAutoTable.finalY || 110
-    doc.setFontSize(11)
-    let y = finalY + 10
-
-    if (order.discountAmount) {
-      doc.text("Discount:", 150, y, { align: "right" })
-      doc.text(`- ${formatINR(order.discountAmount)}`, rightMargin, y, { align: "right" })
-      y += 6
-    }
-
-    doc.setFontSize(12)
-    doc.setFont("helvetica", "bold")
-    doc.text("Total:", 150, y, { align: "right" })
-    doc.text(formatINR(order.total), rightMargin, y, { align: "right" })
-
-    // Footer
-    doc.setFont("helvetica", "normal")
-    doc.setFontSize(10)
-    const footerText = "Thank you for shopping with 360 Electronics!"
-    const textWidth = doc.getTextWidth(footerText)
-    const pageWidth = 210
-    const footerX = (pageWidth - textWidth) / 2
-    doc.text(footerText, footerX, pageHeight - bottomMargin)
-
-    // Save
-    doc.save(`Invoice_${order.id}.pdf`)
-  }
-
-  // Helper functions
   const formatINR = (amount: number | string) =>
     new Intl.NumberFormat("en-IN", {
       style: "currency",
       currency: "INR",
       maximumFractionDigits: 0,
-    }).format(typeof amount === "string" ? parseFloat(amount) : amount)
+    }).format(typeof amount === "string" ? Number.parseFloat(amount) : amount)
 
-  const capitalize = (str: string) => str.charAt(0).toUpperCase() + str.slice(1)
+  const capitalize = (str: string) => (str ? str.charAt(0).toUpperCase() + str.slice(1) : str)
 
-  // Handle loading and error states
+  const handleGeneratePDF = () => {
+    if (!order) return
+    setGeneratingPDF(true)
+    try {
+      const doc = new jsPDF({ orientation: "portrait", unit: "mm", format: "a4" })
+
+      const left = 20
+      const right = 190
+      const pageHeight = 297
+      const bottom = 20
+
+      doc.setFont("helvetica", "bold")
+      doc.setFontSize(18)
+      doc.text("INVOICE", left, 20)
+      doc.setFont("helvetica", "normal")
+      doc.setFontSize(10)
+      doc.text("360 Electronics Pvt Ltd.", right, 14, { align: "right" })
+      doc.text("Coimbatore, Tamil Nadu - 641107", right, 19, { align: "right" })
+      doc.text("360electronicspvtltd@gmail.com", right, 24, { align: "right" })
+
+      // Order info
+      doc.setFontSize(12)
+      doc.text(`Order ID: ${order.id}`, left, 32)
+      doc.text(`Date: ${order.date}`, left, 38)
+
+      // Bill To
+      doc.setFontSize(12)
+      doc.text("BILL TO", left, 50)
+      doc.setFontSize(10)
+      const yStart = 56
+      doc.text(order.address.fullName, left, yStart)
+      doc.text(
+        `${order.address.addressLine1}${order.address.addressLine2 ? `, ${order.address.addressLine2}` : ""}`,
+        left,
+        yStart + 5,
+      )
+      doc.text(`${order.address.city}, ${order.address.state} ${order.address.postalCode}`, left, yStart + 10)
+      doc.text(order.address.country, left, yStart + 15)
+      doc.text(`Phone: ${order.address.phoneNumber}`, left, yStart + 20)
+      doc.text(`Email: ${order.email || "N/A"}`, left, yStart + 25)
+
+      // Summary (right)
+      doc.setFontSize(12)
+      doc.text("ORDER SUMMARY", right, 50, { align: "right" })
+      doc.setFontSize(10)
+      const sy = 56
+      doc.text(`Status: ${capitalize(order.status)}`, right, sy, { align: "right" })
+      doc.text(`Payment: ${capitalize(order.payment)}`, right, sy + 5, { align: "right" })
+      doc.text(`Shipping: ${order.shippingMethod}`, right, sy + 10, { align: "right" })
+      if (order.coupon) {
+        const discountText =
+          order.coupon.type === "percentage" ? `${order.coupon.value}%` : formatINR(order.coupon.value)
+        doc.text(`Coupon: ${order.coupon.code} (${discountText})`, right, sy + 15, { align: "right" })
+      }
+
+      // Items table
+      const tableHeaders = ["Product", "SKU", "Qty", "Unit Price", "Total"]
+      const tableData = order.itemsDetails.map((item) => [
+        item.variant.name,
+        item.variant.sku,
+        item.quantity.toString(),
+        formatINR(item.unitPrice),
+        formatINR(Number.parseFloat(item.unitPrice) * item.quantity),
+      ])
+
+      autoTable(doc, {
+        startY: 85,
+        head: [tableHeaders],
+        body: tableData,
+        styles: { fontSize: 10, cellPadding: 4, textColor: 20, overflow: "linebreak" },
+        headStyles: { fillColor: [33, 37, 41], textColor: [255, 255, 255], fontStyle: "bold", halign: "center" },
+        alternateRowStyles: { fillColor: [245, 245, 245] },
+        columnStyles: {
+          0: { cellWidth: 70, halign: "left" },
+          1: { cellWidth: 30, halign: "center" },
+          2: { cellWidth: 20, halign: "center" },
+          3: { cellWidth: 30, halign: "right" },
+          4: { cellWidth: 30, halign: "right" },
+        },
+        margin: { left: left, right: left },
+      })
+
+      const finalY = (doc as any).lastAutoTable.finalY || 110
+      let y = finalY + 10
+      doc.setFontSize(11)
+      if (order.discountAmount) {
+        doc.text("Discount:", 150, y, { align: "right" })
+        doc.text(`- ${formatINR(order.discountAmount)}`, right, y, { align: "right" })
+        y += 6
+      }
+      doc.setFontSize(12)
+      doc.setFont("helvetica", "bold")
+      doc.text("Total:", 150, y, { align: "right" })
+      doc.text(formatINR(order.total), right, y, { align: "right" })
+
+      // Footer
+      doc.setFont("helvetica", "normal")
+      doc.setFontSize(10)
+      const footerText = "Thank you for shopping with 360 Electronics!"
+      const textWidth = doc.getTextWidth(footerText)
+      const pageWidth = 210
+      const footerX = (pageWidth - textWidth) / 2
+      doc.text(footerText, footerX, pageHeight - bottom)
+
+      doc.save(`Invoice_${order.id}.pdf`)
+    } finally {
+      setGeneratingPDF(false)
+    }
+  }
+
+  // Loading UI (full width, modern retail style)
   if (loading) {
     return (
       <ProfileLayout>
-        <div className="flex justify-center items-center min-h-screen ">
-          <div className="text-center">
-            <div className="relative">
-              <div className="w-20 h-20 border-4 border-blue-200 border-t-blue-600 rounded-full animate-spin mx-auto mb-4"></div>
-              <div className="absolute inset-0 w-20 h-20 border-4 border-transparent border-r-blue-400 rounded-full animate-spin mx-auto" style={{ animationDirection: 'reverse', animationDuration: '1.5s' }}></div>
+        <main className="min-h-[100dvh]">
+          <div className="mx-auto max-w-6xl px-4 py-10">
+            <div className="flex items-center gap-3 mb-6">
+              <Button variant="ghost" onClick={() => router.back()} className="gap-2 px-2">
+                <ArrowLeft className="h-4 w-4" />
+                Back
+              </Button>
+              <div className="h-4 w-24 bg-muted rounded animate-pulse" />
             </div>
-            <p className="text-lg font-semibold text-gray-700 mb-2">Loading order details...</p>
-            <p className="text-sm text-gray-500">Please wait while we fetch your order information</p>
+
+            <div className="space-y-6">
+              <div className="h-20 w-full bg-muted/50 rounded-xl animate-pulse" />
+              <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+                <div className="h-48 bg-muted/50 rounded-xl animate-pulse lg:col-span-2" />
+                <div className="h-48 bg-muted/50 rounded-xl animate-pulse" />
+              </div>
+              <div className="h-12 w-40 bg-muted/50 rounded-lg animate-pulse" />
+              <div className="h-80 w-full bg-muted/50 rounded-xl animate-pulse" />
+            </div>
           </div>
-        </div>
+        </main>
       </ProfileLayout>
     )
   }
@@ -349,335 +313,343 @@ export default function OrderDetailsPage() {
   if (error || !order) {
     return (
       <ProfileLayout>
-        <div className="flex justify-center items-center min-h-screen ">
-          <div className="text-center p-8 bg-white rounded-3xl  border border-red-100 max-w-md">
-            <div className="w-16 h-16 bg-red-100 rounded-full flex items-center justify-center mx-auto mb-4">
-              <svg className="w-8 h-8 text-red-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4c-.77-.833-1.732-.833-2.5 0L4.268 16.5c-.77.833.192 2.5 1.732 2.5z" />
-              </svg>
+        <main className="min-h-[100dvh]">
+          <div className="mx-auto max-w-3xl px-4 py-16 text-center">
+            <div className="mx-auto w-16 h-16 rounded-full bg-rose-100 text-rose-700 flex items-center justify-center">
+              <BadgeCheck className="h-8 w-8 rotate-45" />
             </div>
-            <h3 className="text-xl font-bold text-gray-900 mb-2">Order Not Found</h3>
-            <p className="text-gray-600 mb-6">{error || "The order you're looking for doesn't exist or has been removed."}</p>
-            <Link
-              href="/profile/orders"
-              className="inline-flex items-center px-6 py-3 bg-gradient-to-r from-blue-600 to-blue-700 text-white font-medium rounded-xl hover:from-blue-700 hover:to-blue-800 transform hover:scale-105 transition-all duration-200 -lg hover:"
-            >
-              <svg className="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M15 19l-7-7 7-7" />
-              </svg>
-              Back to Orders
-            </Link>
+            <h1 className="mt-4 text-2xl font-semibold">Order not found</h1>
+            <p className="mt-2 text-muted-foreground">{error || "The order you’re looking for doesn’t exist."}</p>
+            <div className="mt-6">
+              <Link href="/profile/orders">
+                <Button className="gap-2" variant="default">
+                  <ArrowLeft className="h-4 w-4" />
+                  Back to orders
+                </Button>
+              </Link>
+            </div>
           </div>
-        </div>
+        </main>
       </ProfileLayout>
     )
   }
 
+  const currentIndex = statusSteps.findIndex((s) => s.id === order.status)
+  const progressPct = ((currentIndex + 1) / statusSteps.length) * 100
+
   return (
     <ProfileLayout>
-      <div className="min-h-screen ">
-        <div className=" mx-auto  sm:px-6 lg:px-8 py-8">
-          {/* Enhanced Page Header */}
-          <div className="relative overflow-hidden bg-gradient-to-r from-blue-600 via-blue-700 to-indigo-700 rounded-3xl  mb-8">
-            <div className="absolute inset-0 bg-black/10"></div>
-            <div className="absolute top-0 right-0 w-64 h-64 bg-white/5 rounded-full -translate-y-32 translate-x-32"></div>
-            <div className="absolute bottom-0 left-0 w-48 h-48 bg-white/5 rounded-full translate-y-24 -translate-x-24"></div>
-            <div className="relative px-8 py-12">
-              <div className="flex flex-col lg:flex-row justify-between items-start lg:items-center">
-                <div className="mb-6 lg:mb-0">
-                  <div className="flex items-center space-x-3 mb-2">
-                    <div className="w-3 h-3 bg-green-400 rounded-full animate-pulse"></div>
-                    <span className="text-blue-100 text-sm font-medium uppercase tracking-wider">Order Details</span>
-                  </div>
-                  <h1 className="text-xl lg:text-5xl font-bold text-white mb-2">
-                    Order #{order.id}
-                  </h1>
-                  <p className="text-blue-100 text-lg">
-                    Placed on {new Date(order.date).toLocaleDateString('en-US', { 
-                      weekday: 'long', 
-                      year: 'numeric', 
-                      month: 'long', 
-                      day: 'numeric' 
-                    })}
-                  </p>
-                </div>
-                <div className="flex flex-col sm:flex-row gap-3">
-                  <Link
-                    href="/profile/orders"
-                    className="inline-flex items-center px-3 py-2  bg-white/10 backdrop-blur-sm text-white font-medium rounded-xl hover:bg-white/20 text-sm transition-all duration-300 border border-white/20"
-                  >
-                    <svg className="w-10 h-10 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M15 19l-7-7 7-7" />
-                    </svg>
-                    Back to Orders
-                  </Link>
-                  <button
-                    onClick={handleGeneratePDF}
-                    className="inline-flex items-center text-sm px-3 py-2 bg-white text-blue-700 font-medium rounded-xl hover:bg-blue-50 transition-all duration-300 -lg hover: transform hover:-translate-y-0.5"
-                  >
-                    <svg className="w-10 h-10 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
-                    </svg>
-                    Download Invoice
-                  </button>
-                </div>
-              </div>
+      <main className="min-h-[100dvh] bg-muted/30">
+        <div className="mx-auto max-w-6xl px-4 py-8 md:py-12">
+          {/* Breadcrumb + header actions */}
+          <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4 mb-6">
+            <div className="flex items-center gap-2 text-sm text-muted-foreground">
+              <Button variant="ghost" onClick={() => router.back()} className="gap-2 px-2">
+                <ArrowLeft className="h-4 w-4" />
+                Back
+              </Button>
+              <span>/</span>
+              <Link href="/profile/orders" className="hover:underline">
+                Orders
+              </Link>
+              <span>/</span>
+              <span className="text-foreground font-medium">#{order.id}</span>
+            </div>
+
+            <div className="flex flex-wrap items-center gap-3">
+              <Badge variant="secondary" className="gap-2">
+                <CreditCard className="h-3.5 w-3.5" />
+                Payment: {capitalize(order.payment)}
+              </Badge>
+              <Button onClick={handleGeneratePDF} disabled={generatingPDF} className="gap-2">
+                <Download className="h-4 w-4" />
+                {generatingPDF ? "Preparing..." : "Download invoice"}
+              </Button>
             </div>
           </div>
 
-          {/* Enhanced Order Tracking */}
-          <div className="bg-white/80 backdrop-blur-sm rounded-3xl  p-8 mb-8 border border-gray-200">
-            <div className="flex items-center justify-between mb-8">
-              <h2 className="text-2xl font-bold text-gray-900">Order Progress</h2>
-              <div className="text-right">
-                <p className="text-sm text-gray-500">Current Status</p>
-                <p className="text-lg font-semibold text-blue-600">{capitalize(order.status)}</p>
+          {/* Hero header */}
+          <section className="rounded-2xl border bg-white/80 backdrop-blur p-6 md:p-8">
+            <div className="flex flex-col md:flex-row md:items-end md:justify-between gap-4">
+              <div>
+                <div className="flex items-center gap-2 text-xs text-muted-foreground">
+                  <PackageCheck className="h-4 w-4 text-emerald-600" />
+                  <span>Order details</span>
+                </div>
+                <h1 className="mt-2 text-2xl md:text-3xl font-bold tracking-tight">Order #{order.id}</h1>
+                <p className="mt-1 text-sm text-muted-foreground">
+                  Placed on{" "}
+                  {new Date(order.date).toLocaleDateString("en-US", {
+                    weekday: "long",
+                    year: "numeric",
+                    month: "long",
+                    day: "numeric",
+                  })}
+                </p>
+              </div>
+              <div className="flex items-center gap-2">
+                <span className="text-sm text-muted-foreground">Status</span>
+                <Badge
+                  className={`text-xs ${
+                    order.status === "delivered"
+                      ? "bg-emerald-100 text-emerald-800"
+                      : order.status === "shipped"
+                        ? "bg-amber-100 text-amber-800"
+                        : "bg-slate-100 text-slate-800"
+                  }`}
+                >
+                  {capitalize(order.status)}
+                </Badge>
               </div>
             </div>
-            
-            <div className="relative">
-              <div className="absolute top-6 left-0 w-full h-1 bg-gray-200 rounded-full"></div>
-              <div 
-                className="absolute top-6 left-0 h-1 bg-gradient-to-r from-blue-500 to-blue-600 rounded-full transition-all duration-1000"
-                style={{ 
-                  width: `${((statusSteps.findIndex(s => s.id === order.status) + 1) / statusSteps.length) * 100}%` 
-                }}
-              ></div>
-              
-              <div className="relative flex justify-between">
-                {statusSteps.map((step, index) => {
-                  const currentStatusIndex = statusSteps.findIndex((s) => s.id === order.status)
-                  const isCompleted = index <= currentStatusIndex
-                  const isCurrent = index === currentStatusIndex
 
+            {/* Progress */}
+            <div className="mt-6">
+              <div className="relative">
+                <div className="h-1.5 w-full rounded-full bg-muted" />
+                <div
+                  className="absolute left-0 top-0 h-1.5 rounded-full bg-emerald-500 transition-all"
+                  style={{ width: `${progressPct}%` }}
+                />
+              </div>
+              <div className="mt-4 grid grid-cols-3 gap-4">
+                {statusSteps.map((step, idx) => {
+                  const Icon = step.icon
+                  const isActive = idx <= currentIndex
                   return (
-                    <div key={step.id} className="flex flex-col items-center text-center max-w-xs">
-                      <div className="relative mb-4">
-                        <div
-                          className={`w-12 h-12 rounded-full flex items-center justify-center transition-all duration-500 border-4 ${
-                            isCompleted 
-                              ? "bg-blue-600 border-blue-600 text-white -lg" 
-                              : "bg-gray-100 border-gray-300 text-gray-400"
-                          } ${isCurrent ? "ring-4 ring-blue-200 scale-110" : ""}`}
-                        >
-                          <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d={step.icon} />
-                          </svg>
-                        </div>
-                        {isCompleted && (
-                          <div className="absolute inset-0 w-12 h-12 rounded-full bg-blue-600 animate-ping opacity-20"></div>
-                        )}
+                    <div key={step.id} className="flex items-center gap-3">
+                      <div
+                        className={`h-8 w-8 rounded-full border flex items-center justify-center ${
+                          isActive
+                            ? "bg-emerald-50 border-emerald-200 text-emerald-700"
+                            : "bg-white border-slate-200 text-slate-400"
+                        }`}
+                      >
+                        <Icon className="h-4 w-4" />
                       </div>
-                      <h3 className={`font-semibold text-sm md:text-lg mb-1 ${isCompleted ? "text-gray-900" : "text-gray-500"}`}>
-                        {step.label}
-                      </h3>
-                      <p className={` text-xs md:text-sm ${isCompleted ? "text-gray-600" : "text-gray-400"}`}>
-                        {step.description}
-                      </p>
+                      <div>
+                        <p className={`text-sm font-medium ${isActive ? "text-foreground" : "text-slate-500"}`}>
+                          {step.label}
+                        </p>
+                        <p className="text-xs text-muted-foreground">{step.description}</p>
+                      </div>
                     </div>
                   )
                 })}
               </div>
             </div>
-          </div>
+          </section>
 
-          <div className="grid grid-cols-1 xl:grid-cols-3 gap-8 mb-8">
-            {/* Enhanced Order Summary Card */}
-            <div className="xl:col-span-2 bg-white backdrop-blur-sm rounded-3xl  p-8 border border-gray-200">
-              <div className="flex items-center justify-between mb-6">
-                <h2 className="text-2xl font-bold text-gray-900">Order Summary</h2>
-                <div className="flex items-center space-x-2">
-                  <div className="w-2 h-2 bg-green-400 rounded-full animate-pulse"></div>
-                  <span className="text-sm text-green-600 font-medium">Active</span>
-                </div>
-              </div>
-              
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
-                <div className="space-y-6">
-                  <div className="group hover:bg-gray-50 rounded-xl p-4 transition-colors duration-200">
-                    <label className="text-sm font-medium text-gray-500 uppercase tracking-wider">Order ID</label>
-                    <p className="text-lg font-semibold text-gray-900 mt-1">{order.id}</p>
-                  </div>
-                  
-                  <div className="group hover:bg-gray-50 rounded-xl p-4 transition-colors duration-200">
-                    <label className="text-sm font-medium text-gray-500 uppercase tracking-wider">Date</label>
-                    <p className="text-lg font-semibold text-gray-900 mt-1">{order.date}</p>
-                  </div>
-                  
-                  <div className="group hover:bg-gray-50 rounded-xl p-4 transition-colors duration-200">
-                    <label className="text-sm font-medium text-gray-500 uppercase tracking-wider">Status</label>
-                    <div className="mt-2">
+          {/* Summary + Address */}
+          <section className="mt-8 grid grid-cols-1 lg:grid-cols-3 gap-6">
+            <div className="lg:col-span-2 rounded-2xl border bg-white p-6">
+              <h2 className="text-lg font-semibold flex items-center gap-2">
+                <Receipt className="h-4 w-4 text-muted-foreground" />
+                Order summary
+              </h2>
+              <Separator className="my-4" />
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <div className="space-y-3">
+                  <Row label="Order ID" value={order.id} />
+                  <Row label="Date" value={order.date} />
+                  <Row
+                    label="Status"
+                    value={
                       <span
-                        className={`inline-flex items-center px-4 py-2 rounded-full text-sm font-medium ${
-                          order.status === "confirmed"
-                            ? "bg-blue-100 text-blue-800 ring-1 ring-blue-200"
+                        className={`inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium ${
+                          order.status === "delivered"
+                            ? "bg-emerald-100 text-emerald-800"
                             : order.status === "shipped"
-                            ? "bg-amber-100 text-amber-800 ring-1 ring-amber-200"
-                            : order.status === "delivered"
-                            ? "bg-green-100 text-green-800 ring-1 ring-green-200"
-                            : order.status === "cancelled" || order.status === "returned"
-                            ? "bg-red-100 text-red-800 ring-1 ring-red-200"
-                            : "bg-gray-100 text-gray-800 ring-1 ring-gray-200"
+                              ? "bg-amber-100 text-amber-800"
+                              : "bg-slate-100 text-slate-800"
                         }`}
                       >
                         {capitalize(order.status)}
                       </span>
-                    </div>
-                  </div>
+                    }
+                  />
                 </div>
-                
-                <div className="space-y-6">
-                  <div className="group hover:bg-gray-50 rounded-xl p-4 transition-colors duration-200">
-                    <label className="text-sm font-medium text-gray-500 uppercase tracking-wider">Payment Status</label>
-                    <div className="mt-2">
+                <div className="space-y-3">
+                  <Row
+                    label="Payment"
+                    value={
                       <span
-                        className={`inline-flex items-center px-4 py-2 rounded-full text-sm font-medium ${
-                          order.payment === "paid" 
-                            ? "bg-green-100 text-green-800 ring-1 ring-green-200" 
-                            : "bg-gray-100 text-gray-800 ring-1 ring-gray-200"
+                        className={`inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium ${
+                          order.payment === "paid" ? "bg-emerald-100 text-emerald-800" : "bg-slate-100 text-slate-800"
                         }`}
                       >
                         {capitalize(order.payment)}
                       </span>
-                    </div>
-                  </div>
-                  
-                  <div className="group hover:bg-gray-50 rounded-xl p-4 transition-colors duration-200">
-                    <label className="text-sm font-medium text-gray-500 uppercase tracking-wider">Total Amount</label>
-                    <p className="text-2xl font-bold text-gray-900 mt-1">{formatINR(order.total)}</p>
-                  </div>
-                  
-                  <div className="group hover:bg-gray-50 rounded-xl p-4 transition-colors duration-200">
-                    <label className="text-sm font-medium text-gray-500 uppercase tracking-wider">Items</label>
-                    <p className="text-lg font-semibold text-gray-900 mt-1">{order.items} item{order.items > 1 ? 's' : ''}</p>
-                  </div>
+                    }
+                  />
+                  <Row label="Items" value={`${order.items} item${order.items > 1 ? "s" : ""}`} />
+                  <Row label="Total" value={<span className="font-semibold">{formatINR(order.total)}</span>} />
                 </div>
               </div>
 
-              {/* Additional Info */}
-              <div className="mt-8 pt-6 border-t border-gray-200">
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                  <div>
-                    <label className="text-sm font-medium text-gray-500 uppercase tracking-wider">Shipping Method</label>
-                    <p className="text-lg font-semibold text-gray-900 mt-1">{order.shippingMethod}</p>
-                  </div>
-                  {order.discountAmount > 0 && (
-                    <div>
-                      <label className="text-sm font-medium text-gray-500 uppercase tracking-wider">Discount Applied</label>
-                      <p className="text-lg font-semibold text-green-600 mt-1">-{formatINR(order.discountAmount)}</p>
-                    </div>
+              <div className="mt-6 grid grid-cols-1 md:grid-cols-2 gap-6">
+                <div className="rounded-xl border p-4">
+                  <h3 className="text-sm font-medium text-muted-foreground">Shipping method</h3>
+                  <p className="mt-1">{order.shippingMethod}</p>
+                  {!!order.discountAmount && (
+                    <p className="mt-2 text-sm text-emerald-700">
+                      Discount applied: -{formatINR(order.discountAmount)}
+                    </p>
                   )}
                   {order.coupon && (
-                    <div className="md:col-span-2">
-                      <label className="text-sm font-medium text-gray-500 uppercase tracking-wider">Coupon Used</label>
-                      <div className="mt-2 inline-flex items-center px-4 py-2 bg-gradient-to-r from-purple-100 to-pink-100 rounded-lg">
-                        <svg className="w-4 h-4 text-purple-600 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M7 7h.01M7 3h5c.512 0 1.024.195 1.414.586l7 7a2 2 0 010 2.828l-7 7a2 2 0 01-2.828 0l-7-7A1.994 1.994 0 013 12V7a4 4 0 014-4z" />
-                        </svg>
-                        <span className="font-semibold text-purple-800">
-                          {order.coupon.code} (
-                          {order.coupon.type === "percentage"
-                            ? `${order.coupon.value}%`
-                            : formatINR(order.coupon.value)}
-                          )
-                        </span>
-                      </div>
-                    </div>
+                    <p className="mt-2 text-sm">
+                      Coupon:{" "}
+                      <span className="font-medium">
+                        {order.coupon.code}{" "}
+                        {order.coupon.type === "percentage"
+                          ? `(${order.coupon.value}%)`
+                          : `(${formatINR(order.coupon.value)})`}
+                      </span>
+                    </p>
                   )}
                 </div>
-              </div>
-            </div>
-
-            {/* Customer Information and Shipping Address */}
-            <div className="bg-white/80 backdrop-blur-sm rounded-3xl  p-8 border border-gray-200">
-              <h2 className="text-2xl font-bold text-gray-900 mb-6">Customer & Shipping</h2>
-              <div className="space-y-8">
-                <div>
-                  <h3 className="text-lg font-semibold text-gray-900 mb-4">Customer Information</h3>
-                  <div className="space-y-4">
-                    <div className="group hover:bg-gray-50 rounded-xl p-4 transition-colors duration-200">
-                      <label className="text-sm font-medium text-gray-500 uppercase tracking-wider">Name</label>
-                      <p className="text-lg font-semibold text-gray-900 mt-1">{order.customer}</p>
+                <div className="rounded-xl border p-4">
+                  <h3 className="text-sm font-medium text-muted-foreground">Payment breakdown</h3>
+                  <div className="mt-2 space-y-2 text-sm">
+                    <div className="flex items-center justify-between">
+                      <span className="text-muted-foreground">Subtotal</span>
+                      <span>{formatINR(subtotal)}</span>
                     </div>
-                    <div className="group hover:bg-gray-50 rounded-xl p-4 transition-colors duration-200">
-                      <label className="text-sm font-medium text-gray-500 uppercase tracking-wider">Email</label>
-                      <p className="text-lg font-semibold text-gray-900 mt-1">{order.email || "N/A"}</p>
-                    </div>
-                    <div className="group hover:bg-gray-50 rounded-xl p-4 transition-colors duration-200">
-                      <label className="text-sm font-medium text-gray-500 uppercase tracking-wider">Phone</label>
-                      <p className="text-lg font-semibold text-gray-900 mt-1">{order.address.phoneNumber}</p>
-                    </div>
-                  </div>
-                </div>
-                <div>
-                  <h3 className="text-lg font-semibold text-gray-900 mb-4">Shipping Address</h3>
-                  <div className="space-y-4">
-                    <div className="group hover:bg-gray-50 rounded-xl p-4 transition-colors duration-200">
-                      <label className="text-sm font-medium text-gray-500 uppercase tracking-wider">Recipient</label>
-                      <p className="text-lg font-semibold text-gray-900 mt-1">{order.address.fullName}</p>
-                    </div>
-                    <div className="group hover:bg-gray-50 rounded-xl p-4 transition-colors duration-200">
-                      <label className="text-sm font-medium text-gray-500 uppercase tracking-wider">Address</label>
-                      <p className="text-lg font-semibold text-gray-900 mt-1">
-                        {order.address.addressLine1}{order.address.addressLine2 ? `, ${order.address.addressLine2}` : ""}
-                      </p>
-                      <p className="text-lg font-semibold text-gray-900">
-                        {order.address.city}, {order.address.state} {order.address.postalCode}
-                      </p>
-                      <p className="text-lg font-semibold text-gray-900">{order.address.country}</p>
-                    </div>
-                    <div className="group hover:bg-gray-50 rounded-xl p-4 transition-colors duration-200">
-                      <label className="text-sm font-medium text-gray-500 uppercase tracking-wider">Address Type</label>
-                      <p className="text-lg font-semibold text-gray-900 mt-1">{order.address.addressType}</p>
+                    {order.discountAmount > 0 && (
+                      <div className="flex items-center justify-between">
+                        <span className="text-muted-foreground">Discount</span>
+                        <span>-{formatINR(order.discountAmount)}</span>
+                      </div>
+                    )}
+                    <Separator className="my-2" />
+                    <div className="flex items-center justify-between font-medium">
+                      <span>Total</span>
+                      <span>{formatINR(order.total)}</span>
                     </div>
                   </div>
                 </div>
               </div>
             </div>
-          </div>
 
-          {/* Order Items */}
-          <div className="bg-white/80 backdrop-blur-sm rounded-3xl  p-8 border border-gray-200">
-            <h2 className="text-2xl font-bold text-gray-900 mb-6">Order Items</h2>
+            <div className="rounded-2xl border bg-white p-6">
+              <h2 className="text-lg font-semibold">Customer & shipping</h2>
+              <Separator className="my-4" />
+              <div className="space-y-4">
+                <Row label="Name" value={order.customer} />
+                <Row label="Email" value={order.email || "N/A"} />
+                <Row label="Phone" value={order.address.phoneNumber} />
+                <Separator />
+                <div>
+                  <h3 className="text-sm font-medium text-muted-foreground">Shipping address</h3>
+                  <p className="mt-1">{order.address.fullName}</p>
+                  <p className="text-sm text-muted-foreground">
+                    {order.address.addressLine1}
+                    {order.address.addressLine2 ? `, ${order.address.addressLine2}` : ""}
+                  </p>
+                  <p className="text-sm text-muted-foreground">
+                    {order.address.city}, {order.address.state} {order.address.postalCode}
+                  </p>
+                  <p className="text-sm text-muted-foreground">{order.address.country}</p>
+                  <p className="mt-1 inline-flex items-center rounded-full bg-slate-100 text-slate-700 px-2 py-0.5 text-xs">
+                    {order.address.addressType}
+                  </p>
+                </div>
+              </div>
+            </div>
+          </section>
+
+          {/* Items */}
+          <section className="mt-8 rounded-2xl border bg-white p-6">
+            <h2 className="text-lg font-semibold">Order items</h2>
+            <Separator className="my-4" />
             {order.itemsDetails.length > 0 ? (
               <div className="overflow-x-auto">
-                <table className="min-w-full divide-y divide-gray-200 border border-gray-200 rounded-lg">
-                  <thead className="bg-gray-100">
-                    <tr>
-                      <th className="px-4 py-3 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider">Image</th>
-                      <th className="px-4 py-3 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider">Product</th>
-                      <th className="px-4 py-3 text-center text-xs font-semibold text-gray-700 uppercase tracking-wider">SKU</th>
-                      <th className="px-4 py-3 text-center text-xs font-semibold text-gray-700 uppercase tracking-wider">Quantity</th>
-                      <th className="px-4 py-3 text-right text-xs font-semibold text-gray-700 uppercase tracking-wider">Unit Price</th>
-                      <th className="px-4 py-3 text-right text-xs font-semibold text-gray-700 uppercase tracking-wider">Total</th>
+                <table className="min-w-full text-sm">
+                  <thead>
+                    <tr className="text-left text-xs text-muted-foreground border-b">
+                      <th className="py-3 pr-3 font-medium">Item</th>
+                      <th className="py-3 pr-3 font-medium">SKU</th>
+                      <th className="py-3 pr-3 font-medium text-center">Qty</th>
+                      <th className="py-3 pr-3 font-medium text-right">Unit price</th>
+                      <th className="py-3 pl-3 font-medium text-right">Total</th>
                     </tr>
                   </thead>
-                  <tbody className="divide-y divide-gray-200">
-                    {order.itemsDetails.map((item, index) => (
-                      <tr key={item.id} className={index % 2 === 0 ? "bg-white" : "bg-gray-50"}>
-                        <td className="px-4 py-4 whitespace-nowrap">
-                          <img
-                            src={item.variant.productImages.find((img) => img.isFeatured)?.url || item.variant.productImages[0]?.url || ""}
-                            alt={item.variant.productImages.find((img) => img.isFeatured)?.alt || item.variant.productImages[0]?.alt || ""}
-                            className="h-12 w-12 object-cover rounded-md border border-gray-200"
-                          />
-                        </td>
-                        <td className="px-4 py-4 text-sm text-gray-900">{item.variant.name}</td>
-                        <td className="px-4 py-4 text-center text-sm text-gray-600">{item.variant.sku}</td>
-                        <td className="px-4 py-4 text-center text-sm text-gray-900">{item.quantity}</td>
-                        <td className="px-4 py-4 text-right text-sm text-gray-900">{formatINR(item.unitPrice)}</td>
-                        <td className="px-4 py-4 text-right text-sm text-gray-900">{formatINR(parseFloat(item.unitPrice) * item.quantity)}</td>
-                      </tr>
-                    ))}
+                  <tbody>
+                    {order.itemsDetails.map((item) => {
+                      const featured =
+                        item.variant.productImages.find((img) => img.isFeatured) || item.variant.productImages[0]
+                      return (
+                        <tr key={item.id} className="border-b last:border-b-0">
+                          <td className="py-4 pr-3">
+                            <div className="flex items-center gap-3">
+                              {featured?.url ? (
+                                <img
+                                  src={featured.url || "/placeholder.svg"}
+                                  alt={featured.alt || item.variant.name}
+                                  className="h-12 w-12 rounded border object-cover"
+                                />
+                              ) : (
+                                <div className="h-12 w-12 rounded border bg-muted" />
+                              )}
+                              <div className="min-w-0">
+                                <p className="font-medium truncate">{item.variant.name}</p>
+                                <p className="text-xs text-muted-foreground">Product ID: {item.productId}</p>
+                              </div>
+                            </div>
+                          </td>
+                          <td className="py-4 pr-3">{item.variant.sku}</td>
+                          <td className="py-4 pr-3 text-center">{item.quantity}</td>
+                          <td className="py-4 pr-3 text-right">{formatINR(item.unitPrice)}</td>
+                          <td className="py-4 pl-3 text-right">
+                            {formatINR(Number.parseFloat(item.unitPrice) * item.quantity)}
+                          </td>
+                        </tr>
+                      )
+                    })}
                   </tbody>
                 </table>
               </div>
             ) : (
-              <p className="text-gray-600 text-sm">No items found for this order.</p>
+              <p className="text-sm text-muted-foreground">No items found for this order.</p>
             )}
+          </section>
+
+          {/* Bottom actions */}
+          <div className="mt-8 flex flex-wrap items-center justify-between gap-3">
+            <Link href="/profile/orders">
+              <Button variant="secondary" className="gap-2">
+                <ArrowLeft className="h-4 w-4" />
+                Back to orders
+              </Button>
+            </Link>
+            <div className="flex items-center gap-2 text-sm text-muted-foreground">
+              <Badge variant="outline" className="gap-1">
+                <CreditCard className="h-3.5 w-3.5" />
+                Paid via {capitalize(order.payment)}
+              </Badge>
+              <span>&middot;</span>
+              <span>
+                {order.items} item{order.items > 1 ? "s" : ""}
+              </span>
+            </div>
           </div>
         </div>
-      </div>
+      </main>
     </ProfileLayout>
+  )
+}
+
+function Row({
+  label,
+  value,
+}: {
+  label: string
+  value: React.ReactNode
+}) {
+  return (
+    <div className="flex items-center justify-between gap-3">
+      <span className="text-sm text-muted-foreground">{label}</span>
+      <span className="text-sm">{value}</span>
+    </div>
   )
 }

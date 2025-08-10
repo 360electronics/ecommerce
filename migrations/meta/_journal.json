@@ -15,6 +15,13 @@
       "when": 1753961457804,
       "tag": "0001_dark_tarantula",
       "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "7",
+      "when": 1754851460514,
+      "tag": "0002_jittery_beyonder",
+      "breakpoints": true
     }
   ]
 }

@@ -1,3 +1,4 @@
+// components/Home/Hero/HeroBanner.tsx
 'use client';
 
 import { useState, useEffect, useRef, useCallback, memo } from 'react';
@@ -27,7 +28,7 @@ interface Banner {
 }
 
 const HeroBanner: React.FC = () => {
-  const { banners, isLoading, error } = useHomeStore();
+  const { banners, error } = useHomeStore();
   const [currentImageIndex, setCurrentImageIndex] = useState(0);
   const [mainBanners, setMainBanners] = useState<Banner[]>([]);
   const [secondaryBanner, setSecondaryBanner] = useState<Banner | null>(null);
@@ -149,19 +150,8 @@ const HeroBanner: React.FC = () => {
   const getResponsiveImageUrl = useCallback((imageUrls: ImageUrls | undefined): string => {
     if (!imageUrls) return '/placeholder_banner.png';
     const width = typeof window !== 'undefined' ? window.innerWidth : 0;
-    return (width >= 1024 && imageUrls.default) || (width <= 640 && imageUrls.sm) || imageUrls.default;
+    return (width >= 1024 && imageUrls.lg) || (width <= 640 && imageUrls.sm) || imageUrls.default;
   }, []);
-
-  if (isLoading) {
-    return (
-      <div className="w-full flex flex-col gap-4 items-center justify-center p-0">
-        <div className="relative w-full h-[70dvh] rounded-xl overflow-hidden bg-gray-200 animate-pulse" aria-hidden="true">
-          <div className="absolute left-0 bottom-0 w-[30%] md:w-[20%] h-[30%] bg-gray-200 animate-pulse" />
-        </div>
-        <div className="w-full h-[30dvh] sm:h-[25dvh] md:h-[20dvh] rounded-xl bg-gray-200 animate-pulse" aria-hidden="true" />
-      </div>
-    );
-  }
 
   if (error) {
     return (
@@ -211,7 +201,7 @@ const HeroBanner: React.FC = () => {
               <div className="absolute inset-0 flex items-center justify-between px-6">
                 <button
                   onClick={goToPrevSlide}
-                  className="bg-primary bg-opacity-40 hover:bg-opacity-60 text-white p-3 rounded-full transition-all duration-300"
+                  className="bg-primary cursor-pointer hover:bg-opacity-60 text-white p-3 rounded-full transition-all duration-300"
                   aria-label="Previous slide"
                 >
                   <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
@@ -220,7 +210,7 @@ const HeroBanner: React.FC = () => {
                 </button>
                 <button
                   onClick={goToNextSlide}
-                  className="bg-primary bg-opacity-40 hover:bg-opacity-60 text-white p-3 rounded-full transition-all duration-300"
+                  className="bg-primary cursor-pointer bg-opacity-40 hover:bg-opacity-60 text-white p-3 rounded-full transition-all duration-300"
                   aria-label="Next slide"
                 >
                   <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
@@ -244,7 +234,7 @@ const HeroBanner: React.FC = () => {
                     onClick={() => goToSlide(index)}
                     className={cn(
                       'w-3 h-3 rounded-full transition-all duration-300',
-                      currentImageIndex === index ? 'bg-white scale-125' : 'bg-gray-100 '
+                      currentImageIndex === index ? 'bg-white scale-125' : 'bg-gray-100'
                     )}
                     aria-label={`Go to slide ${index + 1}`}
                   />
@@ -253,18 +243,22 @@ const HeroBanner: React.FC = () => {
             </div>
           ) : (
             <div className="w-full h-full bg-gray-200 flex items-center justify-center rounded-xl">
-              <p className="text-gray-500 text-lg">No hero-main banners available</p>
+              <Image
+                src="/placeholder_banner.png"
+                alt="Default banner"
+                fill
+                className="object-cover"
+                quality={85}
+              />
             </div>
           )}
           <div className="absolute bottom-[30%] w-6 h-6 rounded-full shadow-[-12px_12px_0_#fff] z-0" />
           <div className="absolute bottom-0 left-[30%] md:left-[20%] w-6 h-6 rounded-full shadow-[-12px_12px_0_#fff] z-0" />
         </div>
         <div className="absolute left-0 bottom-0 w-[30%] md:w-[20%] h-[30%] border-t-[12px] border-r-[12px] border-white rounded-tr-2xl rounded-bl-2xl overflow-hidden">
-          {isLoading ? (
-            <div className="relative w-full h-full bg-gray-200 animate-pulse" aria-hidden="true"></div>
-          ) : (
+          {secondaryBanner ? (
             <div className="relative w-full h-full">
-              {secondaryBanner && isVideoUrl(secondaryBanner.imageUrls.default) ? (
+              {isVideoUrl(secondaryBanner.imageUrls.default) ? (
                 <video
                   ref={secondaryVideoRef}
                   src={getResponsiveImageUrl(secondaryBanner.imageUrls)}
@@ -279,19 +273,19 @@ const HeroBanner: React.FC = () => {
                 />
               ) : (
                 <Image
-                  src={getResponsiveImageUrl(secondaryBanner?.imageUrls) || '/placeholder.svg'}
-                  alt={secondaryBanner?.title || 'Secondary banner'}
+                  src={getResponsiveImageUrl(secondaryBanner.imageUrls) || '/placeholder.svg'}
+                  alt={secondaryBanner.title || 'Secondary banner'}
                   fill
                   className="object-cover"
                   quality={85}
                   loading="lazy"
                   onError={(e) => {
-                    console.error('[SECONDARY_IMAGE_ERROR] Failed to load image:', secondaryBanner?.imageUrls);
+                    console.error('[SECONDARY_IMAGE_ERROR] Failed to load image:', secondaryBanner.imageUrls);
                     e.currentTarget.src = '/placeholder.svg';
                   }}
                 />
               )}
-              {secondaryBanner && isVideoUrl(secondaryBanner.imageUrls.default) && (
+              {isVideoUrl(secondaryBanner.imageUrls.default) && (
                 <button
                   onClick={toggleSecondaryMute}
                   className="absolute bottom-3 right-3 bg-white text-gray-800 p-1.5 rounded-full shadow-md hover:bg-gray-100 transition-all"
@@ -301,6 +295,14 @@ const HeroBanner: React.FC = () => {
                 </button>
               )}
             </div>
+          ) : (
+            <Image
+              src="/placeholder_banner.png"
+              alt="Default secondary banner"
+              fill
+              className="object-cover"
+              quality={85}
+            />
           )}
           <div className="absolute top-0 left-0 w-6 h-6 rounded-full shadow-[-12px_-12px_0_#fff] z-40" />
           <div className="absolute top-0 right-0 w-6 h-6 rounded-full shadow-[12px_-12px_0_#fff] z-40" />
@@ -308,33 +310,40 @@ const HeroBanner: React.FC = () => {
         </div>
       </div>
       <div className="w-full h-[30dvh] sm:h-[25dvh] md:h-[20dvh] rounded-xl relative overflow-hidden">
-        {isLoading ? (
-          <div className="absolute inset-0 bg-gray-200 animate-pulse" aria-hidden="true"></div>
-        ) : (
+        {customisePC ? (
           <div className="absolute inset-0 bg-cover bg-center z-0">
-            {customisePC?.imageUrls.default ? (
-              <Image
-                src={getResponsiveImageUrl(customisePC.imageUrls)}
-                alt={customisePC.title || 'Customize your PC'}
-                fill
-                className="object-cover"
-                style={{ filter: 'brightness(0.7)' }}
-                quality={85}
-                loading="lazy"
-                onError={(e) => {
-                  console.error('[CUSTOMISE_IMAGE_ERROR] Failed to load image:', customisePC.imageUrls);
-                  e.currentTarget.src = '/placeholder.svg';
-                }}
-              />
-            ) : (
-              <div
-              className="absolute inset-0 bg-cover bg-center"
-              style={{
-                backgroundImage: "url('/customise.png')",
-                filter: 'brightness(0.7)',
+            <Image
+              src={getResponsiveImageUrl(customisePC.imageUrls)}
+              alt={customisePC.title || 'Customize your PC'}
+              fill
+              className="object-cover"
+              style={{ filter: 'brightness(0.7)' }}
+              quality={85}
+              loading="lazy"
+              onError={(e) => {
+                console.error('[CUSTOMISE_IMAGE_ERROR] Failed to load image:', customisePC.imageUrls);
+                e.currentTarget.src = '/placeholder.svg';
               }}
-            ></div>
-            )}
+            />
+            <div className="relative z-10 h-full flex flex-col md:flex-row items-start md:items-center justify-end md:justify-between px-4 sm:px-6 md:px-8 py-4 gap-3 md:gap-0">
+              <div className="text-white max-w-xl">
+                <h2 className="text-xl sm:text-2xl md:text-3xl font-bold mb-1 nohemi-bold">
+                  Customize Your <span className="text-primary">Own PC</span>
+                </h2>
+                <p className="text-xs sm:text-sm md:text-base opacity-90 mb-2">
+                  Build your dream gaming rig with premium components and expert assembly.
+                </p>
+              </div>
+              <PrimaryLinkButton href="/customise-pc">Start Building</PrimaryLinkButton>
+            </div>
+          </div>
+        ) : (
+          <div
+            className="absolute inset-0 bg-cover bg-center"
+            style={{
+              backgroundImage: "url('/customise.png')",
+            }}
+          >
             <div className="relative z-10 h-full flex flex-col md:flex-row items-start md:items-center justify-end md:justify-between px-4 sm:px-6 md:px-8 py-4 gap-3 md:gap-0">
               <div className="text-white max-w-xl">
                 <h2 className="text-xl sm:text-2xl md:text-3xl font-bold mb-1 nohemi-bold">

@@ -539,7 +539,7 @@ export default function ProductDetailsContent({ className, activeVariant }: Prod
     return (
       <div className="mt-6 bg-gray-50 rounded-xl p-6 border border-gray-100">
         <h3 className="text-lg font-semibold text-gray-900 mb-4 flex items-center gap-2">
-          <Truck className="w-5 h-5 text-blue-600" /> Delivery Details
+          <Truck className="w-5 h-5 text-primary" /> Delivery Details
         </h3>
         <div className="flex flex-col gap-4">
           <div className="flex items-center gap-3 flex-wrap">
@@ -551,14 +551,14 @@ export default function ProductDetailsContent({ className, activeVariant }: Prod
                 onChange={handlePinCodeChange}
                 placeholder="Enter 6-digit PIN code"
                 maxLength={6}
-                className="pl-10 pr-3 py-2.5 border border-gray-300 rounded-lg text-sm w-full focus:outline-none focus:ring-2 focus:ring-blue-500 transition-all bg-white"
+                className="pl-10 pr-3 py-2.5 border border-gray-300 rounded-lg text-sm w-full focus:outline-none focus:ring-2 focus:ring-primary transition-all bg-white"
                 aria-label="Enter PIN code for delivery estimation"
               />
             </div>
           </div>
           {isCheckingPin && (
             <div className="flex items-center gap-2 text-sm text-gray-500">
-              <div className="w-4 h-4 border-2 border-blue-500 border-t-transparent rounded-full animate-spin" />
+              <div className="w-4 h-4 border-2 border-primary border-t-transparent rounded-full animate-spin" />
               Checking delivery details...
             </div>
           )}
@@ -577,7 +577,7 @@ export default function ProductDetailsContent({ className, activeVariant }: Prod
           )}
           {deliveryEstimate && !isCheckingPin && (
             <p className="text-sm text-gray-700 flex items-center gap-2">
-              <Truck className="w-4 h-4 text-blue-500" /> {deliveryEstimate}
+              <Truck className="w-4 h-4 text-primary" /> {deliveryEstimate}
             </p>
           )}
           <p className="text-xs text-gray-500 flex items-center gap-2">
@@ -602,7 +602,7 @@ export default function ProductDetailsContent({ className, activeVariant }: Prod
         <span className="mr-3 text-gray-700 text-sm">Qty:</span>
         <button
           onClick={decreaseQuantity}
-          className="p-1 rounded-full hover:bg-gray-100 disabled:opacity-50 transition-colors"
+          className="p-1 rounded-full hover:bg-gray-100 disabled:opacity-50 transition-colors cursor-pointer"
           aria-label="Decrease quantity"
           disabled={quantity <= 1}
         >
@@ -611,7 +611,7 @@ export default function ProductDetailsContent({ className, activeVariant }: Prod
         <span className="px-4 text-sm font-medium">{quantity}</span>
         <button
           onClick={increaseQuantity}
-          className="p-1 rounded-full hover:bg-gray-100 disabled:opacity-50 transition-colors"
+          className="p-1 rounded-full hover:bg-gray-100 disabled:opacity-50 transition-colors cursor-pointer"
           aria-label="Increase quantity"
           disabled={(quantity >= 10) || (activeVariant.stock < quantity + 1 && !activeVariant.isBackorderable)}
         >
@@ -621,7 +621,7 @@ export default function ProductDetailsContent({ className, activeVariant }: Prod
       <button
         onClick={handleWishlistClick}
         className={cn(
-          'p-2 rounded-full transition-colors border',
+          'p-2 rounded-full transition-colors border cursor-pointer',
           isInWishlistStatus ? 'text-red-500 border-red-500 bg-red-50' : 'text-gray-500 border-gray-300 bg-white',
           'hover:bg-gray-100 disabled:opacity-50'
         )}
@@ -674,7 +674,7 @@ export default function ProductDetailsContent({ className, activeVariant }: Prod
         <button
           onClick={handleBuyNowClick}
           className={cn(
-            'flex-1 flex items-center justify-center gap-2 py-3 px-6 rounded-full bg-blue-600 hover:bg-blue-700 text-white text-sm font-semibold transition-colors',
+            'flex-1 flex items-center justify-center gap-2 py-3 px-6 rounded-full bg-primary hover:bg-primary-hover text-white text-sm font-semibold transition-colors',
             isAddingToCart || (!activeVariant.stock && !activeVariant.isBackorderable)
               ? 'opacity-50 cursor-not-allowed'
               : 'cursor-pointer'
@@ -704,14 +704,14 @@ export default function ProductDetailsContent({ className, activeVariant }: Prod
       </h2>
       <ul className="space-y-4 text-sm text-gray-600">
         <li className="flex items-start gap-3">
-          <Shield className="w-5 h-5 text-blue-500 mt-0.5" />
+          <Shield className="w-5 h-5 text-primary mt-0.5" />
           <div>
             <span className="font-medium">Warranty:</span>{' '}
             1 Year Manufacturer Warranty for Device and 6 Months for In-Box Accessories
           </div>
         </li>
         <li className="flex items-start gap-3">
-          <Phone className="w-5 h-5 text-blue-500 mt-0.5" />
+          <Phone className="w-5 h-5 text-primary mt-0.5" />
           <div>
             <span className="font-medium">Customer Support:</span> Contact us at support@techtrend.in or call 1800-123-4567
           </div>
@@ -758,8 +758,8 @@ export default function ProductDetailsContent({ className, activeVariant }: Prod
                       className={cn(
                         'px-4 py-2 rounded-full text-sm border transition-colors',
                         isSelected
-                          ? 'bg-blue-600 text-white border-blue-600'
-                          : 'bg-white text-gray-900 border-gray-300 hover:border-blue-400 hover:bg-blue-50',
+                          ? 'bg-primary text-white border-primary'
+                          : 'bg-white text-gray-900 border-gray-300 hover:bg-primary-hover',
                         !isValid && 'opacity-50 cursor-not-allowed'
                       )}
                       disabled={!isValid}

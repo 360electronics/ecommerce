@@ -102,8 +102,8 @@ export default function ProductImageGallery({ activeVariant }: ProductImageGalle
           <button
             key={image.url + index}
             className={cn(
-              'relative w-16 h-16 border rounded-md overflow-hidden flex-shrink-0 transition-colors',
-              selectedImageIndex === index ? 'border-blue-500' : 'border-gray-200 hover:border-blue-300'
+              'relative w-16 h-16 border rounded-md overflow-hidden flex-shrink-0 transition-colors cursor-pointer',
+              selectedImageIndex === index ? 'border-primary' : 'border-gray-200 hover:border-primary-hover'
             )}
             onClick={() => setSelectedImageIndex(index)}
             aria-label={`Select ${activeVariant.name} image ${image.alt || index + 1}`}

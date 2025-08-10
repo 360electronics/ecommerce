@@ -1,7 +1,9 @@
+'use client'
 import React, { useEffect, useRef, useState } from 'react';
 import { X, Clock, TrendingUp } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { fetchProducts } from '@/utils/products.util';
+import Fuse from 'fuse.js';
 
 interface SearchModalProps {
   searchQuery: string;
@@ -35,15 +37,39 @@ const SearchModal: React.FC<SearchModalProps> = ({
 }) => {
   const modalRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
-  const [products, setProducts] = useState<Product[]>([]); // State to store fetched products
+  const [products, setProducts] = useState<Product[]>([]);
+  const [fuse, setFuse] = useState<Fuse<Product> | null>(null);
+
   // Fetch products on mount
   useEffect(() => {
     const loadProducts = async () => {
-      const fetchedProducts = await fetchProducts();
-      setProducts(fetchedProducts);
+      try {
+        const fetchedProducts = await fetchProducts();
+        setProducts(fetchedProducts);
+      } catch (error) {
+        console.error('Error fetching products:', error);
+      }
     };
     loadProducts();
   }, []);
+
+  // Initialize Fuse.js with weighted keys for better relevance
+  useEffect(() => {
+    if (products.length > 0) {
+      const fuseInstance = new Fuse(products, {
+        keys: [
+          { name: 'shortName', weight: 0.4 }, // Higher weight for product names
+          { name: 'fullName', weight: 0.4 },
+          { name: 'description', weight: 0.2 }, // Lower weight for description
+        ],
+        threshold: 0.3, // Moderate fuzziness for matching
+        includeScore: true, // Include score for sorting by relevance
+        minMatchCharLength: 2, // Minimum query length for matching
+        ignoreLocation: true, // Match anywhere in the string
+      });
+      setFuse(fuseInstance);
+    }
+  }, [products]);
 
   // Focus trap for accessibility
   useEffect(() => {
@@ -73,25 +99,21 @@ const SearchModal: React.FC<SearchModalProps> = ({
     return () => document.removeEventListener('keydown', handleKeyDown);
   }, [onClose]);
 
-  // Filter suggestions and matching products based on searchQuery
-  const suggestions = products
-    .filter((product) =>
-      (product.shortName || product.fullName || '')
-        .toLowerCase()
-        .includes(searchQuery.toLowerCase())
-    )
-    .map((product) => product.shortName || product.fullName || '')
-    .slice(0, 5); // Limit to 5 suggestions
+  // Perform search and sort results by relevance (lower score = better match)
+  const searchResults = fuse && searchQuery 
+    ? fuse.search(searchQuery).sort((a, b) => (a.score || 0) - (b.score || 0)) 
+    : [];
 
-  const matchingProducts = products
-    .filter((product) =>
-      (product.shortName || product.fullName || '')
-        .toLowerCase()
-        .includes(searchQuery.toLowerCase())
-    )
-    .slice(0, 4); // Limit to 4 matching products
+  // Extract suggestions and matching products, limited to 5 and 4 respectively
+  const suggestions = searchResults
+    .map((result) => result.item.shortName || result.item.fullName || '')
+    .slice(0, 5);
 
-  // Updated trending searches
+  const matchingProducts = searchResults
+    .map((result) => result.item)
+    .slice(0, 4);
+
+  // Trending searches
   const trendingSearches = [
     'MacBook',
     'White Keyboard',
@@ -194,7 +216,7 @@ const SearchModal: React.FC<SearchModalProps> = ({
                             {product.variants[0]?.productImages[0]?.url && (
                               <img
                                 src={product.variants[0].productImages[0].url}
-                                alt={product.shortName}
+                                alt={product.shortName || product.fullName || 'Product image'}
                                 className="w-16 h-16 object-contain mr-4"
                               />
                             )}

@@ -16,8 +16,8 @@ export const orders = pgTable(
       .references(() => savedAddresses.id, { onDelete: "restrict" }),
     couponId: uuid("coupon_id"),
     couponCode: varchar("coupon_code", { length: 50 }),
-    razorpayOrderId: varchar("razorpay_order_id", { length: 255 }),
-    razorpayPaymentId: varchar("razorpay_payment_id", { length: 255 }),
+    cashfreeOrderId: varchar("cashfree_order_id", { length: 255 }),
+    cashfreePaymentId: varchar("cashfree_payment_id", { length: 255 }),
     status: varchar("status", {
       enum: ["pending", "confirmed", "shipped", "delivered", "cancelled", "returned"],
     })
@@ -29,7 +29,7 @@ export const orders = pgTable(
       .default("pending")
       .notNull(),
     paymentMethod: varchar("payment_method", {
-      enum: ["cod", "razorpay"],
+      enum: ["cod", "cashfree"],
     }).notNull(),
     totalAmount: numeric("total_amount", { precision: 10, scale: 2 }).notNull(),
     discountAmount: numeric("discount_amount", { precision: 10, scale: 2 })
@@ -52,7 +52,7 @@ export const orders = pgTable(
   (table) => [
     index("idx_orders_user_id").on(table.userId),
     index("idx_orders_status").on(table.status),
-    index("idx_orders_razorpay_order_id").on(table.razorpayOrderId),
+    index("idx_orders_razorpay_order_id").on(table.cashfreeOrderId),
     index("idx_orders_address_id").on(table.addressId),
     index("idx_orders_user_status").on(table.userId, table.status),
     index("idx_orders_coupon_id").on(table.couponId),

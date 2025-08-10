@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useEffect } from 'react';
+import React, { useEffect, useState } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import UserLayout from '@/components/Layouts/UserLayout';
@@ -12,17 +12,13 @@ import { Button } from '@/components/ui/button';
 import { useAuthStore } from '@/store/auth-store';
 import { useCheckoutStore } from '@/store/checkout-store';
 import { useCartStore } from '@/store/cart-store';
+import { CartItem } from '@/store/cart-store';
 
-type CartOfferProduct = {
-  id: string;
-  productName: string;
-  productImage: string;
-  range: string;
-  ourPrice: string;
-  quantity: number;
-};
+interface CartPageProps {
+  initialCartItems: CartItem[];
+}
 
-const CartPage: React.FC = () => {
+const CartPage: React.FC<CartPageProps> = ({ initialCartItems }) => {
   const {
     cartItems,
     coupon,
@@ -37,33 +33,38 @@ const CartPage: React.FC = () => {
     getCartTotal,
     getItemCount,
     getSavings,
+    initializeCart, // New action to initialize cart
   } = useCartStore();
-  const { isLoggedIn, isLoading, user } = useAuthStore();
+  const { isLoggedIn, user } = useAuthStore(); 
   const router = useRouter();
   const [isUpdating, setIsUpdating] = useState<string | null>(null);
   const [couponCode, setCouponCode] = useState('');
   const { addToCheckout } = useCheckoutStore();
-  const [offerProducts, setOfferProducts] = useState<CartOfferProduct[]>([]);
+  const [offerProducts, setOfferProducts] = useState<any[]>([]);
   const [isFetchingOffers, setIsFetchingOffers] = useState(false);
   const [effectiveRange, setEffectiveRange] = useState<string | null>(null);
 
+  // Initialize cart with server-fetched data
+  useEffect(() => {
+    if (initialCartItems) {
+      initializeCart(initialCartItems);
+    }
+  }, [initialCartItems, initializeCart]);
+
   // Calculate totals including offer products
   const calculateTotals = () => {
-    // Calculate subtotal for regular products
     const regularProductsSubtotal = cartItems.reduce((sum, item) => {
       if (item.id.startsWith('temp-')) return sum;
       const itemPrice = Number(item.variant.ourPrice) || 0;
       return sum + itemPrice * item.quantity;
     }, 0);
 
-    // Calculate offer products total (only one offer product allowed)
     const offerProductsTotal = cartItems.reduce((sum, item) => {
       if (item.id.startsWith('temp-') || !item.cartOfferProductId) return sum;
       const offerPrice = Number(item.offerProductPrice) || 0;
-      return sum + offerPrice; // Single offer product, quantity is always 1
+      return sum + offerPrice;
     }, 0);
 
-    // Total subtotal including both regular and offer products
     const subtotal = regularProductsSubtotal + offerProductsTotal;
 
     const savings = cartItems.reduce((sum, item) => {
@@ -103,7 +104,6 @@ const CartPage: React.FC = () => {
     grandTotal 
   } = calculateTotals();
 
-  // Format numbers safely
   const formatCurrency = (value: number | null | undefined): string => {
     return (value ?? 0).toLocaleString('en-IN', {
       style: 'currency',
@@ -112,7 +112,6 @@ const CartPage: React.FC = () => {
     });
   };
 
-  // Calculate cart value including offer products for eligibility
   const getCartValueForOffers = () => {
     return cartItems.reduce((sum, item) => {
       if (item.id.startsWith('temp-')) return sum;
@@ -122,7 +121,6 @@ const CartPage: React.FC = () => {
     }, 0);
   };
 
-  // Determine eligible range based on cart subtotal INCLUDING offer products
   const getEligibleRange = (cartValue: number): string | null => {
     if (cartValue >= 25000) return '25000';
     if (cartValue >= 10000) return '10000';
@@ -148,7 +146,7 @@ const CartPage: React.FC = () => {
       setIsFetchingOffers(true);
       try {
         const ranges = ['25000', '10000', '5000', '1000'];
-        let products: CartOfferProduct[] = [];
+        let products: any[] = [];
         let selectedRange: string | null = null;
 
         for (const range of ranges) {
@@ -158,7 +156,7 @@ const CartPage: React.FC = () => {
               console.error(`Failed to fetch offer products for range ${range}`);
               continue;
             }
-            const fetchedProducts: CartOfferProduct[] = await response.json();
+            const fetchedProducts: any[] = await response.json();
             if (fetchedProducts.length > 0) {
               products = fetchedProducts;
               selectedRange = range;
@@ -182,7 +180,7 @@ const CartPage: React.FC = () => {
     fetchOfferProducts();
   }, [eligibleRange, hasRegularProduct, hasOfferProductInCart]);
 
-  const handleAddOfferProduct = async (offerProduct: CartOfferProduct) => {
+  const handleAddOfferProduct = async (offerProduct: any) => {
     if (!isLoggedIn || !user?.id) {
       toast.error('Please log in to add offer products');
       return;
@@ -292,7 +290,7 @@ const CartPage: React.FC = () => {
           productId: item.productId,
           variantId: item.variantId,
           totalPrice,
-          quantity: item.cartOfferProductId ? 1 : item.quantity, // Offer product quantity is always 1
+          quantity: item.cartOfferProductId ? 1 : item.quantity,
           cartOfferProductId: item.cartOfferProductId,
         });
       }
@@ -348,22 +346,12 @@ const CartPage: React.FC = () => {
     '25000': 'Above ₹25,000',
   };
 
-  if (isLoading) {
-    return (
-      <UserLayout>
-        <div className="mx-auto">
-          <p className="text-center text-gray-600 text-lg">Loading cart...</p>
-        </div>
-      </UserLayout>
-    );
-  }
-
   return (
     <UserLayout>
       <div className="mx-auto">
         <Breadcrumbs breadcrumbs={breadcrumbItems} />
         <h1 className="text-2xl font-bold text-gray-900 my-6 nohemi-bold">
-          Shopping Cart ({getItemCount()} {getItemCount() === 1 ? 'item' : 'items'})
+          Shopping Cart
         </h1>
 
         {cartItems.length === 0 ? (
@@ -373,7 +361,7 @@ const CartPage: React.FC = () => {
             <p className="text-gray-600 mb-6">Looks like you haven&apos;t added any items yet.</p>
             <Link
               href="/"
-              className="bg-blue-600 text-white px-6 py-3 rounded-full hover:bg-blue-700 transition-colors text-base font-medium"
+              className="bg-primary text-white px-6 py-3 rounded-full hover:bg-primary-HOVER transition-colors text-base font-medium"
               aria-label="Continue shopping"
             >
               Continue Shopping
@@ -382,12 +370,7 @@ const CartPage: React.FC = () => {
         ) : (
           <div className="flex flex-col lg:flex-row gap-8">
             <div className="flex-1">
-              <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 mb-6">
-                <p className="text-sm text-blue-800">
-                  Current Cart Value: <span className="font-semibold">{formatCurrency(cartValueForOffers)}</span>
-                </p>
-              </div>
-
+              
               <div className="space-y-4 mb-8">
                 {cartItems.map((item) => (
                   <div key={item.id} className="bg-white border border-gray-200 rounded-lg p-4">
@@ -467,7 +450,7 @@ const CartPage: React.FC = () => {
                             </p>
                             <Button
                               onClick={() => handleAddOfferProduct(product)}
-                              className="w-full bg-blue-600 text-white hover:bg-blue-700"
+                              className="w-full bg-primary text-white hover:bg-primary-HOVER"
                               disabled={hasOfferProductInCart || !hasRegularProduct}
                             >
                               Add
@@ -500,7 +483,7 @@ const CartPage: React.FC = () => {
                         value={couponCode}
                         onChange={(e) => setCouponCode(e.target.value)}
                         placeholder="Enter coupon code"
-                        className="flex-1 border border-gray-300 rounded-md px-4 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                        className="flex-1 border border-gray-300 rounded-md px-4 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary"
                         disabled={couponStatus === 'applied'}
                       />
                       {coupon && couponStatus === 'applied' ? (
@@ -513,7 +496,7 @@ const CartPage: React.FC = () => {
                       ) : (
                         <button
                           onClick={handleApplyCoupon}
-                          className="bg-blue-600 text-white px-4 py-2 rounded-md hover:bg-blue-700 transition-colors text-sm font-medium"
+                          className="bg-primary text-white px-4 py-2 rounded-md hover:bg-primary-HOVER transition-colors text-sm font-medium"
                         >
                           Apply
                         </button>
@@ -546,7 +529,13 @@ const CartPage: React.FC = () => {
 
                   <div className="space-y-2">
                     <div className="flex justify-between text-sm">
-                      <span className="text-gray-600">Regular Products ({cartItems.filter(item => !item.cartOfferProductId).reduce((sum, item) => sum + item.quantity, 0)} items)</span>
+                      <span className="text-gray-600">
+                        Regular Products (
+                        {cartItems
+                          .filter(item => !item.isOfferProduct)
+                          .reduce((sum, item) => sum + item.quantity, 0)
+                        } items)
+                      </span>
                       <span className="text-gray-900">{formatCurrency(regularProductsSubtotal)}</span>
                     </div>
                     {offerProductsTotal > 0 && (
@@ -583,7 +572,7 @@ const CartPage: React.FC = () => {
                 </div>
                 <button
                   onClick={handleCheckout}
-                  className="w-full mt-6 bg-blue-600 text-white py-3 rounded-full hover:bg-blue-700 transition-colors disabled:opacity-50 text-base font-medium"
+                  className="w-full mt-6 bg-primary text-white py-3 rounded-full hover:bg-primary-HOVER transition-colors disabled:opacity-50 text-base font-medium"
                   disabled={cartItems.length === 0 || isUpdating !== null}
                   aria-label="Proceed to checkout"
                 >
@@ -591,7 +580,7 @@ const CartPage: React.FC = () => {
                 </button>
                 <Link
                   href="/"
-                  className="block text-center text-sm text-blue-600 hover:text-blue-800 mt-4"
+                  className="block text-center text-sm text-primary hover:text-primary-HOVER mt-4"
                   aria-label="Continue shopping"
                 >
                   Continue Shopping

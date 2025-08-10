@@ -7,7 +7,7 @@ import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { cn } from '@/lib/utils';
 import { useAuthStore } from '@/store/auth-store';
-import { useWishlistStore, useWishlistAuthSync } from '@/store/wishlist-store';
+import { useWishlistStore } from '@/store/wishlist-store';
 import { useProfileStore } from '@/store/profile-store';
 import { useCartStore } from '@/store/cart-store';
 import toast from 'react-hot-toast';
@@ -43,7 +43,6 @@ const WishlistProductCard: React.FC<ProductCardProps> = ({
   productId,
   variantId,
 }) => {
-  useWishlistAuthSync(); // Sync wishlist with auth state
   const { isInWishlist, addToWishlist, removeFromWishlist, isLoading } = useWishlistStore();
   const { isLoggedIn, fetchAuthStatus } = useAuthStore();
   const { refetch: refetchProfile } = useProfileStore();
@@ -160,6 +159,7 @@ const WishlistProductCard: React.FC<ProductCardProps> = ({
   return (
     <Link
       href={`/product/${slug}`}
+      target='_blank'
       className={cn('w-full rounded-lg cursor-pointer', className)}
       aria-label={`View details for ${name}`}
     >

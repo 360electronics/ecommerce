@@ -1,111 +1,41 @@
-'use client';
-
-import { useEffect, useState } from 'react';
-import { use } from 'react'; // Import React.use
+// app/products/[slug]/page.tsx
+import { notFound } from 'next/navigation';
 import UserLayout from '@/components/Layouts/UserLayout';
-import { useProductStore } from '@/store/product-store';
-import toast from 'react-hot-toast';
-import { FlattenedProduct } from '@/types/product';
 import ProductDetailPage from '@/components/Product/ProductDetails/ProductDetailsPage';
+import { FlattenedProduct } from '@/types/product';
 
-type Params = Promise<{ slug: string }>;
+async function getProductData(slug: string): Promise<FlattenedProduct | null> {
+  try {
+    const res = await fetch(`${process.env.NEXT_PUBLIC_API_BASE_URL}/api/products/${slug}`, {
+      cache: 'no-store', // ensures fresh fetch for SSR
+    });
 
-export default function Page({ params }: { params: Params }) {
-  const { slug } = use(params); // Unwrap params using React.use
-  const { product, setProduct, isLoading, setIsLoading, error, setError } = useProductStore();
-  const [initialLoad, setInitialLoad] = useState(true);
-
-  const getProductData = async (slug: string): Promise<FlattenedProduct | null> => {
-    try {
-      const res = await fetch(`/api/products/${slug}`);
-      if (!res.ok) {
-        if (res.status === 404) throw new Error('Product not found');
-        throw new Error(`Failed to fetch product data: ${res.status}`);
-      }
-      const data: FlattenedProduct = await res.json();
-      // console.log("product data", data)
-      return data;
-    } catch (error) {
-      console.error('Error fetching product data:', error);
-      return null;
+    if (!res.ok) {
+      if (res.status === 404) return null;
+      throw new Error(`Failed to fetch product: ${res.status}`);
     }
-  };
 
-  useEffect(() => {
-    let retryCount = 0;
-    const maxRetries = 3;
+    return res.json();
+  } catch (err) {
+    console.error('Error fetching product:', err);
+    return null;
+  }
+}
 
-    const fetchData = async () => {
-      setIsLoading(true);
-      setError(null);
+type Params = Promise<{ slug: string }>
 
-      const data = await getProductData(slug);
+export default async function Page({ params }: { params: Params }) {
 
-      if (data) {
-        setProduct(data);
-        setInitialLoad(false);
-      } else {
-        setError({ message: 'Failed to load product. Retrying...', name: '' });
+  const { slug } = await params
+  const product = await getProductData(slug);
 
-        if (retryCount < maxRetries) {
-          retryCount += 1;
-          setTimeout(fetchData, 2000);
-        } else {
-          setError({ message: 'Product not found or server error.', name: 'ProductError' });
-          toast.error('Failed to load product after multiple attempts.');
-        }
-      }
-
-      setIsLoading(false);
-    };
-
-    if (initialLoad || !product || product.slug !== slug) {
-      fetchData();
-    }
-  }, [slug, product, initialLoad, setError, setIsLoading, setProduct]);
+  if (!product) {
+    notFound();
+  }
 
   return (
-    <UserLayout isCategory={true}>
-      {isLoading ? (
-        <div className="container mx-auto p-4 text-center">
-          <div className="animate-pulse">
-            <div className="h-8 w-1/2 bg-gray-200 rounded mx-auto mb-6" />
-            <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
-              <div className="bg-gray-200 h-[500px] w-full rounded-lg" />
-              <div>
-                <div className="bg-gray-200 h-10 w-3/4 rounded mb-4" />
-                <div className="bg-gray-200 h-6 w-1/2 rounded mb-4" />
-                <div className="bg-gray-200 h-24 w-full rounded mb-4" />
-                <div className="bg-gray-200 h-12 w-1/3 rounded" />
-              </div>
-            </div>
-          </div>
-        </div>
-      ) : error ? (
-        <div className="container mx-auto p-4 text-center text-red-600">
-          {error.message}
-          <button
-            onClick={async () => {
-              setError(null);
-              setIsLoading(true);
-              const data = await getProductData(slug);
-              if (data) {
-                setProduct(data);
-              } else {
-                setError({ message: 'Failed to load product.', name: 'ProductError' });
-              }
-              setIsLoading(false);
-            }}
-            className="ml-4 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
-          >
-            Retry
-          </button>
-        </div>
-      ) : product ? (
-        <ProductDetailPage product={product} />
-      ) : (
-        <div className="container mx-auto p-4 text-center text-gray-600">Product not found</div>
-      )}
+    <UserLayout isCategory>
+      <ProductDetailPage product={product} />
     </UserLayout>
   );
 }

@@ -6,7 +6,7 @@ import { useCheckoutStore } from '@/store/checkout-store';
 import { useHomeStore } from '@/store/home-store';
 import { useProfileStore } from '@/store/profile-store';
 import { logError } from '@/store/store-utils';
-import { useWishlistAuthSync, useWishlistStore } from '@/store/wishlist-store';
+import { useWishlistStore } from '@/store/wishlist-store';
 import { useEffect, useRef, type ReactNode } from 'react';
 
 export const refetchWishlist = async () => {
@@ -42,7 +42,6 @@ export const StoreProvider = ({ children }: { children: ReactNode }) => {
   const { fetchHomeData } = useHomeStore();
   const { fetchProfileData, fetchOrders, fetchReferrals, fetchTickets } = useProfileStore();
 
-  useWishlistAuthSync();
 
   useEffect(() => {
     const initializeStores = async () => {

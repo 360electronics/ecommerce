@@ -238,36 +238,3 @@ export const useWishlistStore = create<WishlistState>((set, get) => ({
   },
 }));
 
-export const useWishlistAuthSync = () => {
-  useEffect(() => {
-    const { isLoggedIn, user } = useAuthStore.getState();
-    const { fetchWishlist, reset } = useWishlistStore.getState();
-
-    // Initial fetch if logged in
-    if (isLoggedIn && user?.id) {
-      // console.log('[useWishlistAuthSync] Initial fetch for logged-in user:', user.id);
-      fetchWishlist(); // No force=true to respect cache
-    } else {
-      console.log('[useWishlistAuthSync] User not logged in, resetting wishlist');
-      reset();
-    }
-
-    // Subscribe to auth state changes
-    const unsubscribe = useAuthStore.subscribe((state, prevState) => {
-      if (state.isLoggedIn !== prevState.isLoggedIn) {
-        if (state.isLoggedIn && state.user?.id) {
-          // console.log('[useWishlistAuthSync] Auth state changed to logged in, fetching wishlist');
-          fetchWishlist(); // No force=true to respect cache
-        } else {
-          console.log('[useWishlistAuthSync] Auth state changed to logged out, resetting wishlist');
-          reset();
-        }
-      }
-    });
-
-    return () => {
-      console.log('[useWishlistAuthSync] Unsubscribing from auth store');
-      unsubscribe();
-    };
-  }, []);
-};
