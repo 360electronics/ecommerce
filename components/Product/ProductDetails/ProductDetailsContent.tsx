@@ -2,7 +2,7 @@
 import { Heart, Minus, Plus, Share2, Truck, Shield, Package, Phone, MapPin } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useRouter } from 'next/navigation';
-import { useEffect, useMemo, useState, useCallback } from 'react';
+import { useEffect, useMemo, useState, useCallback, useRef } from 'react';
 import toast, { Toaster } from 'react-hot-toast';
 import { addToWishlist, removeFromWishlist } from '@/utils/wishlist.utils';
 import { useProfileStore } from '@/store/profile-store';
@@ -40,19 +40,73 @@ export default function ProductDetailsContent({ className, activeVariant }: Prod
   const [deliveryEstimate, setDeliveryEstimate] = useState<string | null>(null);
   const [pinCodeError, setPinCodeError] = useState<string | null>(null);
   const [isCheckingPin, setIsCheckingPin] = useState(false);
+  const [district, setDistrict] = useState<string | null>(null);
+  const inputRef = useRef<HTMLInputElement>(null); // Add ref for input focus
   const userId = user?.id;
+
+  // Fetch location details from API
+  const fetchLocationDetails = async (pincode: string) => {
+    if (!/^\d{6}$/.test(pincode)) {
+      setPinCodeError('Invalid PIN code format');
+      setDeliveryEstimate(null);
+      setIsCheckingPin(false);
+      return;
+    }
+
+    setIsCheckingPin(true);
+    try {
+      const response = await fetch(`https://api.postalpincode.in/pincode/${pincode}`);
+      const data = await response.json();
+
+      if (
+        data &&
+        data[0] &&
+        data[0].Status === "Success" &&
+        data[0].PostOffice &&
+        data[0].PostOffice.length > 1
+      ) {
+        const postOfficeData = data[0].PostOffice[data[0].PostOffice.length - 2];
+        const districtName = postOfficeData.District;
+        const location = postOfficeData.Name;
+        // setDistrict(districtName);
+      
+
+        // Calculate delivery estimate with fetched district
+        calculateDeliveryEstimate(pincode, location, districtName);
+      } else {
+        setPinCodeError('Invalid PIN code or no data available');
+        setDeliveryEstimate(null);
+        // setDistrict(null);
+        setIsCheckingPin(false);
+      }
+    } catch (error) {
+      setPinCodeError('Error fetching location details. Please try again.');
+      setDeliveryEstimate(null);
+      // setDistrict(null);
+      setIsCheckingPin(false);
+    }
+  };
 
   // Load location from localStorage and set initial delivery estimate
   useEffect(() => {
     const savedLocation = localStorage.getItem('g36-location');
     if (savedLocation) {
-      const { pincode, location, district } = JSON.parse(savedLocation);
+      const { pincode, location, district: savedDistrict } = JSON.parse(savedLocation);
       if (pincode) {
         setPinCode(pincode);
-        calculateDeliveryEstimate(pincode, location, district);
+        if (savedDistrict) {
+          // Use saved district if available
+          setDistrict(savedDistrict);
+          calculateDeliveryEstimate(pincode, location, savedDistrict);
+        } else {
+          // Fetch district from API for initial PIN code
+          fetchLocationDetails(pincode);
+        }
       }
     }
   }, []);
+
+  
 
   // Debounce function to limit rapid API calls
   const debounce = (func: (...args: any[]) => void, wait: number) => {
@@ -62,6 +116,8 @@ export default function ProductDetailsContent({ className, activeVariant }: Prod
       timeout = setTimeout(() => func(...args), wait);
     };
   };
+
+  
 
   // Calculate delivery estimate based on PIN code, stock, and backorder status
   const calculateDeliveryEstimate = useCallback(
@@ -89,9 +145,9 @@ export default function ProductDetailsContent({ className, activeVariant }: Prod
           } else if ([7, 8].includes(firstDigit)) {
             deliveryDays = 7; // Northeast or remote areas
           } else if ([3, 4].includes(firstDigit)) {
-            deliveryDays = 3; // Central/West India
+            deliveryDays = 5; // Central/West India
           } else if ([5, 6].includes(firstDigit)) {
-            deliveryDays = 4; // South India
+            deliveryDays = 3; // South India
           }
 
           // Adjust delivery days based on stock availability
@@ -115,7 +171,16 @@ export default function ProductDetailsContent({ className, activeVariant }: Prod
               month: 'short',
             });
 
-          const locationText = district ? `${district}` : pin;
+          // Use district if available, else location, else PIN
+          let locationText = pin;
+          if (location && district) {
+            locationText = `${location}, ${district}. `;
+          } else if (district) {
+            locationText = district;
+          } else if (location) {
+            locationText = location;
+          }
+
           const estimateText = activeVariant.stock > 0
             ? `Estimated delivery between ${formatDate(minDeliveryDate)} and ${formatDate(maxDeliveryDate)} for ${locationText}`
             : activeVariant.isBackorderable
@@ -129,26 +194,21 @@ export default function ProductDetailsContent({ className, activeVariant }: Prod
           setDeliveryEstimate(null);
           setIsCheckingPin(false);
         }
-      }, 800); // Increased delay to simulate more realistic API response
+      }, 800); // Simulate API response delay
     }, 300),
     [activeVariant.stock, activeVariant.isBackorderable, activeVariant.lowStockThreshold]
   );
 
   // Handle PIN code input change
-  const handlePinCodeChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const value = e.target.value.replace(/\D/g, '').slice(0, 6); // Allow only digits, max 6
-    setPinCode(value);
-
-    if (value.length === 6) {
-      const savedLocation = JSON.parse(localStorage.getItem('g36-location') || '{}');
-      localStorage.setItem('g36-location', JSON.stringify({ ...savedLocation, pincode: value }));
-      calculateDeliveryEstimate(value, savedLocation.location, savedLocation.district);
-    } else {
-      setDeliveryEstimate(null);
-      setPinCodeError(null);
-      setIsCheckingPin(false);
-    }
-  };
+  const handlePinCodeChange = useCallback(
+    (e: React.ChangeEvent<HTMLInputElement>) => {
+      const value = e.target.value.replace(/\D/g, '').slice(0, 6);
+      setPinCode(value);
+      fetchLocationDetails(value)
+      calculateDeliveryEstimate(value);
+    },
+    [calculateDeliveryEstimate]
+  );
 
   // Calculate discount
   const discount = useMemo(
@@ -532,65 +592,167 @@ export default function ProductDetailsContent({ className, activeVariant }: Prod
     </div>
   );
 
+
   const DeliveryEstimation = () => {
     const savedLocation = JSON.parse(localStorage.getItem('g36-location') || '{}');
     const { location, district } = savedLocation;
-
+  
+    useEffect(() => {
+      if (inputRef.current && pinCode.length < 6) {
+        inputRef.current.focus();
+      }
+    }, [pinCode]);
+  
     return (
-      <div className="mt-6 bg-gray-50 rounded-xl p-6 border border-gray-100">
-        <h3 className="text-lg font-semibold text-gray-900 mb-4 flex items-center gap-2">
-          <Truck className="w-5 h-5 text-primary" /> Delivery Details
-        </h3>
-        <div className="flex flex-col gap-4">
-          <div className="flex items-center gap-3 flex-wrap">
-            <div className="relative flex items-center w-full max-w-xs">
-              <MapPin className="absolute left-3 w-5 h-5 text-gray-400" />
+      <div className="mt-6 border border-gray-200 rounded-lg">
+        {/* Header */}
+        <div className="border-b border-gray-200 px-4 py-3 bg-gray-50">
+          <h3 className="text-base font-semibold text-gray-900 flex items-center gap-2">
+            <Truck className="w-5 h-5 text-primary" />
+            Delivery Options
+          </h3>
+        </div>
+  
+        {/* Content */}
+        <div className="p-4 space-y-4">
+          {/* PIN Code Input Section */}
+          <div className="flex items-center gap-3">
+            <div className="relative flex-1 max-w-xs">
+              <MapPin className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-gray-400" />
               <input
                 type="text"
                 value={pinCode}
                 onChange={handlePinCodeChange}
-                placeholder="Enter 6-digit PIN code"
+                placeholder="Enter PIN code"
                 maxLength={6}
-                className="pl-10 pr-3 py-2.5 border border-gray-300 rounded-lg text-sm w-full focus:outline-none focus:ring-2 focus:ring-primary transition-all bg-white"
+                ref={inputRef}
+                className="w-full pl-10 pr-4 py-2.5 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-primary focus:border-primary transition-all"
                 aria-label="Enter PIN code for delivery estimation"
               />
             </div>
+            <button 
+              onClick={() => fetchLocationDetails(pinCode)}
+              className="px-4 py-2.5 text-sm font-medium text-primary border border-primary rounded-md hover:bg-primary/50 transition-colors"
+              disabled={pinCode.length !== 6 || isCheckingPin}
+            >
+              {isCheckingPin ? 'Checking...' : 'Check'}
+            </button>
           </div>
+  
+          {/* Loading State */}
           {isCheckingPin && (
-            <div className="flex items-center gap-2 text-sm text-gray-500">
+            <div className="flex items-center gap-2 p-3 bg-blue-50 rounded-md">
               <div className="w-4 h-4 border-2 border-primary border-t-transparent rounded-full animate-spin" />
-              Checking delivery details...
+              <span className="text-sm text-primry">Checking delivery options...</span>
             </div>
           )}
+  
+          {/* Error State */}
           {pinCodeError && (
-            <span className="text-red-500 text-sm flex items-center gap-2">
-              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  strokeWidth="2"
-                  d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"
-                />
+            <div className="flex items-center gap-2 p-3 bg-red-50 rounded-md border border-red-200">
+              <svg className="w-4 h-4 text-red-500 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
               </svg>
-              {pinCodeError}
-            </span>
+              <span className="text-sm text-red-700">{pinCodeError}</span>
+            </div>
           )}
-          {deliveryEstimate && !isCheckingPin && (
-            <p className="text-sm text-gray-700 flex items-center gap-2">
-              <Truck className="w-4 h-4 text-primary" /> {deliveryEstimate}
-            </p>
+  
+          {/* Success State - Delivery Information */}
+          {deliveryEstimate && !isCheckingPin && !pinCodeError && (
+            <div className="space-y-4">
+              {/* Main Delivery Info */}
+              <div className="flex items-start gap-3 p-3 bg-green-50 rounded-md border border-green-200">
+                <Truck className="w-5 h-5 text-green-600 flex-shrink-0 mt-0.5" />
+                <div className="flex-1">
+                  <p className="text-sm font-medium text-green-800 mb-1">
+                    {activeVariant.stock > 0 ? 'Available for delivery' : 'Available for backorder'}
+                  </p>
+                  <p className="text-sm text-green-700">{deliveryEstimate}</p>
+                </div>
+              </div>
+  
+              {/* Additional Delivery Options */}
+              <div className="grid grid-cols-1 gap-3">
+                {/* Standard Delivery */}
+                <div className="flex items-center justify-between p-3 border border-gray-200 rounded-md">
+                  <div className="flex items-center gap-3">
+                    <Truck className="w-4 h-4 text-gray-500" />
+                    <div>
+                      <p className="text-sm font-medium text-gray-900">Standard Delivery</p>
+                      <p className="text-xs text-gray-500">
+                        {activeVariant.ourPrice >= 499 ? 'FREE' : '₹49'} • {deliveryEstimate.includes('between') ? deliveryEstimate.split('between ')[1].split(' for')[0] : '3-5 days'}
+                      </p>
+                    </div>
+                  </div>
+                  {activeVariant.ourPrice >= 499 && (
+                    <span className="text-xs font-semibold text-green-600 bg-green-100 px-2 py-1 rounded">
+                      FREE
+                    </span>
+                  )}
+                </div>
+  
+                {/* Express Delivery (if available) */}
+                {activeVariant.deliveryMode === 'Express' && (
+                  <div className="flex items-center justify-between p-3 border border-gray-200 rounded-md">
+                    <div className="flex items-center gap-3">
+                      <svg className="w-4 h-4 text-orange-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M13 10V3L4 14h7v7l9-11h-7z" />
+                      </svg>
+                      <div>
+                        <p className="text-sm font-medium text-gray-900">Express Delivery</p>
+                        <p className="text-xs text-gray-500">₹99 • Get it by tomorrow</p>
+                      </div>
+                    </div>
+                    <span className="text-xs font-medium text-orange-600">
+                      +₹99
+                    </span>
+                  </div>
+                )}
+              </div>
+  
+              {/* Delivery Highlights */}
+              <div className="border-t border-gray-200 pt-4">
+                <h4 className="text-sm font-medium text-gray-900 mb-3">Delivery Highlights</h4>
+                <div className="space-y-2">
+                  <div className="flex items-center gap-2 text-sm text-gray-600">
+                    <svg className="w-4 h-4 text-green-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M5 13l4 4L19 7" />
+                    </svg>
+                    <span>Free delivery on orders above ₹499</span>
+                  </div>
+                  {/* <div className="flex items-center gap-2 text-sm text-gray-600">
+                    <svg className="w-4 h-4 text-green-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M5 13l4 4L19 7" />
+                    </svg>
+                    <span>Cash on Delivery available</span>
+                  </div> */}
+                  <div className="flex items-center gap-2 text-sm text-gray-600">
+                    <svg className="w-4 h-4 text-green-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M5 13l4 4L19 7" />
+                    </svg>
+                    <span>Easy returns within 7 days</span>
+                  </div>
+                  {activeVariant.isBackorderable && (
+                    <div className="flex items-center gap-2 text-sm text-amber-600">
+                      <svg className="w-4 h-4 text-amber-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                      </svg>
+                      <span>This item is currently on backorder</span>
+                    </div>
+                  )}
+                </div>
+              </div>
+            </div>
           )}
-          <p className="text-xs text-gray-500 flex items-center gap-2">
-            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                strokeWidth="2"
-                d="M3 10h18M7 15h1m4 0h1m-7 4h12a3 3 0 003-3V8a3 3 0 00-3-3H6a3 3 0 00-3 3v8a3 3 0 003 3z"
-              />
-            </svg>
-            Free delivery on orders above ₹499
-          </p>
+  
+          {/* Default state when no PIN is entered */}
+          {!pinCode && !isCheckingPin && (
+            <div className="text-center py-4">
+              <MapPin className="w-8 h-8 text-gray-300 mx-auto mb-2" />
+              <p className="text-sm text-gray-500 mb-1">Enter your PIN code to check delivery options</p>
+              <p className="text-xs text-gray-400">We'll show you exact delivery dates and charges</p>
+            </div>
+          )}
         </div>
       </div>
     );

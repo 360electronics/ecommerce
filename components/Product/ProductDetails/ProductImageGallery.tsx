@@ -71,7 +71,7 @@ export default function ProductImageGallery({ activeVariant }: ProductImageGalle
   const currentImage = activeVariant.productImages[validIndex];
 
   return (
-    <div className="flex flex-col md:flex-row-reverse gap-4">
+    <div className="flex flex-col md:flex-row-reverse gap-4 sticky top-32">
       {/* Main Image */}
       <div
         ref={imageContainerRef}

@@ -108,54 +108,90 @@ const INITIAL_STATE: ProfileState = {
 };
 
 const fetchProfile = async (userId: string, signal?: AbortSignal) => {
-  const data = await fetchWithRetry<{ user: ProfileState['profileData'] }>(() =>
-    fetch(`/api/users/${userId}`, { credentials: 'include', signal })
-  );
-  return data.user || { firstName: null, lastName: null, email: null, phoneNumber: null, addresses: [] };
+  try {
+    const response = await fetchWithRetry<{ user: ProfileState['profileData'] }>(() =>
+      fetch(`/api/users/${userId}`, { credentials: 'include', signal })
+    );
+    return response.user || { firstName: null, lastName: null, email: null, phoneNumber: null, addresses: [] };
+  } catch (error: any) {
+    // Check if the error is due to the user not being logged in (e.g., 401 Unauthorized)
+    if (error.status === 401 || error.message.includes('Unauthorized')) {
+      // Return default data instead of throwing an error
+      return { firstName: null, lastName: null, email: null, phoneNumber: null, addresses: [] };
+    }
+    // Re-throw other errors to be handled by the caller
+    throw error;
+  }
 };
 
 const fetchOrders = async (userId: string, signal?: AbortSignal) => {
-  const data = await fetchWithRetry<Order[]>(() =>
-    fetch(`/api/users/orders?userId=${userId}`, { credentials: 'include', signal })
-  );
-  return Array.isArray(data) ? data : [];
+  try {
+    const data = await fetchWithRetry<Order[]>(() =>
+      fetch(`/api/users/orders?userId=${userId}`, { credentials: 'include', signal })
+    );
+    return Array.isArray(data) ? data : [];
+  } catch (error: any) {
+    if (error.status === 401 || error.message.includes('Unauthorized')) {
+      return [];
+    }
+    throw error;
+  }
 };
 
 const fetchTickets = async (userId: string, signal?: AbortSignal) => {
-  const data = await fetchWithRetry<Ticket[]>(() =>
-    fetch(`/api/tickets/${userId}`, { credentials: 'include', signal })
-  );
-  return Array.isArray(data) ? data : [];
+  try {
+    const data = await fetchWithRetry<Ticket[]>(() =>
+      fetch(`/api/tickets/${userId}`, { credentials: 'include', signal })
+    );
+    return Array.isArray(data) ? data : [];
+  } catch (error: any) {
+    if (error.status === 401 || error.message.includes('Unauthorized')) {
+      return [];
+    }
+    throw error;
+  }
 };
 
 const fetchReferralsData = async (userId: string, signal?: AbortSignal) => {
-  const [referralLink, referrals, coupons] = await Promise.all([
-    fetchWithRetry<{ referralLink: string }>(() =>
-      fetch(`/api/referrals/link?userId=${userId}`, { credentials: 'include', signal })
-    ),
-    fetchWithRetry<Referral[]>(() => fetch(`/api/referrals?userId=${userId}`, { credentials: 'include', signal })),
-    fetchWithRetry<Coupon[]>(() => fetch(`/api/coupons?userId=${userId}`, { credentials: 'include', signal })),
-  ]);
+  try {
+    const [referralLink, referrals, coupons] = await Promise.all([
+      fetchWithRetry<{ referralLink: string }>(() =>
+        fetch(`/api/referrals/link?userId=${userId}`, { credentials: 'include', signal })
+      ),
+      fetchWithRetry<Referral[]>(() => fetch(`/api/referrals?userId=${userId}`, { credentials: 'include', signal })),
+      fetchWithRetry<Coupon[]>(() => fetch(`/api/coupons?userId=${userId}`, { credentials: 'include', signal })),
+    ]);
 
-  const parsed = {
-    referralLink: referralLink.referralLink || '',
-    referrals: Array.isArray(referrals) ? referrals : [],
-    coupons: Array.isArray(coupons) ? coupons : [],
-  };
-  const completedReferrals = parsed.referrals.filter((r) => r.status === 'completed').length;
-  const availableCoupons = parsed.coupons.filter((c) => !c.isUsed && new Date(c.expiryDate) > new Date()).length;
+    const parsed = {
+      referralLink: referralLink.referralLink || '',
+      referrals: Array.isArray(referrals) ? referrals : [],
+      coupons: Array.isArray(coupons) ? coupons : [],
+    };
+    const completedReferrals = parsed.referrals.filter((r) => r.status === 'completed').length;
+    const availableCoupons = parsed.coupons.filter((c) => !c.isUsed && new Date(c.expiryDate) > new Date()).length;
 
-  return {
-    referralLink: parsed.referralLink,
-    referrals: parsed.referrals,
-    coupons: parsed.coupons,
-    stats: {
-      totalReferrals: parsed.referrals.length,
-      completedReferrals,
-      totalCoupons: parsed.coupons.length,
-      availableCoupons,
-    },
-  };
+    return {
+      referralLink: parsed.referralLink,
+      referrals: parsed.referrals,
+      coupons: parsed.coupons,
+      stats: {
+        totalReferrals: parsed.referrals.length,
+        completedReferrals,
+        totalCoupons: parsed.coupons.length,
+        availableCoupons,
+      },
+    };
+  } catch (error: any) {
+    if (error.status === 401 || error.message.includes('Unauthorized')) {
+      return {
+        referralLink: '',
+        referrals: [],
+        coupons: [],
+        stats: { totalReferrals: 0, completedReferrals: 0, totalCoupons: 0, availableCoupons: 0 },
+      };
+    }
+    throw error;
+  }
 };
 
 export const useProfileStore = create<ProfileState>((set, get) => ({

@@ -120,6 +120,7 @@ export type ProductVariant = {
   updatedAt: Date;
   discountPercentage: number | null;
   isLowStock: boolean;
+  deliveryMode?: any;
 };
 
 // Promotion Type

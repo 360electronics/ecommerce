@@ -52,6 +52,7 @@ export default function ProductDetailPage({ product }: ProductDetailPageProps) {
         ourPrice: Number(product.ourPrice) || 0,
         salePrice: null,
         isOnSale: false,
+        deliveryMode: product.productParent?.deliveryMode,
         productImages: Array.isArray(product.productImages) ? product.productImages : (product.productImages ? [product.productImages] : []),
         weight: Number(product.weight) || null,
         weightUnit: null,
@@ -114,12 +115,12 @@ export default function ProductDetailPage({ product }: ProductDetailPageProps) {
         role="region"
         aria-label="Product details"
       >
-        <div className="w-full md:w-auto relative">
+        <div className="  w-full md:w-auto sticky">
           <ProductImageGallery activeVariant={activeVariant} />
         </div>
         <div className="relative">
           <ProductZoomOverlay activeVariant={activeVariant} className="hidden lg:block" />
-          <div ref={detailsContentRef} className="w-full overflow-y-auto h-[70dvh] hide-scrollbar">
+          <div ref={detailsContentRef} className="w-full ">
             <ProductDetailsContent activeVariant={activeVariant} />
           </div>
         </div>
