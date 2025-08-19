@@ -62,13 +62,13 @@ const NewArrivals: React.FC = () => {
   }, []);
 
   const renderSkeletons = useCallback(() => {
-    return Array(4)
+    return Array(5)
       .fill(0)
       .map((_, index) => (
         <div
           key={`skeleton-${index}`}
           className="snap-start flex-shrink-0"
-          style={{ width: 'calc(70vw - 24px)', maxWidth: '22rem' }}
+          style={{ width: 'calc(60vw - 32px)', maxWidth: '15rem'  }}
         >
           <ProductCardSkeleton />
         </div>
@@ -91,7 +91,7 @@ const NewArrivals: React.FC = () => {
               The Future of Tech Starts Here, Unbox what&apos;s New & Next.
             </p>
           </div>
-          <div className="flex overflow-x-auto pb-4 sm:pb-6 snap-x snap-mandatory minimal-scrollbar gap-3 sm:gap-5 scrollbar-hide">
+          <div className="flex overflow-x-auto pb-4 sm:pb-6 snap-x snap-mandatory minimal-scrollbar gap-3 sm:gap-5 ">
             {renderSkeletons()}
           </div>
         </div>
@@ -127,7 +127,7 @@ const NewArrivals: React.FC = () => {
       <div className="mx-auto">
 
         <div className="relative">
-          <div className="flex overflow-x-auto pb-4 sm:pb-6 snap-x snap-mandatory minimal-scrollbar gap-3 sm:gap-5 scrollbar-hide">
+          <div className="flex overflow-x-auto pb-4 sm:pb-6 snap-x snap-mandatory minimal-scrollbar gap-3 sm:gap-5">
             <div className="hidden md:flex mb-8 text-start snap-start flex-shrink-0 w-80 flex-col justify-center items-start">
               <h2 className="text-3xl md:text-4xl font-bold mb-2 nohemi-bold">
                 New <br />
@@ -147,7 +147,7 @@ const NewArrivals: React.FC = () => {
                   <div
                     key={`${productId}-${variantId}`}
                     className="snap-start flex-shrink-0"
-                    style={{ width: 'calc(60vw - 32px)', maxWidth: '20rem' }}
+                    style={{ width: 'calc(60vw - 32px)', maxWidth: '16rem' }}
 
                   >
                     <ProductCardwithoutCart

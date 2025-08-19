@@ -278,7 +278,7 @@ function VerifyOTPContent() {
         <div className="text-center">
           <h1 className="text-2xl font-bold text-red-600">Invalid Request</h1>
           <p className="mt-2 text-gray-600">Missing user ID. Please try again.</p>
-          <Link href="/signin" className="text-blue-600 hover:underline mt-4 inline-block">
+          <Link href="/signin" className="text-primary hover:underline mt-4 inline-block">
             Back to Login
           </Link>
         </div>
@@ -290,29 +290,21 @@ function VerifyOTPContent() {
     <div className="flex min-h-screen bg-gray-50">
       {/* Banner Section */}
       <div className="hidden md:block w-full md:w-[40%] relative">
-        {isBannerLoading ? (
-          <div className="w-full h-full bg-gray-200 flex items-center justify-center animate-pulse">
-            <span className="text-gray-500 text-lg">Loading banner...</span>
-          </div>
-        ) : banner ? (
-          <Link href={banner.link || "#"} className="block w-full h-full">
+        
+          <Link href={banner?.link || "#"} className="block w-full h-full">
             <Image
-              src={banner.imageUrls.default || "/default-banner.jpg"}
-              alt={banner.title || "Promotional Banner"}
+              src={banner?.imageUrls.default || "/auth_placeholder.webp"}
+              alt={banner?.title || "Promotional Banner"}
               fill
               sizes="40vw"
+              quality={100}
               className="object-cover"
               priority
               placeholder="blur"
-              blurDataURL="/placeholder.svg"
+              blurDataURL="/auth_placeholder.webp"
               onError={() => setBanner(null)}
             />
           </Link>
-        ) : (
-          <div className="w-full h-full bg-gray-200 flex items-center justify-center">
-            <span className="text-gray-500 text-lg">No banner available</span>
-          </div>
-        )}
       </div>
 
       {/* Form Section */}
@@ -321,7 +313,7 @@ function VerifyOTPContent() {
           {/* Logo */}
           <div className="flex justify-center">
             <Image
-              src="/logo/360.svg"
+              src="/logo/logo.png"
               alt="Computer Garage Logo"
               width={180}
               height={54}

@@ -140,7 +140,7 @@ const TopTierBrands: React.FC = () => {
         <div
           key={`skeleton-${index}`}
           className="snap-start flex-shrink-0"
-          style={{ width: 'calc(80vw - 32px)', maxWidth: '22rem' }}
+          style={{  width: 'calc(60vw - 32px)', maxWidth: '15rem'  }}
         >
           <ProductCardSkeleton />
         </div>
@@ -208,7 +208,7 @@ const TopTierBrands: React.FC = () => {
       </div>
 
       {variantCards.length > 0 ? (
-        <div className="flex overflow-x-auto pb-6 sm:pb-8 snap-x snap-mandatory minimal-scrollbar scrollbar-hide">
+        <div className="flex overflow-x-auto pb-6 sm:pb-8 snap-x snap-mandatory minimal-scrollbar ">
           <div className="flex gap-3 sm:gap-4 md:gap-6 pl-1">
             {variantCards.map(({ productId, variantId, product, variant, displayName }) => {
               const mrp = Number(variant.mrp) || 0;
@@ -219,7 +219,7 @@ const TopTierBrands: React.FC = () => {
                 <div
                   key={`${productId}-${variantId}`}
                   className="snap-start flex-shrink-0"
-                  style={{ width: 'calc(60vw - 32px)', maxWidth: '20rem' }}
+                  style={{  width: 'calc(60vw - 32px)', maxWidth: '15rem'  }}
                 >
                   <ProductCardwithoutCart
                     productId={productId}

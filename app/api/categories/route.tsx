@@ -1,8 +1,8 @@
 // app/api/categories/route.ts
 import { NextRequest, NextResponse } from 'next/server';
 import { db } from '@/db/drizzle';
-import { categories, attributeTemplates, subcategories } from '@/db/schema';
-import { eq, and, sql } from 'drizzle-orm';
+import { categories, attributeTemplates, subcategories, products } from '@/db/schema';
+import { eq, and, sql, inArray } from 'drizzle-orm';
 import { z } from 'zod';
 
 // Validation schemas
@@ -35,7 +35,7 @@ const createCategorySchema = z.object({
     imageUrl: z.string().max(500).optional(),
     isActive: z.boolean().default(true),
     displayOrder: z.number().int().min(0).default(0),
-    attributes: z.array(attributeSchema).default([]),
+    attributes: z.array(z.any()),
     subcategoryNames: z.array(z.string()).default([]),
   });
 
@@ -111,89 +111,156 @@ export async function GET() {
     }
 }
 
+
 export async function PATCH(req: NextRequest) {
     try {
-        const body = await req.json();
-        console.log('PATCH request body:', body);
-
-        const validatedData = patchCategorySchema.parse(body);
-        const {
-            id,
-            name,
-            slug,
-            description,
-            imageUrl,
-            isActive,
-            displayOrder,
-            attributes,
-            subcategoryNames, // Changed from subcategories
-        } = validatedData;
-
-        // Check if slug is unique (excluding the current category)
-        const existingCategory = await db
-            .select()
-            .from(categories)
-            .where(and(eq(categories.slug, slug), sql`${categories.id} != ${id}`))
-            .limit(1);
-        if (existingCategory.length > 0) {
-            return NextResponse.json({ error: 'Category slug already exists' }, { status: 400 });
-        }
-
-        // Update category
-        const [updatedCategory] = await db
-            .update(categories)
-            .set({
-                name,
-                slug,
-                description: description || null,
-                imageUrl: imageUrl || null,
-                isActive: isActive ?? true,
-                displayOrder: displayOrder.toString(),
-                updatedAt: new Date(),
-            })
-            .where(eq(categories.id, id))
-            .returning();
-
-        if (!updatedCategory) {
-            return NextResponse.json({ error: 'Category not found' }, { status: 404 });
-        }
-
-        // Update or insert attribute template
-        await db.delete(attributeTemplates).where(eq(attributeTemplates.categoryId, id));
-        if (attributes.length > 0) {
-            await db.insert(attributeTemplates).values({
-                categoryId: id,
-                name: `${name} Attributes`,
-                attributes,
+      const body = await req.json();
+      console.log('PATCH request body:', body);
+  
+      const validatedData = patchCategorySchema.parse(body);
+      const {
+        id,
+        name,
+        slug,
+        description,
+        imageUrl,
+        isActive,
+        displayOrder,
+        attributes,
+        subcategoryNames,
+      } = validatedData;
+  
+      // Check if slug is unique (excluding the current category)
+      const existingCategory = await db
+        .select()
+        .from(categories)
+        .where(and(eq(categories.slug, slug), sql`${categories.id} != ${id}`))
+        .limit(1);
+      if (existingCategory.length > 0) {
+        return NextResponse.json({ error: 'Category slug already exists' }, { status: 400 });
+      }
+  
+      // Update category
+      const [updatedCategory] = await db
+        .update(categories)
+        .set({
+          name,
+          slug,
+          description: description || null,
+          imageUrl: imageUrl || null,
+          isActive: isActive ?? true,
+          displayOrder: displayOrder.toString(),
+          updatedAt: new Date(),
+        })
+        .where(eq(categories.id, id))
+        .returning();
+  
+      if (!updatedCategory) {
+        return NextResponse.json({ error: 'Category not found' }, { status: 404 });
+      }
+  
+      // Update or insert attribute template
+      await db.delete(attributeTemplates).where(eq(attributeTemplates.categoryId, id));
+      if (attributes.length > 0) {
+        await db.insert(attributeTemplates).values({
+          categoryId: id,
+          name: `${name} Attributes`,
+          attributes,
+        });
+      }
+  
+      // Fetch existing subcategories
+      const existingSubcategories = await db
+        .select({ id: subcategories.id, name: subcategories.name, slug: subcategories.slug, displayOrder: subcategories.displayOrder })
+        .from(subcategories)
+        .where(eq(subcategories.categoryId, id));
+  
+      // Create maps for easier comparison
+      const existingSubcategoryMap = new Map(existingSubcategories.map(sub => [sub.name, sub]));
+      const newSubcategoryNamesSet = new Set(subcategoryNames);
+  
+      // Identify subcategories to delete (not in new list)
+      const subcategoriesToDelete = existingSubcategories
+        .filter(sub => !newSubcategoryNamesSet.has(sub.name))
+        .map(sub => sub.id);
+  
+      // Reassign products to NULL for subcategories to be deleted
+      if (subcategoriesToDelete.length > 0) {
+        await db
+          .update(products)
+          .set({ subcategoryId: null })
+          .where(inArray(products.subcategoryId, subcategoriesToDelete));
+      }
+  
+      // Identify subcategories to insert or update
+      const subcategoriesToInsert: { categoryId: string; name: string; slug: string; displayOrder: string; isActive: boolean; createdAt: Date; updatedAt: Date }[] = [];
+      const subcategoriesToUpdate: { id: string; name: string; slug: string; displayOrder: string; updatedAt: Date }[] = [];
+  
+      subcategoryNames.forEach((name, index) => {
+        const slug = name.toLowerCase().replace(/\s+/g, '-');
+        const existingSub = existingSubcategoryMap.get(name);
+  
+        if (existingSub) {
+          // Update existing subcategory if name, slug, or displayOrder changed
+          if (existingSub.slug !== slug || existingSub.displayOrder !== index.toString()) {
+            subcategoriesToUpdate.push({
+              id: existingSub.id,
+              name,
+              slug,
+              displayOrder: index.toString(),
+              updatedAt: new Date(),
             });
-        }
-
-        // Update subcategories (delete existing and insert new)
-        await db.delete(subcategories).where(eq(subcategories.categoryId, id));
-        if (subcategoryNames.length > 0) {
-          const subcategoryValues = subcategoryNames.map((name: string, index: number) => ({
+          }
+        } else {
+          // Insert new subcategory
+          subcategoriesToInsert.push({
             categoryId: id,
             name,
-            slug: name.toLowerCase().replace(/\s+/g, '-'),
+            slug,
             displayOrder: index.toString(),
             isActive: true,
             createdAt: new Date(),
             updatedAt: new Date(),
-          }));
-          console.log('Subcategory values:', subcategoryValues);
-          console.log('Insert SQL:', db.insert(subcategories).values(subcategoryValues).toSQL());
-          await db.insert(subcategories).values(subcategoryValues);
+          });
         }
-
-        return NextResponse.json({ category: updatedCategory }, { status: 200 });
+      });
+  
+      // Perform database operations
+      if (subcategoriesToDelete.length > 0) {
+        await db.delete(subcategories).where(inArray(subcategories.id, subcategoriesToDelete));
+      }
+  
+      if (subcategoriesToInsert.length > 0) {
+        await db.insert(subcategories).values(subcategoriesToInsert);
+      }
+  
+      if (subcategoriesToUpdate.length > 0) {
+        for (const sub of subcategoriesToUpdate) {
+          await db
+            .update(subcategories)
+            .set({
+              name: sub.name,
+              slug: sub.slug,
+              displayOrder: sub.displayOrder,
+              updatedAt: sub.updatedAt,
+            })
+            .where(eq(subcategories.id, sub.id));
+        }
+      }
+  
+      console.log('Subcategories deleted:', subcategoriesToDelete);
+      console.log('Subcategories inserted:', subcategoriesToInsert);
+      console.log('Subcategories updated:', subcategoriesToUpdate);
+  
+      return NextResponse.json({ category: updatedCategory }, { status: 200 });
     } catch (error) {
-        console.error('Error updating category:', error);
-        if (error instanceof z.ZodError) {
-            return NextResponse.json({ error: error.errors }, { status: 400 });
-        }
-        return NextResponse.json({ error: `Failed to update category: ${(error as Error).message}` }, { status: 500 });
+      console.error('Error updating category:', error);
+      if (error instanceof z.ZodError) {
+        return NextResponse.json({ error: error.errors }, { status: 400 });
+      }
+      return NextResponse.json({ error: `Failed to update category: ${(error as Error).message}` }, { status: 500 });
     }
-}
+  }
 
 export async function POST(req: NextRequest) {
     try {

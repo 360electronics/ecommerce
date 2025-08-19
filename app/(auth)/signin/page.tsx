@@ -132,29 +132,21 @@ export default function LoginPage() {
     <div className="flex min-h-screen bg-gray-50">
       {/* Banner Section */}
       <div className="hidden md:block w-full md:w-[40%] relative">
-        {isBannerLoading ? (
-          <div className="w-full h-full bg-gray-200 flex items-center justify-center animate-pulse">
-            <span className="text-gray-500 text-lg">Loading banner...</span>
-          </div>
-        ) : banner ? (
-          <Link href={banner.link || "#"} className="block w-full h-full">
+   
+          <Link href={banner?.link || "#"} className="block w-full h-full">
             <Image
-              src={banner.imageUrls.default || "/default-banner.jpg"}
-              alt={banner.title || "Promotional Banner"}
+              src={banner?.imageUrls.default || "/auth_placeholder.webp"}
+              alt={banner?.title || "Promotional Banner"}
               fill
               sizes="40vw"
+              quality={100}
               className="object-cover"
               priority
               placeholder="blur"
-              blurDataURL="/placeholder.svg"
+              blurDataURL="/auth_placeholder.webp"
               onError={() => setBanner(null)} // Fallback to null on error
             />
           </Link>
-        ) : (
-          <div className="w-full h-full bg-gray-200 flex items-center justify-center">
-            <span className="text-gray-500 text-lg">No banner available</span>
-          </div>
-        )}
       </div>
 
       {/* Login Form Section */}
@@ -163,7 +155,7 @@ export default function LoginPage() {
           {/* Logo */}
           <div className="flex justify-center">
             <Image
-              src="/logo/360.svg"
+              src="/logo/logo.png"
               alt="Computer Garage Logo"
               width={180}
               height={54}
@@ -203,7 +195,7 @@ export default function LoginPage() {
                 onChange={(e) => setIdentifier(e.target.value.trim())}
                 className={cn(
                   "w-full px-4 py-3 border rounded-md text-gray-900",
-                  "focus:outline-none focus:ring-2 focus:ring-blue-500",
+                  "focus:outline-none focus:ring-2 focus:ring-primary",
                   "placeholder-gray-400",
                   error && "border-red-500"
                 )}

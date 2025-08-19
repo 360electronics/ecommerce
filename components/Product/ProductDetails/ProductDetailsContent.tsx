@@ -750,7 +750,7 @@ export default function ProductDetailsContent({ className, activeVariant }: Prod
             <div className="text-center py-4">
               <MapPin className="w-8 h-8 text-gray-300 mx-auto mb-2" />
               <p className="text-sm text-gray-500 mb-1">Enter your PIN code to check delivery options</p>
-              <p className="text-xs text-gray-400">We'll show you exact delivery dates and charges</p>
+              <p className="text-xs text-gray-400">We&apos;ll show you exact delivery dates and charges</p>
             </div>
           )}
         </div>

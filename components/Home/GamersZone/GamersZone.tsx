@@ -88,7 +88,7 @@ const GamersZone: React.FC = () => {
         <div
           key={`skeleton-${index}`}
           className="snap-start flex-shrink-0"
-          style={{ width: 'calc(70vw - 24px)', maxWidth: '22rem' }}
+          style={{  width: 'calc(60vw - 32px)', maxWidth: '15rem'  }}
         >
           <ProductCardSkeleton />
         </div>
@@ -233,7 +233,7 @@ const GamersZone: React.FC = () => {
                 );
               })}
             </div>
-            <div className="hidden sm:grid sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4 md:gap-6">
+            <div className="hidden sm:grid sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-4 md:gap-6">
               {variantCards.map(({ productId, variantId, product, variant, displayName }) => {
                 const mrp = Number(variant.mrp);
                 const ourPrice = Number(variant.ourPrice);

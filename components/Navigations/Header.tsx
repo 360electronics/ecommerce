@@ -84,8 +84,9 @@ const Header = ({ isCategory = true }: HeaderProps) => {
   const dropdownTimeoutRef = useRef<NodeJS.Timeout | null>(null);
   const attributeRef = useRef<HTMLDivElement>(null);
 
- 
-  
+  // Define allowed categories with corrected display name
+  const allowedCategories = new Set(['Laptops', 'Processors', 'Graphics Card', 'Monitors', 'Accessories']);
+
   useEffect(() => {
     if (typeof window !== "undefined") {
       const cachedData = sessionStorage.getItem(CACHE_KEY);
@@ -93,26 +94,34 @@ const Header = ({ isCategory = true }: HeaderProps) => {
         const { data, timestamp } = JSON.parse(cachedData);
         const now = Date.now();
         if (now - timestamp < CACHE_DURATION) {
-          setCategories(data);
+          // Normalize Graphics_card to Graphics Card for display
+          setCategories(
+            data
+              .map((category: Category) => ({
+                ...category,
+                name: category.name === 'Graphics_cards' ? 'Graphics Card' : category.name,
+              }))
+              .filter((category: Category) => allowedCategories.has(category.name))
+          );
           setHasFetched(true);
-          return; // Don't fetch if cache is valid
+          return;
         }
       }
     }
-  
+
     const fetchData = async () => {
       try {
         const [categoryResponse, productResponse] = await Promise.all([
           fetch('/api/categories'),
           fetch('/api/products'),
         ]);
-  
+
         if (!categoryResponse.ok) throw new Error('Failed to fetch categories');
         if (!productResponse.ok) throw new Error('Failed to fetch products');
-  
+
         const categoryData: CategoryResponse = await categoryResponse.json();
         const productData: Product[] = await productResponse.json();
-  
+
         const attributeValuesMap: { [categoryId: string]: { [key: string]: Set<string> } } = {};
         productData.forEach((product) => {
           const categoryId = product.categoryId;
@@ -128,21 +137,25 @@ const Header = ({ isCategory = true }: HeaderProps) => {
             });
           });
         });
-  
-        const categoryList = Object.values(categoryData).map(({ category, attributes, subcategories }) => ({
-          ...category,
-          attributes,
-          subCategories: subcategories,
-          attributeValues: attributeValuesMap[category.id]
-            ? Object.fromEntries(
-                Object.entries(attributeValuesMap[category.id]).map(([key, valueSet]) => [
-                  key,
-                  Array.from(valueSet).sort(),
-                ])
-              )
-            : {},
-        }));
-  
+
+        const categoryList = Object.values(categoryData)
+          .map(({ category, attributes, subcategories }) => ({
+            ...category,
+            // Normalize Graphics_card to Graphics Card for display
+            name: category.name === 'Graphics_cards' ? 'Graphics Card' : category.name,
+            attributes,
+            subCategories: subcategories,
+            attributeValues: attributeValuesMap[category.id]
+              ? Object.fromEntries(
+                  Object.entries(attributeValuesMap[category.id]).map(([key, valueSet]) => [
+                    key,
+                    Array.from(valueSet).sort(),
+                  ])
+                )
+              : {},
+          }))
+          .filter(({ name }) => allowedCategories.has(name));
+
         setCategories(categoryList);
         if (typeof window !== "undefined") {
           sessionStorage.setItem(CACHE_KEY, JSON.stringify({ data: categoryList, timestamp: Date.now() }));
@@ -153,10 +166,9 @@ const Header = ({ isCategory = true }: HeaderProps) => {
         setHasFetched(true);
       }
     };
-  
+
     fetchData();
   }, []);
-  
 
   // Handle scroll effect
   useEffect(() => {
@@ -207,7 +219,8 @@ const Header = ({ isCategory = true }: HeaderProps) => {
     if (dropdownTimeoutRef.current) {
       clearTimeout(dropdownTimeoutRef.current);
     }
-    setHoveredCategory(categoryName);
+    // Use the normalized name for consistency
+    setHoveredCategory(categoryName === 'Graphics_cards' ? 'Graphics Card' : categoryName);
     setHoveredAttribute(null);
   };
 
@@ -322,69 +335,73 @@ const Header = ({ isCategory = true }: HeaderProps) => {
                 {hasFetched && categories.length === 0 ? (
                   <p className="text-gray-600">No categories available</p>
                 ) : (
-                  categories.map((category) => (
-                    <div key={category.id} className="mb-4">
-                      <Link
-                        href={`/category/${category.slug}`}
-                        className="block py-2 text-gray-700 hover:text-primary font-medium"
-                        onClick={closeMenu}
-                      >
-                        {category.name}
-                      </Link>
-                      {category.subCategories.length > 0 && (
-                        <div className="ml-4">
-                          <h4 className="text-sm font-semibold text-gray-700 mt-2">Explore Subcategories</h4>
-                          {category.subCategories.map((subCat) => (
-                            <Link
-                              key={subCat.id}
-                              href={`/category/${category.slug}?subcategory=${subCat.slug}`}
-                              className="block py-1 text-sm text-gray-600 hover:text-primary"
-                              onClick={closeMenu}
-                            >
-                              {subCat.name}
-                            </Link>
-                          ))}
-                        </div>
-                      )}
-                      {Object.keys(category.attributeValues).length > 0 && (
-                        <div className="ml-4">
-                          <h4 className="text-sm font-semibold text-gray-700 mt-2">Filter by Features</h4>
-                          {Object.entries(category.attributeValues)
-                            .sort(([a], [b]) => a.localeCompare(b))
-                            .map(([attrName, values]) => (
-                              <div key={attrName} className="py-1">
-                                <button
-                                  className="text-sm text-gray-600 hover:text-primary flex items-center"
-                                  onClick={() =>
-                                    setHoveredAttribute(hoveredAttribute === attrName ? null : attrName)
-                                  }
-                                >
-                                  {attrName.replace('_', ' ')}
-                                  <ChevronDown
-                                    size={14}
-                                    className={`ml-1 transform ${hoveredAttribute === attrName ? 'rotate-180' : ''}`}
-                                  />
-                                </button>
-                                {hoveredAttribute === attrName && (
-                                  <div className="ml-4 mt-1">
-                                    {values.map((value) => (
-                                      <Link
-                                        key={value}
-                                        href={`/category/${category.slug}?${attrName}=${encodeURIComponent(value)}`}
-                                        className="block text-xs text-gray-500 hover:text-primary py-0.5"
-                                        onClick={closeMenu}
-                                      >
-                                        {value}
-                                      </Link>
-                                    ))}
-                                  </div>
-                                )}
-                              </div>
+                  categories.map((category) => {
+                    const filterableAttributes = category.attributes.filter(attr => attr.isFilterable === true);
+                    return (
+                      <div key={category.id} className="mb-4">
+                        <Link
+                          href={`/category/${category.slug}`}
+                          className="block py-2 text-gray-700 hover:text-primary font-medium"
+                          onClick={closeMenu}
+                        >
+                          {category.name}
+                        </Link>
+                        {category.subCategories.length > 0 && (
+                          <div className="ml-4">
+                            <h4 className="text-sm font-semibold text-gray-700 mt-2">Explore Subcategories</h4>
+                            {category.subCategories.map((subCat) => (
+                              <Link
+                                key={subCat.id}
+                                href={`/category/${category.slug}?subcategory=${subCat.slug}`}
+                                className="block py-1 text-sm text-gray-600 hover:text-primary"
+                                onClick={closeMenu}
+                              >
+                                {subCat.name}
+                              </Link>
                             ))}
-                        </div>
-                      )}
-                    </div>
-                  ))
+                          </div>
+                        )}
+                        {filterableAttributes.length > 0 && Object.keys(category.attributeValues).length > 0 && (
+                          <div className="ml-4">
+                            <h4 className="text-sm font-semibold text-gray-700 mt-2">Filter by Features</h4>
+                            {filterableAttributes
+                              .filter(attr => category.attributeValues[attr.name!])
+                              .sort((a, b) => (a.name || '').localeCompare(b.name || ''))
+                              .map((attr) => (
+                                <div key={attr.name} className="py-1">
+                                  <button
+                                    className="text-sm text-gray-600 hover:text-primary flex items-center"
+                                    onClick={() =>
+                                      setHoveredAttribute(hoveredAttribute === attr.name ? null : attr.name)
+                                    }
+                                  >
+                                    {attr.name?.replace('_', ' ')}
+                                    <ChevronDown
+                                      size={14}
+                                      className={`ml-1 transform ${hoveredAttribute === attr.name ? 'rotate-180' : ''}`}
+                                    />
+                                  </button>
+                                  {hoveredAttribute === attr.name && (
+                                    <div className="ml-4 mt-1">
+                                      {category.attributeValues[attr.name!].map((value) => (
+                                        <Link
+                                          key={value}
+                                          href={`/category/${category.slug}?${attr.name}=${encodeURIComponent(value)}`}
+                                          className="block text-xs text-gray-500 hover:text-primary py-0.5"
+                                          onClick={closeMenu}
+                                        >
+                                          {value}
+                                        </Link>
+                                      ))}
+                                    </div>
+                                  )}
+                                </div>
+                              ))}
+                          </div>
+                        )}
+                      </div>
+                    );
+                  })
                 )}
               </div>
 
@@ -430,24 +447,27 @@ const Header = ({ isCategory = true }: HeaderProps) => {
                   </Link>
                 </li>
                 {hasFetched && categories.length === 0 ? null : (
-                  categories.map((category) => (
-                    <li
-                      key={category.id}
-                      className="relative"
-                      onMouseEnter={() => handleMouseEnterCategory(category.name)}
-                      onMouseLeave={handleMouseLeaveCategory}
-                    >
-                      <Link
-                        href={`/category/${category.slug}`}
-                        className="text-sm font-medium text-gray-800 hover:text-primary transition-colors flex items-center"
+                  categories.map((category) => {
+                    const hasFilterableAttributes = category.attributes.some(attr => attr.isFilterable === true);
+                    return (
+                      <li
+                        key={category.id}
+                        className="relative"
+                        onMouseEnter={() => handleMouseEnterCategory(category.name)}
+                        onMouseLeave={handleMouseLeaveCategory}
                       >
-                        {category.name}
-                        {(category.subCategories.length > 0 || Object.keys(category.attributeValues).length > 0) && (
-                          <ChevronDown size={16} className="ml-1" />
-                        )}
-                      </Link>
-                    </li>
-                  ))
+                        <Link
+                          href={`/category/${category.slug}`}
+                          className="text-sm font-medium text-gray-800 hover:text-primary transition-colors flex items-center"
+                        >
+                          {category.name}
+                          {(category.subCategories.length > 0 || hasFilterableAttributes) && (
+                            <ChevronDown size={16} className="ml-1" />
+                          )}
+                        </Link>
+                      </li>
+                    );
+                  })
                 )}
               </ul>
             </div>
@@ -468,71 +488,77 @@ const Header = ({ isCategory = true }: HeaderProps) => {
                 >
                   {categories
                     .filter((category) => category.name === hoveredCategory)
-                    .map((category) => (
-                      <React.Fragment key={category.id}>
-                        {/* Left: Subcategories */}
-                        <div className="w-1/2">
-                          <h3 className="text-lg font-semibold text-gray-800 mb-4">Explore Subcategories</h3>
-                          {category.subCategories.length > 0 ? (
-                            <ul className="grid grid-cols-2 gap-2">
-                              {category.subCategories.map((subCat) => (
-                                <li key={subCat.id}>
-                                  <Link
-                                    href={`/category/${category.slug}?subcategory=${subCat.slug}`}
-                                    className="block text-sm text-gray-600 hover:text-primary py-1 transition-colors"
-                                    onClick={() => setHoveredCategory(null)}
-                                  >
-                                    {subCat.name}
-                                  </Link>
-                                </li>
-                              ))}
-                            </ul>
-                          ) : (
-                            <p className="text-sm text-gray-500">No subcategories available</p>
-                          )}
-                        </div>
-
-                        {/* Right: Attributes */}
-                        <div className="w-1/2 relative" ref={attributeRef}>
-                          <h3 className="text-lg font-semibold text-gray-800 mb-4">Filter by Features</h3>
-                          <div className="flex flex-row gap-6">
-                            <ul className="w-1/2">
-                              {Object.entries(category.attributeValues)
-                                .sort(([a], [b]) => a.localeCompare(b))
-                                .map(([attrName]) => (
-                                  <li
-                                    key={attrName}
-                                    className="py-1"
-                                    onMouseEnter={() => handleMouseEnterAttribute(attrName)}
-                                  >
-                                    <button
-                                      className="text-sm text-gray-600 hover:text-primary transition-colors capitalize"
-                                      onMouseLeave={handleMouseLeaveAttribute}
-                                    >
-                                      {attrName.replace('_', ' ')}
-                                    </button>
-                                  </li>
-                                ))}
-                            </ul>
-                            {hoveredAttribute && (
-                              <ul className="w-1/2">
-                                {category.attributeValues[hoveredAttribute]?.map((value) => (
-                                  <li key={value} className="py-1">
+                    .map((category) => {
+                      const filterableAttributes = category.attributes.filter(attr => attr.isFilterable === true);
+                      return (
+                        <React.Fragment key={category.id}>
+                          {/* Left: Subcategories */}
+                          <div className="w-1/2">
+                            <h3 className="text-lg font-semibold text-gray-800 mb-4">Explore Subcategories</h3>
+                            {category.subCategories.length > 0 ? (
+                              <ul className="grid grid-cols-2 gap-2">
+                                {category.subCategories.map((subCat) => (
+                                  <li key={subCat.id}>
                                     <Link
-                                      href={`/category/${category.slug}?${hoveredAttribute}=${encodeURIComponent(value)}`}
-                                      className="block text-sm text-gray-600 hover:text-primary transition-colors cursor-pointer"
+                                      href={`/category/${category.slug}?subcategory=${subCat.slug}`}
+                                      className="block text-sm text-gray-600 hover:text-primary py-1 transition-colors"
                                       onClick={() => setHoveredCategory(null)}
                                     >
-                                      {value}
+                                      {subCat.name}
                                     </Link>
                                   </li>
                                 ))}
                               </ul>
+                            ) : (
+                              <p className="text-sm text-gray-500">No subcategories available</p>
                             )}
                           </div>
-                        </div>
-                      </React.Fragment>
-                    ))}
+
+                          {/* Right: Attributes */}
+                          {filterableAttributes.length > 0 && (
+                            <div className="w-1/2 relative" ref={attributeRef}>
+                              <h3 className="text-lg font-semibold text-gray-800 mb-4">Filter by Features</h3>
+                              <div className="flex flex-row gap-6">
+                                <ul className="w-1/2">
+                                  {filterableAttributes
+                                    .filter(attr => category.attributeValues[attr.name!])
+                                    .sort((a, b) => (a.name || '').localeCompare(b.name || ''))
+                                    .map((attr) => (
+                                      <li
+                                        key={attr.name}
+                                        className="py-1"
+                                        onMouseEnter={() => handleMouseEnterAttribute(attr.name!)}
+                                      >
+                                        <button
+                                          className="text-sm text-gray-600 hover:text-primary transition-colors capitalize"
+                                          onMouseLeave={handleMouseLeaveAttribute}
+                                        >
+                                          {attr.name?.replace('_', ' ')}
+                                        </button>
+                                      </li>
+                                    ))}
+                                </ul>
+                                {hoveredAttribute && (
+                                  <ul className="w-1/2">
+                                    {category.attributeValues[hoveredAttribute]?.map((value) => (
+                                      <li key={value} className="py-1">
+                                        <Link
+                                          href={`/category/${category.slug}?${hoveredAttribute}=${encodeURIComponent(value)}`}
+                                          className="block text-sm text-gray-600 hover:text-primary transition-colors cursor-pointer"
+                                          onClick={() => setHoveredCategory(null)}
+                                        >
+                                          {value}
+                                        </Link>
+                                      </li>
+                                    ))}
+                                  </ul>
+                                )}
+                              </div>
+                            </div>
+                          )}
+                        </React.Fragment>
+                      );
+                    })}
                 </div>
               </div>
             )}

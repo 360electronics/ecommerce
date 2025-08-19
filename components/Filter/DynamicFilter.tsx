@@ -141,7 +141,7 @@ const DynamicFilter: React.FC<FilterProps> = ({ category, products, onFilterChan
       }
     });
 
-    console.log('Generated Sections:', sections);
+    // console.log('Generated Sections:', sections);
     return sections;
   }, [products, category, filterOptions]);
 
@@ -155,7 +155,7 @@ const DynamicFilter: React.FC<FilterProps> = ({ category, products, onFilterChan
           newExpanded[section.id] = index < 4;
         }
       });
-      console.log('Expanded State:', newExpanded);
+      // console.log('Expanded State:', newExpanded);
       return newExpanded;
     });
 
@@ -210,7 +210,7 @@ const DynamicFilter: React.FC<FilterProps> = ({ category, products, onFilterChan
     }
 
     if (hasChanges) {
-      console.log('Applying URL params to filters:', updatedSections);
+      // console.log('Applying URL params to filters:', updatedSections);
       setFilterSections(updatedSections);
       onFilterChange(getFilterValues(updatedSections, excludeOOS));
     }
@@ -246,7 +246,7 @@ const DynamicFilter: React.FC<FilterProps> = ({ category, products, onFilterChan
       filters.inStock = true;
     }
 
-    console.log('Filter Values:', filters);
+    // console.log('Filter Values:', filters);
     return filters;
   };
 
@@ -254,7 +254,7 @@ const DynamicFilter: React.FC<FilterProps> = ({ category, products, onFilterChan
     event.stopPropagation();
     setExpanded((prev) => {
       const newExpanded = { ...prev, [sectionId]: !prev[sectionId] };
-      console.log('Toggled Section:', { sectionId, expanded: newExpanded[sectionId] });
+      // console.log('Toggled Section:', { sectionId, expanded: newExpanded[sectionId] });
       return newExpanded;
     });
   };
@@ -289,7 +289,7 @@ const DynamicFilter: React.FC<FilterProps> = ({ category, products, onFilterChan
       return section;
     });
 
-    console.log('Price Change:', { sectionId, newMin, newMax });
+    // console.log('Price Change:', { sectionId, newMin, newMax });
     setFilterSections(updatedSections);
     applyFilters(updatedSections, excludeOutOfStock);
   };
@@ -309,7 +309,7 @@ const DynamicFilter: React.FC<FilterProps> = ({ category, products, onFilterChan
       return section;
     });
 
-    console.log('Price Input Change:', { sectionId, type, value });
+    // console.log('Price Input Change:', { sectionId, type, value });
     setFilterSections(updatedSections);
     applyFilters(updatedSections, excludeOutOfStock);
   };
@@ -318,7 +318,7 @@ const DynamicFilter: React.FC<FilterProps> = ({ category, products, onFilterChan
     event.stopPropagation();
     setVisibleOptions((prev) => {
       const newVisible = { ...prev, [sectionId]: prev[sectionId] === 5 ? Number.MAX_SAFE_INTEGER : 5 };
-      console.log('View More Toggled:', { sectionId, visible: newVisible[sectionId] });
+      // console.log('View More Toggled:', { sectionId, visible: newVisible[sectionId] });
       return newVisible;
     });
   };

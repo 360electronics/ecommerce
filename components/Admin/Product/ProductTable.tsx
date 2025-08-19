@@ -465,7 +465,7 @@ export function ProductsTable() {
   const handleEditProduct = (rows: TableRow[]) => {
     console.log("Edit action triggered with rows:", rows);
     if (rows.length === 1) {
-      router.push(`/admin/products/edit-product/${rows[0].productId}`);
+      window.open(`/admin/products/edit-product/${rows[0].productId}`, "_blank");
     }
   };
 
@@ -663,7 +663,7 @@ export function ProductsTable() {
           stickyHeader: true
         }}
         onRowClick={(row) => {
-          router.push(`/product/${row.slug}`);
+          window.open(`/product/${row.slug}`, "_blank");
         }}
       />
     </div>

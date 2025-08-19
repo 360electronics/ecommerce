@@ -303,7 +303,7 @@ export default function CategoryListPage() {
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
                         <button
-                          onClick={() => router.push(`/admin/categories/edit/${category.id}`)}
+                          onClick={() => window.open(`/admin/categories/edit/${category.id}`,'_blank')}
                           className="inline-flex items-center px-3 py-1.5 bg-blue-100 text-blue-700 rounded-lg text-xs font-medium hover:bg-blue-200 transition-colors duration-200"
                         >
                           <svg className="w-3 h-3 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
