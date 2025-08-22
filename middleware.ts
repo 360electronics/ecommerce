@@ -7,14 +7,12 @@ const nonAuthRoutes = ["/signin", "/signup"]
 
 export async function middleware(request: NextRequest) {
   const { pathname } = request.nextUrl
-
+  
   // Get authToken from cookies
   const token = request.cookies.get("authToken")?.value
-
   let isAuthenticated = false
   let isAdmin = false
   let userRole = null
-
   let response: NextResponse
 
   if (token) {
@@ -25,8 +23,10 @@ export async function middleware(request: NextRequest) {
         headers: {
           Cookie: `authToken=${token}`,
         },
+        // Add cache control to prevent stale responses
+        cache: 'no-cache'
       })
-
+      
       if (res.ok) {
         const data = await res.json()
         isAuthenticated = data.isAuthenticated
@@ -36,14 +36,17 @@ export async function middleware(request: NextRequest) {
         }
       } else {
         console.warn("Auth status check failed:", res.status, await res.text())
-        response = NextResponse.next()
-        response.cookies.set("authToken", "", { expires: new Date(0), path: "/" })
-        return response
+        // Don't immediately clear cookie on 401/403, might be temporary
+        if (res.status === 401 || res.status === 403) {
+          response = NextResponse.next()
+          response.cookies.set("authToken", "", { expires: new Date(0), path: "/" })
+          return response
+        }
       }
     } catch (error) {
       console.error("Error checking auth status in middleware:", error)
+      // Don't clear cookie on network errors, might be temporary
       response = NextResponse.next()
-      response.cookies.set("authToken", "", { expires: new Date(0), path: "/" })
       return response
     }
   }
