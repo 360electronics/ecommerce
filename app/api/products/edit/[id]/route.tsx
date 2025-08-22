@@ -133,6 +133,8 @@ export async function GET(
                 .map(row => row.variants!),
         };
 
+        // console.log(product)
+
         return NextResponse.json(product);
 
     } catch (error) {
@@ -140,7 +142,6 @@ export async function GET(
         return NextResponse.json({ error: 'Server error' }, { status: 500 });
     }
 }
-
 
 export async function PUT(req: NextRequest) {
   try {
@@ -221,9 +222,6 @@ export async function PUT(req: NextRequest) {
       variants: parseJSONField(formData.get('variants') as string, []),
     };
 
-    // Validate the parsed data
-    const validatedData = createProductSchema.parse(productData);
-
     // Check if product exists
     const existingProduct = await db
       .select()
@@ -238,25 +236,24 @@ export async function PUT(req: NextRequest) {
     const [updatedProduct] = await db
       .update(products)
       .set({
-        shortName: validatedData.shortName,
-        fullName: validatedData.fullName,
-        slug: validatedData.slug,
-        description: validatedData.description,
-        categoryId: validatedData.categoryId,
-        subcategoryId: validatedData.subcategoryId,
-        brandId: validatedData.brandId,
-        status: validatedData.status,
-        isFeatured: validatedData.isFeatured,
-        totalStocks: toNumericString(validatedData.totalStocks, '0'),
-        deliveryMode: validatedData.deliveryMode,
-        tags: validatedData.tags,
-        attributes: validatedData.attributes || {},
-        specifications: validatedData.specifications,
-        warranty: validatedData.warranty,
-        averageRating: toNumericString(validatedData.averageRating, '0.0'),
-        ratingCount: toNumericString(validatedData.ratingCount, '0'),
-        metaTitle: validatedData.metaTitle,
-        metaDescription: validatedData.metaDescription,
+        shortName: productData.shortName,
+        fullName: productData.fullName,
+        slug: productData.slug,
+        description: productData.description,
+        categoryId: productData.categoryId,
+        subcategoryId: productData.subcategoryId,
+        brandId: productData.brandId,
+        status: productData.status as "active" | "inactive" | "coming_soon" | "discontinued",
+        isFeatured: productData.isFeatured,
+        totalStocks: toNumericString(productData.totalStocks, '0'),
+        deliveryMode: productData.deliveryMode as "standard" | "express",
+        tags: productData.tags,
+        specifications: productData.specifications,
+        warranty: productData.warranty,
+        averageRating: toNumericString(productData.averageRating, '0.0'),
+        ratingCount: toNumericString(productData.ratingCount, '0'),
+        metaTitle: productData.metaTitle,
+        metaDescription: productData.metaDescription,
         updatedAt: new Date(),
       })
       .where(eq(products.id, productId))
@@ -268,7 +265,7 @@ export async function PUT(req: NextRequest) {
       .from(variants)
       .where(eq(variants.productId, productId));
 
-    const submittedVariantIds = validatedData.variants
+    const submittedVariantIds = productData.variants
       .map((v: any) => v.id)
       .filter((id: string | undefined) => id && !id.startsWith('variant-'));
 
@@ -300,70 +297,114 @@ export async function PUT(req: NextRequest) {
       }
     }
 
+    // Define variant type for better type safety
+    interface VariantData {
+      id?: string;
+      name: string;
+      sku: string;
+      slug: string;
+      attributes?: Record<string, any>;
+      stock?: number;
+      lowStockThreshold?: number;
+      isBackorderable?: boolean;
+      mrp?: number;
+      ourPrice?: number;
+      salePrice?: number;
+      isOnSale?: boolean;
+      productImages?: Array<{ url: string; alt: string; isFeatured: boolean; displayOrder: number; }>;
+      weight?: number;
+      weightUnit?: string;
+      dimensions?: any;
+      isDefault?: boolean;
+    }
+
     // Process variants (stock, prices, and status are always updatable)
     const updatedVariants = [];
-    for (const variantData of validatedData.variants) {
+    for (const variantItem of productData.variants) {
+      // Type guard to ensure variantData is an object with the right structure
+      if (!variantItem || typeof variantItem !== 'object') {
+        continue;
+      }
+
+      const variantData = variantItem as VariantData;
+
       // Handle image uploads for this variant
-      const uploadedImages = [];
-      const imageFiles = Array.from(formData.entries())
-        .filter(([key]) => key.startsWith(`variantImages_${variantData.sku}_`))
-        .map(([, file]) => file as File);
-      for (const [index, imageFile] of imageFiles.entries()) {
-        if (imageFile && imageFile.size > 0) {
-          const buffer = Buffer.from(await imageFile.arrayBuffer());
-          const fileName = `${variantData.sku}-${index}-${imageFile.name}`;
-          const mimeType = imageFile.type;
+      const uploadedImages: Array<any> = [];
+      const sku = variantData.sku;
+      
+      if (sku && typeof sku === 'string') {
+        const imageFiles = Array.from(formData.entries())
+          .filter(([key]) => key.startsWith(`variantImages_${sku}_`))
+          .map(([, file]) => file as File);
+        
+        for (const [index, imageFile] of imageFiles.entries()) {
+          if (imageFile && imageFile.size > 0) {
+            const buffer = Buffer.from(await imageFile.arrayBuffer());
+            const fileName = `${sku}-${index}-${imageFile.name}`;
+            const mimeType = imageFile.type;
 
-          // Upload image to R2
-          const imageUrl = await uploadProductImageToR2(
-            validatedData.shortName,
-            variantData.sku,
-            buffer,
-            mimeType,
-            fileName
-          );
+            // Upload image to R2
+            const imageUrl = await uploadProductImageToR2(
+              productData.shortName,
+              sku,
+              buffer,
+              mimeType,
+              fileName
+            );
 
-          uploadedImages.push({
-            url: imageUrl,
-            alt: `Image for ${variantData.name} ${index + 1}`,
-            isFeatured: index === 0,
-            displayOrder: index,
-          });
+            uploadedImages.push({
+              url: imageUrl,
+              alt: `Image for ${variantData.name || 'variant'} ${index + 1}`,
+              isFeatured: index === 0,
+              displayOrder: index,
+            });
+          }
         }
       }
 
+      // Get existing images and filter out empty URLs
+      const existingImages = Array.isArray(variantData.productImages)
+        ? variantData.productImages.filter(
+            (img: any) => img && typeof img === 'object' && img.url && typeof img.url === 'string' && img.url.trim() !== ''
+          )
+        : [];
+
       // Merge existing images with new uploads
-      const existingImages = Array.isArray(variantData.productImages) ? variantData.productImages : [];
       const finalProductImages = [...existingImages, ...uploadedImages];
 
-      if (variantData.id && !variantData.id.startsWith('variant-')) {
-        // Update existing variant (stock, prices, and status are always updated)
+      if (variantData.id && typeof variantData.id === 'string' && !variantData.id.startsWith('variant-')) {
+        // Update existing variant
         const [updatedVariant] = await db
           .update(variants)
           .set({
-            name: variantData.name,
-            sku: variantData.sku,
-            slug: variantData.slug,
-            attributes: variantData.attributes,
+            name: variantData.name || '',
+            sku: variantData.sku || '',
+            slug: variantData.slug || '',
+            attributes: variantData.attributes || {},
             stock: toNumericString(variantData.stock, '0') || '0',
             lowStockThreshold: toNumericString(variantData.lowStockThreshold, '5') || '5',
-            isBackorderable: variantData.isBackorderable,
+            isBackorderable: Boolean(variantData.isBackorderable),
             mrp: toNumericString(variantData.mrp, '0') || '0',
             ourPrice: toNumericString(variantData.ourPrice, '0') || '0',
             salePrice: toNumericString(variantData.salePrice),
-            isOnSale: variantData.isOnSale,
+            isOnSale: Boolean(variantData.isOnSale),
             productImages: finalProductImages,
             weight: toNumericString(variantData.weight),
-            weightUnit: variantData.weightUnit,
+            weightUnit: variantData.weightUnit || 'kg',
             dimensions: variantData.dimensions,
-            isDefault: variantData.isDefault,
+            isDefault: Boolean(variantData.isDefault),
             updatedAt: new Date(),
           })
           .where(eq(variants.id, variantData.id))
           .returning();
         updatedVariants.push(updatedVariant);
       } else {
-        // Insert new variant
+        // Insert new variant - ensure all required fields are present
+        if (!variantData.name || !variantData.sku || !variantData.slug) {
+          console.error('Missing required variant fields:', { name: variantData.name, sku: variantData.sku, slug: variantData.slug });
+          continue;
+        }
+
         const [newVariant] = await db
           .insert(variants)
           .values({
@@ -371,24 +412,44 @@ export async function PUT(req: NextRequest) {
             name: variantData.name,
             sku: variantData.sku,
             slug: variantData.slug,
-            attributes: variantData.attributes,
+            attributes: variantData.attributes || {},
             stock: toNumericString(variantData.stock, '0') || '0',
             lowStockThreshold: toNumericString(variantData.lowStockThreshold, '5') || '5',
-            isBackorderable: variantData.isBackorderable,
+            isBackorderable: Boolean(variantData.isBackorderable),
             mrp: toNumericString(variantData.mrp, '0') || '0',
             ourPrice: toNumericString(variantData.ourPrice, '0') || '0',
             salePrice: toNumericString(variantData.salePrice),
-            isOnSale: variantData.isOnSale,
+            isOnSale: Boolean(variantData.isOnSale),
             productImages: finalProductImages,
             weight: toNumericString(variantData.weight),
-            weightUnit: variantData.weightUnit,
+            weightUnit: variantData.weightUnit || 'kg',
             dimensions: variantData.dimensions,
-            isDefault: variantData.isDefault,
+            isDefault: Boolean(variantData.isDefault),
           })
           .returning();
         updatedVariants.push(newVariant);
       }
     }
+
+    // Validate the final product data with cleaned variants
+    const cleanedVariants = productData.variants
+      .filter((v: any) => v && typeof v === 'object')
+      .map((v: any) => {
+        const variant = v as VariantData;
+        return {
+          ...variant,
+          productImages: Array.isArray(variant.productImages) 
+            ? variant.productImages.filter((img: any) => img && img.url && img.url.trim() !== '')
+            : [],
+        };
+      });
+
+    const validatedData = createProductSchema.parse({
+      ...productData,
+      variants: cleanedVariants,
+    });
+
+    console.log('Validated data:', validatedData);
 
     // Return response with warning if some variants couldn't be deleted
     if (nonDeletableVariants.length > 0) {
