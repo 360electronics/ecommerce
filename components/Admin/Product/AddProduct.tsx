@@ -331,6 +331,7 @@ export default function AddProductPage() {
         }
         const brandData: Brand[] = await brandResponse.json();
         setBrands(brandData);
+        
       } catch (err) {
         setError(err instanceof Error ? err.message : 'Unknown error');
       } finally {
@@ -660,6 +661,8 @@ export default function AddProductPage() {
 
     const presetAttributes = (product.category && categoryPresets?.[product.category]?.attributes) || [];
 
+    // console.log(presetAttributes)
+
     const validVariants = variants.filter((v) => {
       const requiredAttributesFilled = presetAttributes
         .filter((attr) => attr.isRequired)
@@ -690,6 +693,11 @@ export default function AddProductPage() {
     }
 
     const formData = new FormData();
+
+    // console.log("Category:" , product.category)
+    // console.log("Sub Category:" , product.subcategory)
+    // console.log("brand:" , product.brand)
+    
     formData.append('shortName', product.shortName);
     formData.append('fullName', product.fullName);
     formData.append('slug', slugify(product.fullName));
@@ -705,6 +713,8 @@ export default function AddProductPage() {
     formData.append('metaTitle', product.metaTitle || '');
     formData.append('metaDescription', product.metaDescription || '');
     formData.append('totalStocks', validVariants.reduce((sum, v) => sum + Number(v.stock), 0).toString());
+
+    
 
     const variantsPayload = validVariants.map((v) => {
       const combinedAttributes = { ...v.attributes };
@@ -755,6 +765,7 @@ export default function AddProductPage() {
         method: 'POST',
         body: formData,
       });
+      
 
       if (!res.ok) {
         const error = await res.json();
@@ -850,7 +861,7 @@ export default function AddProductPage() {
                   options={
                     product.category && categoryPresets[product.category]
                       ? categoryPresets[product.category].subcategories.map((subcat: any) => ({
-                          value: subcat.id,
+                          value: subcat.name,
                           label: subcat.name,
                         }))
                       : []
@@ -872,7 +883,7 @@ export default function AddProductPage() {
                   options={
                     Array.isArray(brands)
                       ? brands.map((brand: any) => ({
-                          value: brand.id,
+                          value: brand.name,
                           label: brand.name,
                         }))
                       : []

@@ -147,6 +147,7 @@ export async function POST(req: NextRequest) {
   try {
     // Parse FormData
     const formData = await req.formData();
+    // console.log('Received FormData:', Object.fromEntries(formData));
 
     // Fetch category, subcategory, and brand IDs
     const categorySlug = formData.get('category') as string;
@@ -162,6 +163,8 @@ export async function POST(req: NextRequest) {
     if (!category.length) {
       return NextResponse.json({ error: `Category with slug '${categorySlug}' not found` }, { status: 400 });
     }
+
+    // console.log('Category of product',category)
     const categoryId = category[0].id;
 
     // Query subcategory ID by name (if provided)
@@ -180,6 +183,8 @@ export async function POST(req: NextRequest) {
       }
       subcategoryId = subcategory[0].id;
     }
+    // console.log('Sub Category of product',subcategoryId)
+
 
     // Query brand ID by name
     const brand = await db
@@ -191,6 +196,9 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: `Brand '${brandName}' not found` }, { status: 400 });
     }
     const brandId = brand[0].id;
+
+    // console.log('Brand of product',brandId)
+
 
     // Convert FormData to a structured object with resolved IDs
     const productData = {
@@ -395,9 +403,9 @@ export async function PATCH(req: NextRequest) {
     // Delete associated images from R2
     const variantsToDelete = validatedData.ids.length
       ? await db
-          .select({ productImages: variants.productImages })
-          .from(variants)
-          .where(inArray(variants.productId, validatedData.ids))
+        .select({ productImages: variants.productImages })
+        .from(variants)
+        .where(inArray(variants.productId, validatedData.ids))
       : [];
 
     const deleteImagePromises = variantsToDelete.flatMap((variant) =>
