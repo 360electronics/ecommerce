@@ -13,7 +13,7 @@ export interface AuthState {
   isLoading: boolean;
   error: AppError | null;
   fetchAuthStatus: () => Promise<void>;
-  setAuth: (isLoggedIn: boolean, user: User | null) => void;
+  setAuth: (isLoggedIn: boolean, user: User | null) => Promise<void>; // Make async
   logout: () => Promise<void>;
 }
 
@@ -38,7 +38,7 @@ export const useAuthStore = create<AuthState>()(
             isLoggedIn: data.isAuthenticated,
             user: data.user,
             isLoading: false,
-            error: data.isAuthenticated ? null : null // Don't set error if just logged out
+            error: data.isAuthenticated ? null : null
           });
         } catch (error) {
           logError('fetchAuthStatus', error);
@@ -46,7 +46,19 @@ export const useAuthStore = create<AuthState>()(
         }
       },
       
-      setAuth: (isLoggedIn, user) => set({ isLoggedIn, user, isLoading: false, error: null }),
+      // Make setAuth async to ensure persistence
+      setAuth: async (isLoggedIn, user) => {
+        set({ isLoggedIn, user, isLoading: false, error: null });
+        
+        // Force persistence by waiting a tick
+        await new Promise(resolve => setTimeout(resolve, 0));
+        
+        // Optionally trigger a storage event to ensure synchronization
+        if (typeof window !== 'undefined') {
+          window.dispatchEvent(new Event('storage'));
+        }
+      },
+      
       logout: async () => {
         try {
           await fetchWithRetry(() =>
