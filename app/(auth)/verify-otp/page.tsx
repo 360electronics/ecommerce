@@ -223,7 +223,7 @@ function VerifyOTPContent() {
   
       // Navigate based on role
       if (data.user.role === "admin") {
-        router.push("/admin/dashboard");
+        router.replace("/admin/dashboard");
         router.refresh();
       } else {
         router.push("/");
