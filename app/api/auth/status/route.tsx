@@ -1,99 +1,85 @@
-// export const dynamic = 'force-dynamic'; 
+// export const dynamic = 'force-dynamic';
 
-import { NextResponse } from "next/server";
-import { db } from "@/db/drizzle";
-import { authTokens, users } from "@/db/schema";
-import { verifyToken } from "@/utils/jwt";
-import { eq, and } from "drizzle-orm";
+import { NextResponse } from "next/server"
+import { db } from "@/db/drizzle"
+import { authTokens, users } from "@/db/schema"
+import { verifyToken } from "@/utils/jwt"
+import { eq, and } from "drizzle-orm"
 
 // Define the response type
 interface AuthStatusResponse {
-  isAuthenticated: boolean;
+  isAuthenticated: boolean
   user: {
-    id: string;
-    firstName: string | null;
-    lastName: string | null;
-    email: string;
-    phoneNumber: string | null;
-    role: "user" | "admin" | "guest";
-    emailVerified: boolean;
-    phoneVerified: boolean;
-  } | null;
-  error?: string;
+    id: string
+    firstName: string | null
+    lastName: string | null
+    email: string
+    phoneNumber: string | null
+    role: "user" | "admin" | "guest"
+    emailVerified: boolean
+    phoneVerified: boolean
+  } | null
+  error?: string
 }
 
 // GET /api/auth/status
 export async function GET(request: Request) {
-  let token: string | undefined;
+  let token: string | undefined
 
   try {
     // Extract token from cookie or Authorization header
-    const cookies = request.headers.get("cookie");
-    const authHeader = request.headers.get("authorization");
+    const cookies = request.headers.get("cookie")
+    const authHeader = request.headers.get("authorization")
     if (authHeader && authHeader.startsWith("Bearer ")) {
-      token = authHeader.replace("Bearer ", "").trim();
+      token = authHeader.replace("Bearer ", "").trim()
     }
 
     if (!token && cookies) {
-      const cookieMatch = cookies.match(/authToken=([^;]+)/);
-      token = cookieMatch ? cookieMatch[1] : undefined;
+      const cookieMatch = cookies.match(/authToken=([^;]+)/)
+      token = cookieMatch ? cookieMatch[1] : undefined
     }
 
     if (!token) {
       return NextResponse.json<AuthStatusResponse>(
         { isAuthenticated: false, user: null },
-        { status: 200 } // OK, just not logged in
-      );
+        { status: 200 }, // OK, just not logged in
+      )
     }
 
     // Verify JWT
-    const payload = verifyToken(token);
+    const payload = verifyToken(token)
     if (!payload) {
       return NextResponse.json<AuthStatusResponse>(
         { isAuthenticated: false, user: null, error: "Invalid or expired JWT" },
-        { status: 401 }
-      );
+        { status: 401 },
+      )
     }
-
-
-    
-    if (!payload) {
-      return NextResponse.json<AuthStatusResponse>(
-        { isAuthenticated: false, user: null },
-        { status: 200 } // OK, just not logged in
-      );
-    }
-    
 
     // Query auth_tokens table for token
     const tokenRecord = await db
       .select()
       .from(authTokens)
-      .where(
-        and(
-          eq(authTokens.token, token),
-          eq(authTokens.userId, payload.userId)
-        )
-      )
-      .limit(1);
+      .where(and(eq(authTokens.token, token), eq(authTokens.userId, payload.userId)))
+      .limit(1)
 
     if (!tokenRecord.length) {
       return NextResponse.json<AuthStatusResponse>(
         { isAuthenticated: false, user: null, error: "Invalid token" },
-        { status: 401 }
-      );
+        { status: 401 },
+      )
     }
 
-    const record = tokenRecord[0];
+    const record = tokenRecord[0]
     if (!record.expiresAt || record.expiresAt < new Date()) {
+      await db.delete(authTokens).where(eq(authTokens.id, record.id))
       return NextResponse.json<AuthStatusResponse>(
         { isAuthenticated: false, user: null, error: "Token expired" },
-        { status: 401 }
-      );
+        { status: 401 },
+      )
     }
 
     // Fetch user details
-    const userId = record.userId;
+    const userId = record.userId
     const userRecord = await db
       .select({
         id: users.id,
@@ -107,16 +93,16 @@ export async function GET(request: Request) {
       })
       .from(users)
       .where(eq(users.id, userId))
-      .limit(1);
+      .limit(1)
 
     if (!userRecord.length) {
       return NextResponse.json<AuthStatusResponse>(
         { isAuthenticated: false, user: null, error: "User not found" },
-        { status: 401 }
-      );
+        { status: 401 },
+      )
     }
 
-    const user = userRecord[0];
+    const user = userRecord[0]
 
     // Validate user data: require role and at least one verified contact method
     if (
@@ -132,28 +118,25 @@ export async function GET(request: Request) {
         role: user.role,
         emailVerified: user.emailVerified,
         phoneVerified: user.phoneVerified,
-      });
+      })
       return NextResponse.json<AuthStatusResponse>(
         { isAuthenticated: false, user: null, error: "Invalid user data" },
-        { status: 401 }
-      );
+        { status: 401 },
+      )
     }
 
     // Ensure guest users are marked as verified for their login method
     if (user.role === "guest") {
-      if (
-        (user.email !== null && !user.emailVerified) ||
-        (user.phoneNumber !== null && !user.phoneVerified)
-      ) {
+      if ((user.email !== null && !user.emailVerified) || (user.phoneNumber !== null && !user.phoneVerified)) {
         console.error("Guest user not verified:", {
           userId,
           emailVerified: user.emailVerified,
           phoneVerified: user.phoneVerified,
-        });
+        })
         return NextResponse.json<AuthStatusResponse>(
           { isAuthenticated: false, user: null, error: "User not verified" },
-          { status: 401 }
-        );
+          { status: 401 },
+        )
       }
     }
 
@@ -169,15 +152,15 @@ export async function GET(request: Request) {
         emailVerified: user.emailVerified ?? false,
         phoneVerified: user.phoneVerified ?? false,
       },
-    });
+    })
   } catch (error) {
     console.error("Error checking auth status:", {
       error: error instanceof Error ? error.message : "Unknown error",
       token: token ? "present" : "missing",
-    });
+    })
     return NextResponse.json<AuthStatusResponse>(
       { isAuthenticated: false, user: null, error: "Internal server error" },
-      { status: 500 }
-    );
+      { status: 500 },
+    )
   }
 }

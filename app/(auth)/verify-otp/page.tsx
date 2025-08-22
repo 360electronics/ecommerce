@@ -60,7 +60,7 @@ function VerifyOTPContent() {
   const searchParams = useSearchParams(); // Use useSearchParams
   const inputRefs = useRef<(HTMLInputElement | null)[]>(Array(6).fill(null));
   const { setAuth } = useAuthStore();
-
+  
 
   // Extract params from URL
   useEffect(() => {
@@ -168,22 +168,22 @@ function VerifyOTPContent() {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError("");
-
+  
     const validationError = validateOTP();
     if (validationError) {
       setError(validationError);
       toast.error(validationError);
       return;
     }
-
+  
     if (!userId) {
       setError("Invalid request: Missing user ID");
       toast.error("Invalid request");
       return;
     }
-
+  
     setLoading(true);
-
+  
     try {
       const response = await fetch("/api/auth/verify-otp", {
         method: "POST",
@@ -191,23 +191,24 @@ function VerifyOTPContent() {
         body: JSON.stringify({ userId, otp: otp.join(""), type }),
         credentials: "include",
       });
-
+  
       const data: VerifyOTPResponse = await response.json();
-
+  
       if (!response.ok) {
         throw new Error(data.error || "Failed to verify OTP");
       }
-
+  
       toast.success("OTP verified successfully!");
-
+  
       // Update auth state
       setAuth(true, data.user);
-
+  
       // Fetch critical store data
       if (data.user.id) {
+        // toast.loading("Fetching your data...");
         const results = await Promise.allSettled([
           useCartStore.getState().fetchCart(),
-          useWishlistStore.getState().fetchWishlist(true),
+          useWishlistStore.getState().fetchWishlist(true), // Force fetch
           useCheckoutStore.getState().fetchCheckoutItems(data.user.id),
         ]);
         results.forEach((result, index) => {
@@ -217,18 +218,16 @@ function VerifyOTPContent() {
             console.log(`[VerifyOTPContent] Fetch[${index}] succeeded`);
           }
         });
+        toast.dismiss();
       }
-
-      //A small delay to ensure persistence
-      await new Promise(resolve => setTimeout(resolve, 100));
-
+  
+      // Navigate based on role
       if (data.user.role === "admin") {
-        window.location.href = "/admin/dashboard";
+        router.push("/admin/dashboard");
+        router.refresh();
       } else {
-        // Use window.location.href for immediate navigation with fresh auth state
-        window.location.href = "/";
+        router.push("/");
       }
-
     } catch (err: unknown) {
       const errorMessage = err instanceof Error ? err.message : "Failed to verify OTP";
       setError(errorMessage);
@@ -291,21 +290,21 @@ function VerifyOTPContent() {
     <div className="flex min-h-screen bg-gray-50">
       {/* Banner Section */}
       <div className="hidden md:block w-full md:w-[40%] relative">
-
-        <Link href={banner?.link || "#"} className="block w-full h-full">
-          <Image
-            src={banner?.imageUrls.default || "/auth_placeholder.webp"}
-            alt={banner?.title || "Promotional Banner"}
-            fill
-            sizes="40vw"
-            quality={100}
-            className="object-cover"
-            priority
-            placeholder="blur"
-            blurDataURL="/auth_placeholder.webp"
-            onError={() => setBanner(null)}
-          />
-        </Link>
+        
+          <Link href={banner?.link || "#"} className="block w-full h-full">
+            <Image
+              src={banner?.imageUrls.default || "/auth_placeholder.webp"}
+              alt={banner?.title || "Promotional Banner"}
+              fill
+              sizes="40vw"
+              quality={100}
+              className="object-cover"
+              priority
+              placeholder="blur"
+              blurDataURL="/auth_placeholder.webp"
+              onError={() => setBanner(null)}
+            />
+          </Link>
       </div>
 
       {/* Form Section */}
