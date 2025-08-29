@@ -88,7 +88,6 @@ export default function ProductRatingsReviews({ className }: ProductRatingsRevie
       fetchReviews();
       fetchAuthStatus();
     }
-
   }, [product?.id, offset, reviewSort]);
 
   const fetchReviews = async (variantId?: string) => {
@@ -102,7 +101,6 @@ export default function ProductRatingsReviews({ className }: ProductRatingsRevie
         variantId: product.id,
       });
       const url = `/api/reviews/${product.productId}?${query}`;
-      // console.log('Fetching reviews from:', url);
       const response = await fetch(url, {
         credentials: "include",
       });
@@ -114,12 +112,9 @@ export default function ProductRatingsReviews({ className }: ProductRatingsRevie
           setTotalReviews(0);
           return;
         }
-
-        console.error('API Error:', errorData);
         throw new Error(errorData.error || `Failed to fetch reviews (Status: ${response.status})`);
       }
       const data = await response.json();
-      // console.log("reviews", data)
       setReviews(data.reviews);
       setTotalReviews(data.total);
     } catch (err) {
@@ -136,7 +131,7 @@ export default function ProductRatingsReviews({ className }: ProductRatingsRevie
   const customerImages = reviews
     .filter((review: Review) => review.images && review.images.length > 0)
     .flatMap((review: Review) => review.images || [])
-    .slice(0, 6);
+    .slice(0, 4); // Reduced to 4 images
 
   const handleWriteReview = () => {
     if (!isLoggedIn) {
@@ -182,8 +177,6 @@ export default function ProductRatingsReviews({ className }: ProductRatingsRevie
     setIsImageModalOpen(true);
   };
 
-
-
   const handleCustomerImageClick = (image: ReviewImage) => {
     for (const review of reviews) {
       if (review.images) {
@@ -222,7 +215,7 @@ export default function ProductRatingsReviews({ className }: ProductRatingsRevie
         credentials: "include",
         body: JSON.stringify({
           rating: reviewData.rating,
-          title: reviewData.name, // Using name as title for consistency
+          title: reviewData.name,
           comment: reviewData.review,
           images,
           variantId: product?.id,
@@ -333,284 +326,230 @@ export default function ProductRatingsReviews({ className }: ProductRatingsRevie
   }, [reviews, reviewSort]);
 
   return (
-    <div className={cn("mb-12", className)}>
+    <div className={cn("mb-6", className)}>
       {/* Error Message */}
       {error && (
-        <div className="mb-4 p-4 bg-red-100 text-red-700 rounded-md">
+        <div className="mb-2 p-2 bg-red-100 text-red-700 rounded text-sm">
           {error}
-          <button onClick={() => setError(null)} className="ml-4 text-red-900">Dismiss</button>
+          <button onClick={() => setError(null)} className="ml-2 text-red-900 text-xs">Dismiss</button>
         </div>
       )}
 
       {/* Reviews Section */}
       <div>
-        <div className="flex flex-col md:flex-row justify-between md:items-center my-8 md:my-16">
-          <h2 className="text-2xl md:text-4xl font-medium md:font-bold">
-            Ratings & <span className="text-primary">Reviews</span>
+        <div className="flex justify-between items-center mb-4">
+          <h2 className="text-2xl font-medium">
+            Ratings & Reviews
           </h2>
-          <Button
-            className="hidden md:flex items-center gap-2 text-black border hover:bg-gray-100 px-4 py-2 font-medium"
-            onClick={handleWriteReview}
-            disabled={isLoading}
-          >
-            Write a Review
-            <svg viewBox="0 0 20 20" fill="none" xmlns="http://www.w3.org/2000/svg" className="w-5 h-5">
-              <path
-                d="M3.75 10H16.25"
-                stroke="currentColor"
-                strokeWidth="1.5"
-                strokeLinecap="round"
-                strokeLinejoin="round"
-              />
-              <path
-                d="M11.25 5L16.25 10L11.25 15"
-                stroke="currentColor"
-                strokeWidth="1.5"
-                strokeLinecap="round"
-                strokeLinejoin="round"
-              />
-            </svg>
-          </Button>
         </div>
 
-        {/* Ratings & Reviews Section */}
-        <section className="w-full mx-auto px-4 md:px-8 py-8 md:py-12">
-          {/* Ratings Summary */}
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-10 mb-12">
-            <div className="grid grid-cols-2 items-end">
-              {/* Average Rating */}
-              <div className="flex flex-col justify-end">
-                <div className="flex items-center mb-2">
-                  <span className="text-3xl md:text-5xl font-semibold text-gray-900 mr-2">
-                    {Number(product?.averageRating || 0).toFixed(1)}
-                  </span>
-                  <Star className="w-6 h-6 md:w-10 md:h-10 fill-black" />
-                </div>
-                <p className="text-gray-600 text-sm md:text-base">
-                  {product?.ratingCount || 0} Ratings & {totalReviews} Reviews
-                </p>
-              </div>
-
-              {/* Rating Distribution */}
-              <div className="space-y-3 text-sm md:text-base ml-4">
-                {product?.ratingDistribution?.length ? (
-                  product.ratingDistribution.map((item: RatingDistribution) => (
-                    <div key={item.value} className="flex items-center gap-3">
-                      <span className="w-6 text-right">{item.value}.0</span>
-                      <Star className="w-4 h-4 fill-black" />
-                      <div className="flex-1 bg-gray-200 rounded-full h-2 md:h-3">
-                        <div
-                          className="bg-blue-500 h-2 md:h-3 rounded-full"
-                          style={{ width: `${(item.count / maxCount) * 100}%` }}
-                        />
-                      </div>
-                      <span className="text-gray-600">{item.count}</span>
-                    </div>
-                  ))
-                ) : (
-                  <p className="text-gray-500">No ratings available</p>
-                )}
-              </div>
+        {/* Ratings Summary */}
+        <div className=" flex justify-between  gap-20 mb-4">
+          <div className="w-full max-w-xs ">
+            <div className="flex items-center">
+              <span className="text-2xl font-semibold mr-1">
+                {Number(product?.averageRating || 0).toFixed(1)}
+              </span>
+              <Star className="w-5 h-5 fill-black" />
+              <p className="ml-2 text-sm text-gray-600">
+                ({product?.ratingCount || 0} ratings, {totalReviews} reviews)
+              </p>
             </div>
 
-            {/* Mobile Write Review Button */}
-            <div className="md:hidden mt-6 flex justify-center">
+            {/* Rating Distribution */}
+            <div className="space-y-1 text-xs  py-4">
+              {product?.ratingDistribution?.length ? (
+                product.ratingDistribution.map((item: RatingDistribution) => (
+                  <div key={item.value} className="flex items-center gap-2">
+                    <span className="w-6 flex items-center gap-1"><Star className="w-3 h-3 fill-black" />{item.value}</span>
+                    <div className="flex-1 bg-gray-200 rounded h-1">
+                      <div
+                        className="bg-blue-500 h-1 rounded"
+                        style={{ width: `${(item.count / maxCount) * 100}%` }}
+                      />
+                    </div>
+                    <span>{item.count}</span>
+                  </div>
+                ))
+              ) : (
+                <p className="text-gray-500">No ratings</p>
+              )}
+            </div>
+
+            <div className=" py-2">
+
               <Button
-                className="bg-blue-600 text-white w-full py-2 rounded-md"
+                size="sm"
+                className="text-sm px-3 py-1"
                 onClick={handleWriteReview}
                 disabled={isLoading}
               >
-                Write a Review
+                Write Review
               </Button>
             </div>
           </div>
 
-          {/* Customer Images */}
-          {customerImages.length > 0 && (
-            <div className="mb-12">
-              <h3 className="text-lg md:text-xl font-medium mb-4">Customer Photos</h3>
-              <div className="flex overflow-x-auto gap-4 pb-2 scrollbar-hide">
-                {customerImages.slice(0, 6).map((image: ReviewImage, index: number) => (
-                  <div
-                    key={index}
-                    className="relative w-20 h-20 md:w-28 md:h-28 border rounded-md overflow-hidden flex-shrink-0 cursor-pointer hover:opacity-90 transition"
-                    onClick={() => handleCustomerImageClick(image)}
-                  >
-                    <Image
-                      src={image.url || DEFAULT_IMAGE}
-                      alt={image.alt}
-                      fill
-                      sizes="(max-width: 768px) 80px, 112px"
-                      className="object-cover"
-                    />
-                    {index === 5 && customerImages.length > 6 && (
-                      <div className="absolute inset-0 bg-black/50 text-white flex items-center justify-center text-lg md:text-xl font-semibold">
-                        +{customerImages.length - 6}
-                      </div>
-                    )}
-                  </div>
-                ))}
-              </div>
-            </div>
-          )}
+          <div className="w-full">
 
-          {/* Reviews Filter */}
-          <div className="flex justify-end mb-4">
-            <div className="relative w-40 md:w-48 text-sm">
-              <select
-                className="w-full border rounded-md py-2 px-3 appearance-none pr-10"
-                value={reviewSort}
-                onChange={handleSortChange}
-                disabled={isLoading}
-              >
-                <option value="mostRecent">Most Recent</option>
-                <option value="highestRating">Highest Rating</option>
-                <option value="lowestRating">Lowest Rating</option>
-              </select>
-              <div className="absolute right-3 top-1/2 -translate-y-1/2 pointer-events-none">
-                <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
-                  <path d="M4 6L8 10L12 6" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
-                </svg>
-              </div>
-            </div>
-          </div>
-
-          {/* Reviews List */}
-          <div className="space-y-6">
-            {isLoading ? (
-              <p className="text-center text-gray-500 py-8">Loading reviews...</p>
-            ) : sortedReviews.length > 0 ? (
-              sortedReviews.map((review: Review) => (
-                <div key={review.id} className="border-b pb-6">
-                  <div className="flex items-start gap-4">
-                    <div className="w-10 h-10 md:w-12 md:h-12 rounded-full overflow-hidden relative bg-gray-200 flex-shrink-0">
+            {/* Customer Images */}
+            {customerImages.length > 0 && (
+              <div className="mb-4 w-full">
+                <h3 className="text-lg font-medium mb-4">Reviews with Images</h3>
+                <div className="flex gap-2 ">
+                  {customerImages.map((image: ReviewImage, index: number) => (
+                    <div
+                      key={index}
+                      className="w-40 h-40 border rounded overflow-hidden cursor-pointer relative"
+                      onClick={() => handleCustomerImageClick(image)}
+                    >
                       <Image
-                        src={DEFAULT_AVATAR}
-                        alt={`${review.userFirstName || 'User'} avatar`}
+                        src={image.url || DEFAULT_IMAGE}
+                        alt={image.alt}
                         fill
-                        sizes="(max-width: 768px) 40px, 48px"
                         className="object-cover"
                       />
                     </div>
-                    <div className="flex-1">
-                      <div className="flex flex-col md:flex-row md:justify-between md:items-start gap-1 md:gap-0">
-                        <div>
-                          <h4 className="font-semibold text-sm md:text-base">
-                            {review.userFirstName && review.userLastName
-                              ? `${review.userFirstName} ${review.userLastName}`
-                              : 'Anonymous'}
-                          </h4>
-                          <p className="text-gray-500 text-xs md:text-sm">
-                            {new Date(review.createdAt).toLocaleDateString()}
-                          </p>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {/* Reviews List */}
+            <div className="space-y-4 w-full py-4">
+              {isLoading ? (
+                <p className="text-center text-gray-500">Loading...</p>
+              ) : sortedReviews.length > 0 ? (
+                sortedReviews.map((review: Review) => (
+                  <div key={review.id} className="border-b pb-2">
+                    <div className="flex gap-2">
+                      <div className="w-8 h-8 rounded-full overflow-hidden bg-gray-200 relative">
+                        <Image
+                          src={DEFAULT_AVATAR}
+                          alt="Avatar"
+                          fill
+                          className="object-cover"
+                        />
+                      </div>
+                      <div className="flex-1">
+                        <div className="flex justify-between text-sm">
+                          <div>
+                            <h4 className="font-medium">
+                              {review.userFirstName ? `${review.userFirstName} ${review.userLastName || ''}` : 'Anonymous'}
+                            </h4>
+
+                            <p className="text-gray-500 text-xs">
+                              {new Date(review.createdAt).toLocaleDateString()}
+                            </p>
+                            <div className="flex items-center gap-1">
+                              <span>{parseFloat(review.rating).toFixed(1)}</span>
+                              <div className="flex">
+                                {[1, 2, 3, 4, 5].map((star) => (
+                                  <Star
+                                    key={star}
+                                    className={`w-3 h-3 ${star <= parseFloat(review.rating) ? 'fill-black' : 'text-gray-300'}`}
+                                  />
+                                ))}
+                              </div>
+                            </div>
+                          </div>
+
                         </div>
-                        <div className="flex items-center gap-1">
-                          <span className="font-medium text-sm md:text-base">{parseFloat(review.rating).toFixed(1)}</span>
-                          <div className="flex">
-                            {[1, 2, 3, 4, 5].map((star) => (
-                              <Star
-                                key={star}
-                                className={`w-3 h-3 md:w-4 md:h-4 ${star <= parseFloat(review.rating) ? 'fill-black' : 'text-gray-300'
-                                  }`}
-                              />
+                        {review.title && <p className="mt-1 text-sm font-medium">{review.title}</p>}
+                        {review.comment && <p className="mt-1 text-sm">{review.comment}</p>}
+
+                        {/* Review Actions */}
+                        {review.canEdit && (
+                          <div className="mt-1 flex gap-2 text-xs">
+                            <Button variant="outline" size="sm" onClick={() => handleEditReview(review)} disabled={isLoading}>
+                              <Edit className="w-3 h-3 mr-1" />
+                              Edit
+                            </Button>
+                            <Button variant="destructive" size="sm" onClick={() => handleDeleteReview(review.id)} disabled={isLoading}>
+                              <Trash className="w-3 h-3 mr-1" />
+                              Delete
+                            </Button>
+                          </div>
+                        )}
+
+                        {/* Review Images */}
+                        {review.images && review.images.length > 0 && (
+                          <div className="mt-2 flex gap-2 overflow-x-auto">
+                            {review.images.map((image: ReviewImage, index: number) => (
+                              <div
+                                key={index}
+                                className="w-16 h-16 border rounded overflow-hidden cursor-pointer relative"
+                                onClick={() => handleImageClick(review, index)}
+                              >
+                                <Image
+                                  src={image.url || DEFAULT_IMAGE}
+                                  alt={image.alt}
+                                  fill
+                                  className="object-cover"
+                                />
+                              </div>
                             ))}
                           </div>
-                        </div>
+                        )}
                       </div>
-                      {review.title && <p className="mt-2 font-medium text-sm md:text-base">{review.title}</p>}
-                      {review.comment && <p className="mt-2 text-sm md:text-base">{review.comment}</p>}
-
-                      {/* Review Actions */}
-                      {review.canEdit && (
-                        <div className="mt-2 flex gap-2">
-                          <Button variant="outline" size="sm" onClick={() => handleEditReview(review)} disabled={isLoading}>
-                            <Edit className="w-4 h-4 mr-2" />
-                            Edit
-                          </Button>
-                          <Button variant="destructive" size="sm" onClick={() => handleDeleteReview(review.id)} disabled={isLoading}>
-                            <Trash className="w-4 h-4 mr-2" />
-                            Delete
-                          </Button>
-                        </div>
-                      )}
-
-                      {/* Review Images */}
-                      {review.images && review.images.length > 0 && (
-                        <div className="mt-3 ml-12 flex gap-2 overflow-x-auto scrollbar-hide">
-                          {review.images.map((image: ReviewImage, index: number) => (
-                            <div
-                              key={index}
-                              className="w-16 h-16 md:w-28 md:h-28 relative border rounded-md overflow-hidden flex-shrink-0 cursor-pointer hover:opacity-90 transition"
-                              onClick={() => handleImageClick(review, index)}
-                            >
-                              <Image
-                                src={image.url || DEFAULT_IMAGE}
-                                alt={image.alt}
-                                fill
-                                sizes="(max-width: 768px) 64px, 112px"
-                                className="object-cover"
-                              />
-                            </div>
-                          ))}
-                        </div>
-                      )}
                     </div>
                   </div>
-                </div>
-              ))
-            ) : (
-              <p className="text-center text-gray-500 py-8">No reviews yet. Be the first to write one!</p>
+                ))
+              ) : (
+                <p className="text-center text-gray-500 text-sm">No reviews yet.</p>
+              )}
+            </div>
+
+            {/* Load More Button */}
+            {totalReviews > reviews.length && (
+              <div className="mt-4 flex justify-center">
+                <Button variant="outline" size="sm" onClick={handleLoadMore} disabled={isLoading}>
+                  Load More
+                </Button>
+              </div>
             )}
           </div>
 
-          {/* Load More Button */}
-          {totalReviews > reviews.length && (
-            <div className="mt-10 flex justify-center">
-              <Button variant="outline" onClick={handleLoadMore} disabled={isLoading}>
-                Load More Reviews
-              </Button>
-            </div>
-          )}
-        </section>
+
+        </div>
 
 
 
 
-        {/* Review Image Modal */}
-        <ReviewImageModal
-          isOpen={isImageModalOpen}
-          onClose={() => setIsImageModalOpen(false)}
-          review={selectedReview}
-          initialImageIndex={selectedImageIndex}
-        />
 
-        {/* Write Review Modal */}
-        <WriteReviewModal
-          isOpen={isWriteReviewModalOpen}
-          onClose={() => setIsWriteReviewModalOpen(false)}
-          onSubmit={handleReviewSubmit}
-        />
-
-        {/* Edit Review Modal */}
-        <WriteReviewModal
-          isOpen={isEditReviewModalOpen}
-          onClose={() => {
-            setIsEditReviewModalOpen(false);
-            setSelectedReview(null);
-          }}
-          onSubmit={handleEditReviewSubmit}
-          initialData={
-            selectedReview
-              ? {
-                name: selectedReview.title || "",
-                review: selectedReview.comment || "",
-                rating: parseFloat(selectedReview.rating),
-                images: [],
-              }
-              : undefined
-          }
-        />
       </div>
+
+      {/* Modals */}
+      <ReviewImageModal
+        isOpen={isImageModalOpen}
+        onClose={() => setIsImageModalOpen(false)}
+        review={selectedReview}
+        initialImageIndex={selectedImageIndex}
+      />
+
+      <WriteReviewModal
+        isOpen={isWriteReviewModalOpen}
+        onClose={() => setIsWriteReviewModalOpen(false)}
+        onSubmit={handleReviewSubmit}
+      />
+
+      <WriteReviewModal
+        isOpen={isEditReviewModalOpen}
+        onClose={() => {
+          setIsEditReviewModalOpen(false);
+          setSelectedReview(null);
+        }}
+        onSubmit={handleEditReviewSubmit}
+        initialData={
+          selectedReview
+            ? {
+              name: selectedReview.title || "",
+              review: selectedReview.comment || "",
+              rating: parseFloat(selectedReview.rating),
+              images: [],
+            }
+            : undefined
+        }
+      />
     </div>
   );
 }

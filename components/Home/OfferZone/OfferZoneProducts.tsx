@@ -135,6 +135,7 @@ const FeaturedProducts: React.FC = () => {
                         discount={discount}
                         isHeartNeed={true}
                         showViewDetails={true}
+                        status={product.status}
                       />
                     </div>
                   );

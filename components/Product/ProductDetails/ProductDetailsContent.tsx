@@ -2,7 +2,7 @@
 import { Heart, Minus, Plus, Share2, Truck, Shield, Package, Phone, MapPin } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useRouter } from 'next/navigation';
-import { useEffect, useMemo, useState, useCallback, useRef } from 'react';
+import { useEffect, useMemo, useState, useCallback, useRef, JSX } from 'react';
 import toast, { Toaster } from 'react-hot-toast';
 import { addToWishlist, removeFromWishlist } from '@/utils/wishlist.utils';
 import { useProfileStore } from '@/store/profile-store';
@@ -44,6 +44,8 @@ export default function ProductDetailsContent({ className, activeVariant }: Prod
   const inputRef = useRef<HTMLInputElement>(null); // Add ref for input focus
   const userId = user?.id;
 
+
+
   // Fetch location details from API
   const fetchLocationDetails = async (pincode: string) => {
     if (!/^\d{6}$/.test(pincode)) {
@@ -69,7 +71,7 @@ export default function ProductDetailsContent({ className, activeVariant }: Prod
         const districtName = postOfficeData.District;
         const location = postOfficeData.Name;
         // setDistrict(districtName);
-      
+
 
         // Calculate delivery estimate with fetched district
         calculateDeliveryEstimate(pincode, location, districtName);
@@ -106,7 +108,7 @@ export default function ProductDetailsContent({ className, activeVariant }: Prod
     }
   }, []);
 
-  
+
 
   // Debounce function to limit rapid API calls
   const debounce = (func: (...args: any[]) => void, wait: number) => {
@@ -117,7 +119,29 @@ export default function ProductDetailsContent({ className, activeVariant }: Prod
     };
   };
 
-  
+  const renderRating = useCallback((): JSX.Element | null => {
+    if (typeof product?.averageRating !== 'number' || isNaN(product?.averageRating) || product?.averageRating <= 3 || product?.averageRating > 5) return null;
+
+    const stars = Array(5)
+      .fill(0)
+      .map((_, index) => (
+        <span
+          key={index}
+          className={cn('text-base sm:text-lg', index < Math.floor(Number(product?.averageRating)) ? 'text-yellow-500' : 'text-gray-300')}
+        >
+          ★
+        </span>
+      ));
+
+    return (
+      <div className="flex items-center">
+        <span className="mr-1 font-medium text-[10px] sm:text-sm">{Number(product?.averageRating).toFixed(1)}</span>
+        <div className="flex">{stars}</div>
+      </div>
+    );
+  }, [Number(product?.averageRating)]);
+
+
 
   // Calculate delivery estimate based on PIN code, stock, and backorder status
   const calculateDeliveryEstimate = useCallback(
@@ -184,8 +208,8 @@ export default function ProductDetailsContent({ className, activeVariant }: Prod
           const estimateText = activeVariant.stock > 0
             ? `Estimated delivery between ${formatDate(minDeliveryDate)} and ${formatDate(maxDeliveryDate)} for ${locationText}`
             : activeVariant.isBackorderable
-            ? `Estimated delivery between ${formatDate(minDeliveryDate)} and ${formatDate(maxDeliveryDate)} for ${locationText} (Backordered)`
-            : `Currently unavailable for delivery to ${locationText}`;
+              ? `Estimated delivery between ${formatDate(minDeliveryDate)} and ${formatDate(maxDeliveryDate)} for ${locationText} (Backordered)`
+              : `Currently unavailable for delivery to ${locationText}`;
 
           setDeliveryEstimate(estimateText);
           setIsCheckingPin(false);
@@ -228,9 +252,8 @@ export default function ProductDetailsContent({ className, activeVariant }: Prod
 
     const shareData = {
       title: product.name,
-      text: `Check out ${product.name} - ₹${activeVariant.ourPrice.toLocaleString()}${
-        discount > 0 ? ` (${discount}% OFF)` : ''
-      }`,
+      text: `Check out ${product.name} - ₹${activeVariant.ourPrice.toLocaleString()}${discount > 0 ? ` (${discount}% OFF)` : ''
+        }`,
       url: window.location.href,
     };
 
@@ -596,13 +619,13 @@ export default function ProductDetailsContent({ className, activeVariant }: Prod
   const DeliveryEstimation = () => {
     const savedLocation = JSON.parse(localStorage.getItem('g36-location') || '{}');
     const { location, district } = savedLocation;
-  
+
     useEffect(() => {
       if (inputRef.current && pinCode.length < 6) {
         inputRef.current.focus();
       }
     }, [pinCode]);
-  
+
     return (
       <div className="mt-6 border border-gray-200 rounded-lg">
         {/* Header */}
@@ -612,7 +635,7 @@ export default function ProductDetailsContent({ className, activeVariant }: Prod
             Delivery Options
           </h3>
         </div>
-  
+
         {/* Content */}
         <div className="p-4 space-y-4">
           {/* PIN Code Input Section */}
@@ -630,7 +653,7 @@ export default function ProductDetailsContent({ className, activeVariant }: Prod
                 aria-label="Enter PIN code for delivery estimation"
               />
             </div>
-            <button 
+            <button
               onClick={() => fetchLocationDetails(pinCode)}
               className="px-4 py-2.5 text-sm font-medium text-primary border border-primary rounded-md hover:bg-primary/50 transition-colors"
               disabled={pinCode.length !== 6 || isCheckingPin}
@@ -638,7 +661,7 @@ export default function ProductDetailsContent({ className, activeVariant }: Prod
               {isCheckingPin ? 'Checking...' : 'Check'}
             </button>
           </div>
-  
+
           {/* Loading State */}
           {isCheckingPin && (
             <div className="flex items-center gap-2 p-3 bg-blue-50 rounded-md">
@@ -646,7 +669,7 @@ export default function ProductDetailsContent({ className, activeVariant }: Prod
               <span className="text-sm text-primry">Checking delivery options...</span>
             </div>
           )}
-  
+
           {/* Error State */}
           {pinCodeError && (
             <div className="flex items-center gap-2 p-3 bg-red-50 rounded-md border border-red-200">
@@ -656,7 +679,7 @@ export default function ProductDetailsContent({ className, activeVariant }: Prod
               <span className="text-sm text-red-700">{pinCodeError}</span>
             </div>
           )}
-  
+
           {/* Success State - Delivery Information */}
           {deliveryEstimate && !isCheckingPin && !pinCodeError && (
             <div className="space-y-4">
@@ -670,7 +693,7 @@ export default function ProductDetailsContent({ className, activeVariant }: Prod
                   <p className="text-sm text-green-700">{deliveryEstimate}</p>
                 </div>
               </div>
-  
+
               {/* Additional Delivery Options */}
               <div className="grid grid-cols-1 gap-3">
                 {/* Standard Delivery */}
@@ -690,7 +713,7 @@ export default function ProductDetailsContent({ className, activeVariant }: Prod
                     </span>
                   )}
                 </div>
-  
+
                 {/* Express Delivery (if available) */}
                 {activeVariant.deliveryMode === 'Express' && (
                   <div className="flex items-center justify-between p-3 border border-gray-200 rounded-md">
@@ -709,7 +732,7 @@ export default function ProductDetailsContent({ className, activeVariant }: Prod
                   </div>
                 )}
               </div>
-  
+
               {/* Delivery Highlights */}
               <div className="border-t border-gray-200 pt-4">
                 <h4 className="text-sm font-medium text-gray-900 mb-3">Delivery Highlights</h4>
@@ -744,7 +767,7 @@ export default function ProductDetailsContent({ className, activeVariant }: Prod
               </div>
             </div>
           )}
-  
+
           {/* Default state when no PIN is entered */}
           {!pinCode && !isCheckingPin && (
             <div className="text-center py-4">
@@ -799,88 +822,79 @@ export default function ProductDetailsContent({ className, activeVariant }: Prod
     </div>
   );
 
-  const Actions = () => (
-    <div className="fixed bottom-0 left-0 right-0 bg-white border-t border-gray-200 p-4 md:static md:border-t-0 md:p-0 z-10">
-      <div className="flex gap-4 max-w-3xl mx-auto">
-        <button
-          onClick={handleCartClick}
-          className={cn(
-            'flex-1 flex items-center justify-center gap-2 py-3 px-6 rounded-full border border-gray-300 hover:bg-gray-50 text-sm font-semibold transition-colors',
-            isAddingToCart || (activeVariant.stock <= 0 && !activeVariant.isBackorderable)
-              ? 'opacity-50 cursor-not-allowed'
-              : 'cursor-pointer'
-          )}
-          disabled={isAddingToCart || (activeVariant.stock <= 0 && !activeVariant.isBackorderable)}
-        >
-          {isAddingToCart ? 'Adding...' : 'Add to Cart'}
-          <svg width="20" height="20" viewBox="0 0 20 20" fill="none" xmlns="http://www.w3.org/2000/svg">
-            <path d="M5 5H17.5L16 12H6.5L5 5Z" stroke="currentColor" strokeWidth="1.5" strokeLinejoin="round" />
-            <path
-              d="M5 5L4.5 3H2.5"
-              stroke="currentColor"
-              strokeWidth="1.5"
-              strokeLinecap="round"
-              strokeLinejoin="round"
-            />
-            <path
-              d="M6.5 12L6 14H16.5"
-              stroke="currentColor"
-              strokeWidth="1.5"
-              strokeLinecap="round"
-              strokeLinejoin="round"
-            />
-            <circle cx="7.5" cy="17" r="1" stroke="currentColor" strokeWidth="1.5" />
-            <circle cx="15.5" cy="17" r="1" stroke="currentColor" strokeWidth="1.5" />
-          </svg>
-        </button>
-        <button
-          onClick={handleBuyNowClick}
-          className={cn(
-            'flex-1 flex items-center justify-center gap-2 py-3 px-6 rounded-full bg-primary hover:bg-primary-hover text-white text-sm font-semibold transition-colors',
-            isAddingToCart || (!activeVariant.stock && !activeVariant.isBackorderable)
-              ? 'opacity-50 cursor-not-allowed'
-              : 'cursor-pointer'
-          )}
-          disabled={isAddingToCart || (!activeVariant.stock && !activeVariant.isBackorderable)}
-        >
-          Buy Now
-          <svg width="20" height="20" viewBox="0 0 20 20" fill="none" xmlns="http://www.w3.org/2000/svg">
-            <path d="M3.75 10H16.25" stroke="white" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
-            <path
-              d="M11.25 5L16.25 10L11.25 15"
-              stroke="white"
-              strokeWidth="1.5"
-              strokeLinecap="round"
-              strokeLinejoin="round"
-            />
-          </svg>
-        </button>
-      </div>
-    </div>
-  );
+  const Actions = () => {
+    const status = (product?.productParent?.status || " ").trim().toLowerCase();
 
-  const WarrantyAndDetails = () => (
-    <div className="mt-6 bg-white rounded-lg p-6 border border-gray-100">
-      <h2 className="text-lg font-semibold text-gray-900 mb-4 flex items-center gap-2">
-        <Shield className="w-5 h-5 text-gray-600" /> Warranty & Additional Details
-      </h2>
-      <ul className="space-y-4 text-sm text-gray-600">
-        <li className="flex items-start gap-3">
-          <Shield className="w-5 h-5 text-primary mt-0.5" />
-          <div>
-            <span className="font-medium">Warranty:</span>{' '}
-            1 Year Manufacturer Warranty for Device and 6 Months for In-Box Accessories
+    console.log("Action Status: ", status)
+  
+    const isOutOfStock =
+      (activeVariant?.stock ?? 0) <= (activeVariant?.lowStockThreshold ?? 0) &&
+      !activeVariant?.isBackorderable;
+  
+    // Coming Soon
+    if (status === 'coming_soon') {
+      return (
+        <div className="fixed bottom-0 left-0 right-0 bg-yellow-50 border-t border-yellow-200 p-4 md:static md:border-t-0 md:p-4 z-10">
+          <div className="text-center w-full">
+            <p className="text-yellow-800 font-semibold">🚀 Coming Soon</p>
+            <p className="text-sm text-yellow-600">
+              This product isn’t available yet, but it’ll be here soon!
+            </p>
           </div>
-        </li>
-        <li className="flex items-start gap-3">
-          <Phone className="w-5 h-5 text-primary mt-0.5" />
-          <div>
-            <span className="font-medium">Customer Support:</span> Contact us at support@techtrend.in or call 1800-123-4567
+        </div>
+      );
+    }
+  
+    // Inactive or Discontinued
+    if (status === 'inactive' || status === 'discontinued') {
+      return (
+        <div className="fixed bottom-0 left-0 right-0 bg-gray-50 border-t border-gray-200 p-4 md:static md:border-t-0 md:p-4 z-10">
+          <div className="text-center w-full">
+            <p className="text-gray-700 font-semibold">❌ Not Available</p>
+            <p className="text-sm text-gray-500">
+              This product has been discontinued or is currently inactive.
+            </p>
           </div>
-        </li>
-      </ul>
-    </div>
-  );
+        </div>
+      );
+    }
+  
+    // Default (Active)
+    return (
+      <div className="fixed bottom-0 left-0 right-0 bg-white border-t border-gray-200 p-4 md:static md:border-t-0 md:p-0 z-10">
+        <div className="flex gap-4 max-w-3xl mx-auto">
+          {/* Add to Cart */}
+          <button
+            onClick={handleCartClick}
+            className={cn(
+              'flex-1 flex items-center justify-center gap-2 py-3 px-6 rounded-full border border-gray-300 hover:bg-gray-50 text-sm font-semibold transition-colors',
+              isAddingToCart || isOutOfStock
+                ? 'opacity-50 cursor-not-allowed'
+                : 'cursor-pointer'
+            )}
+            disabled={isAddingToCart || isOutOfStock}
+          >
+            {isAddingToCart ? 'Adding...' : 'Add to Cart'}
+          </button>
+  
+          {/* Buy Now */}
+          <button
+            onClick={handleBuyNowClick}
+            className={cn(
+              'flex-1 flex items-center justify-center gap-2 py-3 px-6 rounded-full bg-primary hover:bg-primary-hover text-white text-sm font-semibold transition-colors',
+              isAddingToCart || isOutOfStock
+                ? 'opacity-50 cursor-not-allowed'
+                : 'cursor-pointer'
+            )}
+            disabled={isAddingToCart || isOutOfStock}
+          >
+            Buy Now
+          </button>
+        </div>
+      </div>
+    );
+  };
+  
 
   return (
     <div className={cn('p-4 md:p-6 max-w-3xl mx-auto', className)}>
@@ -896,6 +910,11 @@ export default function ProductDetailsContent({ className, activeVariant }: Prod
       </div>
 
       <h1 className="text-xl md:text-2xl font-medium text-gray-900 mb-4">{product.name}</h1>
+
+      <div className=' pb-4'>
+        {/* Rating */}
+        {renderRating()}
+      </div>
 
       <Pricing />
       <DeliveryEstimation />
@@ -958,7 +977,6 @@ export default function ProductDetailsContent({ className, activeVariant }: Prod
             </div>
           </div>
         )}
-        <WarrantyAndDetails />
       </div>
     </div>
   );

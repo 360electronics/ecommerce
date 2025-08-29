@@ -228,6 +228,7 @@ const GamersZone: React.FC = () => {
                       discount={discount}
                       isHeartNeed={true}
                       showViewDetails={true}
+                      status={product.status}
                     />
                   </div>
                 );
@@ -257,6 +258,7 @@ const GamersZone: React.FC = () => {
                       discount={discount}
                       isHeartNeed={true}
                       showViewDetails={true}
+                      status={product.status}
                     />
                   </div>
                 );

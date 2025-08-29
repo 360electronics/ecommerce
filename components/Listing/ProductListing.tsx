@@ -10,16 +10,24 @@ import { FlattenedProduct } from '@/types/product';
 
 const MemoizedProductCard = memo(ProductCard);
 
-const ProductListing = ({ 
-  category, 
-  searchQuery, 
-  initialProducts = [] 
-}: { 
-  category?: string; 
-  searchQuery?: string; 
-  initialProducts?: FlattenedProduct[]; 
+const ProductListing = ({
+    category,
+    searchQuery,
+    initialProducts = []
+}: {
+    category?: string;
+    searchQuery?: string;
+    initialProducts?: FlattenedProduct[];
 }) => {
-    const [originalProducts] = useState<FlattenedProduct[]>(initialProducts);
+    const [originalProducts] = useState<FlattenedProduct[]>(
+        initialProducts.filter(
+            (p) =>
+                p.status &&
+                ['active', 'coming_soon'].includes(p.status.trim().toLowerCase())
+
+        )
+    );
+
     const [filteredProducts, setFilteredProducts] = useState<FlattenedProduct[]>([]);
     const [loading, setLoading] = useState(false); // Data is pre-fetched, so no initial loading
     const [error, setError] = useState<string | null>(null);
@@ -36,12 +44,22 @@ const ProductListing = ({
         () =>
             debounce(
                 (productsList: FlattenedProduct[], filters: Record<string, any>, sortOpt: string, query: string) => {
-                    let filtered = [...productsList];
+
+                    console.log(productsList)
+                    let filtered = productsList.filter(
+                        (product) =>
+                            product.status &&
+                            ['active', 'coming_soon'].includes(product.status.trim().toLowerCase())
+
+                    );
 
                     // Apply category filter with exact matching
                     if (category && category.toLowerCase() !== 'all') {
-                        filtered = filtered.filter((product) =>
-                            product.category && (product.category as unknown as string).toLowerCase() === category.toLowerCase()
+                        filtered = filtered.filter(
+                            (product) =>
+                                product.category &&
+                                (product.category as unknown as string).toLowerCase() ===
+                                category.toLowerCase()
                         );
                     }
 
@@ -340,6 +358,15 @@ const ProductListing = ({
     };
 
     // Helper function to get display text for category/subcategory
+    const formatText = (text: string) => {
+        if (!text) return "";
+
+        return text
+            .replace(/[-_]/g, " ")                // replace hyphens/underscores with spaces
+            .toLowerCase()                        // make all lowercase first
+            .replace(/\b\w/g, (char) => char.toUpperCase()); // capitalize first letter of each word
+    };
+
     const getDisplayText = () => {
         const parts = [];
         if (filteredProducts.length > 0) {
@@ -347,15 +374,15 @@ const ProductListing = ({
         }
 
         if (category && category !== 'all') {
-            parts.push(`in ${DOMPurify.sanitize(category)}`);
+            parts.push(`in ${formatText(DOMPurify.sanitize(category))}`);
         }
 
         if (subcategory && subcategory !== 'all') {
-            parts.push(`> ${DOMPurify.sanitize(subcategory)}`);
+            parts.push(`> ${formatText(DOMPurify.sanitize(subcategory))}`);
         }
 
         if (searchQuery?.trim()) {
-            parts.push(`for "${DOMPurify.sanitize(searchQuery)}"`);
+            parts.push(`for "${formatText(DOMPurify.sanitize(searchQuery))}"`);
         }
 
         return parts.join(' ');
@@ -458,13 +485,14 @@ const ProductListing = ({
                     ) : (
                         <>
                             <div className="grid grid-cols-2 lg:grid-cols-3 gap-6">
-                                {displayedProducts.map((product,index) => (
+                                {displayedProducts.map((product, index) => (
                                     <MemoizedProductCard
                                         productId={product.productId}
                                         variantId={product.id}
                                         key={index}
                                         slug={product.slug}
                                         name={product.name}
+                                        status={product.status}
                                         image={
                                             Array.isArray(product.productImages) && product.productImages.length > 0
                                                 ? product.productImages?.[0]?.url

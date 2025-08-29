@@ -105,6 +105,7 @@ export type ProductVariant = {
   slug: string;
   attributes: Record<string, string | number | boolean>;
   stock: number;
+  status: any;
   lowStockThreshold: number | null;
   isBackorderable: boolean;
   mrp: number;
@@ -171,6 +172,7 @@ export type CompleteProduct = {
   fullName: string;
   slug: string;
   description: string | null;
+
   
   // Category, Subcategory and Brand information
   category: Category;
@@ -250,6 +252,7 @@ export interface RatingDistribution {
 
 
 export interface FlattenedProduct {
+  status?: any;
   attributes: any;
   id: string;
   productId: string;

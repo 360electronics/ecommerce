@@ -574,11 +574,11 @@ const DynamicFilter: React.FC<FilterProps> = ({ category, products, onFilterChan
                       />
                     </div>
                     <div className="flex justify-between mt-2 text-xs text-gray-600">
-                      <span>$0</span>
-                      <span>${section.max || 1000}</span>
+                      <span>₹0</span>
+                      <span>₹{section.max || 1000}</span>
                     </div>
                     <div className="text-center mt-2 text-xs text-gray-600">
-                      ${section.currentMin || 0} - ${section.currentMax || section.max || 1000}
+                    ₹{section.currentMin || 0} - ₹{section.currentMax || section.max || 1000}
                     </div>
                   </div>
                 )}

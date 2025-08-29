@@ -44,6 +44,7 @@ export default function ProductDetailPage({ product }: ProductDetailPageProps) {
         name: product.name,
         sku: product.sku,
         slug: product.slug,
+        status: product.productParent?.status,
         attributes: {},
         stock: Number(product.stock) || 0,
         lowStockThreshold: null,
@@ -64,11 +65,14 @@ export default function ProductDetailPage({ product }: ProductDetailPageProps) {
         isLowStock: false,
       };
     }
+
     const matchedVariant = product.productParent.variants.find((v) =>
       Object.entries(selectedAttributes).every(([key, value]) => v.attributes[key] === value)
     );
     return matchedVariant || product.productParent.variants.find((v) => v.id === product.id) || product.productParent.variants[0];
   }, [product, selectedAttributes]);
+
+
 
   const breadcrumbItems = useMemo(() => [
     { name: 'Home', path: '/' },
@@ -132,6 +136,7 @@ export default function ProductDetailPage({ product }: ProductDetailPageProps) {
       </div>
       <ProductRatingsReviews />
       <SimilarProducts product={product as any} />
+
     </div>
   );
 }

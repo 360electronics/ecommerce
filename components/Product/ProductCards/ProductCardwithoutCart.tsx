@@ -26,6 +26,7 @@ interface ProductCardProps {
   isHeartNeed?: boolean;
   productId: string;
   variantId: string;
+  status?: string;
 }
 
 const ProductCardwithoutCart: React.FC<ProductCardProps> = ({
@@ -42,6 +43,7 @@ const ProductCardwithoutCart: React.FC<ProductCardProps> = ({
   isHeartNeed = true,
   productId,
   variantId,
+  status
 }) => {
   const { isInWishlist, addToWishlist, removeFromWishlist, isLoading } = useWishlistStore();
   const { isLoggedIn, fetchAuthStatus, user } = useAuthStore();
@@ -187,6 +189,11 @@ const ProductCardwithoutCart: React.FC<ProductCardProps> = ({
 
         {/* Product Image */}
         <div className="mb-2 sm:mb-4 relative w-full aspect-square border border-gray-100 rounded-md bg-[#F4F4F4] overflow-hidden">
+        {status?.toLowerCase() === 'coming_soon' && (
+            <div className="absolute top-2 left-2 bg-gradient-to-r from-yellow-200 to-yellow-400 text-[10px] sm:text-xs px-2 py-1 rounded-full ">
+              Coming Soon
+            </div>
+          )}
           <Image
             src={image || '/placeholder.png'}
             alt={name || 'Product'}

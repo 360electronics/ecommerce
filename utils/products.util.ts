@@ -3,11 +3,12 @@ const API_BASE_URL = process.env.NEXT_PUBLIC_API_BASE_URL || 'http://localhost:3
 
 export async function fetchProducts() {
   try {
-    const res = await fetch(`${API_BASE_URL}/api/products`, {
+    const res = await fetch(`${API_BASE_URL}/api/products`,  {
       method: 'GET',
       headers: {
         'Content-Type': 'application/json',
       },
+      next: { revalidate: 60 },
     });
 
     if (!res.ok) {
@@ -30,6 +31,7 @@ export async function fetchSingleProduct(id: string) {
       headers: {
         'Content-Type': 'application/json',
       },
+      next: { revalidate: 60 },
     });
 
     if (!res.ok) {
@@ -51,6 +53,7 @@ export async function fetchOfferZoneProducts() {
       headers: {
         'Content-Type': 'application/json',
       },
+      next: { revalidate: 60 },
     });
 
     if (!res.ok) {
@@ -73,6 +76,7 @@ export async function fetchNewArrivalsProducts() {
       headers: {
         'Content-Type': 'application/json',
       },
+      next: { revalidate: 60 },
     });
 
     if (!res.ok) {

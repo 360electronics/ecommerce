@@ -26,6 +26,7 @@ const flattenProductVariants = (products: CompleteProduct[]): FlattenedProduct[]
                     category: product.category?.slug || '',
                     subcategory: product.subcategory?.slug || '',
                     brand: product.brand,
+                    status: product.status,
                     averageRating: product.averageRating?.toString() || '0',
                     tags: Array.isArray(product.tags)
                         ? product.tags
@@ -65,6 +66,7 @@ const flattenProductVariants = (products: CompleteProduct[]): FlattenedProduct[]
                 category: product.category?.slug || '',
                 subcategory: product.subcategory?.slug || '',
                 brand: product.brand,
+                status: product.status,
                 averageRating: product.averageRating?.toString() || '0',
                 totalStocks: product.totalStocks?.toString() || '0',
                 description: product.description || '',

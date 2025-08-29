@@ -163,6 +163,7 @@ const NewArrivals: React.FC = () => {
                       discount={discount}
                       isHeartNeed={true}
                       showViewDetails={true}
+                      status={product.status}
                     />
                   </div>
                 );

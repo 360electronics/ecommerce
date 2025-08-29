@@ -26,7 +26,8 @@ interface ProductCardProps {
   onRemove?: () => void; // Optional callback for remove action
   isHeartNeed?: boolean; // Show wishlist heart button
   productId: string; // Product ID
-  variantId: string; // Variant ID
+  variantId: string; // Variant ID\
+  status?: string;
 }
 
 const ProductCardwithCart: React.FC<ProductCardProps> = ({
@@ -43,6 +44,7 @@ const ProductCardwithCart: React.FC<ProductCardProps> = ({
   isHeartNeed = true,
   productId,
   variantId,
+  status
 }) => {
   const { isInWishlist, addToWishlist, removeFromWishlist, isLoading } = useWishlistStore();
   const { isLoggedIn, fetchAuthStatus } = useAuthStore();
@@ -53,6 +55,7 @@ const ProductCardwithCart: React.FC<ProductCardProps> = ({
 
   const isInWishlistStatus = productId && variantId ? isInWishlist(productId, variantId) : false;
 
+  console.log(status)
   // Fetch auth status on mount if not logged in
   useEffect(() => {
     if (!isLoggedIn) {
@@ -138,7 +141,7 @@ const ProductCardwithCart: React.FC<ProductCardProps> = ({
 
   const renderRating = useCallback((): JSX.Element | null => {
     if (typeof rating !== 'number' || isNaN(rating) || rating <= 3 || rating > 5) return null;
-  
+
     const stars = Array(5)
       .fill(0)
       .map((_, index) => (
@@ -149,7 +152,7 @@ const ProductCardwithCart: React.FC<ProductCardProps> = ({
           ★
         </span>
       ));
-  
+
     return (
       <div className="flex items-center">
         <span className="mr-1 font-medium text-[10px] sm:text-sm">{rating.toFixed(1)}</span>
@@ -216,6 +219,11 @@ const ProductCardwithCart: React.FC<ProductCardProps> = ({
 
         {/* Product Image */}
         <div className="mb-4 relative w-full aspect-square border group border-gray-100 rounded-md bg-[#F4F4F4] overflow-hidden">
+          {status?.toLowerCase() === 'coming_soon' && (
+            <div className="absolute top-2 left-2 bg-gradient-to-r from-yellow-200 to-yellow-400 text-[10px] sm:text-xs px-2 py-1 rounded-full ">
+              Coming Soon
+            </div>
+          )}
           <Image
             src={image || '/placeholder.png'}
             alt={name || 'Product'}
