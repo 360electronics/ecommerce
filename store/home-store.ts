@@ -48,13 +48,13 @@ export const useHomeStore = create<HomeState>()(
           set({ isLoading: true, error: null });
           const startTime = performance.now();
           const [bannerResponse, featuredProducts, newArrivals, gamersZoneProducts, brandProducts] = await Promise.all([
-            fetchWithRetry<{ data: Banner[] }>(() => fetch('/api/banner')).then((data) =>
+            fetchWithRetry<{ data: Banner[] }>(() => fetch('/api/banner', { cache: 'no-store' })).then((data) =>
               Array.isArray(data?.data) ? data.data : []
             ),
-            fetchWithRetry<Product[]>(() => fetch('/api/products/offer-zone')).then((data) =>
+            fetchWithRetry<Product[]>(() => fetch('/api/products/offer-zone', { cache: 'no-store' })).then((data) =>
               Array.isArray(data) ? data : []
             ),
-            fetchWithRetry<Product[]>(() => fetch('/api/products/new-arrivals')).then((data) =>
+            fetchWithRetry<Product[]>(() => fetch('/api/products/new-arrivals', { cache: 'no-store' })).then((data) =>
               Array.isArray(data) ? data : []
             ),
             fetchWithRetry<{
@@ -62,7 +62,7 @@ export const useHomeStore = create<HomeState>()(
               accessories: Product[];
               laptops: Product[];
               'steering-chairs': Product[];
-            }>(() => fetch('/api/products/gamers-zone')).then((data) =>
+            }>(() => fetch('/api/products/gamers-zone', { cache: 'no-store' })).then((data) =>
               data && typeof data === 'object'
                 ? {
                     consoles: Array.isArray(data.consoles) ? data.consoles : [],
@@ -72,7 +72,7 @@ export const useHomeStore = create<HomeState>()(
                   }
                 : { consoles: [], accessories: [], laptops: [], 'steering-chairs': [] }
             ),
-            fetchWithRetry<Product[]>(() => fetch('/api/products')).then((data) =>
+            fetchWithRetry<Product[]>(() => fetch('/api/products', { cache: 'no-store' })).then((data) =>
               Array.isArray(data) ? data : []
             ),
           ]);
