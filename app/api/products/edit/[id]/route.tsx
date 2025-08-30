@@ -7,8 +7,17 @@ import { uploadProductImageToR2 } from '@/lib/r2';
 
 type Params = { id: string };
 
-const toNumericString = (value: number | undefined | null, defaultValue?: string): string | undefined =>
-    value != null ? value.toString() : defaultValue;
+const toNumericString = (value: any, defaultValue?: string): string | undefined => {
+  if (value === undefined || value === null || value === '') {
+    return defaultValue;
+  }
+  const num = Number(value);
+  if (isNaN(num)) {
+    return defaultValue;
+  }
+  return num.toString();
+};
+
 
 const parseJSONField = <T,>(
     field: string | null | undefined,
@@ -80,16 +89,16 @@ const createProductSchema = z.object({
             })
           )
           .default([]),
-        weight: z.coerce.number().positive().optional(),
-        weightUnit: z.string().max(10).default('kg'),
-        dimensions: z
-          .object({
-            length: z.number().positive(),
-            width: z.number().positive(),
-            height: z.number().positive(),
-            unit: z.string(),
-          })
-          .optional(),
+          weight: z.coerce.number().nonnegative().default(0),
+          weightUnit: z.string().max(10).default('kg'),
+          dimensions: z
+            .object({
+              length: z.number().optional().default(0),
+              width: z.number().optional().default(0),
+              height: z.number().optional().default(0),
+              unit: z.string(),
+            })
+            .optional(),
         isDefault: z.boolean().default(true),
       })
     ).min(1),

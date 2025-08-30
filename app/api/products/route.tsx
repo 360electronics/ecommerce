@@ -102,13 +102,13 @@ const bulkDeleteProductSchema = z.object({
 export async function GET(req: Request) {
 
   //API Proxy
-  const apiKey = req.headers.get('x-super-secure-key');
-  if (apiKey !== process.env.API_SECRET_KEY) {
-    return NextResponse.json(
-      { message: 'Unauthorized' },
-      { status: 401 }
-    );
-  }
+  // const apiKey = req.headers.get('x-super-secure-key');
+  // if (apiKey !== process.env.API_SECRET_KEY) {
+  //   return NextResponse.json(
+  //     { message: 'Unauthorized' },
+  //     { status: 401 }
+  //   );
+  // }
   //
 
   try {
@@ -171,6 +171,8 @@ export async function POST(req: NextRequest) {
       .from(categories)
       .where(eq(categories.slug, categorySlug))
       .limit(1);
+
+      
     if (!category.length) {
       return NextResponse.json({ error: `Category with slug '${categorySlug}' not found` }, { status: 400 });
     }
