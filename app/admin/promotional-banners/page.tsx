@@ -30,6 +30,7 @@ type BannerType =
   | 'hero-main'
   | 'hero-secondary'
   | 'customise-pc'
+  | 'promotional'
   | 'cta'
   | 'register'
   | 'all'
@@ -132,6 +133,22 @@ const bannerTypeConfig: Record<BannerType, BannerTypeConfig> = {
     },
     supportsVideo: false,
   },
+  promotional: {
+    color: 'bg-cyan-100 text-cyan-800',
+    label: 'Promotional',
+    description: 'Banner for promotional in product pages',
+    recommendedSizes: {
+      default: '240x200px',
+      sm: '240x200px',
+      lg: '640x600px',
+    },
+    dimensions: {
+      default: { width: 240, height: 200 },
+      sm: { width: 240, height: 200 },
+      lg: { width: 640, height: 600 },
+    },
+    supportsVideo: false,
+  },
   all: {
     color: 'bg-red-100 text-red-800',
     label: 'All Categories',
@@ -164,6 +181,7 @@ const bannerTypeConfig: Record<BannerType, BannerTypeConfig> = {
     },
     supportsVideo: false,
   },
+ 
   'new-arrivals': {
     color: 'bg-green-100 text-green-800',
     label: 'New Arrivals',
@@ -269,20 +287,20 @@ const PromotionalBannersPage: React.FC = () => {
       const { data } = await response.json();
       const transformedBanners: Banner[] = Array.isArray(data)
         ? data.map((item: any) => ({
-            id: item.id,
-            title: item.title,
-            imageUrls: {
-              default: item.imageUrls.default,
-              sm: item.imageUrls.sm,
-              lg: item.imageUrls.lg,
-            },
-            type: item.type,
-            createdAt: item.createdAt,
-            updatedAt: item.updatedAt,
-            active: item.status === 'active',
-            startDate: item.start_date || '',
-            endDate: item.end_date || '',
-          }))
+          id: item.id,
+          title: item.title,
+          imageUrls: {
+            default: item.imageUrls.default,
+            sm: item.imageUrls.sm,
+            lg: item.imageUrls.lg,
+          },
+          type: item.type,
+          createdAt: item.createdAt,
+          updatedAt: item.updatedAt,
+          active: item.status === 'active',
+          startDate: item.start_date || '',
+          endDate: item.end_date || '',
+        }))
         : [];
       setBanners(transformedBanners);
     } catch (error) {

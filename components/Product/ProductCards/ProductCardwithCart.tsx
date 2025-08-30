@@ -55,7 +55,6 @@ const ProductCardwithCart: React.FC<ProductCardProps> = ({
 
   const isInWishlistStatus = productId && variantId ? isInWishlist(productId, variantId) : false;
 
-  console.log(status)
   // Fetch auth status on mount if not logged in
   useEffect(() => {
     if (!isLoggedIn) {

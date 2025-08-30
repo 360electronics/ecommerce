@@ -58,14 +58,16 @@ const SearchModal: React.FC<SearchModalProps> = ({
     if (products.length > 0) {
       const fuseInstance = new Fuse(products, {
         keys: [
-          { name: 'shortName', weight: 0.4 }, // Higher weight for product names
+          { name: 'shortName', weight: 0.5 },
           { name: 'fullName', weight: 0.4 },
-          { name: 'description', weight: 0.2 }, // Lower weight for description
+          { name: 'description', weight: 0.1 },
         ],
-        threshold: 0.3, // Moderate fuzziness for matching
-        includeScore: true, // Include score for sorting by relevance
-        minMatchCharLength: 2, // Minimum query length for matching
-        ignoreLocation: true, // Match anywhere in the string
+        threshold: 0.35,         // allow partial fuzzy matches
+        minMatchCharLength: 2,
+        ignoreLocation: true,    // match anywhere in string
+        includeScore: true,
+        shouldSort: true,
+        useExtendedSearch: true, // lets "asus laptop" behave better
       });
       setFuse(fuseInstance);
     }
@@ -100,9 +102,26 @@ const SearchModal: React.FC<SearchModalProps> = ({
   }, [onClose]);
 
   // Perform search and sort results by relevance (lower score = better match)
-  const searchResults = fuse && searchQuery 
-    ? fuse.search(searchQuery).sort((a, b) => (a.score || 0) - (b.score || 0)) 
-    : [];
+  const searchResults = (() => {
+    if (!fuse || !searchQuery) return [];
+
+    const results = fuse.search(searchQuery);
+
+    // ✅ If Fuse returned nothing, fallback to simple "includes" match
+    if (results.length === 0) {
+      const lowerQ = searchQuery.toLowerCase();
+      return products
+        .filter(
+          (p) =>
+            p.shortName?.toLowerCase().includes(lowerQ) ||
+            p.fullName?.toLowerCase().includes(lowerQ) ||
+            p.description?.toLowerCase().includes(lowerQ)
+        )
+        .map((item) => ({ item, score: 1 })); // fake score so structure matches
+    }
+
+    return results.sort((a, b) => (a.score || 0) - (b.score || 0));
+  })();
 
   // Extract suggestions and matching products, limited to 5 and 4 respectively
   const suggestions = searchResults

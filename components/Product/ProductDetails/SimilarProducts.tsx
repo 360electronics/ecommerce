@@ -120,7 +120,7 @@ const SimilarProducts: React.FC<SimilarProductsProps> = ({ product }) => {
 
   if (!similarProducts.length) {
     return (
-      <div className="mx-auto px-10 ">
+      <div className="mx-auto py-10">
         <h2 className="text-2xl font-medium mb-6">Similar Products</h2>
         <p className="text-gray-600">No similar products found.</p>
       </div>

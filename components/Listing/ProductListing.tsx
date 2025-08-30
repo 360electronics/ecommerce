@@ -6,6 +6,7 @@ import ProductCard from '@/components/Product/ProductCards/ProductCardwithCart';
 import { useSearchParams } from 'next/navigation';
 import DOMPurify from 'isomorphic-dompurify';
 import debounce from 'lodash/debounce';
+import Fuse from "fuse.js";
 import { FlattenedProduct } from '@/types/product';
 
 const MemoizedProductCard = memo(ProductCard);
@@ -19,14 +20,7 @@ const ProductListing = ({
     searchQuery?: string;
     initialProducts?: FlattenedProduct[];
 }) => {
-    const [originalProducts] = useState<FlattenedProduct[]>(
-        initialProducts.filter(
-            (p) =>
-                p.status &&
-                ['active', 'coming_soon'].includes(p.status.trim().toLowerCase())
-
-        )
-    );
+    const [originalProducts] = useState<FlattenedProduct[]>(initialProducts);
 
     const [filteredProducts, setFilteredProducts] = useState<FlattenedProduct[]>([]);
     const [loading, setLoading] = useState(false); // Data is pre-fetched, so no initial loading
@@ -34,7 +28,31 @@ const ProductListing = ({
     const [sortOption, setSortOption] = useState('featured');
     const [currentPage, setCurrentPage] = useState(1);
     const [productsPerPage] = useState(50);
+    const [fuse, setFuse] = useState<Fuse<FlattenedProduct> | null>(null);
     const searchParams = useSearchParams();
+
+    console.log("Og Products", originalProducts)
+    useEffect(() => {
+        if (originalProducts.length > 0) {
+            const fuseInstance = new Fuse(originalProducts, {
+                keys: [
+                    { name: 'name', weight: 0.4, getFn: (obj) => obj.name || '' },
+                    { name: 'brand.name', weight: 0.3, getFn: (obj) => obj.brand?.name || '' },
+                    { name: 'category.name', weight: 0.1, getFn: (obj) => obj.category?.name || '' },
+                    { name: 'subcategory.name', weight: 0.1, getFn: (obj) => obj.subcategory?.name || '' },
+                    { name: 'description', weight: 0.1, getFn: (obj) => obj.description || '' },
+                ],
+                threshold: 0.35,
+                minMatchCharLength: 2,
+                ignoreLocation: true,
+                shouldSort: true,
+                includeScore: true,
+                useExtendedSearch: true,
+            });
+            setFuse(fuseInstance);
+        }
+    }, [originalProducts]);
+
 
     // Get subcategory from URL params
     const subcategory = searchParams.get('subcategory');
@@ -45,7 +63,7 @@ const ProductListing = ({
             debounce(
                 (productsList: FlattenedProduct[], filters: Record<string, any>, sortOpt: string, query: string) => {
 
-                    console.log(productsList)
+                    // console.log(productsList)
                     let filtered = productsList.filter(
                         (product) =>
                             product.status &&
@@ -70,33 +88,33 @@ const ProductListing = ({
                         );
                     }
 
-                    // Apply search query filter
+                    // Apply search query filter (with Fuse.js)
                     if (query?.trim()) {
-                        const sanitizedQuery = DOMPurify.sanitize(query.trim()).toLowerCase();
-                        const queryWords = sanitizedQuery.split(/\s+/).filter(word => word.length > 0);
-                        filtered = filtered.filter((product: FlattenedProduct) => {
-                            const searchableText = [
-                                product.name || '',
-                                product.category || '',
-                                product.subcategory || '',
-                                product.brand?.name || '',
-                                product.description || '',
-                                Array.isArray(product.tags) ? product.tags.join(' ') : ''
-                            ].join(' ').toLowerCase();
+                        let results: FlattenedProduct[] = [];
 
-                            return queryWords.every(word => searchableText.includes(word));
-                        });
+                        if (fuse) {
+                            const fuseResults = fuse.search(query.trim());
+                            results = fuseResults.map(r => r.item);
+                            console.log('Fuse search results:', fuseResults); // <-- debug Fuse output
+                        }
+                        // Fallback if Fuse found nothing → simple includes
+                        if (results.length === 0) {
+                            const q = query.trim().toLowerCase();
+                            results = productsList.filter(p =>
+                                (p.name || '').toLowerCase().includes(q) ||
+                                (p.brand?.name || '').toLowerCase().includes(q) ||
+                                (p.category.name || '').toLowerCase().includes(q) ||
+                                (p.subcategory.name || '').toLowerCase().includes(q) ||
+                                (p.description || '').toLowerCase().includes(q)
+                            );
+                            console.log('Fallback search results:', results); // <-- debug fallback
+                        }
+
+                        filtered = results;
                     }
 
-                    // Apply price range filter
-                    if (filters.ourPrice) {
-                        const minPrice = Number(filters.ourPrice.min) || 0;
-                        const maxPrice = Number(filters.ourPrice.max) || Infinity;
-                        filtered = filtered.filter((product) => {
-                            const price = Number(product.ourPrice) || 0;
-                            return price >= minPrice && price <= maxPrice;
-                        });
-                    }
+                    console.log('Final filtered products:', filtered);
+
 
                     // Apply color filter
                     if (filters.color?.length > 0) {
@@ -132,14 +150,92 @@ const ProductListing = ({
                         filtered = filtered.filter((product) => Number(product.totalStocks) > 0);
                     }
 
+                    const normalizeValue = (val: string): string => {
+                        if (!val) return "";
+
+                        let v = val.trim().replace(/\s+/g, " ").toLowerCase();
+                        let brand = "";
+
+                        // --- Detect explicit brand ---
+                        if (/\bamd\b/i.test(v)) brand = "AMD";
+                        else if (/\bintel\b/i.test(v)) brand = "Intel";
+                        else if (/\bnvidia\b/i.test(v)) brand = "NVIDIA";
+                        else if (/\bmsi\b/i.test(v)) brand = "MSI";
+                        else if (/\basus\b/i.test(v)) brand = "Asus";
+
+                        // --- Remove duplicate brand mentions ---
+                        if (brand) {
+                            const brandRegex = new RegExp(`\\b(${brand})\\b`, "ig");
+                            v = v.replace(brandRegex, "").trim();
+                        }
+
+                        // --- Series inference ---
+                        if (/ryzen\s*[3579]/i.test(v)) {
+                            if (!brand) brand = "AMD";
+                            v = v.replace(/ryzen\s*([3579]).*/i, "Ryzen $1");
+                        }
+                        if (/core\s*i\s*[3579]/i.test(v)) {
+                            if (!brand) brand = "Intel";
+                            v = v.replace(/core\s*i\s*([3579]).*/i, "Core i$1");
+                        }
+                        if (/rtx\s*\d+/i.test(v)) {
+                            if (!brand) brand = "NVIDIA";
+                            v = v.replace(/geforce\s*/i, "");
+                            v = v.replace(/\brtx\s*(\d+).*/i, "RTX $1");
+                        }
+
+                        // --- Special inference for laptop lines ---
+                        if (/tuf\s+gaming/i.test(v)) {
+                            if (!brand) brand = "Asus";
+                            v = v.replace(/tuf\s+gaming/i, "TUF Gaming");
+                        }
+                        if (/rog\s+/i.test(v)) {
+                            if (!brand) brand = "Asus";
+                            v = v.replace(/rog\s+/i, "ROG ");
+                        }
+
+                        // --- Storage normalization ---
+                        v = v.replace(/(\d+)\s*(gb|ssd|hdd)/i, "$1 GB");
+                        v = v.replace(/(\d+)(gb|ssd|hdd)/i, "$1 GB");
+
+                        // --- Display sizes ---
+                        v = v.replace(/(\d+(\.\d+)?)\s*cm\s*\((\d+(\.\d+)?)\s*inch\)/i, "$3 inch");
+
+                        // --- Collapse duplicate words ---
+                        v = v.replace(/\b(\w+)( \1\b)+/gi, "$1");
+
+                        // --- Title case ---
+                        v = v.replace(/\b\w/g, (c) => c.toUpperCase());
+
+                        // --- Prepend brand (avoid duplicates) ---
+                        if (brand && !v.startsWith(brand)) {
+                            v = `${brand} ${v}`;
+                        }
+
+                        return v.trim();
+                    };
+
+
+
                     // Apply dynamic attribute filters
                     Object.keys(filters).forEach((key) => {
-                        if (!['ourPrice', 'color', 'storage', 'brand', 'rating', 'inStock', 'category'].includes(key) && Array.isArray(filters[key])) {
-                            filtered = filtered.filter((product) =>
-                                product.attributes && product.attributes[key] && filters[key].includes(product.attributes[key])
-                            );
+                        if (
+                            !['ourPrice', 'color', 'storage', 'brand', 'rating', 'inStock', 'category'].includes(key) &&
+                            Array.isArray(filters[key])
+                        ) {
+                            filtered = filtered.filter((product) => {
+                                const productVal = product.attributes?.[key];
+                                if (!productVal) return false;
+
+                                // Normalize both product attribute & filter values
+                                const normalizedProductVal = normalizeValue(productVal);
+                                const normalizedFilterVals = filters[key].map((v: string) => normalizeValue(v));
+
+                                return normalizedFilterVals.includes(normalizedProductVal);
+                            });
                         }
                     });
+
 
                     // Apply sorting
                     const sorted = [...filtered];
@@ -170,7 +266,7 @@ const ProductListing = ({
                 },
                 300
             ),
-        [category, subcategory, searchQuery]
+        [category, subcategory, searchQuery, fuse]
     );
 
     useEffect(() => {
@@ -245,9 +341,11 @@ const ProductListing = ({
 
     // Apply filters when dependencies change
     useEffect(() => {
+        console.log('Search query:', searchQuery);
         if (originalProducts.length === 0) return;
 
         const filters: Record<string, any> = {};
+        console.log('Applied filters:', filters);
         const maxPrice = searchParams.get('maxPrice');
 
         if (maxPrice) {

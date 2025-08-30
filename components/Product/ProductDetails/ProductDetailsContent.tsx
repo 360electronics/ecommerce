@@ -825,7 +825,7 @@ export default function ProductDetailsContent({ className, activeVariant }: Prod
   const Actions = () => {
     const status = (product?.productParent?.status || " ").trim().toLowerCase();
 
-    console.log("Action Status: ", status)
+    // console.log("Action Status: ", status)
   
     const isOutOfStock =
       (activeVariant?.stock ?? 0) <= (activeVariant?.lowStockThreshold ?? 0) &&

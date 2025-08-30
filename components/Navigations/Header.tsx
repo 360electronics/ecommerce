@@ -109,6 +109,72 @@ const Header = ({ isCategory = true }: HeaderProps) => {
       }
     }
 
+    const normalizeValue = (val: string): string => {
+      if (!val) return "";
+
+      let v = val.trim().replace(/\s+/g, " ").toLowerCase();
+      let brand = "";
+
+      // --- Detect explicit brand ---
+      if (/\bamd\b/i.test(v)) brand = "AMD";
+      else if (/\bintel\b/i.test(v)) brand = "Intel";
+      else if (/\bnvidia\b/i.test(v)) brand = "NVIDIA";
+      else if (/\bmsi\b/i.test(v)) brand = "MSI";
+      else if (/\basus\b/i.test(v)) brand = "Asus";
+
+      // --- Remove duplicate brand mentions ---
+      if (brand) {
+        const brandRegex = new RegExp(`\\b(${brand})\\b`, "ig");
+        v = v.replace(brandRegex, "").trim();
+      }
+
+      // --- Series inference ---
+      if (/ryzen\s*[3579]/i.test(v)) {
+        if (!brand) brand = "AMD";
+        v = v.replace(/ryzen\s*([3579]).*/i, "Ryzen $1");
+      }
+      if (/core\s*i\s*[3579]/i.test(v)) {
+        if (!brand) brand = "Intel";
+        v = v.replace(/core\s*i\s*([3579]).*/i, "Core i$1");
+      }
+      if (/rtx\s*\d+/i.test(v)) {
+        if (!brand) brand = "NVIDIA";
+        v = v.replace(/geforce\s*/i, "");
+        v = v.replace(/\brtx\s*(\d+).*/i, "RTX $1");
+      }
+
+      // --- Special inference for laptop lines ---
+      if (/tuf\s+gaming/i.test(v)) {
+        if (!brand) brand = "Asus";
+        v = v.replace(/tuf\s+gaming/i, "TUF Gaming");
+      }
+      if (/rog\s+/i.test(v)) {
+        if (!brand) brand = "Asus";
+        v = v.replace(/rog\s+/i, "ROG ");
+      }
+
+      // --- Storage normalization ---
+      v = v.replace(/(\d+)\s*(gb|ssd|hdd)/i, "$1 GB");
+      v = v.replace(/(\d+)(gb|ssd|hdd)/i, "$1 GB");
+
+      // --- Display sizes ---
+      v = v.replace(/(\d+(\.\d+)?)\s*cm\s*\((\d+(\.\d+)?)\s*inch\)/i, "$3 inch");
+
+      // --- Collapse duplicate words ---
+      v = v.replace(/\b(\w+)( \1\b)+/gi, "$1");
+
+      // --- Title case ---
+      v = v.replace(/\b\w/g, (c) => c.toUpperCase());
+
+      // --- Prepend brand (avoid duplicates) ---
+      if (brand && !v.startsWith(brand)) {
+        v = `${brand} ${v}`;
+      }
+
+      return v.trim();
+    };
+
+
     const fetchData = async () => {
       try {
         const [categoryResponse, productResponse] = await Promise.all([
@@ -133,7 +199,7 @@ const Header = ({ isCategory = true }: HeaderProps) => {
               if (!attributeValuesMap[categoryId][key]) {
                 attributeValuesMap[categoryId][key] = new Set();
               }
-              attributeValuesMap[categoryId][key].add(value);
+              attributeValuesMap[categoryId][key].add(normalizeValue(value));
             });
           });
         });
@@ -147,11 +213,11 @@ const Header = ({ isCategory = true }: HeaderProps) => {
             subCategories: subcategories,
             attributeValues: attributeValuesMap[category.id]
               ? Object.fromEntries(
-                  Object.entries(attributeValuesMap[category.id]).map(([key, valueSet]) => [
-                    key,
-                    Array.from(valueSet).sort(),
-                  ])
-                )
+                Object.entries(attributeValuesMap[category.id]).map(([key, valueSet]) => [
+                  key,
+                  Array.from(valueSet).sort(),
+                ])
+              )
               : {},
           }))
           .filter(({ name }) => allowedCategories.has(name));
@@ -244,6 +310,14 @@ const Header = ({ isCategory = true }: HeaderProps) => {
     }
   };
 
+  const categoryImages: { [key: string]: string } = {
+    Laptops: '/header/categories/storage.jpg',
+    Processors: '/header/categories/processor.jpg',
+    'Graphics Card': '/header/categories/graphics-card.jpg',
+    Monitors: '/header/categories/monitors.jpg',
+    Accessories: '/header/categories/accessories.jpg',
+  };
+
   return (
     <>
       <header
@@ -317,15 +391,15 @@ const Header = ({ isCategory = true }: HeaderProps) => {
               </div>
 
               <div className="py-4 border-b border-gray-200">
-                <Link href="/account" className="flex items-center py-3" onClick={closeMenu}>
+                <Link href="/profile" className="flex items-center py-3" onClick={closeMenu}>
                   <User size={20} className="mr-3 text-gray-700" />
                   <span className="font-medium">My Account</span>
                 </Link>
-                <Link href="/orders" className="flex items-center py-3" onClick={closeMenu}>
+                <Link href="/profile/orders" className="flex items-center py-3" onClick={closeMenu}>
                   <ShoppingBag size={20} className="mr-3 text-gray-700" />
                   <span className="font-medium">My Orders</span>
                 </Link>
-                <Link href="/wishlist" className="flex items-center py-3" onClick={closeMenu}>
+                <Link href="/profile/wishlist" className="flex items-center py-3" onClick={closeMenu}>
                   <Heart size={20} className="mr-3 text-gray-700" />
                   <span className="font-medium">Wishlist</span>
                 </Link>
@@ -414,20 +488,7 @@ const Header = ({ isCategory = true }: HeaderProps) => {
                 >
                   Contact Us
                 </Link>
-                <Link
-                  href="/faq"
-                  className="block py-2 text-gray-700 hover:text-primary"
-                  onClick={closeMenu}
-                >
-                  FAQ
-                </Link>
-                <Link
-                  href="/returns"
-                  className="block py-2 text-gray-700 hover:text-primary"
-                  onClick={closeMenu}
-                >
-                  Returns & Refunds
-                </Link>
+
               </div>
             </div>
           </div>
@@ -475,7 +536,7 @@ const Header = ({ isCategory = true }: HeaderProps) => {
             {/* Full-Screen Dropdown */}
             {hoveredCategory && (
               <div
-                className="fixed left-0 right-0 top-26 bg-black/30 shadow-lg z-[100]"
+                className="fixed left-0 right-0 top-26 bg-black/30 shadow-lg z-[100] "
               >
                 <div
                   onMouseEnter={() => {
@@ -484,7 +545,7 @@ const Header = ({ isCategory = true }: HeaderProps) => {
                     }
                   }}
                   onMouseLeave={handleMouseLeaveCategory}
-                  className="max-w-[90%] bg-white mx-auto p-6 flex flex-row gap-12 h-[calc(100vh-6rem)] overflow-y-auto"
+                  className="max-w-[90%] bg-white mx-auto p-6  flex flex-row gap-12 h-[calc(100vh-6rem)] overflow-y-auto"
                 >
                   {categories
                     .filter((category) => category.name === hoveredCategory)
@@ -493,7 +554,7 @@ const Header = ({ isCategory = true }: HeaderProps) => {
                       return (
                         <React.Fragment key={category.id}>
                           {/* Left: Subcategories */}
-                          <div className="w-1/2">
+                          <div className="w-1/2 ">
                             <h3 className="text-lg font-semibold text-gray-800 mb-4">Explore Subcategories</h3>
                             {category.subCategories.length > 0 ? (
                               <ul className="grid grid-cols-2 gap-2">
@@ -512,6 +573,20 @@ const Header = ({ isCategory = true }: HeaderProps) => {
                             ) : (
                               <p className="text-sm text-gray-500">No subcategories available</p>
                             )}
+
+                            {/* Category Image */}
+                            <div className=" absolute bottom-10 w-full max-w-md">
+                              {categoryImages[category.name] && (
+                                <Image
+                                  src={categoryImages[category.name]}
+                                  alt={category.name}
+                                  width={500}
+                                  height={300}
+                                  className="object-cover aspect-video"
+                                />
+                              )}
+                            </div>
+
                           </div>
 
                           {/* Right: Attributes */}
@@ -530,7 +605,7 @@ const Header = ({ isCategory = true }: HeaderProps) => {
                                         onMouseEnter={() => handleMouseEnterAttribute(attr.name!)}
                                       >
                                         <button
-                                          className="text-sm text-gray-600 hover:text-primary transition-colors capitalize"
+                                          className="text-sm cursor-pointer text-gray-600 hover:text-primary transition-colors capitalize"
                                           onMouseLeave={handleMouseLeaveAttribute}
                                         >
                                           {attr.name?.replace('_', ' ')}

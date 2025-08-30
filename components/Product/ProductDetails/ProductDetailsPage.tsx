@@ -10,6 +10,7 @@ import { FlattenedProduct, ProductVariant } from '@/types/product';
 import ProductRatingsReviews from './ProductRatingsReviews';
 import SimilarProducts from './SimilarProducts';
 import ProductSpecsSideImages from './ProductSpecsSideImages';
+import OfferProducts from './OfferProducts';
 
 interface ProductDetailPageProps {
   product: FlattenedProduct;
@@ -129,13 +130,16 @@ export default function ProductDetailPage({ product }: ProductDetailPageProps) {
           </div>
         </div>
       </div>
-      <div ref={specificationsRef} className=' flex gap-10 relative'>
+      <div ref={specificationsRef} className=' flex md:gap-10 relative'>
         <ProductSpecifications className="py-20 max-w-5xl w-full" />
+        <div className=' sticky'>
+          <ProductSpecsSideImages />
 
-        <ProductSpecsSideImages />
+        </div>
       </div>
       <ProductRatingsReviews />
       <SimilarProducts product={product as any} />
+      <OfferProducts />
 
     </div>
   );
