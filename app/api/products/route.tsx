@@ -67,8 +67,7 @@ const createProductSchema = z.object({
       isBackorderable: z.boolean().default(false),
       mrp: z.coerce.number().positive(),
       ourPrice: z.coerce.number().positive(),
-      salePrice: z.coerce.number().positive().optional(),
-      isOnSale: z.boolean().default(false),
+      salePrice: z.coerce.number().positive().optional().nullable(),
       productImages: z
         .array(
           z.object({
@@ -79,7 +78,7 @@ const createProductSchema = z.object({
           })
         )
         .default([]),
-      weight: z.coerce.number().positive().optional(),
+      weight: z.coerce.number().nonnegative().default(0),
       weightUnit: z.string().max(10).default('kg'),
       dimensions: z
         .object({
@@ -172,7 +171,8 @@ export async function POST(req: NextRequest) {
       .where(eq(categories.slug, categorySlug))
       .limit(1);
 
-      
+
+
     if (!category.length) {
       return NextResponse.json({ error: `Category with slug '${categorySlug}' not found` }, { status: 400 });
     }
@@ -212,16 +212,26 @@ export async function POST(req: NextRequest) {
 
     // console.log('Brand of product',brandId)
 
+    const rawVariants = parseJSONField(formData.get('variants') as string, []);
 
-    // Convert FormData to a structured object with resolved IDs
+    const normalizedVariants = rawVariants.map((v: any) => ({
+      ...v,
+      stock: v.stock ? Number(v.stock) : 0,
+      lowStockThreshold: v.lowStockThreshold ? Number(v.lowStockThreshold) : 5,
+      mrp: v.mrp ? Number(v.mrp) : 0,
+      ourPrice: v.ourPrice ? Number(v.ourPrice) : 0,
+      salePrice: v.salePrice ? Number(v.salePrice) : null,
+      weight: v.weight ? Number(v.weight) : null,
+    }));
+
     const productData = {
       shortName: formData.get('shortName') as string,
       fullName: formData.get('fullName') as string,
       slug: formData.get('slug') as string,
       description: formData.get('description') as string,
-      categoryId, // Use resolved UUID
-      subcategoryId, // Use resolved UUID or undefined
-      brandId, // Use resolved UUID
+      categoryId,
+      subcategoryId,
+      brandId,
       status: (formData.get('status') as string) || 'active',
       isFeatured: formData.get('isFeatured') === 'true',
       totalStocks: parseInt(formData.get('totalStocks') as string || '0'),
@@ -233,22 +243,65 @@ export async function POST(req: NextRequest) {
       metaTitle: formData.get('metaTitle') as string,
       metaDescription: formData.get('metaDescription') as string,
       specifications: parseJSONField(formData.get('specifications') as string, []),
-      variants: parseJSONField(formData.get('variants') as string, []),
+      variants: normalizedVariants,
     };
+
 
     // Validate the parsed data
     const validatedData = createProductSchema.parse(productData);
 
-    // Check if slug already exists
+    // console.log("Category:", categorySlug);
+    // console.log("Subcategory:", subcategoryName);
+    // console.log("Brand:", brandName);
+    // console.log("Validated productData:", productData);
+
+
+
+
+    // Check if product slug already exists
     const existingProduct = await db
-      .select()
+      .select({ id: products.id, slug: products.slug })
       .from(products)
       .where(eq(products.slug, validatedData.slug))
       .limit(1);
     if (existingProduct.length > 0) {
-      return NextResponse.json({ error: 'Product slug already exists' }, { status: 400 });
+      return NextResponse.json(
+        {
+          error: `Product slug '${validatedData.slug}' is not unique`,
+          details: `A product with slug '${validatedData.slug}' already exists in the database`,
+        },
+        { status: 400 }
+      );
     }
 
+    // Check if variant SKUs are unique
+    const variantSkus = validatedData.variants.map((v) => v.sku);
+    const existingVariants = await db
+      .select({ sku: variants.sku })
+      .from(variants)
+      .where(inArray(variants.sku, variantSkus));
+    if (existingVariants.length > 0) {
+      const duplicateSkus = existingVariants.map((v) => v.sku);
+      return NextResponse.json(
+        {
+          error: `Variant SKU(s) not unique`,
+          details: `The following SKU(s) already exist in the database: ${duplicateSkus.join(', ')}`,
+        },
+        { status: 400 }
+      );
+    }
+
+    // Check for duplicate SKUs within the request
+    const uniqueSkus = new Set(variantSkus);
+    if (uniqueSkus.size !== variantSkus.length) {
+      return NextResponse.json(
+        {
+          error: `Duplicate variant SKU(s) in request`,
+          details: `The variants array contains duplicate SKU(s). Each SKU must be unique within the request`,
+        },
+        { status: 400 }
+      );
+    }
     // Insert product
     const [newProduct] = await db
       .insert(products)
@@ -324,7 +377,6 @@ export async function POST(req: NextRequest) {
           mrp: toNumericString(variantData.mrp, '0') || '0',
           ourPrice: toNumericString(variantData.ourPrice, '0') || '0',
           salePrice: toNumericString(variantData.salePrice),
-          isOnSale: variantData.isOnSale,
           productImages: finalProductImages,
           weight: toNumericString(variantData.weight),
           weightUnit: variantData.weightUnit,

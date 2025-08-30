@@ -652,7 +652,6 @@ export default function AddProductPage() {
   // Form submission
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-
     // Validations
     if (!product.shortName) return alert('Short name is required');
     if (!product.fullName) return alert('Full name is required');
@@ -769,7 +768,10 @@ export default function AddProductPage() {
 
       if (!res.ok) {
         const error = await res.json();
-        throw new Error(error.message || 'Failed to create product');
+        // Use server-provided error details if available
+        const message =
+          error.details || error.error || error.message || 'Failed to create product';
+        throw new Error(message);
       }
 
       alert('Product added successfully!');
