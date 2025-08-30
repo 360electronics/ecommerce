@@ -1,5 +1,6 @@
 'use client';
 
+import { fetchBannersServer } from '@/utils/banners.utils';
 import Image from 'next/image';
 import React, { useEffect, useState } from 'react';
 
@@ -19,9 +20,8 @@ const ProductSpecsSideImages = () => {
   useEffect(() => {
     const fetchBanners = async () => {
       try {
-        const res = await fetch('/api/banner');
-        const data = await res.json();
-        if (data.success) {
+        const data = await fetchBannersServer();
+        if (data) {
           // Filter banners of type 'promotional'
           const sideBanners = data.data.filter((b: Banner) => b.type === 'promotional');
           setBanners(sideBanners);

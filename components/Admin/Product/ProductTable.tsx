@@ -515,9 +515,8 @@ export function ProductsTable() {
       try {
         setLoading(true);
         setError(null);
-        const response = await fetch("/api/products", { method: "GET" });
-        if (!response.ok) throw new Error("Failed to fetch products");
-        const data: CompleteProduct[] = await response.json();
+        const response = await fetchProducts();
+        const data: CompleteProduct[] = response;
         setProducts(data);
         setTableData(flattenProducts(data));
       } catch (err) {

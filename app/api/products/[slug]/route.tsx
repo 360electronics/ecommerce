@@ -8,9 +8,18 @@ type Params = { slug: string };
 
 
 export async function GET(
-  request: Request,
+  req: Request,
   context: { params: Promise<Params> }
 ) {
+  //API Proxy
+  const apiKey = req.headers.get('x-super-secure-key');
+  if (apiKey !== process.env.API_SECRET_KEY) {
+    return NextResponse.json(
+      { message: 'Unauthorized' },
+      { status: 401 }
+    );
+  }
+  //
   try {
     const { slug } = await context.params;
 
@@ -87,9 +96,9 @@ export async function GET(
         fullName: product.fullName,
         slug: product.slug,
         description: product.description,
-        category: category.name, 
+        category: category.name,
         subcategory: subcategory.name, // Adjust based on actual subcategory data
-        brand: brand.name, 
+        brand: brand.name,
         status: product.status,
         isFeatured: product.isFeatured,
         totalStocks: Number(product.totalStocks),
@@ -119,16 +128,16 @@ export async function GET(
           createdAt: v.createdAt,
           updatedAt: v.updatedAt,
         })),
-        relatedProducts: [], 
+        relatedProducts: [],
         createdAt: product.createdAt,
         updatedAt: product.updatedAt,
         hasMultipleVariants: allVariants.length > 1,
         priceRange:
           allVariants.length > 0
             ? {
-                min: Math.min(...allVariants.map((v) => Number(v.ourPrice))),
-                max: Math.max(...allVariants.map((v) => Number(v.ourPrice))),
-              }
+              min: Math.min(...allVariants.map((v) => Number(v.ourPrice))),
+              max: Math.max(...allVariants.map((v) => Number(v.ourPrice))),
+            }
             : null,
         allImages: allVariants.flatMap((v) => v.productImages || []),
         isDiscontinued: product.status === 'discontinued',

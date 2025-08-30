@@ -9,29 +9,38 @@ export interface AppError extends Error {
 
 // Fetch with retry logic
 export async function fetchWithRetry<T>(
-  fn: () => Promise<Response>,
+  fn: (headers?: Record<string, string>) => Promise<Response>,
   maxRetries = 3,
-  delay = 1000
+  delay = 1000,
+  headers?: Record<string, string> // optional headers
 ): Promise<T> {
   let lastError: AppError | null = null;
+
   for (let i = 0; i < maxRetries; i++) {
     try {
-      const response = await fn();
+      const response = await fn(headers); // headers passed only if provided
+
       if (!response.ok) {
         const errorData = await response.json().catch(() => ({}));
-        const error = new Error(errorData.error || `Request failed with status ${response.status}`) as AppError;
+        const error = new Error(
+          errorData.error || `Request failed with status ${response.status}`
+        ) as AppError;
         error.status = response.status;
         error.details = errorData;
         throw error;
       }
+
       return await response.json();
     } catch (error) {
       lastError = error instanceof Error ? error : new Error('Unknown error');
       if (i < maxRetries - 1) {
-        await new Promise((resolve) => setTimeout(resolve, delay * Math.pow(2, i)));
+        await new Promise((resolve) =>
+          setTimeout(resolve, delay * Math.pow(2, i))
+        );
       }
     }
   }
+
   throw lastError;
 }
 

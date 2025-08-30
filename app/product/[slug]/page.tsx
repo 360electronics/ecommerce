@@ -8,6 +8,9 @@ async function getProductData(slug: string): Promise<FlattenedProduct | null> {
   try {
     const res = await fetch(`${process.env.NEXT_PUBLIC_API_BASE_URL}/api/products/${slug}`, {
       cache: 'no-store', // ensures fresh fetch for SSR
+      headers: {
+        'x-super-secure-key': `${process.env.API_SECRET_KEY}`
+      }
     });
 
     if (!res.ok) {

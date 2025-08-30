@@ -74,12 +74,13 @@ const OfferProducts = () => {
             <div className="flex overflow-x-auto pb-10 snap-x snap-mandatory minimal-scrollbar">
                 {offerProducts.map((product) => (
                     <div
+                        key={product.id}
+
                         className="snap-start flex-shrink-0 relative"
                         style={{ width: 'calc(60vw - 32px)', maxWidth: '18rem' }}
                     >
 
                         <ProductCardwithCart
-                            key={product.id}
                             image={
                                 Array.isArray(product.productImages)
                                     ? (

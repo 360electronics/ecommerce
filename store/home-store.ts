@@ -48,13 +48,25 @@ export const useHomeStore = create<HomeState>()(
           set({ isLoading: true, error: null });
           const startTime = performance.now();
           const [bannerResponse, featuredProducts, newArrivals, gamersZoneProducts, brandProducts] = await Promise.all([
-            fetchWithRetry<{ data: Banner[] }>(() => fetch('/api/banner', { cache: 'no-store' })).then((data) =>
+            fetchWithRetry<{ data: Banner[] }>(() => fetch('/api/banner', {
+              cache: 'no-store', headers: {
+                'x-super-secure-key': `${process.env.API_SECRET_KEY}`
+              }
+            })).then((data) =>
               Array.isArray(data?.data) ? data.data : []
             ),
-            fetchWithRetry<Product[]>(() => fetch('/api/products/offer-zone', { cache: 'no-store' })).then((data) =>
+            fetchWithRetry<Product[]>(() => fetch('/api/products/offer-zone', {
+              cache: 'no-store', headers: {
+                'x-super-secure-key': `${process.env.API_SECRET_KEY}`
+              }
+            })).then((data) =>
               Array.isArray(data) ? data : []
             ),
-            fetchWithRetry<Product[]>(() => fetch('/api/products/new-arrivals', { cache: 'no-store' })).then((data) =>
+            fetchWithRetry<Product[]>(() => fetch('/api/products/new-arrivals', {
+              cache: 'no-store', headers: {
+                'x-super-secure-key': `${process.env.API_SECRET_KEY}`
+              }
+            })).then((data) =>
               Array.isArray(data) ? data : []
             ),
             fetchWithRetry<{
@@ -62,17 +74,25 @@ export const useHomeStore = create<HomeState>()(
               accessories: Product[];
               laptops: Product[];
               'steering-chairs': Product[];
-            }>(() => fetch('/api/products/gamers-zone', { cache: 'no-store' })).then((data) =>
+            }>(() => fetch('/api/products/gamers-zone', {
+              cache: 'no-store', headers: {
+                'x-super-secure-key': `${process.env.API_SECRET_KEY}`
+              }
+            })).then((data) =>
               data && typeof data === 'object'
                 ? {
-                    consoles: Array.isArray(data.consoles) ? data.consoles : [],
-                    accessories: Array.isArray(data.accessories) ? data.accessories : [],
-                    laptops: Array.isArray(data.laptops) ? data.laptops : [],
-                    'steering-chairs': Array.isArray(data['steering-chairs']) ? data['steering-chairs'] : [],
-                  }
+                  consoles: Array.isArray(data.consoles) ? data.consoles : [],
+                  accessories: Array.isArray(data.accessories) ? data.accessories : [],
+                  laptops: Array.isArray(data.laptops) ? data.laptops : [],
+                  'steering-chairs': Array.isArray(data['steering-chairs']) ? data['steering-chairs'] : [],
+                }
                 : { consoles: [], accessories: [], laptops: [], 'steering-chairs': [] }
             ),
-            fetchWithRetry<Product[]>(() => fetch('/api/products', { cache: 'no-store' })).then((data) =>
+            fetchWithRetry<Product[]>(() => fetch('/api/products', {
+              cache: 'no-store', headers: {
+                'x-super-secure-key': `${process.env.API_SECRET_KEY}`
+              }
+            })).then((data) =>
               Array.isArray(data) ? data : []
             ),
           ]);

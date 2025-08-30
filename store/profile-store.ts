@@ -37,8 +37,8 @@ interface Order {
   status: string;
   items: Array<{
     variant: any;
-    unitPrice(unitPrice: any): unknown; productId: string; variantId: string; quantity: number 
-}>;
+    unitPrice(unitPrice: any): unknown; productId: string; variantId: string; quantity: number
+  }>;
 }
 
 interface Referral {
@@ -97,20 +97,24 @@ const INITIAL_STATE: ProfileState = {
   isRefetching: false,
   errors: {},
   lastFetched: {},
-  fetchProfileData: async () => {},
-  fetchOrders: async () => {},
-  fetchReferrals: async () => {},
-  fetchTickets: async () => {},
-  fetchAll: async () => {},
-  refetch: async () => {},
-  shareCurrentPage: () => {},
-  reset: () => {},
+  fetchProfileData: async () => { },
+  fetchOrders: async () => { },
+  fetchReferrals: async () => { },
+  fetchTickets: async () => { },
+  fetchAll: async () => { },
+  refetch: async () => { },
+  shareCurrentPage: () => { },
+  reset: () => { },
 };
 
 const fetchProfile = async (userId: string, signal?: AbortSignal) => {
   try {
     const response = await fetchWithRetry<{ user: ProfileState['profileData'] }>(() =>
-      fetch(`/api/users/${userId}`, { credentials: 'include', signal })
+      fetch(`/api/users/${userId}`, {
+        credentials: 'include', signal, headers: {
+          'x-super-secure-key': `${process.env.API_SECRET_KEY}`
+        }
+      })
     );
     return response.user || { firstName: null, lastName: null, email: null, phoneNumber: null, addresses: [] };
   } catch (error: any) {
@@ -127,7 +131,11 @@ const fetchProfile = async (userId: string, signal?: AbortSignal) => {
 const fetchOrders = async (userId: string, signal?: AbortSignal) => {
   try {
     const data = await fetchWithRetry<Order[]>(() =>
-      fetch(`/api/users/orders?userId=${userId}`, { credentials: 'include', signal })
+      fetch(`/api/users/orders?userId=${userId}`, {
+        credentials: 'include', signal, headers: {
+          'x-super-secure-key': `${process.env.API_SECRET_KEY}`
+        }
+      })
     );
     return Array.isArray(data) ? data : [];
   } catch (error: any) {
@@ -141,7 +149,11 @@ const fetchOrders = async (userId: string, signal?: AbortSignal) => {
 const fetchTickets = async (userId: string, signal?: AbortSignal) => {
   try {
     const data = await fetchWithRetry<Ticket[]>(() =>
-      fetch(`/api/tickets/${userId}`, { credentials: 'include', signal })
+      fetch(`/api/tickets/${userId}`, {
+        credentials: 'include', signal, headers: {
+          'x-super-secure-key': `${process.env.API_SECRET_KEY}`
+        }
+      })
     );
     return Array.isArray(data) ? data : [];
   } catch (error: any) {
@@ -156,10 +168,22 @@ const fetchReferralsData = async (userId: string, signal?: AbortSignal) => {
   try {
     const [referralLink, referrals, coupons] = await Promise.all([
       fetchWithRetry<{ referralLink: string }>(() =>
-        fetch(`/api/referrals/link?userId=${userId}`, { credentials: 'include', signal })
+        fetch(`/api/referrals/link?userId=${userId}`, {
+          credentials: 'include', signal, headers: {
+            'x-super-secure-key': `${process.env.API_SECRET_KEY}`
+          }
+        })
       ),
-      fetchWithRetry<Referral[]>(() => fetch(`/api/referrals?userId=${userId}`, { credentials: 'include', signal })),
-      fetchWithRetry<Coupon[]>(() => fetch(`/api/coupons?userId=${userId}`, { credentials: 'include', signal })),
+      fetchWithRetry<Referral[]>(() => fetch(`/api/referrals?userId=${userId}`, {
+        credentials: 'include', signal, headers: {
+          'x-super-secure-key': `${process.env.API_SECRET_KEY}`
+        }
+      })),
+      fetchWithRetry<Coupon[]>(() => fetch(`/api/coupons?userId=${userId}`, {
+        credentials: 'include', signal, headers: {
+          'x-super-secure-key': `${process.env.API_SECRET_KEY}`
+        }
+      })),
     ]);
 
     const parsed = {

@@ -20,21 +20,41 @@ export const metadata = {
 async function fetchHomeData() {
   try {
     const [bannerResponse, featuredProducts, newArrivals, gamersZoneProducts, brandProducts] = await Promise.all([
-      fetchWithRetry<{ data: Banner[] }>(() => fetch(`${process.env.NEXT_PUBLIC_API_BASE_URL}/api/banner`)).then((res) => res?.data || []),
-      fetchWithRetry<Product[]>(() => fetch(`${process.env.NEXT_PUBLIC_API_BASE_URL}/api/products/offer-zone`)).then((res) => res || []),
-      fetchWithRetry<Product[]>(() => fetch(`${process.env.NEXT_PUBLIC_API_BASE_URL}/api/products/new-arrivals`)).then((res) => res || []),
+      fetchWithRetry<{ data: Banner[] }>(() => fetch(`${process.env.NEXT_PUBLIC_API_BASE_URL}/api/banner`, {
+        headers: {
+          'x-super-secure-key': process.env.API_SECRET_KEY!,
+        }
+      })).then((res) => res?.data || []),
+      fetchWithRetry<Product[]>(() => fetch(`${process.env.NEXT_PUBLIC_API_BASE_URL}/api/products/offer-zone`, {
+        headers: {
+          'x-super-secure-key': process.env.API_SECRET_KEY!,
+        }
+      })).then((res) => res || []),
+      fetchWithRetry<Product[]>(() => fetch(`${process.env.NEXT_PUBLIC_API_BASE_URL}/api/products/new-arrivals`, {
+        headers: {
+          'x-super-secure-key': process.env.API_SECRET_KEY!,
+        }
+      })).then((res) => res || []),
       fetchWithRetry<{
         consoles: Product[];
         accessories: Product[];
         laptops: Product[];
         'steering-chairs': Product[];
-      }>(() => fetch(`${process.env.NEXT_PUBLIC_API_BASE_URL}/api/products/gamers-zone`)).then((res) => ({
+      }>(() => fetch(`${process.env.NEXT_PUBLIC_API_BASE_URL}/api/products/gamers-zone`, {
+        headers: {
+          'x-super-secure-key': process.env.API_SECRET_KEY!,
+        }
+      })).then((res) => ({
         consoles: res?.consoles || [],
         accessories: res?.accessories || [],
         laptops: res?.laptops || [],
         'steering-chairs': res?.['steering-chairs'] || [],
       })),
-      fetchWithRetry<Product[]>(() => fetch(`${process.env.NEXT_PUBLIC_API_BASE_URL}/api/products`)).then((res) => res || []),
+      fetchWithRetry<Product[]>(() => fetch(`${process.env.NEXT_PUBLIC_API_BASE_URL}/api/products`,{
+        headers: {
+          'x-super-secure-key': process.env.API_SECRET_KEY!,
+        }
+      })).then((res) => res || []),
     ]);
 
     return {

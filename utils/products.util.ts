@@ -1,3 +1,4 @@
+'use server'
 
 const API_BASE_URL = process.env.NEXT_PUBLIC_API_BASE_URL || 'http://localhost:3000';
 
@@ -7,6 +8,7 @@ export async function fetchProducts() {
       method: 'GET',
       headers: {
         'Content-Type': 'application/json',
+        'x-super-secure-key': `${process.env.API_SECRET_KEY}`
       },
       next: { revalidate: 60 },
     });
@@ -30,6 +32,7 @@ export async function fetchSingleProduct(id: string) {
       method: 'GET',
       headers: {
         'Content-Type': 'application/json',
+        'x-super-secure-key': `${process.env.API_SECRET_KEY}`
       },
       next: { revalidate: 60 },
     });
@@ -52,6 +55,7 @@ export async function fetchOfferZoneProducts() {
       method: 'GET',
       headers: {
         'Content-Type': 'application/json',
+        'x-super-secure-key': `${process.env.API_SECRET_KEY}`
       },
       next: { revalidate: 60 },
     });
@@ -75,6 +79,7 @@ export async function fetchNewArrivalsProducts() {
       method: 'GET',
       headers: {
         'Content-Type': 'application/json',
+        'x-super-secure-key': `${process.env.API_SECRET_KEY}`
       },
       next: { revalidate: 60 },
     });
@@ -99,6 +104,7 @@ export async function fetchGamersZoneProducts() {
       method: 'GET',
       headers: {
         'Content-Type': 'application/json',
+        'x-super-secure-key': `${process.env.API_SECRET_KEY}`
       },
     });
 

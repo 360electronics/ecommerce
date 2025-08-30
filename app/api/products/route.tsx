@@ -99,7 +99,18 @@ const bulkDeleteProductSchema = z.object({
   ids: z.array(z.string().uuid()).min(1, 'At least one product ID is required'),
 });
 // GET: Fetch all products with related data
-export async function GET() {
+export async function GET(req: Request) {
+
+  //API Proxy
+  const apiKey = req.headers.get('x-super-secure-key');
+  if (apiKey !== process.env.API_SECRET_KEY) {
+    return NextResponse.json(
+      { message: 'Unauthorized' },
+      { status: 401 }
+    );
+  }
+  //
+
   try {
     const allProducts = await db
       .select({

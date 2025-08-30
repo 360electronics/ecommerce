@@ -11,6 +11,7 @@ import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { Menu, X, ShoppingBag, Heart, User, ChevronDown } from 'lucide-react';
 import { slugify } from '@/utils/slugify';
+import { fetchProducts } from '@/utils/products.util';
 
 interface HeaderProps {
   isCategory?: boolean;
@@ -179,14 +180,16 @@ const Header = ({ isCategory = true }: HeaderProps) => {
       try {
         const [categoryResponse, productResponse] = await Promise.all([
           fetch('/api/categories'),
-          fetch('/api/products'),
+          fetchProducts()
         ]);
 
+        console.log('Product Response:', productResponse)
+
         if (!categoryResponse.ok) throw new Error('Failed to fetch categories');
-        if (!productResponse.ok) throw new Error('Failed to fetch products');
+        // if (!productResponse || productResponse.length === 0) throw new Error('Failed to fetch products');
 
         const categoryData: CategoryResponse = await categoryResponse.json();
-        const productData: Product[] = await productResponse.json();
+        const productData: Product[] = productResponse;
 
         const attributeValuesMap: { [categoryId: string]: { [key: string]: Set<string> } } = {};
         productData.forEach((product) => {
