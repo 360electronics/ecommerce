@@ -275,6 +275,72 @@ export default function ProductDetailsContent({ className, activeVariant }: Prod
     }
   }, [product, activeVariant.ourPrice, discount]);
 
+  const normalizeValue = (val: string): string => {
+    if (!val) return "";
+
+    let v = val.trim().replace(/\s+/g, " ").toLowerCase();
+    let brand = "";
+
+    // --- Detect explicit brand ---
+    if (/\bamd\b/i.test(v)) brand = "AMD";
+    else if (/\bintel\b/i.test(v)) brand = "Intel";
+    else if (/\bnvidia\b/i.test(v)) brand = "NVIDIA";
+    else if (/\bmsi\b/i.test(v)) brand = "MSI";
+    else if (/\basus\b/i.test(v)) brand = "Asus";
+
+    // --- Remove duplicate brand mentions ---
+    if (brand) {
+      const brandRegex = new RegExp(`\\b(${brand})\\b`, "ig");
+      v = v.replace(brandRegex, "").trim();
+    }
+
+    // --- Series inference ---
+    if (/ryzen\s*[3579]/i.test(v)) {
+      if (!brand) brand = "AMD";
+      v = v.replace(/ryzen\s*([3579]).*/i, "Ryzen $1");
+    }
+    if (/core\s*i\s*[3579]/i.test(v)) {
+      if (!brand) brand = "Intel";
+      v = v.replace(/core\s*i\s*([3579]).*/i, "Core i$1");
+    }
+    if (/rtx\s*\d+/i.test(v)) {
+      if (!brand) brand = "NVIDIA";
+      v = v.replace(/geforce\s*/i, "");
+      v = v.replace(/\brtx\s*(\d+).*/i, "RTX $1");
+    }
+
+    // --- Special inference for laptop lines ---
+    if (/tuf\s+gaming/i.test(v)) {
+      if (!brand) brand = "Asus";
+      v = v.replace(/tuf\s+gaming/i, "TUF Gaming");
+    }
+    if (/rog\s+/i.test(v)) {
+      if (!brand) brand = "Asus";
+      v = v.replace(/rog\s+/i, "ROG ");
+    }
+
+    // --- Storage normalization ---
+    v = v.replace(/(\d+)\s*(gb|ssd|hdd)/i, "$1 GB");
+    v = v.replace(/(\d+)(gb|ssd|hdd)/i, "$1 GB");
+
+    // --- Display sizes ---
+    v = v.replace(/(\d+(\.\d+)?)\s*cm\s*\((\d+(\.\d+)?)\s*inch\)/i, "$3 inch");
+
+    // --- Collapse duplicate words ---
+    v = v.replace(/\b(\w+)( \1\b)+/gi, "$1");
+
+    // --- Title case ---
+    v = v.replace(/\b\w/g, (c) => c.toUpperCase());
+
+    // --- Prepend brand (avoid duplicates) ---
+    if (brand && !v.startsWith(brand)) {
+      v = `${brand} ${v}`;
+    }
+
+    return v.trim();
+  };
+
+
   // Compute attribute keys and options
   const attributeKeys = useMemo(() => {
     if (!product?.productParent?.variants) return [];
@@ -305,14 +371,14 @@ export default function ProductDetailsContent({ className, activeVariant }: Prod
       const options = Array.from(
         new Set(
           product.productParent?.variants
-            ?.map((variant) => String(variant.attributes[key]))
+            ?.map((variant) => normalizeValue(String(variant.attributes[key] ?? '')))
             .filter((value): value is string => !!value) ?? []
         )
       ).map((value) => ({
         value,
-        label: value,
+        label: value, // already normalized
         variantIds: product.productParent?.variants
-          ?.filter((v) => String(v.attributes[key]) === value)
+          ?.filter((v) => normalizeValue(String(v.attributes[key] ?? '')) === value)
           .map((v) => v.id) ?? [],
       }));
       acc[key] = options;
@@ -320,65 +386,86 @@ export default function ProductDetailsContent({ className, activeVariant }: Prod
     }, {} as Record<string, Array<{ value: string; label: string; variantIds: string[] }>>);
   }, [attributeKeys, product?.productParent?.variants]);
 
+
   const findValidVariant = useCallback(
     (key: string, value: string | number | boolean) => {
+      const normalizedValue = normalizeValue(String(value));
       return product?.productParent?.variants?.find((variant) =>
-        String(variant.attributes[key]) === String(value)
+        normalizeValue(String(variant.attributes[key] ?? '')) === normalizedValue
       );
     },
     [product?.productParent?.variants]
   );
-
+  
   const isValidAttributeCombination = useCallback(
     (key: string, value: string | number | boolean) => {
+      const normalizedValue = normalizeValue(String(value));
       return product?.productParent?.variants?.some((variant) =>
-        String(variant.attributes[key]) === String(value)
+        normalizeValue(String(variant.attributes[key] ?? '')) === normalizedValue
       ) ?? false;
     },
     [product?.productParent?.variants]
   );
+  
 
   const handleAttributeSelection = useCallback(
     (key: string, value: string | number | boolean) => {
       const validVariant = findValidVariant(key, value);
       if (!validVariant) return;
-
-      const newAttributes = { [key]: value };
+  
+      // Store normalized values for display
+      const newAttributes: Record<string, string> = { [key]: normalizeValue(String(value)) };
+      
       attributeKeys.forEach((k) => {
         if (k !== key) {
-          newAttributes[k] = validVariant.attributes[k] ?? selectedAttributes[k] ?? '';
+          newAttributes[k] = normalizeValue(String(validVariant.attributes[k] ?? selectedAttributes[k] ?? ''));
         }
       });
-
+  
       setSelectedAttributes(newAttributes);
+  
+      // Immediately switch to the selected variant
+      if (validVariant.id !== activeVariant.id) {
+        router.push(`/product/${validVariant.slug}`, { scroll: false });
+        // Fetch the full FlattenedProduct for the selected variant before updating the store
+        fetch(`/api/products/${validVariant.slug}`)
+          .then(res => {
+            if (!res.ok) throw new Error('Failed to fetch variant');
+            return res.json();
+          })
+          .then((newProduct: FlattenedProduct) => {
+            setProduct(newProduct);
+          })
+          .catch(() => {
+            // Optionally handle error (e.g., toast)
+          });
+      }
     },
-    [attributeKeys, findValidVariant, setSelectedAttributes, selectedAttributes]
+    [attributeKeys, findValidVariant, setSelectedAttributes, selectedAttributes, activeVariant.id, router, setProduct]
   );
+  
 
   const handleVariantNavigation = useCallback(() => {
     if (!activeVariant || activeVariant.id === product?.id || isNavigating) return;
-
+  
     setIsNavigating(true);
-    const fetchNewProduct = async () => {
-      try {
-        const res = await fetch(`/api/products/${activeVariant.slug}`);
-        if (!res.ok) {
-          toast.error('Failed to load variant data');
-          setIsNavigating(false);
-          return;
-        }
-        const newProduct: FlattenedProduct = await res.json();
+  
+    router.push(`/product/${activeVariant.slug}`, { scroll: true });
+    fetch(`/api/products/${activeVariant.slug}`)
+      .then(res => {
+        if (!res.ok) throw new Error('Failed to fetch variant');
+        return res.json();
+      })
+      .then((newProduct: FlattenedProduct) => {
         setProduct(newProduct);
-        router.push(`/product/${activeVariant.slug}`, { scroll: false });
-      } catch (error) {
-        toast.error('Network error while loading variant');
-      } finally {
         setIsNavigating(false);
-      }
-    };
-
-    fetchNewProduct();
+      })
+      .catch(() => {
+        // Optionally handle error (e.g., toast)
+        setIsNavigating(false);
+      });
   }, [activeVariant, product?.id, router, isNavigating, setProduct]);
+  
 
   // Non-varying attributes
   const nonVaryingAttributes = useMemo(() => {
@@ -826,11 +913,11 @@ export default function ProductDetailsContent({ className, activeVariant }: Prod
     const status = (product?.productParent?.status || " ").trim().toLowerCase();
 
     // console.log("Action Status: ", status)
-  
+
     const isOutOfStock =
       (activeVariant?.stock ?? 0) <= (activeVariant?.lowStockThreshold ?? 0) &&
       !activeVariant?.isBackorderable;
-  
+
     // Coming Soon
     if (status === 'coming_soon') {
       return (
@@ -844,7 +931,7 @@ export default function ProductDetailsContent({ className, activeVariant }: Prod
         </div>
       );
     }
-  
+
     // Inactive or Discontinued
     if (status === 'inactive' || status === 'discontinued') {
       return (
@@ -858,7 +945,7 @@ export default function ProductDetailsContent({ className, activeVariant }: Prod
         </div>
       );
     }
-  
+
     // Default (Active)
     return (
       <div className="fixed bottom-0 left-0 right-0 bg-white border-t border-gray-200 p-4 md:static md:border-t-0 md:p-0 z-10">
@@ -876,7 +963,7 @@ export default function ProductDetailsContent({ className, activeVariant }: Prod
           >
             {isAddingToCart ? 'Adding...' : 'Add to Cart'}
           </button>
-  
+
           {/* Buy Now */}
           <button
             onClick={handleBuyNowClick}
@@ -894,7 +981,7 @@ export default function ProductDetailsContent({ className, activeVariant }: Prod
       </div>
     );
   };
-  
+
 
   return (
     <div className={cn('p-4 md:p-6 max-w-3xl mx-auto', className)}>

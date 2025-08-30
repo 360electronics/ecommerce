@@ -90,6 +90,15 @@ export default function AddCategoryPage() {
     fetchPresets();
   }, []);
 
+  const generateSlug = (name: string) =>
+    name
+      .toLowerCase()
+      .trim()
+      .replace(/[^a-z0-9\s-]/g, '') // remove special chars
+      .replace(/\s+/g, '-')         // replace spaces with dash
+      .replace(/-+/g, '-');         // remove duplicate dashes
+
+
   const validateForm = (): Errors => {
     const newErrors: Errors = {};
 
@@ -282,7 +291,13 @@ export default function AddCategoryPage() {
               <Input
                 id="name"
                 value={formData.name}
-                onChange={(e) => setFormData({ ...formData, name: e.target.value })}
+                onChange={(e) =>
+                  setFormData({
+                    ...formData,
+                    name: e.target.value,
+                    slug: generateSlug(e.target.value), // auto-generate slug
+                  })
+                }
                 className="border-gray-200 focus:ring-2 focus:ring-primary"
                 placeholder="Enter category name"
               />
@@ -294,10 +309,11 @@ export default function AddCategoryPage() {
               <Input
                 id="slug"
                 value={formData.slug}
-                onChange={(e) => setFormData({ ...formData, slug: e.target.value })}
-                className="border-gray-200 focus:ring-2 focus:ring-primary"
-                placeholder="Enter category slug"
+                disabled // disable editing
+                className="border-gray-200 focus:ring-2 focus:ring-primary bg-gray-100"
+                placeholder="Slug will be generated automatically"
               />
+
               {errors.slug && <p className="text-red-500 text-sm mt-1">{errors.slug}</p>}
             </div>
           </div>

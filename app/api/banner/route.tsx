@@ -23,7 +23,18 @@ interface ErrorResponse {
 
 type BannerStatus = "active" | "inactive";
 
-export async function GET() {
+export async function GET(req: Request) {
+
+  //API Proxy
+  const apiKey = req.headers.get('x-super-secure-key'); 
+  if (apiKey !== process.env.API_SECRET_KEY) {
+    return NextResponse.json(
+      { message: 'Unauthorized' },
+      { status: 401 }
+    );
+  }
+  //
+
   try {
     const allBanners = await db.select().from(banners);
     return NextResponse.json({
@@ -43,6 +54,7 @@ export async function GET() {
 }
 
 export async function POST(req: Request) {
+  
   try {
     const formData = await req.formData();
     console.log('FormData keys:', Array.from(formData.keys())); // Debug

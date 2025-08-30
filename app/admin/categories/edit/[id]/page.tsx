@@ -249,6 +249,14 @@ export default function EditCategoryPage() {
     }
   };
 
+  const generateSlug = (name: string) =>
+    name
+      .toLowerCase()
+      .trim()
+      .replace(/[^a-z0-9\s-]/g, '') // remove special chars
+      .replace(/\s+/g, '-')         // replace spaces with dash
+      .replace(/-+/g, '-');         // remove duplicate dashes
+
   if (loading) {
     return (
       <div className="flex items-center justify-center h-screen">
@@ -289,7 +297,13 @@ export default function EditCategoryPage() {
                 <Input
                   id="name"
                   value={formData.name}
-                  onChange={(e) => setFormData({ ...formData, name: e.target.value })}
+                  onChange={(e) =>
+                    setFormData({
+                      ...formData,
+                      name: e.target.value,
+                      slug: generateSlug(e.target.value), // auto-generate slug
+                    })
+                  }
                   className="mt-1"
                   aria-required="true"
                 />
@@ -302,7 +316,7 @@ export default function EditCategoryPage() {
                 <Input
                   id="slug"
                   value={formData.slug}
-                  onChange={(e) => setFormData({ ...formData, slug: e.target.value })}
+                  disabled
                   className="mt-1"
                   aria-required="true"
                 />
