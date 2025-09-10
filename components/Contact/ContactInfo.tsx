@@ -30,7 +30,7 @@ const ContactInfo = () => {
                     <div>
                         <h3 className="text-base font-medium text-black mb-3 sm:mb-4">Address</h3>
                         <div className="space-y-2">
-                            <p className="text-sm text-gray-700"> 173-178, Chinnaswamy Road,<br /> New Siddhapudur, Coimbatore,<br /> Tamil Nadu - 641044</p>
+                            <p className="text-sm text-gray-700">360 Electronics, <br />173-178, Chinnaswamy Road,<br /> New Siddhapudur, Coimbatore,<br /> Tamil Nadu - 641044</p>
                         </div>
                     </div>
                 </div>
