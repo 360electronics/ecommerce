@@ -304,7 +304,7 @@ const Footer = () => {
 
           {/* Copyright and Developed By */}
           <div className="mt-8 w-full flex flex-col md:flex-row md:items-center md:justify-between pt-4 border-t border-gray-800 text-xs text-gray-400">
-            <p>Computers Garage Pvt. Ltd © 2012 - 2025. All Rights Reserved.</p>
+            <p>360 Electronics© 2020 - 2025. All Rights Reserved.</p>
             <p className="mt-2 md:mt-0">
               Designed & Developed by{' '}
               <Link

@@ -1,29 +1,33 @@
+import Header from "@/components/Navigations/Header";
+
 export default function PrivacyPolicy() {
-    const lastUpdated = "July 1, 2025";
-    
-    return (
-      <div className="min-h-screen bg-gray-50 py-8">
+  const lastUpdated = "July 1, 2025";
+
+  return (
+    <>
+      <Header />
+      <div className="min-h-screen bg-gray-50 pt-32 pb-8">
         <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="bg-white shadow-sm rounded-lg">
+          <div>
             {/* Header */}
             <div className="border-b border-gray-200 px-6 py-8">
               <h1 className="text-3xl font-bold text-gray-900 mb-4">Privacy Policy</h1>
               <p className="text-sm text-gray-600">Last updated: {lastUpdated}</p>
             </div>
-  
+
             {/* Content */}
             <div className="px-6 py-8 space-y-8">
-              
+
               {/* Introduction */}
               <section>
                 <h2 className="text-xl font-semibold text-gray-900 mb-4">1. Introduction</h2>
                 <p className="text-gray-700 leading-relaxed">
-                  At 360 Electronics, we are committed to protecting your privacy and ensuring the security of your personal information. 
-                  This Privacy Policy explains how we collect, use, disclose, and safeguard your information when you visit our website 
+                  At 360 Electronics (Computer Garage 360), we are committed to protecting your privacy and ensuring the security of your personal information.
+                  This Privacy Policy explains how we collect, use, disclose, and safeguard your information when you visit our website
                   or make purchases from us. By using our services, you consent to the data practices described in this policy.
                 </p>
               </section>
-  
+
               {/* Information We Collect */}
               <section>
                 <h2 className="text-xl font-semibold text-gray-900 mb-4">2. Information We Collect</h2>
@@ -38,7 +42,7 @@ export default function PrivacyPolicy() {
                   <div>
                     <h3 className="text-lg font-medium text-gray-800 mb-2">Technical Information</h3>
                     <p className="text-gray-700 leading-relaxed">
-                      IP address, browser type and version, device information, operating system, referring website addresses, 
+                      IP address, browser type and version, device information, operating system, referring website addresses,
                       pages visited, time spent on pages, and other diagnostic data.
                     </p>
                   </div>
@@ -50,7 +54,7 @@ export default function PrivacyPolicy() {
                   </div>
                 </div>
               </section>
-  
+
               {/* How We Use Information */}
               <section>
                 <h2 className="text-xl font-semibold text-gray-900 mb-4">3. How We Use Your Information</h2>
@@ -64,7 +68,7 @@ export default function PrivacyPolicy() {
                   <p><strong>Legal Compliance:</strong> To comply with applicable laws, regulations, and legal processes.</p>
                 </div>
               </section>
-  
+
               {/* Information Sharing */}
               <section>
                 <h2 className="text-xl font-semibold text-gray-900 mb-4">4. Information Sharing and Disclosure</h2>
@@ -77,7 +81,7 @@ export default function PrivacyPolicy() {
                   <p>We do not sell, trade, or rent your personal information to third parties for marketing purposes.</p>
                 </div>
               </section>
-  
+
               {/* Data Security */}
               <section>
                 <h2 className="text-xl font-semibold text-gray-900 mb-4">5. Data Security</h2>
@@ -88,7 +92,7 @@ export default function PrivacyPolicy() {
                   <p>We recommend using strong passwords and keeping your account information confidential.</p>
                 </div>
               </section>
-  
+
               {/* Cookies and Tracking */}
               <section>
                 <h2 className="text-xl font-semibold text-gray-900 mb-4">6. Cookies and Tracking Technologies</h2>
@@ -99,7 +103,7 @@ export default function PrivacyPolicy() {
                   <p>We may also use web beacons, pixel tags, and other tracking technologies for analytics and marketing purposes.</p>
                 </div>
               </section>
-  
+
               {/* Third Party Services */}
               <section>
                 <h2 className="text-xl font-semibold text-gray-900 mb-4">7. Third-Party Services</h2>
@@ -110,7 +114,7 @@ export default function PrivacyPolicy() {
                   <p>Third-party payment processors handle payment information according to their own privacy policies and security standards.</p>
                 </div>
               </section>
-  
+
               {/* Data Retention */}
               <section>
                 <h2 className="text-xl font-semibold text-gray-900 mb-4">8. Data Retention</h2>
@@ -121,7 +125,7 @@ export default function PrivacyPolicy() {
                   <p>You may request deletion of your personal information, subject to legal and legitimate business requirements.</p>
                 </div>
               </section>
-  
+
               {/* Your Rights */}
               <section>
                 <h2 className="text-xl font-semibold text-gray-900 mb-4">9. Your Privacy Rights</h2>
@@ -135,7 +139,7 @@ export default function PrivacyPolicy() {
                   <p>To exercise these rights, please contact us using the information provided below.</p>
                 </div>
               </section>
-  
+
               {/* Marketing Communications */}
               <section>
                 <h2 className="text-xl font-semibold text-gray-900 mb-4">10. Marketing Communications</h2>
@@ -145,7 +149,7 @@ export default function PrivacyPolicy() {
                   <p>Even if you opt out of marketing communications, we may still send you transactional emails related to your orders and account.</p>
                 </div>
               </section>
-  
+
               {/* Children's Privacy */}
               <section>
                 <h2 className="text-xl font-semibold text-gray-900 mb-4">11. Children&apos;s Privacy</h2>
@@ -156,7 +160,7 @@ export default function PrivacyPolicy() {
                   <p>Parents or guardians who believe their child has provided personal information should contact us immediately.</p>
                 </div>
               </section>
-  
+
               {/* International Transfers */}
               <section>
                 <h2 className="text-xl font-semibold text-gray-900 mb-4">12. International Data Transfers</h2>
@@ -166,7 +170,7 @@ export default function PrivacyPolicy() {
                   <p>By using our services, you consent to the transfer of your information to countries that may have different data protection laws.</p>
                 </div>
               </section>
-  
+
               {/* Changes to Privacy Policy */}
               <section>
                 <h2 className="text-xl font-semibold text-gray-900 mb-4">13. Changes to This Privacy Policy</h2>
@@ -177,22 +181,22 @@ export default function PrivacyPolicy() {
                   <p>Continued use of our services after changes constitutes acceptance of the updated policy.</p>
                 </div>
               </section>
-  
+
               {/* Contact Information */}
               <section className="bg-gray-50 rounded-lg p-6">
                 <h2 className="text-xl font-semibold text-gray-900 mb-4">14. Contact Us</h2>
                 <div className="space-y-2 text-gray-700">
                   <p>If you have any questions about this Privacy Policy or our data practices, please contact us:</p>
-                  <p className="mt-4"><strong>Business Name:</strong> 360 Electronics</p>
+                  <p className="mt-4"><strong>Business Name:</strong> 360 Electronics (a.k.a. Computer Garage 360)</p>
                   <p><strong>Address:</strong> 173-178, Chinnaswamy Road, New Siddhapudur, Coimbatore, Tamil Nadu 641044, India</p>
                   <p><strong>Phone:</strong> 7558132543</p>
                   <p><strong>Email:</strong> 360electronicspvtltd@gmail.com</p>
                   <p className="mt-4">We will respond to your privacy-related inquiries promptly and work to resolve any concerns you may have.</p>
                 </div>
               </section>
-  
+
             </div>
-  
+
             {/* Footer */}
             <div className="border-t border-gray-200 px-6 py-4">
               <p className="text-sm text-gray-500 text-center">
@@ -202,5 +206,6 @@ export default function PrivacyPolicy() {
           </div>
         </div>
       </div>
-    );
-  }
+    </>
+  );
+}

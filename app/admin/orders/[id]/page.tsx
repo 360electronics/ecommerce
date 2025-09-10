@@ -240,7 +240,7 @@ export default function OrderDetailsPage() {
     doc.setFontSize(18)
     doc.text("ORDER INVOICE", leftMargin, 35) // Adjusted Y to account for logo
     doc.setFontSize(10)
-    doc.text("360 Electronics Pvt Ltd.", rightMargin, 20, { align: "right" })
+    doc.text("360 Electronics", rightMargin, 20, { align: "right" })
     doc.text("Coimbatore, Tamil Nadu - 641107", rightMargin, 26, { align: "right" })
     doc.text("360electronicspvtltd@gmail.com", rightMargin, 32, { align: "right" })
 

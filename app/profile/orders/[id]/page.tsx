@@ -187,7 +187,7 @@ export default function OrderDetailsPage() {
       doc.text("INVOICE", left, 20)
       doc.setFont("helvetica", "normal")
       doc.setFontSize(10)
-      doc.text("360 Electronics Pvt Ltd.", right, 14, { align: "right" })
+      doc.text("360 Electronics", right, 14, { align: "right" })
       doc.text("Coimbatore, Tamil Nadu - 641107", right, 19, { align: "right" })
       doc.text("360electronicspvtltd@gmail.com", right, 24, { align: "right" })
 

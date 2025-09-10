@@ -35,11 +35,6 @@ const CartButton = () => {
           {formatCartTotal(cartTotal)}
         </span>
 
-        <div className="hidden md:block border-l border-gray-200 ml-2 pl-2">
-          <span className="text-sm  hover:underline transition-colors">
-            View Cart
-          </span>
-        </div>
       </Link>
     </div>
   );

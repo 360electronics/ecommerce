@@ -1,30 +1,34 @@
+import Header from "@/components/Navigations/Header";
+
 export default function TermsAndConditions() {
-    const lastUpdated = "July 1, 2025";
-    
-    return (
-      <div className="min-h-screen bg-gray-50 py-8">
+  const lastUpdated = "July 1, 2025";
+
+  return (
+    <>
+      <Header />
+      <div className="min-h-screen bg-gray-50 pt-32 pb-10 ">
         <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="bg-white shadow-sm rounded-lg">
+          <div className="">
             {/* Header */}
             <div className="border-b border-gray-200 px-6 py-8">
               <h1 className="text-3xl font-bold text-gray-900 mb-4">Terms and Conditions</h1>
               <p className="text-sm text-gray-600">Last updated: {lastUpdated}</p>
             </div>
-  
+
             {/* Content */}
             <div className="px-6 py-8 space-y-8">
               {/* Introduction */}
               <section>
                 <h2 className="text-xl font-semibold text-gray-900 mb-4">1. Introduction</h2>
                 <p className="text-gray-700 leading-relaxed">
-                  These Terms and Conditions govern your use of our e-commerce platform and services. 
-                  By accessing or using our website, you agree to be bound by these terms. 
-                  &quot;We,&quot; &quot;us,&quot; or &quot;our&quot; refers to 360 Electronics, operating from 
-                  173-178, Chinnaswamy Road, New Siddhapudur, Coimbatore, Tamil Nadu 641044, India. 
+                  These Terms and Conditions govern your use of our e-commerce platform and services.
+                  By accessing or using our website, you agree to be bound by these terms.
+                  &quot;We,&quot; &quot;us,&quot; or &quot;our&quot; refers to 360 Electronics <strong>(Computer Garage 360)</strong>, operating from
+                  173-178, Chinnaswamy Road, New Siddhapudur, Coimbatore, Tamil Nadu 641044, India.
                   &quot;You&quot; or &quot;your&quot; refers to any individual or entity using our services.
                 </p>
               </section>
-  
+
               {/* Account Terms */}
               <section>
                 <h2 className="text-xl font-semibold text-gray-900 mb-4">2. Account Registration</h2>
@@ -35,7 +39,7 @@ export default function TermsAndConditions() {
                   <p>We reserve the right to suspend or terminate accounts that violate these terms.</p>
                 </div>
               </section>
-  
+
               {/* Products and Services */}
               <section>
                 <h2 className="text-xl font-semibold text-gray-900 mb-4">3. Products and Services</h2>
@@ -46,7 +50,7 @@ export default function TermsAndConditions() {
                   <p>We reserve the right to modify or discontinue products at any time.</p>
                 </div>
               </section>
-  
+
               {/* Orders and Payment */}
               <section>
                 <h2 className="text-xl font-semibold text-gray-900 mb-4">4. Orders and Payment</h2>
@@ -59,7 +63,7 @@ export default function TermsAndConditions() {
                   <p>Card transactions are subject to validation by your card issuer and preset limits agreed with our acquiring bank.</p>
                 </div>
               </section>
-  
+
               {/* Shipping and Delivery */}
               <section>
                 <h2 className="text-xl font-semibold text-gray-900 mb-4">5. Shipping and Delivery</h2>
@@ -74,7 +78,7 @@ export default function TermsAndConditions() {
                   <p><strong>Support:</strong> For any issues regarding shipping or our services, contact our helpdesk at 7558132543 or email us at 360electronicspvtltd@gmail.com</p>
                 </div>
               </section>
-  
+
               {/* Returns and Refunds */}
               <section>
                 <h2 className="text-xl font-semibold text-gray-900 mb-4">6. Returns and Refunds</h2>
@@ -86,7 +90,7 @@ export default function TermsAndConditions() {
                   <p>Return shipping costs may be deducted from refunds unless the return is due to our error.</p>
                 </div>
               </section>
-  
+
               {/* Intellectual Property */}
               <section>
                 <h2 className="text-xl font-semibold text-gray-900 mb-4">7. Intellectual Property</h2>
@@ -96,7 +100,7 @@ export default function TermsAndConditions() {
                   <p>Trademarks and brand names belong to their respective owners.</p>
                 </div>
               </section>
-  
+
               {/* User Conduct */}
               <section>
                 <h2 className="text-xl font-semibold text-gray-900 mb-4">8. User Conduct</h2>
@@ -107,7 +111,7 @@ export default function TermsAndConditions() {
                   <p>We reserve the right to remove content that violates these terms.</p>
                 </div>
               </section>
-  
+
               {/* Privacy and Data Protection */}
               <section>
                 <h2 className="text-xl font-semibold text-gray-900 mb-4">9. Privacy and Data Protection</h2>
@@ -117,7 +121,7 @@ export default function TermsAndConditions() {
                   <p>By using our services, you consent to the collection and use of information as described in our Privacy Policy.</p>
                 </div>
               </section>
-  
+
               {/* Limitation of Liability */}
               <section>
                 <h2 className="text-xl font-semibold text-gray-900 mb-4">10. Limitation of Liability</h2>
@@ -128,7 +132,7 @@ export default function TermsAndConditions() {
                   <p>We exclude liability for inaccuracies or errors to the fullest extent permitted by law.</p>
                 </div>
               </section>
-  
+
               {/* Governing Law */}
               <section>
                 <h2 className="text-xl font-semibold text-gray-900 mb-4">11. Governing Law and Disputes</h2>
@@ -138,7 +142,7 @@ export default function TermsAndConditions() {
                   <p>We encourage resolving disputes through direct communication before pursuing legal action.</p>
                 </div>
               </section>
-  
+
               {/* Changes to Terms */}
               <section>
                 <h2 className="text-xl font-semibold text-gray-900 mb-4">12. Changes to Terms</h2>
@@ -149,21 +153,21 @@ export default function TermsAndConditions() {
                   <p>We recommend reviewing these terms periodically for updates.</p>
                 </div>
               </section>
-  
+
               {/* Contact Information */}
               <section className="bg-gray-50 rounded-lg p-6">
                 <h2 className="text-xl font-semibold text-gray-900 mb-4">13. Contact Information</h2>
                 <div className="space-y-2 text-gray-700">
-                  <p><strong>Business Name:</strong> 360 Electronics</p>
+                  <p><strong>Business Name:</strong> 360 Electronics (a.k.a Computer Garage 360)</p>
                   <p><strong>Address:</strong> 173-178, Chinnaswamy Road, New Siddhapudur, Coimbatore, Tamil Nadu 641044, India</p>
                   <p><strong>Phone:</strong> 7558132543</p>
                   <p><strong>Email:</strong> 360electronicspvtltd@gmail.com</p>
                   <p className="mt-4">For questions regarding these terms, shipping inquiries, or any service-related issues, please contact us through the above channels.</p>
                 </div>
               </section>
-  
+
             </div>
-  
+
             {/* Footer */}
             <div className="border-t border-gray-200 px-6 py-4">
               <p className="text-sm text-gray-500 text-center">
@@ -173,5 +177,6 @@ export default function TermsAndConditions() {
           </div>
         </div>
       </div>
-    );
-  }
+    </>
+  );
+}

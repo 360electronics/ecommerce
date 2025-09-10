@@ -9,7 +9,7 @@ import UserButton from './Header/UserButton';
 import CartButton from './Header/CartButton';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
-import { Menu, X, ShoppingBag, Heart, User, ChevronDown } from 'lucide-react';
+import { Menu, X, ShoppingBag, Heart, User, ChevronDown, Building } from 'lucide-react';
 import { slugify } from '@/utils/slugify';
 import { fetchProducts } from '@/utils/products.util';
 
@@ -352,6 +352,14 @@ const Header = ({ isCategory = true }: HeaderProps) => {
             <div className="flex-grow mx-4">
               <SearchBar onSearch={handleSearch} />
             </div>
+          </div>
+          <div className=' px-2'>
+            <Link href={'/store-locator'} className=' flex items-center gap-2 font-medium text-sm'>
+              <span className=' text-primary'>
+                <Building size={20} />
+              </span>
+              Store Locator
+            </Link>
           </div>
 
           <div className="hidden lg:flex items-center gap-4">
