@@ -4,7 +4,7 @@ import { useEffect, useState, useMemo } from "react";
 import { useRouter } from "next/navigation";
 import Image from "next/image";
 import { EnhancedTable, type ColumnDefinition } from "@/components/Layouts/TableLayout";
-import { deleteProducts, fetchProducts } from "@/utils/products.util";
+import { fetchProducts } from "@/utils/products.util";
 import toast, { Toaster } from "react-hot-toast";
 
 // Core Entity Types (unchanged)
@@ -235,6 +235,28 @@ interface TableRow {
   priceRange: { min: number; max: number } | null;
   hasMultipleVariants: boolean;
 }
+
+
+export const deleteProducts = async (ids: string[]) => {
+  try {
+    const res = await fetch('/api/products', {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ ids }),
+    });
+
+    if (!res.ok) {
+      throw new Error(`Failed to delete products. Status: ${res.status}`);
+    }
+
+    const data = await res.json();
+    return data;
+  } catch (error) {
+    console.error('Delete request failed:', error);
+    return null;
+  }
+};
+
 
 export function ProductsTable() {
   const router = useRouter();

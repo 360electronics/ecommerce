@@ -22,9 +22,10 @@ export default function ProductZoomOverlay({
     setIsMounted(true);
   }, []);
 
-  const currentImageUrl = useMemo(() => {
-    return activeVariant.productImages[selectedImageIndex]?.url || '/placeholder.svg';
-  }, [activeVariant.productImages, selectedImageIndex]);
+  if (!activeVariant?.productImages?.length) return null;
+
+  const validIndex = Math.max(0, Math.min(selectedImageIndex, activeVariant.productImages.length - 1));
+  const currentImage = activeVariant.productImages[validIndex];
 
   const isActive = lensPosition.x > 0 && lensPosition.y > 0;
 
@@ -35,7 +36,7 @@ export default function ProductZoomOverlay({
   return (
     <div
       className={cn(
-        'sticky top-32 right-0 z-10 w-full h-[70dvh] border border-gray-200 bg-white rounded-lg shadow-lg overflow-hidden',
+        'sticky top-32 right-0 z-10 w-full h-[70dvh] border border-gray-200 bg-white rounded-lg shadow-lg overflow-hidden hidden lg:block',
         className
       )}
       role="region"
@@ -44,7 +45,8 @@ export default function ProductZoomOverlay({
       <div
         className="relative w-full h-full"
         style={{
-          backgroundImage: `url(${currentImageUrl})`,
+          // 👇 this is the missing link
+          backgroundImage: `url("${currentImage.url}")`,
           backgroundPosition: `${lensPosition.x}% ${lensPosition.y}%`,
           backgroundSize: `${zoomFactor * 100}%`,
           backgroundRepeat: 'no-repeat',

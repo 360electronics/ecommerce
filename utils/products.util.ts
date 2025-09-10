@@ -10,7 +10,7 @@ export async function fetchProducts() {
         'Content-Type': 'application/json',
         'x-super-secure-key': `${process.env.API_SECRET_KEY}`
       },
-      next: { revalidate: 60 },
+      cache: 'no-cache'
     });
 
     if (!res.ok) {
@@ -34,7 +34,7 @@ export async function fetchSingleProduct(id: string) {
         'Content-Type': 'application/json',
         'x-super-secure-key': `${process.env.API_SECRET_KEY}`
       },
-      next: { revalidate: 60 },
+      cache: 'no-cache'
     });
 
     if (!res.ok) {
@@ -139,22 +139,3 @@ export async function fetchGamersZoneProducts() {
 }
 
 
-export const deleteProducts = async (ids: string[]) => {
-  try {
-    const res = await fetch('/api/products', {
-      method: 'PATCH',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ ids }),
-    });
-
-    if (!res.ok) {
-      throw new Error(`Failed to delete products. Status: ${res.status}`);
-    }
-
-    const data = await res.json();
-    return data;
-  } catch (error) {
-    console.error('Delete request failed:', error);
-    return null;
-  }
-};

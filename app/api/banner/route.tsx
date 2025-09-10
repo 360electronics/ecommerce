@@ -25,15 +25,15 @@ type BannerStatus = "active" | "inactive";
 
 export async function GET(req: Request) {
 
-  //API Proxy
-  const apiKey = req.headers.get('x-super-secure-key'); 
-  if (apiKey !== process.env.API_SECRET_KEY) {
-    return NextResponse.json(
-      { message: 'Unauthorized' },
-      { status: 401 }
-    );
-  }
-  //
+  // //API Proxy
+  // const apiKey = req.headers.get('x-super-secure-key'); 
+  // if (apiKey !== process.env.API_SECRET_KEY) {
+  //   return NextResponse.json(
+  //     { message: 'Unauthorized' },
+  //     { status: 401 }
+  //   );
+  // }
+  // //
 
   try {
     const allBanners = await db.select().from(banners);

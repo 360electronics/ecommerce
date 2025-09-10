@@ -44,7 +44,10 @@ export default function LoginPage() {
     try {
       setIsBannerLoading(true);
       const response = await fetch("/api/banner", {
-        cache: "no-store", // Ensure fresh data
+        cache: "no-store", 
+        headers: {
+          'x-super-secure-key': `${process.env.API_SECRET_KEY}`
+        }
       });
 
       if (!response.ok) {

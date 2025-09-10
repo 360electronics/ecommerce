@@ -46,68 +46,6 @@ export default function ProductDetailsContent({ className, activeVariant }: Prod
 
 
 
-  // Fetch location details from API
-  const fetchLocationDetails = async (pincode: string) => {
-    if (!/^\d{6}$/.test(pincode)) {
-      setPinCodeError('Invalid PIN code format');
-      setDeliveryEstimate(null);
-      setIsCheckingPin(false);
-      return;
-    }
-
-    setIsCheckingPin(true);
-    try {
-      const response = await fetch(`https://api.postalpincode.in/pincode/${pincode}`);
-      const data = await response.json();
-
-      if (
-        data &&
-        data[0] &&
-        data[0].Status === "Success" &&
-        data[0].PostOffice &&
-        data[0].PostOffice.length > 1
-      ) {
-        const postOfficeData = data[0].PostOffice[data[0].PostOffice.length - 2];
-        const districtName = postOfficeData.District;
-        const location = postOfficeData.Name;
-        // setDistrict(districtName);
-
-
-        // Calculate delivery estimate with fetched district
-        calculateDeliveryEstimate(pincode, location, districtName);
-      } else {
-        setPinCodeError('Invalid PIN code or no data available');
-        setDeliveryEstimate(null);
-        // setDistrict(null);
-        setIsCheckingPin(false);
-      }
-    } catch (error) {
-      setPinCodeError('Error fetching location details. Please try again.');
-      setDeliveryEstimate(null);
-      // setDistrict(null);
-      setIsCheckingPin(false);
-    }
-  };
-
-  // Load location from localStorage and set initial delivery estimate
-  useEffect(() => {
-    const savedLocation = localStorage.getItem('g36-location');
-    if (savedLocation) {
-      const { pincode, location, district: savedDistrict } = JSON.parse(savedLocation);
-      if (pincode) {
-        setPinCode(pincode);
-        if (savedDistrict) {
-          // Use saved district if available
-          setDistrict(savedDistrict);
-          calculateDeliveryEstimate(pincode, location, savedDistrict);
-        } else {
-          // Fetch district from API for initial PIN code
-          fetchLocationDetails(pincode);
-        }
-      }
-    }
-  }, []);
-
 
 
   // Debounce function to limit rapid API calls
@@ -141,98 +79,63 @@ export default function ProductDetailsContent({ className, activeVariant }: Prod
     );
   }, [Number(product?.averageRating)]);
 
+  const handleCheckDelivery = async () => {
+    if (!pinCode || pinCode.length !== 6) {
+      setPinCodeError("Please enter a valid 6-digit PIN code.");
+      setDeliveryEstimate(null);
+      setDistrict(null);
+      return;
+    }
 
+    setIsCheckingPin(true);
+    setPinCodeError(null);
 
-  // Calculate delivery estimate based on PIN code, stock, and backorder status
-  const calculateDeliveryEstimate = useCallback(
-    debounce((pin: string, location?: string, district?: string) => {
-      if (!/^\d{6}$/.test(pin)) {
-        setPinCodeError('Please enter a valid 6-digit PIN code');
-        setDeliveryEstimate(null);
-        setIsCheckingPin(false);
-        return;
-      }
+    try {
+      const response = await fetch(`https://api.postalpincode.in/pincode/${pinCode}`);
+      const data = await response.json();
 
-      setPinCodeError(null);
-      setIsCheckingPin(true);
+      if (
+        data &&
+        data[0] &&
+        data[0].Status === "Success" &&
+        data[0].PostOffice &&
+        data[0].PostOffice.length > 0
+      ) {
+        const postOffices = data[0].PostOffice;
+        const postOfficeData = postOffices[postOffices.length - 2];
+        const districtName = postOfficeData.District;
+        const location = postOfficeData.Name;
+        setDistrict(`${location}, ${districtName}`);
 
-      // Simulate API call for delivery estimation
-      setTimeout(() => {
-        try {
-          const firstDigit = parseInt(pin[0]);
-          const today = new Date();
-          let deliveryDays = 4; // Default: 2-5 days
+        // Delivery days logic
+        const firstDigit = Number(pinCode[0]);
+        let deliveryDays = 5;
 
-          // Adjust delivery days based on region
-          if ([1, 2].includes(firstDigit)) {
-            deliveryDays = 5; // North India
-          } else if ([7, 8].includes(firstDigit)) {
-            deliveryDays = 7; // Northeast or remote areas
-          } else if ([3, 4].includes(firstDigit)) {
-            deliveryDays = 5; // Central/West India
-          } else if ([5, 6].includes(firstDigit)) {
-            deliveryDays = 3; // South India
-          }
-
-          // Adjust delivery days based on stock availability
-          if (activeVariant.stock <= (activeVariant.lowStockThreshold ?? 10)) {
-            deliveryDays += 2; // Add delay for low stock
-          }
-          if (!activeVariant.stock && activeVariant.isBackorderable) {
-            deliveryDays += 5; // Additional delay for backordered items
-          }
-
-          // Calculate min and max delivery dates
-          const minDeliveryDate = new Date(today);
-          minDeliveryDate.setDate(today.getDate() + deliveryDays - 1);
-          const maxDeliveryDate = new Date(today);
-          maxDeliveryDate.setDate(today.getDate() + deliveryDays + 1);
-
-          const formatDate = (date: Date) =>
-            date.toLocaleDateString('en-IN', {
-              weekday: 'short',
-              day: 'numeric',
-              month: 'short',
-            });
-
-          // Use district if available, else location, else PIN
-          let locationText = pin;
-          if (location && district) {
-            locationText = `${location}, ${district}. `;
-          } else if (district) {
-            locationText = district;
-          } else if (location) {
-            locationText = location;
-          }
-
-          const estimateText = activeVariant.stock > 0
-            ? `Estimated delivery between ${formatDate(minDeliveryDate)} and ${formatDate(maxDeliveryDate)} for ${locationText}`
-            : activeVariant.isBackorderable
-              ? `Estimated delivery between ${formatDate(minDeliveryDate)} and ${formatDate(maxDeliveryDate)} for ${locationText} (Backordered)`
-              : `Currently unavailable for delivery to ${locationText}`;
-
-          setDeliveryEstimate(estimateText);
-          setIsCheckingPin(false);
-        } catch (error) {
-          setPinCodeError('Error calculating delivery estimate. Please try again.');
-          setDeliveryEstimate(null);
-          setIsCheckingPin(false);
+        if ([1, 2].includes(firstDigit)) {
+          deliveryDays = 5; // North India
+        } else if ([7, 8].includes(firstDigit)) {
+          deliveryDays = 7; // Northeast/remote
+        } else if ([3, 4].includes(firstDigit)) {
+          deliveryDays = 5; // Central/West
+        } else if ([5, 6].includes(firstDigit)) {
+          deliveryDays = 3; // South India
         }
-      }, 800); // Simulate API response delay
-    }, 300),
-    [activeVariant.stock, activeVariant.isBackorderable, activeVariant.lowStockThreshold]
-  );
 
-  // Handle PIN code input change
-  const handlePinCodeChange = useCallback(
-    (e: React.ChangeEvent<HTMLInputElement>) => {
-      const value = e.target.value.replace(/\D/g, '').slice(0, 6);
-      setPinCode(value);
-      fetchLocationDetails(value)
-      calculateDeliveryEstimate(value);
-    },
-    [calculateDeliveryEstimate]
-  );
+        setDeliveryEstimate(`Estimated delivery in ${deliveryDays} days`);
+      } else {
+        setPinCodeError("Invalid PIN code or no delivery service available.");
+        setDeliveryEstimate(null);
+        setDistrict(null);
+      }
+    } catch (err) {
+      setPinCodeError("Failed to check delivery. Try again.");
+      setDeliveryEstimate(null);
+      setDistrict(null);
+    } finally {
+      setIsCheckingPin(false);
+    }
+  };
+
 
   // Calculate discount
   const discount = useMemo(
@@ -396,7 +299,7 @@ export default function ProductDetailsContent({ className, activeVariant }: Prod
     },
     [product?.productParent?.variants]
   );
-  
+
   const isValidAttributeCombination = useCallback(
     (key: string, value: string | number | boolean) => {
       const normalizedValue = normalizeValue(String(value));
@@ -406,24 +309,24 @@ export default function ProductDetailsContent({ className, activeVariant }: Prod
     },
     [product?.productParent?.variants]
   );
-  
+
 
   const handleAttributeSelection = useCallback(
     (key: string, value: string | number | boolean) => {
       const validVariant = findValidVariant(key, value);
       if (!validVariant) return;
-  
+
       // Store normalized values for display
       const newAttributes: Record<string, string> = { [key]: normalizeValue(String(value)) };
-      
+
       attributeKeys.forEach((k) => {
         if (k !== key) {
           newAttributes[k] = normalizeValue(String(validVariant.attributes[k] ?? selectedAttributes[k] ?? ''));
         }
       });
-  
+
       setSelectedAttributes(newAttributes);
-  
+
       // Immediately switch to the selected variant
       if (validVariant.id !== activeVariant.id) {
         router.push(`/product/${validVariant.slug}`, { scroll: false });
@@ -443,13 +346,13 @@ export default function ProductDetailsContent({ className, activeVariant }: Prod
     },
     [attributeKeys, findValidVariant, setSelectedAttributes, selectedAttributes, activeVariant.id, router, setProduct]
   );
-  
+
 
   const handleVariantNavigation = useCallback(() => {
     if (!activeVariant || activeVariant.id === product?.id || isNavigating) return;
-  
+
     setIsNavigating(true);
-  
+
     router.push(`/product/${activeVariant.slug}`, { scroll: true });
     fetch(`/api/products/${activeVariant.slug}`)
       .then(res => {
@@ -465,7 +368,7 @@ export default function ProductDetailsContent({ className, activeVariant }: Prod
         setIsNavigating(false);
       });
   }, [activeVariant, product?.id, router, isNavigating, setProduct]);
-  
+
 
   // Non-varying attributes
   const nonVaryingAttributes = useMemo(() => {
@@ -703,170 +606,7 @@ export default function ProductDetailsContent({ className, activeVariant }: Prod
   );
 
 
-  const DeliveryEstimation = () => {
-    const savedLocation = JSON.parse(localStorage.getItem('g36-location') || '{}');
-    const { location, district } = savedLocation;
 
-    useEffect(() => {
-      if (inputRef.current && pinCode.length < 6) {
-        inputRef.current.focus();
-      }
-    }, [pinCode]);
-
-    return (
-      <div className="mt-6 border border-gray-200 rounded-lg">
-        {/* Header */}
-        <div className="border-b border-gray-200 px-4 py-3 bg-gray-50">
-          <h3 className="text-base font-semibold text-gray-900 flex items-center gap-2">
-            <Truck className="w-5 h-5 text-primary" />
-            Delivery Options
-          </h3>
-        </div>
-
-        {/* Content */}
-        <div className="p-4 space-y-4">
-          {/* PIN Code Input Section */}
-          <div className="flex items-center gap-3">
-            <div className="relative flex-1 max-w-xs">
-              <MapPin className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-gray-400" />
-              <input
-                type="text"
-                value={pinCode}
-                onChange={handlePinCodeChange}
-                placeholder="Enter PIN code"
-                maxLength={6}
-                ref={inputRef}
-                className="w-full pl-10 pr-4 py-2.5 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-primary focus:border-primary transition-all"
-                aria-label="Enter PIN code for delivery estimation"
-              />
-            </div>
-            <button
-              onClick={() => fetchLocationDetails(pinCode)}
-              className="px-4 py-2.5 text-sm font-medium text-primary border border-primary rounded-md hover:bg-primary/50 transition-colors"
-              disabled={pinCode.length !== 6 || isCheckingPin}
-            >
-              {isCheckingPin ? 'Checking...' : 'Check'}
-            </button>
-          </div>
-
-          {/* Loading State */}
-          {isCheckingPin && (
-            <div className="flex items-center gap-2 p-3 bg-blue-50 rounded-md">
-              <div className="w-4 h-4 border-2 border-primary border-t-transparent rounded-full animate-spin" />
-              <span className="text-sm text-primry">Checking delivery options...</span>
-            </div>
-          )}
-
-          {/* Error State */}
-          {pinCodeError && (
-            <div className="flex items-center gap-2 p-3 bg-red-50 rounded-md border border-red-200">
-              <svg className="w-4 h-4 text-red-500 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-              </svg>
-              <span className="text-sm text-red-700">{pinCodeError}</span>
-            </div>
-          )}
-
-          {/* Success State - Delivery Information */}
-          {deliveryEstimate && !isCheckingPin && !pinCodeError && (
-            <div className="space-y-4">
-              {/* Main Delivery Info */}
-              <div className="flex items-start gap-3 p-3 bg-green-50 rounded-md border border-green-200">
-                <Truck className="w-5 h-5 text-green-600 flex-shrink-0 mt-0.5" />
-                <div className="flex-1">
-                  <p className="text-sm font-medium text-green-800 mb-1">
-                    {activeVariant.stock > 0 ? 'Available for delivery' : 'Available for backorder'}
-                  </p>
-                  <p className="text-sm text-green-700">{deliveryEstimate}</p>
-                </div>
-              </div>
-
-              {/* Additional Delivery Options */}
-              <div className="grid grid-cols-1 gap-3">
-                {/* Standard Delivery */}
-                <div className="flex items-center justify-between p-3 border border-gray-200 rounded-md">
-                  <div className="flex items-center gap-3">
-                    <Truck className="w-4 h-4 text-gray-500" />
-                    <div>
-                      <p className="text-sm font-medium text-gray-900">Standard Delivery</p>
-                      <p className="text-xs text-gray-500">
-                        {activeVariant.ourPrice >= 499 ? 'FREE' : '₹49'} • {deliveryEstimate.includes('between') ? deliveryEstimate.split('between ')[1].split(' for')[0] : '3-5 days'}
-                      </p>
-                    </div>
-                  </div>
-                  {activeVariant.ourPrice >= 499 && (
-                    <span className="text-xs font-semibold text-green-600 bg-green-100 px-2 py-1 rounded">
-                      FREE
-                    </span>
-                  )}
-                </div>
-
-                {/* Express Delivery (if available) */}
-                {activeVariant.deliveryMode === 'Express' && (
-                  <div className="flex items-center justify-between p-3 border border-gray-200 rounded-md">
-                    <div className="flex items-center gap-3">
-                      <svg className="w-4 h-4 text-orange-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M13 10V3L4 14h7v7l9-11h-7z" />
-                      </svg>
-                      <div>
-                        <p className="text-sm font-medium text-gray-900">Express Delivery</p>
-                        <p className="text-xs text-gray-500">₹99 • Get it by tomorrow</p>
-                      </div>
-                    </div>
-                    <span className="text-xs font-medium text-orange-600">
-                      +₹99
-                    </span>
-                  </div>
-                )}
-              </div>
-
-              {/* Delivery Highlights */}
-              <div className="border-t border-gray-200 pt-4">
-                <h4 className="text-sm font-medium text-gray-900 mb-3">Delivery Highlights</h4>
-                <div className="space-y-2">
-                  <div className="flex items-center gap-2 text-sm text-gray-600">
-                    <svg className="w-4 h-4 text-green-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M5 13l4 4L19 7" />
-                    </svg>
-                    <span>Free delivery on orders above ₹499</span>
-                  </div>
-                  {/* <div className="flex items-center gap-2 text-sm text-gray-600">
-                    <svg className="w-4 h-4 text-green-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M5 13l4 4L19 7" />
-                    </svg>
-                    <span>Cash on Delivery available</span>
-                  </div> */}
-                  <div className="flex items-center gap-2 text-sm text-gray-600">
-                    <svg className="w-4 h-4 text-green-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M5 13l4 4L19 7" />
-                    </svg>
-                    <span>Easy returns within 7 days</span>
-                  </div>
-                  {activeVariant.isBackorderable && (
-                    <div className="flex items-center gap-2 text-sm text-amber-600">
-                      <svg className="w-4 h-4 text-amber-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-                      </svg>
-                      <span>This item is currently on backorder</span>
-                    </div>
-                  )}
-                </div>
-              </div>
-            </div>
-          )}
-
-          {/* Default state when no PIN is entered */}
-          {!pinCode && !isCheckingPin && (
-            <div className="text-center py-4">
-              <MapPin className="w-8 h-8 text-gray-300 mx-auto mb-2" />
-              <p className="text-sm text-gray-500 mb-1">Enter your PIN code to check delivery options</p>
-              <p className="text-xs text-gray-400">We&apos;ll show you exact delivery dates and charges</p>
-            </div>
-          )}
-        </div>
-      </div>
-    );
-  };
 
   const QuantityAndWishlist = () => (
     <div className="flex items-center gap-4 flex-wrap">
@@ -1004,7 +744,42 @@ export default function ProductDetailsContent({ className, activeVariant }: Prod
       </div>
 
       <Pricing />
-      <DeliveryEstimation />
+      <div className="my-6 bg-white rounded-lg border border-gray-100 p-4">
+        <h3 className="text-sm font-semibold text-gray-900 mb-2 flex items-center gap-2">
+          <MapPin className="w-4 h-4 text-gray-600" /> Check Delivery
+        </h3>
+        <div className="flex items-center gap-2">
+          <input
+            ref={inputRef}
+            inputMode='numeric'
+            pattern='[0-9]*'
+            value={pinCode}
+            onChange={(e) => setPinCode(e.target.value.replace(/\D/g, ""))}
+            placeholder="Enter PIN code"
+            maxLength={6}
+            className="flex-1 border border-gray-300 rounded-lg px-3 py-2 text-sm focus:ring-primary focus:border-primary"
+          />
+          <button
+            onClick={handleCheckDelivery}
+            disabled={isCheckingPin}
+            className="px-4 py-2 text-sm rounded-lg bg-primary text-white hover:bg-primary-hover disabled:opacity-50"
+          >
+            {isCheckingPin ? "Checking..." : "Check"}
+          </button>
+        </div>
+
+        {/* Results */}
+        {pinCodeError && <p className="text-red-500 text-sm mt-2">{pinCodeError}</p>}
+        {district && (
+          <p className="text-sm text-gray-700 mt-2">
+            Delivery available to <span className="font-medium">{district}</span>
+          </p>
+        )}
+        {deliveryEstimate && (
+          <p className="text-sm text-green-600 font-medium mt-1">{deliveryEstimate}</p>
+        )}
+      </div>
+
 
       <div className="my-6 space-y-4">
         {attributeKeys.map((key) => {

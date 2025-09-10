@@ -16,7 +16,7 @@ const flattenProductVariants = (products: CompleteProduct[]): FlattenedProduct[]
     const flattened: FlattenedProduct[] = [];
 
     products.forEach(product => {
-      console.log(product.subcategory?.slug === 'ASUS MOTHERBOARD')
+      // console.log(product.subcategory?.slug === 'ASUS MOTHERBOARD')
         if (Array.isArray(product.variants) && product.variants.length > 0) {
             product.variants.forEach(variant => {
                 flattened.push({
