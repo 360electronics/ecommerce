@@ -131,10 +131,9 @@ const Footer = () => {
   ];
 
   const socialLinks = [
-    { href: 'https://instagram.com', icon: <Instagram size={24} />, label: 'Instagram' },
-    { href: 'https://whatsapp.com', icon: <Whatsapp size={24} />, label: 'WhatsApp' },
-    { href: 'https://youtube.com', icon: <Youtube size={24} />, label: 'YouTube' },
-    { href: 'https://facebook.com', icon: <Facebook size={24} />, label: 'Facebook' },
+    { href: 'https://www.instagram.com/computergarage360?igsh=MWFqbTdqcml2ZTQ5&utm_source=qr', icon: <Instagram size={24} />, label: 'Instagram' },
+    { href: 'https://wa.me/7558132543?text=Hello', icon: <Whatsapp size={24} />, label: 'WhatsApp' },
+    { href: 'https://youtube.com/@computergarage360?si=hg6lHMk8852pw_92', icon: <Youtube size={24} />, label: 'YouTube' },
   ];
 
   const handleNewsletterSubmit = () => {
