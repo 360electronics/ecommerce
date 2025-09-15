@@ -1,5 +1,4 @@
 name = "360electronics-app"
 compatibility_date = "2025-09-15"
-
-[assets]
-directory = "./next"
+compatibility_flags = [ "nodejs_compat" ]
+pages_build_output_dir = ".next"  # Use .next for standard Next.js output
