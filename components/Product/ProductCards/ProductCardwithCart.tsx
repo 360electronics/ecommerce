@@ -56,11 +56,11 @@ const ProductCardwithCart: React.FC<ProductCardProps> = ({
   const isInWishlistStatus = productId && variantId ? isInWishlist(productId, variantId) : false;
 
   // Fetch auth status on mount if not logged in
-  useEffect(() => {
-    if (!isLoggedIn) {
-      fetchAuthStatus();
-    }
-  }, [isLoggedIn, fetchAuthStatus]);
+  // useEffect(() => {
+  //   if (!isLoggedIn) {
+  //     fetchAuthStatus();
+  //   }
+  // }, [isLoggedIn, fetchAuthStatus]);
 
   const handleWishlistClick = useCallback(
     async (e: React.MouseEvent) => {

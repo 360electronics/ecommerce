@@ -23,8 +23,6 @@ export async function middleware(request: NextRequest) {
         headers: {
           Cookie: `authToken=${token}`,
         },
-        // Add cache control to prevent stale responses
-        cache: 'no-cache'
       })
       
       if (res.ok) {

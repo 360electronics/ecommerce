@@ -53,11 +53,11 @@ const ProductCardwithoutCart: React.FC<ProductCardProps> = ({
 
   const isInWishlistStatus = productId && variantId ? isInWishlist(productId, variantId) : false;
 
-  useEffect(() => {
-    if (!isLoggedIn) {
-      fetchAuthStatus();
-    }
-  }, [isLoggedIn, fetchAuthStatus]);
+  // useEffect(() => {
+  //   if (!isLoggedIn) {
+  //     fetchAuthStatus();
+  //   }
+  // }, [isLoggedIn, fetchAuthStatus]);
 
   const handleWishlistClick = useCallback(
     async (e: React.MouseEvent) => {

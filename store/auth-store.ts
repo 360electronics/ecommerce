@@ -15,6 +15,7 @@ export interface AuthState {
   fetchAuthStatus: () => Promise<void>;
   setAuth: (isLoggedIn: boolean, user: User | null) => void;
   logout: () => Promise<void>;
+  lastChecked: number | null;
 }
 
 export const useAuthStore = create<AuthState>()(
@@ -24,9 +25,11 @@ export const useAuthStore = create<AuthState>()(
       user: null,
       isLoading: false,
       error: null,
+      lastChecked: null,
       fetchAuthStatus: async () => {
-        const { isLoading } = get();
-        if (isLoading) return;
+        
+        const { isLoading, lastChecked } = get();
+        if (isLoading || (lastChecked && Date.now() - lastChecked < 5 * 60 * 1000)) return;
       
         try {
           set({ isLoading: true, error: null });
@@ -38,6 +41,7 @@ export const useAuthStore = create<AuthState>()(
             isLoggedIn: data.isAuthenticated,
             user: data.user,
             isLoading: false,
+            lastChecked: Date.now(),
             error: data.isAuthenticated ? null : null // Don't set error if just logged out
           });
         } catch (error) {

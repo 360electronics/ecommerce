@@ -31,7 +31,7 @@ const ProductListing = ({
     const [fuse, setFuse] = useState<Fuse<FlattenedProduct> | null>(null);
     const searchParams = useSearchParams();
 
-    console.log("Og Products", originalProducts)
+    // console.log("Og Products", originalProducts)
     useEffect(() => {
         if (originalProducts.length > 0) {
             const fuseInstance = new Fuse(originalProducts, {
@@ -95,7 +95,7 @@ const ProductListing = ({
                         if (fuse) {
                             const fuseResults = fuse.search(query.trim());
                             results = fuseResults.map(r => r.item);
-                            console.log('Fuse search results:', fuseResults); // <-- debug Fuse output
+                            // console.log('Fuse search results:', fuseResults); // <-- debug Fuse output
                         }
                         // Fallback if Fuse found nothing → simple includes
                         if (results.length === 0) {
@@ -107,13 +107,13 @@ const ProductListing = ({
                                 (p.subcategory.name || '').toLowerCase().includes(q) ||
                                 (p.description || '').toLowerCase().includes(q)
                             );
-                            console.log('Fallback search results:', results); // <-- debug fallback
+                            // console.log('Fallback search results:', results); // <-- debug fallback
                         }
 
                         filtered = results;
                     }
 
-                    console.log('Final filtered products:', filtered);
+                    // console.log('Final filtered products:', filtered);
 
 
                     // Apply color filter
@@ -341,11 +341,11 @@ const ProductListing = ({
 
     // Apply filters when dependencies change
     useEffect(() => {
-        console.log('Search query:', searchQuery);
+        // console.log('Search query:', searchQuery);
         if (originalProducts.length === 0) return;
 
         const filters: Record<string, any> = {};
-        console.log('Applied filters:', filters);
+        // console.log('Applied filters:', filters);
         const maxPrice = searchParams.get('maxPrice');
 
         if (maxPrice) {

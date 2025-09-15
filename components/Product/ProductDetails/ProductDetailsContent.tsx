@@ -5,7 +5,6 @@ import { useRouter } from 'next/navigation';
 import { useEffect, useMemo, useState, useCallback, useRef, JSX } from 'react';
 import toast, { Toaster } from 'react-hot-toast';
 import { addToWishlist, removeFromWishlist } from '@/utils/wishlist.utils';
-import { useProfileStore } from '@/store/profile-store';
 import { useWishlistStore } from '@/store/wishlist-store';
 import { useProductStore } from '@/store/product-store';
 import { useCartStore } from '@/store/cart-store';
@@ -31,7 +30,6 @@ export default function ProductDetailsContent({ className, activeVariant }: Prod
   const router = useRouter();
   const { user } = useAuthStore();
   const { isInWishlist, fetchWishlist } = useWishlistStore();
-  const { refetch: refetchProfile } = useProfileStore();
   const { addToCart } = useCartStore();
   const [isAddingToCart, setIsAddingToCart] = useState(false);
   const [isAddingToWishlist, setIsAddingToWishlist] = useState(false);
@@ -420,7 +418,6 @@ export default function ProductDetailsContent({ className, activeVariant }: Prod
       if (result.success) {
         toast.success(isInWishlistStatus ? 'Removed from wishlist!' : 'Added to wishlist!');
         fetchWishlist();
-        refetchProfile?.('profile', userId, true);
       } else {
         toast.error(result.message || `Failed to ${isInWishlistStatus ? 'remove from' : 'add to'} wishlist`);
       }

@@ -107,7 +107,7 @@ export default function Layout({ children }: AdminLayoutProps) {
         <div className="flex h-full flex-col border-r border-gray-200">
           {/* Logo and Close Button */}
           <div className="flex items-center justify-between px-4 py-4">
-            <div className="flex-1 text-center">
+            <Link href={'/'} className="flex-1 text-center">
               <Image
                 src="/logo/logo.png"
                 alt="Computer Garage Logo"
@@ -116,7 +116,7 @@ export default function Layout({ children }: AdminLayoutProps) {
                 className="h-auto w-[200px]"
                 priority
               />
-            </div>
+            </Link>
             <button
               className="p-2 rounded-full hover:bg-gray-100 focus:outline-none focus:ring-2 focus:ring-blue-500 lg:hidden"
               onClick={() => setSidebarOpen(false)}
