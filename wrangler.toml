@@ -1,7 +1,5 @@
-{
-  "name": "360elec-app",
-  "compatibility_date": "2025-09-15",
-  "assets": {
-    "directory": "./next"
-  }
-}
+name = "360electronics-app"
+compatibility_date = "2025-09-15"
+
+[assets]
+directory = "./next"
