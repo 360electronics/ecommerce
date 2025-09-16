@@ -1,3 +1,0 @@
-name = "360electronics-app"
-compatibility_date = "2025-09-15"
-main = "functions/index.js"
