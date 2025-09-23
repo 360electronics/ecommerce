@@ -40,12 +40,12 @@ const ProductSpecsSideImages = () => {
     <div className='flex-col items-center justify-start my-36 gap-10 sticky inset-0 hidden md:flex top-32'>
       {banners.map((banner) => (
         <div key={banner.id}>
-          <Image
+          <img
             src={banner.imageUrls.default}
             alt={banner.title}
             width={300}
             height={450}
-            className='rounded-lg'
+            className='rounded-lg w-full h-full'
           />
         </div>
       ))}

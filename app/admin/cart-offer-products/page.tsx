@@ -405,10 +405,9 @@ export default function CartOfferProductsPage() {
                   />
                   {imagePreview ? (
                     <div className="relative w-48 h-48 mx-auto">
-                      <Image
+                      <img
                         src={imagePreview}
                         alt="Product preview"
-                        fill
                         className="object-contain rounded-lg"
                         sizes="(max-width: 768px) 100vw, 192px"
                       />
@@ -526,11 +525,10 @@ export default function CartOfferProductsPage() {
                     <X className="h-4 w-4" />
                   </button>
                   <div className="relative w-full aspect-[4/3] bg-gradient-to-br from-gray-100 to-gray-200 rounded-t-2xl overflow-hidden">
-                    <Image
+                    <img
                       src={product.productImage ?? '/placeholder.png'}
                       alt={product.productName}
-                      fill
-                      className="object-cover group-hover:scale-105 group-hover:bg-black/10 transition-all duration-300"
+                      className="object-cover w-full h-full group-hover:scale-105 group-hover:bg-black/10 transition-all duration-300"
                       sizes={index % 5 === 0 ? '(max-width: 768px) 100vw, 50vw' : '(max-width: 768px) 100vw, (max-width: 1024px) 50vw, 25vw'}
                     />
                     <div className="absolute top-2 left-2 flex items-center gap-1 px-2 py-1 bg-primary-light text-primary text-xs font-medium rounded-full">
@@ -597,11 +595,10 @@ export default function CartOfferProductsPage() {
                         )}
                       >
                         <div className="relative w-full aspect-[4/3] bg-gradient-to-br from-gray-100 to-gray-200 rounded-t-2xl overflow-hidden">
-                          <Image
+                          <img
                             src={product.productImage ?? '/placeholder.png'}
                             alt={product.productName}
-                            fill
-                            className="object-cover group-hover:scale-105 group-hover:bg-black/10 transition-all duration-300"
+                            className="object-cover w-full h-full group-hover:scale-105 group-hover:bg-black/10 transition-all duration-300"
                             sizes={index % 5 === 0 ? '(max-width: 768px) 100vw, 50vw' : '(max-width: 768px) 100vw, (max-width: 1024px) 50vw, 25vw'}
                           />
                           <div className="absolute top-2 left-2 flex items-center gap-1 px-2 py-1 bg-primary-light text-primary text-xs font-medium rounded-full">

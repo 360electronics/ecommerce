@@ -194,15 +194,12 @@ const ProductCardwithoutCart: React.FC<ProductCardProps> = ({
               Coming Soon
             </div>
           )}
-          <Image
+          <img
             src={image || '/placeholder.png'}
             alt={name || 'Product'}
-            fill
-            className="max-h-full max-w-full object-contain p-3 sm:p-6 group-hover:scale-105 duration-200 mix-blend-multiply"
+            className="max-h-full max-w-full w-full h-full object-contain p-3 sm:p-6 group-hover:scale-105 duration-200 mix-blend-multiply"
             sizes="(max-width: 640px) 50vw, (max-width: 768px) 33vw, (max-width: 1200px) 25vw, 20vw"
             style={{ objectFit: 'contain' }}
-            priority={false}
-            quality={75}
           />
         </div>
 

@@ -1,4 +1,3 @@
-// store/home-store.ts
 'use client';
 
 import { create } from 'zustand';
@@ -123,6 +122,11 @@ export const useHomeStore = create<HomeState>()(
     {
       name: 'home-store',
       storage: createJSONStorage(() => localStorage),
+      // only persist these fields
+      partialize: (state) => ({
+        lastFetched: state.lastFetched,
+        error: state.error,
+      }),
     }
   )
 );

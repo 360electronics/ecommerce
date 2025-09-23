@@ -44,14 +44,11 @@ export default function ProductImageGallery({ activeVariant }: ProductImageGalle
     return (
       <div className="flex flex-col gap-4">
         <div className="relative w-full aspect-square border rounded-lg overflow-hidden bg-gray-100">
-          <Image
+          <img
             src="/placeholder.svg"
             alt="Product placeholder"
-            fill
             sizes="(max-width: 768px) 100vw, 40vw"
-            className="object-contain"
-            placeholder="blur"
-            blurDataURL="/placeholder.svg"
+            className="object-contain w-full h-full"
           />
         </div>
         <div className="flex gap-2 overflow-x-auto">
@@ -80,19 +77,12 @@ export default function ProductImageGallery({ activeVariant }: ProductImageGalle
         onMouseEnter={handleMouseEnter}
         onMouseLeave={handleMouseLeave}
       >
-        <Image
+        <img
           src={currentImage.url || '/placeholder.svg'}
           alt={currentImage.alt || activeVariant.name || 'Product image'}
-          fill
           sizes="(max-width: 768px) 100vw, (max-width: 1024px) 50vw, 40vw"
-          className="object-contain mix-blend-multiply p-10"
-          priority={validIndex === 0}
-          placeholder="blur"
-          blurDataURL="/placeholder.svg"
-          onError={(e) => {
-            e.currentTarget.srcset = '';
-            e.currentTarget.src = '/placeholder.svg';
-          }}
+          loading='lazy'
+          className="object-contain mix-blend-multiply p-10 w-full h-full"
         />
       </div>
 
@@ -108,18 +98,12 @@ export default function ProductImageGallery({ activeVariant }: ProductImageGalle
             onClick={() => setSelectedImageIndex(index)}
             aria-label={`Select ${activeVariant.name} image ${image.alt || index + 1}`}
           >
-            <Image
+            <img
               src={image.url || '/placeholder.svg'}
               alt={`${activeVariant.name} thumbnail ${image.alt || index + 1}`}
-              fill
               sizes="64px"
-              className="object-cover p-2"
-              placeholder="blur"
-              blurDataURL="/placeholder.svg"
-              onError={(e) => {
-                e.currentTarget.srcset = '';
-                e.currentTarget.src = '/placeholder.svg';
-              }}
+              className="object-cover p-2 w-full h-full"
+              loading='lazy'
             />
           </button>
         ))}

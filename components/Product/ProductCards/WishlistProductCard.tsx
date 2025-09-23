@@ -214,11 +214,10 @@ const WishlistProductCard: React.FC<ProductCardProps> = ({
 
         {/* Product Image */}
         <div className="mb-4 relative w-full aspect-square border group border-gray-100 rounded-md bg-[#F4F4F4] overflow-hidden">
-          <Image
+          <img
             src={image || '/placeholder.png'}
             alt={name || 'Product'}
-            fill
-            className="max-h-full max-w-full object-contain p-6 group-hover:scale-105 duration-200 mix-blend-multiply"
+            className="max-h-full max-w-full w-full h-full object-contain p-6 group-hover:scale-105 duration-200 mix-blend-multiply"
             sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 33vw"
             style={{ objectFit: 'contain' }}
           />

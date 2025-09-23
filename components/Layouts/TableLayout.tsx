@@ -406,11 +406,10 @@ export function EnhancedTable<T extends Record<string, any>>({
       ) {
         return (
           <div className="relative h-12 w-12 overflow-hidden rounded-lg border border-gray-200 ">
-            <Image
+            <img
               src={value || "/placeholder.svg?height=48&width=48&query=product"}
               alt={String(item.name || item.title || "Thumbnail")}
-              fill
-              className="object-cover transition-transform duration-300 group-hover:scale-105"
+              className="object-cover w-full h-full transition-transform duration-300 group-hover:scale-105"
             />
           </div>
         )

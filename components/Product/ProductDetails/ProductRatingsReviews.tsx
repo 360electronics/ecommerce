@@ -402,11 +402,10 @@ export default function ProductRatingsReviews({ className }: ProductRatingsRevie
                       className="w-40 h-40 border rounded overflow-hidden cursor-pointer relative"
                       onClick={() => handleCustomerImageClick(image)}
                     >
-                      <Image
+                      <img
                         src={image.url || DEFAULT_IMAGE}
                         alt={image.alt}
-                        fill
-                        className="object-cover"
+                        className="object-cover w-full h-full"
                       />
                     </div>
                   ))}
@@ -423,11 +422,10 @@ export default function ProductRatingsReviews({ className }: ProductRatingsRevie
                   <div key={review.id} className="border-b pb-2">
                     <div className="flex gap-2">
                       <div className="w-8 h-8 rounded-full overflow-hidden bg-gray-200 relative">
-                        <Image
+                        <img
                           src={DEFAULT_AVATAR}
                           alt="Avatar"
-                          fill
-                          className="object-cover"
+                          className="object-cover w-full h-full"
                         />
                       </div>
                       <div className="flex-1">
@@ -480,11 +478,10 @@ export default function ProductRatingsReviews({ className }: ProductRatingsRevie
                                 className="w-16 h-16 border rounded overflow-hidden cursor-pointer relative"
                                 onClick={() => handleImageClick(review, index)}
                               >
-                                <Image
+                                <img
                                   src={image.url || DEFAULT_IMAGE}
                                   alt={image.alt}
-                                  fill
-                                  className="object-cover"
+                                  className="object-cover w-full h-full"
                                 />
                               </div>
                             ))}
