@@ -14,27 +14,22 @@ export default function NotFoundPage() {
                 <div className="w-full max-w-md text-center space-y-8">
                     {/* Logo */}
                     <div className="flex justify-center">
-                        <Image
+                        <img
                             src="/logo/360.svg"
                             alt="Computer Garage Logo"
                             width={180}
                             height={54}
-                            priority
                             className="object-contain"
                         />
                     </div>
 
                     {/* 404 Illustration */}
                     <div className="relative w-48 h-48 mx-auto">
-                        <Image
+                        <img
                             src="/placeholder.svg"
                             alt="404 Not Found"
-                            fill
                             sizes="100vw"
                             className="object-contain"
-                            priority
-                            placeholder="blur"
-                            blurDataURL="/placeholder.svg"
                         />
                     </div>
 

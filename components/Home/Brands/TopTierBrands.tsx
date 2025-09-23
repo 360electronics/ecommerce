@@ -51,17 +51,11 @@ const BrandLogo: React.FC<BrandLogoProps> = memo(({ name, logoSrc, isActive, onC
       aria-pressed={isActive}
     >
       <div className="w-10 h-10 sm:w-12 sm:h-12 md:w-16 md:h-16 relative flex items-center justify-center">
-        <Image
+        <img
           src={logoSrc}
           alt={`${name} logo`}
-          fill
           className="object-contain w-full h-full"
-          priority={name === 'apple'}
           loading={name === 'apple' ? 'eager' : 'lazy'}
-          onError={(e) => {
-            console.warn(`[BRAND_LOGO_ERROR] Failed to load logo for ${name}: ${logoSrc}`);
-            e.currentTarget.src = '/placeholder.png';
-          }}
         />
       </div>
     </button>

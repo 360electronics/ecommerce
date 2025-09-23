@@ -395,11 +395,10 @@ const CartPage: React.FC = ({ initialCartItems }:any) => {
                         </div>
                         <div className="flex items-center gap-4">
                           <div className="relative w-16 h-16">
-                            <Image
+                            <img
                               src={item.offerProduct.productImage || '/placeholder.png'}
                               alt={item.offerProduct.productName}
-                              fill
-                              className="object-cover rounded-md"
+                              className="object-cover rounded-md  w-full h-full aspect-square"
                             />
                           </div>
                           <div className="flex-1">
@@ -433,11 +432,10 @@ const CartPage: React.FC = ({ initialCartItems }:any) => {
                             className="relative bg-white border border-gray-200 rounded-lg p-4"
                           >
                             <div className="relative w-full aspect-square mb-2">
-                              <Image
+                              <img
                                 src={product.productImage || '/placeholder.png'}
                                 alt={product.productName}
-                                fill
-                                className="object-cover rounded-md"
+                                className="object-cover rounded-md w-full h-full aspect-square"
                               />
                             </div>
                             <h3 className="text-sm font-medium text-gray-900 line-clamp-2 mb-2">

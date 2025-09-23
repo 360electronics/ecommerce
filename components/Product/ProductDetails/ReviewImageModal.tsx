@@ -74,13 +74,11 @@ export default function ReviewImageModal({ isOpen, onClose, review, initialImage
               <div className="w-8 h-8 border-4 border-gray-300 border-t-blue-500 rounded-full animate-spin"></div>
             </div>
           )}
-          <Image
+          <img
             src={currentImage.url || "https://avatar.iran.liara.run/public"}
             alt={currentImage.alt || "Image"}
-            fill
-            className="object-contain"
-            onLoad={() => setIsLoading(false)}
-            priority
+            
+            className="object-contain aspect-square w-full h-full"
           />
           {review.images.length > 1 && (
             <>
@@ -109,11 +107,11 @@ export default function ReviewImageModal({ isOpen, onClose, review, initialImage
         <div className="p-4 md:w-1/3 overflow-y-auto text-sm">
           <div className="flex items-center gap-2 mb-2">
             <div className="w-8 h-8 rounded-full overflow-hidden bg-gray-200 relative">
-              <Image
+              <img
                 src="https://avatar.iran.liara.run/public"
                 alt="Avatar"
-                fill
-                className="object-cover"
+                
+                className="object-cover aspect-square w-full h-full"
               />
             </div>
             <div>

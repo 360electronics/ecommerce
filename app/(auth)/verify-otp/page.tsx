@@ -17,7 +17,6 @@ interface ImageUrls {
   lg?: string;
 }
 
-
 interface Banner {
   id: string;
   title: string;
@@ -61,11 +60,11 @@ function VerifyOTPContent() {
   const inputRefs = useRef<(HTMLInputElement | null)[]>(Array(6).fill(null));
   const { setAuth } = useAuthStore();
 
-
   // Extract params from URL
   useEffect(() => {
     const userIdParam = searchParams.get("userId");
-    const typeParam = (searchParams.get("type") as "email" | "phone") || "email";
+    const typeParam =
+      (searchParams.get("type") as "email" | "phone") || "email";
 
     if (!userIdParam) {
       toast.error("Invalid request: Missing user ID");
@@ -94,15 +93,15 @@ function VerifyOTPContent() {
       const responseData = await response.json();
       const transformedBanners: Banner[] = Array.isArray(responseData.data)
         ? responseData.data.map((item: any) => ({
-          id: item.id,
-          title: item.title,
-          imageUrls: item.imageUrls,
-          type: item.type,
-          active: item.status === "active",
-          startDate: item.start_date || "",
-          endDate: item.end_date || "",
-          link: item.link || "",
-        }))
+            id: item.id,
+            title: item.title,
+            imageUrls: item.imageUrls,
+            type: item.type,
+            active: item.status === "active",
+            startDate: item.start_date || "",
+            endDate: item.end_date || "",
+            link: item.link || "",
+          }))
         : [];
       const activeRegisterBanner = transformedBanners.find(
         (banner) => banner.type === "register" && banner.active
@@ -146,7 +145,10 @@ function VerifyOTPContent() {
   // Handle paste
   const handlePaste = (e: React.ClipboardEvent<HTMLInputElement>) => {
     e.preventDefault();
-    const pastedData = e.clipboardData.getData("text").replace(/\D/g, "").slice(0, 6);
+    const pastedData = e.clipboardData
+      .getData("text")
+      .replace(/\D/g, "")
+      .slice(0, 6);
     const newOTP = [...otp];
     for (let i = 0; i < pastedData.length; i++) {
       newOTP[i] = pastedData[i];
@@ -211,8 +213,11 @@ function VerifyOTPContent() {
           useCheckoutStore.getState().fetchCheckoutItems(data.user.id),
         ]);
         results.forEach((result, index) => {
-          if (result.status === 'rejected') {
-            console.log(`[VerifyOTPContent] Fetch[${index}] failed:`, result.reason);
+          if (result.status === "rejected") {
+            console.log(
+              `[VerifyOTPContent] Fetch[${index}] failed:`,
+              result.reason
+            );
           } else {
             console.log(`[VerifyOTPContent] Fetch[${index}] succeeded`);
           }
@@ -227,14 +232,14 @@ function VerifyOTPContent() {
         window.location.href = "/";
       }
     } catch (err: unknown) {
-      const errorMessage = err instanceof Error ? err.message : "Failed to verify OTP";
+      const errorMessage =
+        err instanceof Error ? err.message : "Failed to verify OTP";
       setError(errorMessage);
       toast.error(errorMessage);
     } finally {
       setLoading(false);
     }
   };
-
 
   // Handle resend OTP
   const handleResend = async () => {
@@ -263,7 +268,8 @@ function VerifyOTPContent() {
       setCountdown(30);
       toast.success("OTP resent successfully!");
     } catch (err: unknown) {
-      const errorMessage = err instanceof Error ? err.message : "Failed to resend OTP";
+      const errorMessage =
+        err instanceof Error ? err.message : "Failed to resend OTP";
       setError(errorMessage);
       toast.error(errorMessage);
     } finally {
@@ -276,8 +282,13 @@ function VerifyOTPContent() {
       <div className="flex min-h-screen bg-gray-50 items-center justify-center p-6">
         <div className="text-center">
           <h1 className="text-2xl font-bold text-red-600">Invalid Request</h1>
-          <p className="mt-2 text-gray-600">Missing user ID. Please try again.</p>
-          <Link href="/signin" className="text-primary hover:underline mt-4 inline-block">
+          <p className="mt-2 text-gray-600">
+            Missing user ID. Please try again.
+          </p>
+          <Link
+            href="/signin"
+            className="text-primary hover:underline mt-4 inline-block"
+          >
             Back to Login
           </Link>
         </div>
@@ -289,21 +300,12 @@ function VerifyOTPContent() {
     <div className="flex min-h-screen bg-gray-50">
       {/* Banner Section */}
       <div className="hidden md:block w-full md:w-[40%] relative">
-
-        <Link href={banner?.link || "#"} className="block w-full h-full">
-          <Image
-            src={banner?.imageUrls.default || "/auth_placeholder.webp"}
-            alt={banner?.title || "Promotional Banner"}
-            fill
-            sizes="40vw"
-            quality={100}
-            className="object-cover"
-            priority
-            placeholder="blur"
-            blurDataURL="/auth_placeholder.webp"
-            onError={() => setBanner(null)}
-          />
-        </Link>
+        <img
+          src={banner?.imageUrls.default || "/auth_placeholder.webp"}
+          alt={banner?.title || "Promotional Banner"}
+          sizes="40vw"
+          className="object-cover w-full h-full aspect-[3/4] sticky top-0"
+        />
       </div>
 
       {/* Form Section */}
@@ -311,12 +313,11 @@ function VerifyOTPContent() {
         <div className="w-full max-w-md space-y-8">
           {/* Logo */}
           <div className="flex justify-center">
-            <Image
+            <img
               src="/logo/logo.png"
               alt="Computer Garage Logo"
               width={180}
               height={54}
-              priority
               className="object-contain"
             />
           </div>
@@ -328,7 +329,8 @@ function VerifyOTPContent() {
 
           {/* Description */}
           <p className="text-center text-gray-600">
-            Enter the 6-digit OTP sent to your {type === "email" ? "email" : "phone"}.
+            Enter the 6-digit OTP sent to your{" "}
+            {type === "email" ? "email" : "phone"}.
           </p>
 
           {/* Error Message */}
@@ -430,7 +432,8 @@ function VerifyOTPContent() {
                 "w-full py-3 px-4 rounded-md font-medium",
                 "bg-gray-200 hover:bg-gray-300 focus:outline-none focus:ring-2 focus:ring-gray-500",
                 "transition duration-300",
-                (resendLoading || countdown > 0) && "bg-gray-300 cursor-not-allowed"
+                (resendLoading || countdown > 0) &&
+                  "bg-gray-300 cursor-not-allowed"
               )}
             >
               {resendLoading ? (
@@ -466,7 +469,10 @@ function VerifyOTPContent() {
           {/* Back to Login */}
           <div className="text-center text-sm text-gray-600">
             <p>
-              <Link href="/signin" className="text-primary font-semibold hover:underline">
+              <Link
+                href="/signin"
+                className="text-primary font-semibold hover:underline"
+              >
                 Back to Sign In
               </Link>
             </p>
@@ -479,7 +485,13 @@ function VerifyOTPContent() {
 
 export default function VerifyOTPPage() {
   return (
-    <Suspense fallback={<div className="min-h-screen bg-gray-50 flex items-center justify-center">Loading...</div>}>
+    <Suspense
+      fallback={
+        <div className="min-h-screen bg-gray-50 flex items-center justify-center">
+          Loading...
+        </div>
+      }
+    >
       <VerifyOTPContent />
     </Suspense>
   );

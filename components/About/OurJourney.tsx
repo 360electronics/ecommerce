@@ -92,7 +92,7 @@ const OurJourney = () => {
                                     <div className="relative h-full w-full flex items-center justify-center">
                                         <div className="w-full ml-6 relative rounded-[20px] p-4 flex items-center justify-center">
                                             <div className="w-full h-full relative rounded-[16px] overflow-hidden">
-                                                <Image
+                                                <img
                                                     src={item.image}
                                                     alt={`${item.title} image`}
                                                     width={500}

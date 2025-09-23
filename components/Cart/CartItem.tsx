@@ -71,7 +71,7 @@ export const CartItemComponent: React.FC<{
             Offer Product
           </span>
         )}
-        <Image
+        <img
           src={item.variant.productImages?.[0].url ?? '/images/placeholder.jpg'}
           alt={`${item.product.shortName} (${item.variant.name})`}
           width={150}

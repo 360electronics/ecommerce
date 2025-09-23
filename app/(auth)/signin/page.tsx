@@ -137,17 +137,11 @@ export default function LoginPage() {
       <div className="hidden md:block w-full md:w-[40%] relative">
    
           <Link href={banner?.link || "#"} className="block w-full h-full">
-            <Image
+            <img
               src={banner?.imageUrls.default || "/auth_placeholder.webp"}
               alt={banner?.title || "Promotional Banner"}
-              fill
               sizes="40vw"
-              quality={100}
-              className="object-cover"
-              priority
-              placeholder="blur"
-              blurDataURL="/auth_placeholder.webp"
-              onError={() => setBanner(null)} // Fallback to null on error
+              className="object-cover w-full h-full aspect-[3/4]"
             />
           </Link>
       </div>
@@ -157,12 +151,11 @@ export default function LoginPage() {
         <div className="w-full max-w-md space-y-8">
           {/* Logo */}
           <div className="flex justify-center">
-            <Image
+            <img
               src="/logo/logo.png"
               alt="Computer Garage Logo"
               width={180}
               height={54}
-              priority
               className="object-contain"
             />
           </div>

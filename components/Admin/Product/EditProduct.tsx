@@ -1357,11 +1357,10 @@ export default function EditProductPage({ id }: { id: string }) {
                         >
                           {previewUrls[variant.id]?.[0] ? (
                             <div className="relative h-full w-full">
-                              <Image
+                              <img
                                 src={previewUrls[variant.id][0]}
                                 alt={`Main image for variant ${variantIndex + 1}`}
-                                fill
-                                className="object-contain p-2"
+                                className="object-contain p-2 h-full w-full aspect-square"
                               />
                               <button
                                 type="button"
@@ -1404,11 +1403,10 @@ export default function EditProductPage({ id }: { id: string }) {
                           >
                             {previewUrls[variant.id]?.[index + 1] ? (
                               <div className="relative h-full w-full">
-                                <Image
+                                <img
                                   src={previewUrls[variant.id][index + 1]}
                                   alt={`Additional image ${index + 1}`}
-                                  fill
-                                  className="object-contain p-2"
+                                  className="object-contain p-2 h-full w-full aspect-square"
                                 />
                                 <button
                                   type="button"

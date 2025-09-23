@@ -183,7 +183,7 @@ export default function WriteReviewModal({ isOpen, onClose, onSubmit, initialDat
               <div className="mt-2 flex gap-2">
                 {imagePreviewUrls.map((url, index) => (
                   <div key={index} className="relative w-12 h-12 border rounded overflow-hidden">
-                    <Image src={url} alt={`Preview ${index + 1}`} fill className="object-cover" />
+                    <img src={url} alt={`Preview ${index + 1}`}  className="object-cover w-full h-full" />
                     <button
                       onClick={() => handleRemoveImage(index)}
                       className="absolute top-0 right-0 bg-red-500 text-white p-0.5 text-xs"

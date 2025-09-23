@@ -6,35 +6,37 @@ const nextConfig: NextConfig = {
   images: {
     remotePatterns: [
       {
-        protocol: "https", 
+        protocol: "https",
         hostname: "img.icons8.com",
       },
       {
-        protocol: "https", 
+        protocol: "https",
         hostname: "press.asus.com",
       },
       {
-        protocol: "https", 
+        protocol: "https",
         hostname: "1000logos.net",
       },
       {
-        protocol: "https", 
+        protocol: "https",
         hostname: "img.freepik.com",
       },
       {
-        protocol: "https", 
+        protocol: "https",
         hostname: "avatar.iran.liara.run",
       },
       {
-        protocol: "https", 
+        protocol: "https",
         hostname: "i.pravatar.cc",
       },
       {
-        protocol: "https", 
+        protocol: "https",
         hostname: "assets.360electronics.in",
       },
     ],
+    unoptimized: true,
   },
+  devIndicators: false,
 };
 
 export default nextConfig;

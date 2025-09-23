@@ -80,7 +80,7 @@ function SignupForm({ referralCode = "" }) {
       );
       setBanner(activeRegisterBanner || null);
 
-      console.log(activeRegisterBanner)
+      console.log(activeRegisterBanner);
     } catch (error) {
       console.error("Error fetching banners:", error);
       toast.error("Failed to load banner.");
@@ -94,43 +94,37 @@ function SignupForm({ referralCode = "" }) {
   }, [fetchBanners]);
 
   // Handle input changes
-  const handleChange = useCallback(
-    (e: React.ChangeEvent<HTMLInputElement>) => {
-      setFormData((prev) => ({
-        ...prev,
-        [e.target.name]: e.target.value.trim(),
-      }));
-    },
-    []
-  );
+  const handleChange = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
+    setFormData((prev) => ({
+      ...prev,
+      [e.target.name]: e.target.value.trim(),
+    }));
+  }, []);
 
   // Validate form data
-  const validateForm = useCallback(
-    (data: SignupFormData): string | null => {
-      const nameRegex = /^[A-Za-z\s]{2,}$/;
-      const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-      const phoneRegex = /^\+?[\d\s-]{10,}$/;
-      const referralCodeRegex = /^[A-Z0-9]{10}$/;
+  const validateForm = useCallback((data: SignupFormData): string | null => {
+    const nameRegex = /^[A-Za-z\s]{2,}$/;
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    const phoneRegex = /^\+?[\d\s-]{10,}$/;
+    const referralCodeRegex = /^[A-Z0-9]{10}$/;
 
-      if (!nameRegex.test(data.firstName)) {
-        return "First name must be at least 2 characters and contain only letters";
-      }
-      if (!nameRegex.test(data.lastName)) {
-        return "Last name must be at least 2 characters and contain only letters";
-      }
-      if (!emailRegex.test(data.email)) {
-        return "Please enter a valid email address";
-      }
-      if (!phoneRegex.test(data.phoneNumber)) {
-        return "Please enter a valid phone number (at least 10 digits)";
-      }
-      if (data.referralCode && !referralCodeRegex.test(data.referralCode)) {
-        return "Referral code must be 10 alphanumeric characters";
-      }
-      return null;
-    },
-    []
-  );
+    if (!nameRegex.test(data.firstName)) {
+      return "First name must be at least 2 characters and contain only letters";
+    }
+    if (!nameRegex.test(data.lastName)) {
+      return "Last name must be at least 2 characters and contain only letters";
+    }
+    if (!emailRegex.test(data.email)) {
+      return "Please enter a valid email address";
+    }
+    if (!phoneRegex.test(data.phoneNumber)) {
+      return "Please enter a valid phone number (at least 10 digits)";
+    }
+    if (data.referralCode && !referralCodeRegex.test(data.referralCode)) {
+      return "Referral code must be 10 alphanumeric characters";
+    }
+    return null;
+  }, []);
 
   // Handle form submission
   const handleSubmit = async (e: React.FormEvent) => {
@@ -162,7 +156,8 @@ function SignupForm({ referralCode = "" }) {
       toast.success("Signup successful! OTP sent to your email/phone.");
       router.push(`/verify-otp?userId=${data.userId}`);
     } catch (err: unknown) {
-      const errorMessage = err instanceof Error ? err.message : "An unexpected error occurred";
+      const errorMessage =
+        err instanceof Error ? err.message : "An unexpected error occurred";
       setError(errorMessage);
       toast.error(errorMessage);
     } finally {
@@ -174,21 +169,12 @@ function SignupForm({ referralCode = "" }) {
     <div className="flex min-h-screen bg-gray-50">
       {/* Banner Section */}
       <div className="hidden md:block w-full md:w-[40%] relative">
-        
-          <Link href={banner?.link || "#"} className="block w-full h-full">
-            <Image
-              src={banner?.imageUrls.default || "/auth_placeholder.webp"}
-              alt={banner?.title || "Promotional Banner"}
-              fill
-              sizes="40vw"
-              quality={100}
-              className="object-cover"
-              priority
-              placeholder="blur"
-              blurDataURL="/auth_placeholder.webp"
-              onError={() => setBanner(null)}
-            />
-          </Link>
+        <img
+          src={banner?.imageUrls.default || "/auth_placeholder.webp"}
+          alt={banner?.title || "Promotional Banner"}
+          sizes="40vw"
+          className="object-cover w-full h-full aspect-[3/4] sticky top-0"
+        />
       </div>
 
       {/* Form Section */}
@@ -196,12 +182,11 @@ function SignupForm({ referralCode = "" }) {
         <div className="w-full max-w-md space-y-8">
           {/* Logo */}
           <div className="flex justify-center">
-            <Image
+            <img
               src="/logo/logo.png"
               alt="Computer Garage Logo"
               width={180}
               height={54}
-              priority
               className="object-contain"
             />
           </div>
@@ -373,10 +358,17 @@ function SignupForm({ referralCode = "" }) {
                 placeholder="Enter referral code"
                 disabled={loading}
                 aria-invalid={!!error && error.includes("Referral code")}
-                aria-describedby={error && error.includes("Referral code") ? "referralCode-error" : undefined}
+                aria-describedby={
+                  error && error.includes("Referral code")
+                    ? "referralCode-error"
+                    : undefined
+                }
               />
               {error && error.includes("Referral code") && (
-                <p id="referralCode-error" className="mt-1 text-sm text-red-600">
+                <p
+                  id="referralCode-error"
+                  className="mt-1 text-sm text-red-600"
+                >
                   {error}
                 </p>
               )}
@@ -442,7 +434,8 @@ function SignupForm({ referralCode = "" }) {
             and{" "}
             <Link href="/privacy" className="text-primary hover:underline">
               Privacy Policy
-            </Link>.
+            </Link>
+            .
           </div>
         </div>
       </div>
@@ -460,14 +453,16 @@ export default function SignupPage() {
   }
 
   return (
-    <Suspense fallback={
-      <div className="flex min-h-screen bg-gray-50 items-center justify-center">
-        <div className="text-center">
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary mx-auto"></div>
-          <p className="mt-4 text-gray-600">Loading...</p>
+    <Suspense
+      fallback={
+        <div className="flex min-h-screen bg-gray-50 items-center justify-center">
+          <div className="text-center">
+            <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary mx-auto"></div>
+            <p className="mt-4 text-gray-600">Loading...</p>
+          </div>
         </div>
-      </div>
-    }>
+      }
+    >
       <SearchParamsHandler />
     </Suspense>
   );

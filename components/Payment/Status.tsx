@@ -210,7 +210,7 @@ export default function PaymentStatusPage() {
       {/* Header */}
       <div className="bg-gradient-to-r from-primary/5 via-transparent to-transparent">
         <div className="mx-auto max-w-6xl px-4 py-4 flex items-center justify-between">
-          <Image src={"/logo/logo.png"} alt="Logo" width={120} height={120} />
+          <img src={"/logo/logo.png"} alt="Logo" width={120} height={120} />
           <div className="flex items-center gap-2 text-xs sm:text-sm text-muted-foreground">
             <span className="hidden sm:inline">Checkout</span>
             <ChevronRight className="h-4 w-4 hidden sm:block" />

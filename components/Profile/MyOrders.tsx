@@ -135,7 +135,7 @@ export default function Orders() {
                         >
                           <div className="flex-shrink-0">
                             {item.variant && item.variant.productImages?.[0] ? (
-                              <Image
+                              <img
                                 src={item.variant.productImages[0].url}
                                 alt={item.variant.name || 'Product'}
                                 width={80}

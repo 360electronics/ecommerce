@@ -26,6 +26,7 @@ interface Address {
 }
 
 
+
 const CheckoutPage: React.FC = () => {
   const { isLoggedIn, isLoading, user } = useAuthStore();
   const { checkoutItems, fetchCheckoutItems, clearCheckout } = useCheckoutStore();

@@ -186,7 +186,7 @@ export default function Referrals() {
                       className="inline-flex items-center text-sm font-medium rounded-md text-gray-700 cursor-pointer "
                       aria-label={`Share referral link on ${platform}`}
                     >
-                      <Image
+                      <img
                         src={`https://img.icons8.com/?size=100&id=${
                           platform === 'facebook' ? 'uLWV5A9vXIPu' :
                           platform === 'twitter' ? 'phOKFKYpe00C' :

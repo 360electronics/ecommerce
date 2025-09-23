@@ -674,11 +674,10 @@ function VariantCard({ selection, onSelect, actionLabel, actionVariant }: Varian
         }}
       >
         <div className="relative w-full aspect-square bg-gray-50">
-          <Image
+          <img
             src={selection.variant.productImages?.[0]?.url ?? '/placeholder.png'}
             alt={selection.variant.productImages?.[0]?.alt ?? selection.displayName}
-            fill
-            className="object-contain p-6 group-hover:scale-105 transition-transform duration-200"
+            className="object-contain w-full h-full aspect-square p-6 group-hover:scale-105 transition-transform duration-200"
             sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 33vw"
           />
           {discount && (

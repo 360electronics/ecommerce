@@ -37,6 +37,7 @@ export default function ProductImageGallery({ activeVariant }: ProductImageGalle
     setLensPosition({ x: 0, y: 0 });
   };
 
+
   // Render a placeholder if no images
   if (!activeVariant.productImages || activeVariant.productImages.length === 0) {
     return (

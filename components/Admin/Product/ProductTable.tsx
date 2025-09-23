@@ -279,15 +279,13 @@ export function ProductsTable() {
       renderCell: (_, row) => {
         const featuredImage = row.productImages.find((img) => img.isFeatured) || row.productImages[0];
         return featuredImage ? (
-          <Image
+          <img
             src={featuredImage.url}
             alt={featuredImage.alt}
             width={60}
             height={60}
-            className="object-contain rounded-md"
-            onError={(e) => {
-              (e.target as HTMLImageElement).src = "/placeholder-product.png";
-            }}
+            loading="lazy"
+            className="object-contain rounded-md aspect-square w-full h-full"
           />
         ) : (
           <div className="bg-gray-100 w-12 h-12 rounded-md flex items-center justify-center">

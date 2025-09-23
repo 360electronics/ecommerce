@@ -12,7 +12,7 @@ const ContactPage: React.FC = () => {
         <UserLayout isCategory={false}>
             {/* Hero Banner - Full Width at Top */}
             <div className='relative'>
-                <Image 
+                <img 
                     src="/contact/banner.png" 
                     width={500} 
                     height={500} 

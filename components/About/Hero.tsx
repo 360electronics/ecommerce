@@ -56,7 +56,7 @@ const HeroSection = () => {
             </div>
 
             <div className='lg:hidden '>
-                <Image
+                <img
                     src="/about/bannerImg.jpg" 
                     width="1328"
                     height="324"

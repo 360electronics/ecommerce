@@ -586,11 +586,10 @@ const PromotionalBannersPage: React.FC = () => {
               <picture>
                 {lg && <source srcSet={lg} media="(min-width: 1024px)" />}
                 {sm && <source srcSet={sm} media="(min-width: 640px)" />}
-                <Image
+                <img
                   src={defaultUrl}
                   alt={banner.title}
-                  fill
-                  className="object-contain rounded-lg"
+                  className="object-contain rounded-lg w-full h-full aspect-video"
                   sizes="(max-width: 768px) 100vw, 200px"
                 />
               </picture>
@@ -807,11 +806,10 @@ const PromotionalBannersPage: React.FC = () => {
                     aria-label={`${variant} video preview`}
                   />
                 ) : (
-                  <Image
+                  <img
                     src={imagePreviews[variant]!}
                     alt={`${variant} image preview`}
-                    fill
-                    className="object-contain rounded-lg"
+                    className="object-contain rounded-lg w-full h-full"
                     sizes="(max-width: 768px) 100vw, 50vw"
                   />
                 )}

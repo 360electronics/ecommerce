@@ -18,14 +18,11 @@ const OfferZoneCTA: React.FC = () => {
 
   return (
     <div className="py-8 my-10 px-4 rounded-xl max-h-[300px] relative overflow-hidden">
-      <Image
+      <img
         src={selectedImage ?? '/placeholder.svg'}
         alt={ctaBanner?.title || 'Offer Zone Banner'}
-        fill
-        className="object-cover object-right sm:object-center"
-        quality={85}
-        priority={false}
-        onError={() => console.error('Failed to load image:', selectedImage)}
+      
+        className="object-cover object-right sm:object-center w-full h-full absolute inset-0"
       />
       <div className="absolute inset-0 bg-black/40   md:bg-black/20 rounded-xl z-10" />
       <div className="relative px-10 mx-auto flex flex-col md:flex-row items-center justify-center md:justify-between z-20">

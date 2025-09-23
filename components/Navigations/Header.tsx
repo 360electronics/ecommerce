@@ -336,13 +336,12 @@ const Header = ({ isCategory = true }: HeaderProps) => {
               {isMenuOpen ? <X size={24} /> : <Menu size={24} />}
             </button>
             <Link href="/" className="flex-shrink-0">
-              <Image
+              <img
                 src="/logo/logo.png"
                 alt="Computer 360 Logo"
                 width={150}
                 height={150}
                 className="h-auto w-[120px]"
-                priority
               />
             </Link>
           </div>
@@ -588,7 +587,7 @@ const Header = ({ isCategory = true }: HeaderProps) => {
                             {/* Category Image */}
                             <div className=" absolute bottom-10 w-full max-w-md">
                               {categoryImages[category.name] && (
-                                <Image
+                                <img
                                   src={categoryImages[category.name]}
                                   alt={category.name}
                                   width={500}
