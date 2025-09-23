@@ -19,7 +19,7 @@ export const orders = pgTable(
     cashfreeOrderId: varchar("cashfree_order_id", { length: 255 }),
     cashfreePaymentId: varchar("cashfree_payment_id", { length: 255 }),
     status: varchar("status", {
-      enum: ["pending", "confirmed", "shipped", "delivered", "cancelled", "returned"],
+      enum: ["pending", "confirmed", "shipped", "delivered", "cancelled", "returned", "failed"],
     })
       .default("pending")
       .notNull(),

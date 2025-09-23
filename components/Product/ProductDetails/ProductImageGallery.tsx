@@ -1,6 +1,4 @@
-// ProductImageGallery.tsx
 'use client';
-import Image from 'next/image';
 import { cn } from '@/lib/utils';
 import { useState, useRef, useEffect } from 'react';
 import { useProductStore } from '@/store/product-store';
@@ -81,8 +79,7 @@ export default function ProductImageGallery({ activeVariant }: ProductImageGalle
           src={currentImage.url || '/placeholder.svg'}
           alt={currentImage.alt || activeVariant.name || 'Product image'}
           sizes="(max-width: 768px) 100vw, (max-width: 1024px) 50vw, 40vw"
-          loading='lazy'
-          className="object-contain mix-blend-multiply p-10 w-full h-full"
+          className=" mix-blend-multiply p-10 aspect-square object-contain w-full h-full"
         />
       </div>
 
