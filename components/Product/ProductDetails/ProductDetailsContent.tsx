@@ -512,17 +512,13 @@ export default function ProductDetailsContent({ className, activeVariant }: Prod
 
     if (!isValidSelection) {
       const newAttributes = attributeKeys.reduce((acc, key) => {
-        acc[key] = String(currentVariant.attributes[key] || '');
+        acc[key] = normalizeValue(String(currentVariant.attributes[key] || ''));
         return acc;
       }, {} as Record<string, string | number | boolean>);
       setSelectedAttributes(newAttributes);
     }
   }, [product?.productParent?.variants, attributeKeys, setSelectedAttributes, selectedAttributes, product?.id]);
 
-  // Handle variant navigation effect
-  useEffect(() => {
-    handleVariantNavigation();
-  }, [handleVariantNavigation]);
 
   const increaseQuantity = () => {
     if (quantity < 10 && (activeVariant.stock >= quantity + 1 || activeVariant.isBackorderable)) {

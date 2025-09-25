@@ -54,7 +54,7 @@ const FooterLink = ({ href, label, external = false }: FooterLinkProps) => (
 const SocialLink = ({ href, icon, label }: SocialLinkProps) => (
   <Link
     href={href}
-    className="text-white hover:text-blue-500 transition-colors duration-200"
+    className="text-white hover:text-primary transition-colors duration-200"
     aria-label={`Follow us on ${label}`}
     target="_blank"
     rel="noopener noreferrer"
@@ -126,7 +126,7 @@ const Footer = () => {
     { href: '/profile/info', label: 'My Account' },
     { href: '/profile/orders', label: 'Order History' },
     { href: '/profile/wishlist', label: 'Favourites' },
-    { href: '/profile/referals', label: 'Referrals' },
+    { href: '/profile/referrals', label: 'Referrals' },
     { href: '/profile/help', label: 'Help Center' },
   ];
 
@@ -214,12 +214,12 @@ const Footer = () => {
                     checked={isPrivacyChecked}
                     onChange={(e) => setIsPrivacyChecked(e.target.checked)}
                   />
-                  <label htmlFor="privacy" className="ml-2 text-xs text-gray-400" id="privacy-label">
+                  <label htmlFor="privacy" className="ml-2 text-xs text-gray-400 space-x-1" id="privacy-label">
                     I agree to the{' '}
                     <Link href="/privacy" className="underline hover:text-white transition-colors duration-200">
                       Privacy Policy
                     </Link>{''}
-                    and{' '}
+                    and{' '} 
                     <Link href="/terms-and-conditions" className="underline hover:text-white transition-colors duration-200">
                       Terms & Conditions
                     </Link>
@@ -228,7 +228,7 @@ const Footer = () => {
                 </div>
                 <button
                   onClick={handleNewsletterSubmit}
-                  className="w-full py-3 bg-gradient-to-r from-[#ff6b00] to-[#ff9f00] hover:to-primary-hover text-white font-medium rounded transition duration-200"
+                  className="w-full py-3 cursor-pointer bg-gradient-to-r from-[#ff6b00] to-[#ff9f00] hover:to-primary-hover text-white font-medium rounded transition duration-200"
                   aria-label="Subscribe to newsletter"
                 >
                   Subscribe
@@ -308,7 +308,7 @@ const Footer = () => {
               Designed & Developed by{' '}
               <Link
                 href="https://redefyne.in"
-                className="underline hover:text-white transition-colors duration-200"
+                className="underline text-primary hover:text-primary-hover transition-colors duration-200"
                 target="_blank"
                 rel="noopener noreferrer"
                 aria-label="Visit developer website"

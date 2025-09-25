@@ -28,7 +28,7 @@ export async function GET(request: Request): Promise<NextResponse> {
       );
     }
 
-    const baseUrl = process.env.NEXT_PUBLIC_BASE_URL || "http://localhost:3000";
+    const baseUrl = process.env.NEXT_PUBLIC_API_BASE_URL || "http://localhost:3000";
     const referralLink = `${baseUrl}/signup?ref=${referral[0].referralCode}`;
 
     return NextResponse.json({

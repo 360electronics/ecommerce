@@ -288,7 +288,7 @@ const CartPage: React.FC = ({ initialCartItems }:any) => {
           productId: item.productId,
           variantId: item.variantId,
           totalPrice,
-          quantity: item.cartOfferProductId ? 1 : item.quantity,
+            quantity: item.quantity, 
           cartOfferProductId: item.cartOfferProductId,
         });
       }
@@ -468,7 +468,7 @@ const CartPage: React.FC = ({ initialCartItems }:any) => {
                   Order Summary
                 </h2>
                 <div className="space-y-4">
-                  <div>
+                  {/* <div>
                     <label htmlFor="coupon" className="block text-sm font-medium text-gray-700 mb-1">
                       Coupon Code
                     </label>
@@ -521,7 +521,7 @@ const CartPage: React.FC = ({ initialCartItems }:any) => {
                     {couponStatus === 'expired' && (
                       <p className="text-sm text-red-600 mt-2">Coupon has expired</p>
                     )}
-                  </div>
+                  </div> */}
 
                   <div className="space-y-2">
                     <div className="flex justify-between text-sm">

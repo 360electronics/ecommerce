@@ -38,21 +38,21 @@ const ProductListing = ({
     if (originalProducts.length > 0) {
       const fuseInstance = new Fuse(originalProducts, {
         keys: [
-          { name: "name", weight: 0.5, getFn: (obj) => obj.name || "" },
+          { name: "name", weight: 0.5, getFn: (obj) => (obj.name || "").toLowerCase() },
           {
             name: "brand.name",
             weight: 0.2,
-            getFn: (obj) => obj.brand?.name || "",
+            getFn: (obj) => (obj.brand?.name || "").toLowerCase(),
           },
           {
             name: "category.name",
             weight: 0.15,
-            getFn: (obj) => obj.category?.name || "",
+            getFn: (obj) => (obj.category?.name || "").toLowerCase(),
           },
           {
             name: "subcategory.name",
             weight: 0.15,
-            getFn: (obj) => obj.subcategory?.name || "",
+            getFn: (obj) => (obj.subcategory?.name || "").toLowerCase(),
           },
         ],
         threshold: 0.3,
@@ -111,31 +111,66 @@ const ProductListing = ({
 
           // Apply search query filter (with Fuse.js)
           if (query?.trim()) {
+            const lowerQuery = query.trim().toLowerCase();
+            const words = lowerQuery.split(/\s+/);
             let results: FlattenedProduct[] = [];
 
-            if (fuse) {
-              // Split into words and force all to exist (AND logic with `=` in extended search)
-              const query = (searchQuery ?? "")
-                .trim()
-                .split(/\s+/)
-                .map((w) => `="${w}"`)
-                .join(" ");
-              const fuseResults = fuse.search(query);
-
-              results = fuseResults.map((r) => r.item);
-              // console.log('Fuse search results:', fuseResults); // <-- debug Fuse output
-            }
-            // Fallback if Fuse found nothing → simple includes
-            if (results.length === 0) {
-              const q = query.trim().toLowerCase();
-              results = productsList.filter(
-                (p) =>
-                  (p.name || "").toLowerCase().includes(q) ||
-                  (p.brand?.name || "").toLowerCase().includes(q) ||
-                  (p.category.name || "").toLowerCase().includes(q) ||
-                  (p.subcategory.name || "").toLowerCase().includes(q)
+            if (fuse && words.length > 0) {
+              // Try AND logic: intersection of results for each word
+              const resultSets = words.map((word) =>
+                new Set(fuse.search(`'${word}`).map((r) => r.refIndex))
               );
-              // console.log('Fallback search results:', results); // <-- debug fallback
+
+              let commonIndices = resultSets.reduce((a, b) => {
+                return new Set([...a].filter((x) => b.has(x)));
+              }, resultSets[0]);
+
+              let isFallback = false;
+              if (commonIndices.size === 0 && words.length > 1) {
+                // Fallback to OR: union of indices
+                const allIndices = new Set(
+                  words.flatMap((word) => fuse.search(`'${word}`).map((r) => r.refIndex))
+                );
+                commonIndices = allIndices;
+                isFallback = true;
+              }
+
+              // Get results with average scores for sorting
+              const resultsWithScores = [...commonIndices].map((index) => {
+                const scores = words.map((word) => {
+                  const res = fuse.search(`'${word}`).find((r) => r.refIndex === index);
+                  return res ? (res.score ?? 1) : 1;
+                });
+                const avgScore = scores.reduce((s, c) => s + c, 0) / scores.length;
+                return { item: originalProducts[index], score: avgScore };
+              });
+
+              resultsWithScores.sort((a, b) => a.score - b.score); // Lower score is better
+              results = resultsWithScores.map((r) => r.item);
+            }
+
+            // Fallback if Fuse found nothing or not initialized
+            if (results.length === 0) {
+              const textGetter = (p: FlattenedProduct) =>
+                [
+                  (p.name || "").toLowerCase(),
+                  (p.brand?.name || "").toLowerCase(),
+                  (p.category?.name || "").toLowerCase(),
+                  (p.subcategory?.name || "").toLowerCase(),
+                ].join(" ");
+
+              results = productsList.filter((p) => {
+                const text = textGetter(p);
+                return words.every((word) => text.includes(word));
+              });
+
+              if (results.length === 0 && words.length > 1) {
+                // Fallback to OR
+                results = productsList.filter((p) => {
+                  const text = textGetter(p);
+                  return words.some((word) => text.includes(word));
+                });
+              }
             }
 
             filtered = results;

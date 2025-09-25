@@ -229,7 +229,7 @@ const SearchModal: React.FC<SearchModalProps> = ({
                         matchingProducts.map((product) => (
                           <div
                             key={product.id}
-                            className="flex items-center bg-gray-50 rounded-lg p-3 hover:bg-gray-100 transition-colors"
+                            className="flex items-center bg-gray-50 rounded-lg p-3 hover:bg-gray-100 transition-colors cursor-pointer"
                           >
                             {product.variants[0]?.productImages[0]?.url && (
                               <img
@@ -240,7 +240,7 @@ const SearchModal: React.FC<SearchModalProps> = ({
                             )}
                             <div>
                               <button
-                                className="text-sm font-medium text-gray-800 hover:text-blue-600"
+                                className="text-sm font-medium text-gray-800 hover:text-primary"
                                 onClick={() => handleSearchItemClick(product.shortName || product.fullName || '')}
                                 aria-label={`View ${product.shortName || product.fullName}`}
                               >
@@ -273,7 +273,7 @@ const SearchModal: React.FC<SearchModalProps> = ({
                         </div>
                         <button
                           onClick={clearAllRecentSearches}
-                          className="text-sm text-blue-600 hover:text-blue-800 transition-colors"
+                          className="text-sm text-primary hover:text-primary-hover cursor-pointer transition-colors"
                           aria-label="Clear all recent searches"
                         >
                           Clear All
@@ -321,44 +321,7 @@ const SearchModal: React.FC<SearchModalProps> = ({
                     </div>
                   </div>
 
-                  {/* Promotional Banners */}
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    <div className="relative rounded-lg overflow-hidden shadow-md hover:shadow-lg transition-shadow">
-                      <div className="bg-gradient-to-r from-red-600 to-red-800 h-32 flex items-center p-4">
-                        <div className="text-white">
-                          <div className="text-lg font-bold">PC PORTABLE</div>
-                          <div className="text-2xl font-bold">MSI</div>
-                          <div className="text-lg font-bold">GF63 THIN</div>
-                        </div>
-                      </div>
-                      <button
-                        className="absolute bottom-3 right-3 bg-blue-500 text-white rounded-full px-4 py-1 text-sm hover:bg-blue-600 transition-colors"
-                        aria-label="Shop MSI GF63 Thin"
-                      >
-                        Shop Now
-                      </button>
-                    </div>
-                    <div className="relative rounded-lg overflow-hidden shadow-md hover:shadow-lg transition-shadow">
-                      <div className="bg-gradient-to-r from-yellow-400 to-yellow-600 h-32 flex items-center justify-between p-4">
-                        <div className="text-black font-bold text-lg max-w-[60%]">
-                          Be the Core of Your Play
-                        </div>
-                        <div className="bg-red-500 rounded-full w-12 h-12 flex items-center justify-center text-white font-bold">
-                          <div className="text-xs text-center">
-                            <span>78%</span>
-                            <br />
-                            <span>Off</span>
-                          </div>
-                        </div>
-                      </div>
-                      <button
-                        className="absolute bottom-3 right-3 bg-blue-500 text-white rounded-full px-4 py-1 text-sm hover:bg-blue-600 transition-colors"
-                        aria-label="Shop discounted products"
-                      >
-                        Shop Now
-                      </button>
-                    </div>
-                  </div>
+
                 </>
               )}
             </div>

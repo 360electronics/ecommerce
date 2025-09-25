@@ -182,8 +182,8 @@ const CheckoutPage: React.FC = () => {
   const handleCancelCheckout = async () => {
     try {
       await clearCheckout(user!.id);
-      toast.success("Checkout cancelled");
       router.push("/");
+      toast.success("Checkout cancelled");
     } catch (error) {
       console.error("Error cancelling checkout:", error);
       toast.error("Failed to cancel checkout");
