@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect, useMemo } from "react";
-import { MapContainer, TileLayer, Marker, Popup } from "react-leaflet";
+import dynamic from "next/dynamic";
 import L from "leaflet";
 import UserLayout from "@/components/Layouts/UserLayout";
 
@@ -15,6 +15,9 @@ L.Icon.Default.mergeOptions({
   shadowUrl:
     "https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/images/marker-shadow.png",
 });
+
+// Dynamically import react-leaflet map parts
+const Map = dynamic(() => import("../../components/Store/StoreMap"), { ssr: false });
 
 type Store = {
   id: string;
@@ -55,8 +58,8 @@ export default function StoreLocator() {
 
   return (
     <UserLayout>
-      <div className="  py-4 mx-auto flex flex-col md:flex-row gap-6 relative">
-        <div className=" w-full md:w-[30%]">
+      <div className="py-4 mx-auto flex flex-col md:flex-row gap-6 relative">
+        <div className="w-full md:w-[30%]">
           <h1 className="text-3xl font-bold text-primary mb-6">
             Find a Store Near You
           </h1>
@@ -70,19 +73,17 @@ export default function StoreLocator() {
               placeholder="Search by city, state, or pincode"
               value={query}
               onChange={(e) => setQuery(e.target.value)}
-              className="flex-1 p-3 border border-gray-300 rounded-lg  focus:outline-none "
+              className="flex-1 p-3 border border-gray-300 rounded-lg focus:outline-none"
             />
           </form>
 
-          <div className="grid grid-cols-1  gap-6 mb-8">
+          <div className="grid grid-cols-1 gap-6 mb-8">
             {filteredStores.map((s) => (
               <div
                 key={s.id}
-                className="bg-white rounded-xl border border-gray-300 p-5  transition cursor-pointer"
+                className="bg-white rounded-xl border border-gray-300 p-5 transition cursor-pointer"
               >
-                <h2 className="text-xl font-semibold  mb-2">
-                  {s.name}
-                </h2>
+                <h2 className="text-xl font-semibold mb-2">{s.name}</h2>
                 <p className="text-gray-700 mb-1">{s.address}</p>
                 <p className="text-gray-700 mb-1">
                   {s.city}, {s.state} - {s.pincode}
@@ -94,7 +95,7 @@ export default function StoreLocator() {
                     href={`https://www.google.com/maps/search/?api=1&query=${s.lat},${s.lng}`}
                     target="_blank"
                     rel="noopener noreferrer"
-                    className="inline-block mt-2  text-primary underline"
+                    className="inline-block mt-2 text-primary underline"
                   >
                     Open in Google Maps
                   </a>
@@ -104,40 +105,9 @@ export default function StoreLocator() {
           </div>
         </div>
 
-        <div className="h-[600px] w-full rounded-xl overflow-hidden  sticky top-32">
-          <MapContainer center={[11.0, 78.0]} zoom={7.5} className="h-full w-full">
-            <TileLayer
-              url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
-              attribution="&copy; OpenStreetMap contributors"
-            />
-            {filteredStores.map(
-              (s) =>
-                s.lat &&
-                s.lng && (
-                  <Marker key={s.id} position={[s.lat, s.lng]}>
-                    <Popup>
-                      <div className="flex flex-col gap-1">
-                        <strong>{s.name}</strong>
-                        <span>{s.address}</span>
-                        <span>
-                          {s.city}, {s.state} - {s.pincode}
-                        </span>
-                        {s.lat && s.lng && (
-                          <a
-                            href={`https://www.google.com/maps/search/?api=1&query=${s.lat},${s.lng}`}
-                            target="_blank"
-                            rel="noopener noreferrer"
-                            className="text-blue-600 underline"
-                          >
-                            Open in Google Maps
-                          </a>
-                        )}
-                      </div>
-                    </Popup>
-                  </Marker>
-                )
-            )}
-          </MapContainer>
+        {/* Map dynamically loaded */}
+        <div className="h-[600px] w-full rounded-xl overflow-hidden sticky top-32">
+          <Map stores={filteredStores} />
         </div>
       </div>
     </UserLayout>
