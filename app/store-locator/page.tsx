@@ -2,21 +2,9 @@
 
 import { useState, useEffect, useMemo } from "react";
 import dynamic from "next/dynamic";
-import L from "leaflet";
 import UserLayout from "@/components/Layouts/UserLayout";
 
-// Fix default marker icon for Leaflet
-delete (L.Icon.Default.prototype as any)._getIconUrl;
-L.Icon.Default.mergeOptions({
-  iconRetinaUrl:
-    "https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/images/marker-icon-2x.png",
-  iconUrl:
-    "https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/images/marker-icon.png",
-  shadowUrl:
-    "https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/images/marker-shadow.png",
-});
-
-// Dynamically import react-leaflet map parts
+// Dynamically import StoreMap (no Leaflet here)
 const Map = dynamic(() => import("../../components/Store/StoreMap"), { ssr: false });
 
 type Store = {

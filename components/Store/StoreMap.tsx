@@ -1,6 +1,18 @@
 "use client";
 
 import { MapContainer, TileLayer, Marker, Popup } from "react-leaflet";
+import L from "leaflet";
+
+// Fix default marker icons here (inside client-only map)
+delete (L.Icon.Default.prototype as any)._getIconUrl;
+L.Icon.Default.mergeOptions({
+  iconRetinaUrl:
+    "https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/images/marker-icon-2x.png",
+  iconUrl:
+    "https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/images/marker-icon.png",
+  shadowUrl:
+    "https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/images/marker-shadow.png",
+});
 
 type Store = {
   id: string;
@@ -32,16 +44,14 @@ export default function StoreMap({ stores }: { stores: Store[] }) {
                   <span>
                     {s.city}, {s.state} - {s.pincode}
                   </span>
-                  {s.lat && s.lng && (
-                    <a
-                      href={`https://www.google.com/maps/search/?api=1&query=${s.lat},${s.lng}`}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="text-blue-600 underline"
-                    >
-                      Open in Google Maps
-                    </a>
-                  )}
+                  <a
+                    href={`https://www.google.com/maps/search/?api=1&query=${s.lat},${s.lng}`}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="text-blue-600 underline"
+                  >
+                    Open in Google Maps
+                  </a>
                 </div>
               </Popup>
             </Marker>
