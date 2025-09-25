@@ -20,6 +20,7 @@ import {
   Image as ImageIcon,
   ShoppingCart,
   Tag,
+  StoreIcon,
 } from 'lucide-react'
 import Breadcrumbs from '@/components/Reusable/BreadScrumb'
 
@@ -80,6 +81,7 @@ export default function Layout({ children }: AdminLayoutProps) {
     { name: 'Gamer Zone', path: '/admin/gamer-zone', icon: Gamepad2 },
     { name: 'Cart Value Offers', path: '/admin/cart-offer-products', icon: ShoppingCart },
     { name: 'Promotional Banners', path: '/admin/promotional-banners', icon: ImageIcon },
+    { name: 'Stores', path: '/admin/stores', icon: StoreIcon },
   ]
 
   // Backdrop component for mobile

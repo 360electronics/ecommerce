@@ -24,6 +24,8 @@ export async function POST(request: Request) {
       );
     }
 
+    
+
     let statusUpdate: Partial<typeof orders.$inferInsert> = {};
 
     switch (payment.payment_status) {
@@ -60,11 +62,14 @@ export async function POST(request: Request) {
         break;
     }
 
-    await db.update(orders).set(statusUpdate).where(eq(orderId, payment.order_id));
+    await db.update(orders).set(statusUpdate).where(eq(orders.id, orderId));
 
     return NextResponse.json({ success: true, payment, statusUpdate });
   } catch (error: any) {
-    console.error("Error verifying payment:", error.response?.data || error.message);
+    console.error(
+      "Error verifying payment:",
+      error.response?.data || error.message
+    );
     return NextResponse.json(
       { error: "Failed to verify payment" },
       { status: 500 }

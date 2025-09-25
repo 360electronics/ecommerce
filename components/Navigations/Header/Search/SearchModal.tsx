@@ -60,7 +60,6 @@ const SearchModal: React.FC<SearchModalProps> = ({
         keys: [
           { name: 'shortName', weight: 0.5 },
           { name: 'fullName', weight: 0.4 },
-          { name: 'description', weight: 0.1 },
         ],
         threshold: 0.35,         // allow partial fuzzy matches
         minMatchCharLength: 2,
@@ -117,7 +116,7 @@ const SearchModal: React.FC<SearchModalProps> = ({
             p.fullName?.toLowerCase().includes(lowerQ) ||
             p.description?.toLowerCase().includes(lowerQ)
         )
-        .map((item) => ({ item, score: 1 })); // fake score so structure matches
+        .map((item) => ({ item, score: 1 })); 
     }
 
     return results.sort((a, b) => (a.score || 0) - (b.score || 0));
@@ -185,7 +184,7 @@ const SearchModal: React.FC<SearchModalProps> = ({
               />
               <button
                 onClick={onClose}
-                className="text-gray-500 hover:text-gray-800 p-1 rounded-full hover:bg-gray-100 transition-colors"
+                className=" cursor-pointer text-gray-500 hover:text-gray-800 p-1 rounded-full hover:bg-gray-100 transition-colors"
                 aria-label="Close search modal"
               >
                 <X size={20} />
@@ -206,7 +205,7 @@ const SearchModal: React.FC<SearchModalProps> = ({
                         suggestions.map((suggestion, index) => (
                           <li key={index}>
                             <button
-                              className="w-full text-left text-sm text-gray-700 hover:bg-gray-100 rounded px-3 py-2 transition-colors"
+                              className=" cursor-pointer w-full text-left text-sm text-gray-700 hover:bg-gray-100 rounded px-3 py-2 transition-colors"
                               onClick={() => handleSearchItemClick(suggestion)}
                               aria-label={`Search for ${suggestion}`}
                             >
@@ -284,14 +283,14 @@ const SearchModal: React.FC<SearchModalProps> = ({
                         {recentSearches.map((search, index) => (
                           <button
                             key={index}
-                            className="flex items-center bg-gray-100 rounded-full px-3 py-1 text-sm text-gray-700 hover:bg-gray-200 transition-colors"
+                            className="flex cursor-pointer items-center bg-gray-100 rounded-full px-3 py-1 text-sm text-gray-700 hover:bg-gray-200 transition-colors"
                             onClick={() => handleSearchItemClick(search)}
                             aria-label={`Search for ${search}`}
                           >
                             {search}
                             <button
                               onClick={(e) => removeRecentSearch(search, e)}
-                              className="ml-2 text-gray-500 hover:text-gray-700 p-1 rounded-full hover:bg-gray-300"
+                              className=" cursor-pointer ml-2 text-gray-500 hover:text-gray-700 p-1 rounded-full hover:bg-gray-300"
                               aria-label={`Remove ${search} from recent searches`}
                             >
                               <X size={14} />
@@ -312,7 +311,7 @@ const SearchModal: React.FC<SearchModalProps> = ({
                       {trendingSearches.map((search, index) => (
                         <button
                           key={index}
-                          className="bg-gray-100 rounded-full px-3 py-1 text-sm text-gray-700 hover:bg-gray-200 transition-colors"
+                          className="bg-gray-100 cursor-pointer rounded-full px-3 py-1 text-sm text-gray-700 hover:bg-gray-200 transition-colors"
                           onClick={() => handleSearchItemClick(search)}
                           aria-label={`Search for ${search}`}
                         >

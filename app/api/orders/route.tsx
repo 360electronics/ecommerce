@@ -1,7 +1,13 @@
-import { db } from '@/db/drizzle';
-import { orderItems, orders, savedAddresses, users, variants } from '@/db/schema';
-import { eq } from 'drizzle-orm';
-import { NextResponse } from 'next/server';
+import { db } from "@/db/drizzle";
+import {
+  orderItems,
+  orders,
+  savedAddresses,
+  users,
+  variants,
+} from "@/db/schema";
+import { eq } from "drizzle-orm";
+import { NextResponse } from "next/server";
 
 interface ErrorResponse {
   message: string;
@@ -42,6 +48,8 @@ export async function POST(request: Request) {
       })
       .returning();
 
+    console.log("New Order:", newOrder);
+
     await db.insert(orderItems).values(
       items.map((item: any) => ({
         orderId: newOrder.id,
@@ -54,18 +62,27 @@ export async function POST(request: Request) {
 
     return NextResponse.json(newOrder, { status: 200 });
   } catch (error) {
-    console.error('Error creating order:', error);
-    return NextResponse.json({ error: 'Failed to create order' }, { status: 500 });
+    console.error("Error creating order:", error);
+    return NextResponse.json(
+      { error: "Failed to create order" },
+      { status: 500 }
+    );
   }
 }
 
 export async function GET(request: Request) {
   try {
-    const allOrders = await db.select({ orders: orders, orderItems: orderItems, variants: variants, savedAddresses:savedAddresses }).from(orders)
+    const allOrders = await db
+      .select({
+        orders: orders,
+        orderItems: orderItems,
+        variants: variants,
+        savedAddresses: savedAddresses,
+      })
+      .from(orders)
       .leftJoin(orderItems, eq(orders.id, orderItems.orderId))
       .leftJoin(variants, eq(variants.id, orderItems.variantId))
-      .leftJoin(savedAddresses, eq(savedAddresses.id, orders.addressId))
-      ;
+      .leftJoin(savedAddresses, eq(savedAddresses.id, orders.addressId));
     return NextResponse.json({
       success: true,
       data: allOrders,

@@ -302,7 +302,7 @@ const CheckoutPage: React.FC = () => {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
-        orderId: `order_${id}`,
+        orderId: `${id}`,
         orderAmount: totalAmount,
         customerName: selectedAddress.fullName,
         customerEmail: user?.email,
@@ -318,7 +318,7 @@ const CheckoutPage: React.FC = () => {
     if (!(window as any).Cashfree) {
       await new Promise((resolve) => {
         const script = document.createElement("script");
-        script.src = "https://sdk.cashfree.com/js/ui/2.0.0/cashfree.js";
+        script.src = "https://sdk.cashfree.com/js/v3/cashfree.js";
         script.onload = resolve;
         document.body.appendChild(script);
       });

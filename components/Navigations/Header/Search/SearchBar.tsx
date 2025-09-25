@@ -1,7 +1,7 @@
-import React, { useState, useEffect, useRef } from 'react';
-import { Search, ChevronDown } from 'lucide-react';
-import { useRouter } from 'next/navigation';
-import SearchModal from './SearchModal';
+import React, { useState, useEffect, useRef } from "react";
+import { Search, ChevronDown } from "lucide-react";
+import { useRouter } from "next/navigation";
+import SearchModal from "./SearchModal";
 
 interface SearchProps {
   onSearch?: (query: string, category: string) => void;
@@ -15,8 +15,8 @@ const SearchBar: React.FC<SearchProps> = ({
   inputRef,
   autoFocus = false,
 }) => {
-  const [searchQuery, setSearchQuery] = useState<string>('');
-  const [category, setCategory] = useState<string>('All Categories');
+  const [searchQuery, setSearchQuery] = useState<string>("");
+  const [category, setCategory] = useState<string>("All Categories");
   const [showCategories, setShowCategories] = useState<boolean>(false);
   const [showSearchModal, setShowSearchModal] = useState<boolean>(false);
   const [recentSearches, setRecentSearches] = useState<string[]>([]);
@@ -27,18 +27,18 @@ const SearchBar: React.FC<SearchProps> = ({
   const actualInputRef = inputRef || internalInputRef;
 
   const categories = [
-    'All Categories',
-    'Laptops',
-    'Monitors',
-    'Processor',
-    'Graphics Card',
-    'Accessories',
-    'Storage',
-    'Cabinets',
+    "All Categories",
+    "Laptops",
+    "Monitors",
+    "Processor",
+    "Graphics Card",
+    "Accessories",
+    "Storage",
+    "Cabinets",
   ];
 
   useEffect(() => {
-    const savedSearches = localStorage.getItem('recentSearches');
+    const savedSearches = localStorage.getItem("recentSearches");
     if (savedSearches) {
       setRecentSearches(JSON.parse(savedSearches));
     }
@@ -59,31 +59,38 @@ const SearchBar: React.FC<SearchProps> = ({
         setShowCategories(false);
       }
     };
-    document.addEventListener('mousedown', handleClickOutside);
-    return () => document.removeEventListener('mousedown', handleClickOutside);
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => document.removeEventListener("mousedown", handleClickOutside);
   }, []);
 
   const navigateToSearch = (query: string, selectedCategory: string) => {
     const params = new URLSearchParams();
     if (query.trim()) {
-      params.append('q', query.trim());
+      params.append("q", query.trim());
     }
-    if (selectedCategory !== 'All Categories') {
-      params.append('category', selectedCategory);
+    if (selectedCategory !== "All Categories") {
+      params.append("category", selectedCategory);
     }
     router.push(`/search?${params.toString()}`);
   };
 
   const handleSearch = (e: React.FormEvent) => {
     e.preventDefault();
-    if (searchQuery.trim()) {
-      addToRecentSearches(searchQuery);
-      if (onSearch) {
-        onSearch(searchQuery, category);
-      }
-      navigateToSearch(searchQuery, category);
-      setShowSearchModal(false);
+    if (!searchQuery.trim()) return;
+
+    // Navigate immediately
+    const params = new URLSearchParams();
+    params.append("q", searchQuery.trim());
+    if (category !== "All Categories") {
+      params.append("category", category);
     }
+    router.push(`/search?${params.toString()}`);
+
+    // Save recent search after navigation
+    addToRecentSearches(searchQuery);
+
+    // Close modal if open
+    setShowSearchModal(false);
   };
 
   const addToRecentSearches = (query: string) => {
@@ -92,19 +99,19 @@ const SearchBar: React.FC<SearchProps> = ({
       ...recentSearches.filter((item) => item !== query),
     ].slice(0, 5);
     setRecentSearches(updatedSearches);
-    localStorage.setItem('recentSearches', JSON.stringify(updatedSearches));
+    localStorage.setItem("recentSearches", JSON.stringify(updatedSearches));
   };
 
   const removeRecentSearch = (search: string, e: React.MouseEvent) => {
     e.stopPropagation();
     const updatedSearches = recentSearches.filter((item) => item !== search);
     setRecentSearches(updatedSearches);
-    localStorage.setItem('recentSearches', JSON.stringify(updatedSearches));
+    localStorage.setItem("recentSearches", JSON.stringify(updatedSearches));
   };
 
   const clearAllRecentSearches = () => {
     setRecentSearches([]);
-    localStorage.removeItem('recentSearches');
+    localStorage.removeItem("recentSearches");
   };
 
   const handleSearchItemClick = (search: string) => {
@@ -171,7 +178,7 @@ const SearchBar: React.FC<SearchProps> = ({
             onChange={(e) => setSearchQuery(e.target.value)}
             onFocus={() => setShowSearchModal(true)}
             onKeyDown={(e) => {
-              if (e.key === 'Enter') {
+              if (e.key === "Enter") {
                 handleSearch(e);
               }
             }}

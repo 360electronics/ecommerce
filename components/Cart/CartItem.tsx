@@ -76,7 +76,7 @@ export const CartItemComponent: React.FC<{
           alt={`${item.product.shortName} (${item.variant.name})`}
           width={150}
           height={150}
-          className="rounded-md object-contain border p-2 w-full h-full"
+          className="rounded-md object-contain border p-2 w-full h-full aspect-square"
           loading="lazy"
         />
       </div>

@@ -221,6 +221,7 @@ const HeroBanner: React.FC = () => {
                 />
               ) : (
                 <img
+                  
                   src={
                     getResponsiveImageUrl(
                       mainBanners[currentImageIndex]?.imageUrls
@@ -230,7 +231,7 @@ const HeroBanner: React.FC = () => {
                     mainBanners[currentImageIndex]?.title ||
                     `Banner ${currentImageIndex + 1}`
                   }
-                  className="object-cover object-center transition-opacity duration-500 ease-in-out w-full h-full"
+                  className=" aspect-[3/4.5] md:aspect-auto object-cover object-center transition-opacity duration-500 ease-in-out"
                 />
               )}
               <div className="absolute inset-0 flex items-center justify-between px-6">
@@ -340,7 +341,7 @@ const HeroBanner: React.FC = () => {
                     "/placeholder.svg"
                   }
                   alt={secondaryBanner.title || "Secondary banner"}
-                  className="object-cover"
+                  className="object-cover w-full h-full"
                   loading="lazy"
                 />
               )}
@@ -380,7 +381,7 @@ const HeroBanner: React.FC = () => {
             <img
               src={getResponsiveImageUrl(customisePC.imageUrls)}
               alt={customisePC.title || "Customize your PC"}
-              className="object-cover"
+              className="object-cover w-full h-full"
               style={{ filter: "brightness(0.7)" }}
               loading="lazy"
             />
