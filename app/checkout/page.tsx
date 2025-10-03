@@ -32,12 +32,11 @@ const CheckoutPage: React.FC = () => {
   const { checkoutItems, fetchCheckoutItems, clearCheckout } = useCheckoutStore();
   const { coupon, couponStatus, applyCoupon, removeCoupon, markCouponUsed, clearCoupon } = useCartStore();
   const router = useRouter();
-
   const [addresses, setAddresses] = useState<Address[]>([]);
   const [selectedAddressId, setSelectedAddressId] = useState<string | null>(null);
   const [showAddressForm, setShowAddressForm] = useState(false);
   const [deliveryMode, setDeliveryMode] = useState<"standard" | "express">("standard");
-  const [paymentMethod, setPaymentMethod] = useState<"cashfree">("cashfree");
+  const [paymentMethod, setPaymentMethod] = useState<"razorpay">("razorpay");
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isProcessingPayment, setIsProcessingPayment] = useState(false);
   const [couponCode, setCouponCode] = useState("");
@@ -290,65 +289,134 @@ const CheckoutPage: React.FC = () => {
 
 
 
-  // Handle Cashfree payment
-  async function initiateCashfreePayment({ id, totalAmount }: { id: string; totalAmount: number }) {
+  // Handle Razorpay payment
+  const initiateRazorpayPayment = async (order: {
+    id: string;
+    totalAmount: number;
+    gatewayOrderId?: string;
+  }) => {
+    try {
+      const shortOrderId = order.id.slice(0, 36);
+      const receipt = `ord_${shortOrderId}`;
 
-    const selectedAddress = addresses.find(addr => addr.id === selectedAddressId);
-    if (!selectedAddress) {
-      throw new Error("No address selected");
-    }
-
-    const res = await fetch("/api/cashfree/create-order", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        orderId: `${id}`,
-        orderAmount: totalAmount,
-        customerName: selectedAddress.fullName,
-        customerEmail: user?.email,
-        customerPhone: selectedAddress.phoneNumber,
-      }),
-    });
-
-    const data = await res.json();
-    console.log(data)
-    if (!res.ok) return null;
-
-    // Load SDK
-    if (!(window as any).Cashfree) {
-      await new Promise((resolve) => {
-        const script = document.createElement("script");
-        script.src = "https://sdk.cashfree.com/js/v3/cashfree.js";
-        script.onload = resolve;
-        document.body.appendChild(script);
+      const response = await fetch("/api/razorpay/create-order", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          amount: Math.round(grandTotal * 100),
+          currency: "INR",
+          receipt: receipt,
+        }),
       });
-    }
 
-    const cashfree = new (window as any).Cashfree({ mode: "sandbox" }); 
-    cashfree.checkout({
-      paymentSessionId: data.payment_session_id,
-      redirectTarget: '_self',
-      theme: {
-        color: {
-          primary: "#ff6b00", 
-          primaryHover: "#cd5703",
-          text: "#1F2937",
-          background: "#FFFFFF"
-        },
-        mode: "light", // or "dark"
-        branding: {
-          primaryColor: "#ff6b00",
-          backgroundColor: "#FFFFFF",
-          textColor: "#1F2937",
-          merchantName: "360 Electronics : No.1 Seller in South India",
-          merchantLogo: "https://360electronics.in/logo/logo.png", 
-        }
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.error || "Failed to create Razorpay order");
       }
-    });
 
-    return data.orderId;
-  }
+      const { gatewayOrderId } = await response.json();
 
+      if (!process.env.NEXT_PUBLIC_RAZORPAY_KEY_ID) {
+        throw new Error("Razorpay key is not configured");
+      }
+
+      const options = {
+        key: process.env.NEXT_PUBLIC_RAZORPAY_KEY_ID,
+        amount: Math.round(grandTotal * 100),
+        currency: "INR",
+        name: "360 Electronics",
+        description: "Order Payment",
+        order_id: gatewayOrderId,
+        handler: async (response: {
+          razorpay_payment_id: string;
+          razorpay_order_id: string;
+          razorpay_signature: string;
+        }) => {
+          try {
+            setIsProcessingPayment(true);
+            const verifyResponse = await fetch("/api/razorpay/verify-payment", {
+              method: "POST",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify({
+                payment_id: response.razorpay_payment_id,
+                gateway_order_id: response.razorpay_order_id,
+                razorpay_signature: response.razorpay_signature,
+                orderId: order.id,
+                userId: user!.id,
+              }),
+            });
+
+            if (!verifyResponse.ok) {
+              throw new Error("Payment verification failed");
+            }
+
+            const updateResponse = await fetch("/api/orders/update-status", {
+              method: "POST",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify({
+                orderId: order.id,
+                status: "confirmed",
+                paymentStatus: "paid",
+              }),
+            });
+
+            if (!updateResponse.ok) {
+              throw new Error("Failed to update order status");
+            }
+
+            if (coupon && coupon.code && couponStatus === "applied") {
+              await markCouponUsed(coupon.code);
+            }
+
+            router.push("/profile?tab=orders");
+            clearCoupon();
+            await clearCheckout(user!.id);
+            toast.success("Payment successful!");
+          } catch (error) {
+            console.error("Payment verification error:", error);
+            toast.error("Payment verification failed");
+          } finally {
+            setIsProcessingPayment(false);
+          }
+        },
+        prefill: {
+          name: user?.firstName + " " + user?.lastName || "",
+          email: user?.email || "",
+          contact: addresses.find((addr) => addr.id === selectedAddressId)?.phoneNumber || "",
+        },
+        notes: {
+          order_id: order.id,
+        },
+        theme: {
+          color: "#2563eb",
+        },
+      };
+
+      const razorpay = new (window as any).Razorpay(options);
+      razorpay.open();
+
+      razorpay.on("payment.failed", async (response: any) => {
+        console.error("Payment failed:", response.error);
+        toast.error("Payment failed. Please try again.");
+        await fetch("/api/orders/update-status", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            orderId: order.id,
+            paymentStatus: "failed",
+          }),
+        });
+        setIsProcessingPayment(false);
+      });
+
+      return gatewayOrderId;
+    } catch (error: any) {
+      console.error("Error initiating Razorpay payment:", error);
+      toast.error(error.message || "Failed to initiate payment");
+      setIsProcessingPayment(false);
+      return null;
+    }
+  };
 
   // Handle order confirmation
   const handleConfirmOrder = async () => {
@@ -372,7 +440,7 @@ const CheckoutPage: React.FC = () => {
         shippingAmount,
         deliveryMode,
         paymentMethod,
-        status: paymentMethod === "cashfree" ? "pending" : "confirmed",
+        status: paymentMethod === "razorpay" ? "pending" : "confirmed",
         paymentStatus: "pending",
         orderItems: checkoutItems.map((item) => ({
           productId: item.productId,
@@ -389,27 +457,30 @@ const CheckoutPage: React.FC = () => {
         body: JSON.stringify(order),
       });
 
-      console.log(response.ok)
-
       if (!response.ok) {
         throw new Error("Failed to create order");
       }
 
       const createdOrder = await response.json();
 
-
-      if (paymentMethod === "cashfree") {
-        const cashfreeOrderId = await initiateCashfreePayment({
+      if (paymentMethod === "razorpay") {
+        const razorpayOrderId = await initiateRazorpayPayment({
           id: createdOrder.id,
           totalAmount: grandTotal,
         });
 
-        await clearCheckout(user!.id);
-
-
-        if (!cashfreeOrderId) {
-          throw new Error("Failed to initiate Cashfree payment");
+        if (!razorpayOrderId) {
+          throw new Error("Failed to initiate Razorpay payment");
         }
+
+        await fetch("/api/orders/update-order-id", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            orderId: createdOrder.id,
+            razorpayOrderId,
+          }),
+        });
       } else {
         if (coupon && coupon.code && couponStatus === "applied") {
           await markCouponUsed(coupon.code);
@@ -424,7 +495,9 @@ const CheckoutPage: React.FC = () => {
           }),
         });
         clearCoupon();
-
+        await clearCheckout(user!.id);
+        toast.success("Order placed successfully!");
+        router.push("/orders");
       }
     } catch (error) {
       console.error("Error placing order:", error);
@@ -433,7 +506,6 @@ const CheckoutPage: React.FC = () => {
       setIsSubmitting(false);
     }
   };
-
 
 
 
@@ -450,7 +522,7 @@ const CheckoutPage: React.FC = () => {
 
   return (
     <>
-      <Script src="https://sdk.cashfree.com/js/v3/cashfree.js" strategy="lazyOnload" />
+      <Script src="https://checkout.razorpay.com/v1/checkout.js" strategy="lazyOnload" />
       <CheckoutLayout>
         <div className="mx-auto px-4 sm:px-6 lg:px-8 py-8">
           <h1 className="text-3xl font-bold text-gray-900 mb-8">Checkout</h1>
@@ -752,20 +824,20 @@ const CheckoutPage: React.FC = () => {
                 <h2 className="text-xl font-semibold text-gray-900 mb-4">Payment Method</h2>
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                   <div
-                    className={`border relative rounded-lg p-4 cursor-pointer transition-all duration-200 ${paymentMethod === "cashfree"
+                    className={`border relative rounded-lg p-4 cursor-pointer transition-all duration-200 ${paymentMethod === "razorpay"
                         ? "border-primary bg-primary-LIGHT"
                         : "border-gray-200 hover:border-secondary"
                       }`}
-                    onClick={() => setPaymentMethod("cashfree")}
+                    onClick={() => setPaymentMethod("razorpay")}
                   >
                     <div className="flex items-center gap-3">
                       <CreditCard className="h-6 w-6 text-gray-600" />
                       <div>
-                        <p className="text-gray-900 font-medium">Pay with Cashfree</p>
+                        <p className="text-gray-900 font-medium">Pay with Razorpay</p>
                         <p className="text-sm text-gray-500">Secure online payment with UPI/Card</p>
                       </div>
                     </div>
-                    {paymentMethod === "cashfree" && (
+                    {paymentMethod === "razorpay" && (
                       <Check className="absolute right-4 top-4 text-primary h-5 w-5" />
                     )}
                   </div>
