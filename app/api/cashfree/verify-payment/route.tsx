@@ -32,8 +32,8 @@ export async function POST(request: Request) {
       case "SUCCESS":
         if (payment.is_captured) {
           statusUpdate = {
-            cashfreeOrderId: payment.payment_gateway_details?.gateway_order_id,
-            cashfreePaymentId: payment.cf_payment_id,
+            gatewayOrderId: payment.payment_gateway_details?.gateway_order_id,
+            paymentId: payment.cf_payment_id,
             paymentStatus: "paid",
             status: "confirmed",
           };
