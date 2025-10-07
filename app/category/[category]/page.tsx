@@ -1,4 +1,5 @@
-import React from 'react';
+'use client'
+import React, { Suspense } from 'react';
 import UserLayout from '@/components/Layouts/UserLayout';
 import ProductListing from '@/components/Listing/ProductListing';
 import { CompleteProduct, FlattenedProduct } from '@/types/product';
@@ -77,6 +78,23 @@ const flattenProductVariants = (products: CompleteProduct[]): FlattenedProduct[]
     return flattened;
 };
 
+const CategoryPageLoading = () => (
+  <UserLayout>
+    <div className="mx-auto py-6">
+      <div className="h-12 bg-gray-200 rounded mb-8 animate-pulse"></div>
+      <div className="grid grid-cols-1 md:grid-cols-3 lg:grid-cols-4 gap-6">
+        {[...Array(8)].map((_, i) => (
+          <div key={i} className="bg-white p-4 rounded-lg shadow animate-pulse">
+            <div className="w-full h-48 bg-gray-200 rounded mb-4"></div>
+            <div className="h-5 bg-gray-200 rounded w-2/3 mb-2"></div>
+            <div className="h-4 bg-gray-200 rounded w-1/2"></div>
+          </div>
+        ))}
+      </div>
+    </div>
+  </UserLayout>
+);
+
 type Params = Promise<{ category: string }>;
 
 export default async function CategoryPage({ params }: { params: Params }) {
@@ -98,11 +116,13 @@ export default async function CategoryPage({ params }: { params: Params }) {
     : '';
 
   return (
-    <UserLayout>
-      <div className="mx-auto pt-4 pb-10">
-        {/* Product Listing Component */}
-        <ProductListing category={category} initialProducts={initialProducts} />
-      </div>
-    </UserLayout>
+    <Suspense fallback={<CategoryPageLoading />}>
+      <UserLayout>
+        <div className="mx-auto pt-4 pb-10">
+          {/* Product Listing Component */}
+          <ProductListing category={category} initialProducts={initialProducts} />
+        </div>
+      </UserLayout>
+    </Suspense>
   );
 };
