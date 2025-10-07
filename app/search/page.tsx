@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, Suspense } from "react";
 import { useSearchParams } from "next/navigation";
 import UserLayout from "@/components/Layouts/UserLayout";
 import ProductListing from "@/components/Listing/ProductListing";
@@ -107,31 +107,17 @@ const SearchPageLoading = () => (
   </UserLayout>
 );
 
-export default function SearchPage() {
+function SearchContent({
+  initialProducts,
+  loading,
+  error,
+}: {
+  initialProducts: FlattenedProduct[];
+  loading: boolean;
+  error: string | null;
+}) {
   const searchParams = useSearchParams();
   const q = searchParams.get("q") || "";
-
-  const [initialProducts, setInitialProducts] = useState<FlattenedProduct[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
-
-  useEffect(() => {
-    const loadProducts = async () => {
-      try {
-        setLoading(true);
-        const productData: CompleteProduct[] = await fetchProducts();
-        const flattened = flattenProductVariants(productData);
-        setInitialProducts(flattened);
-      } catch (err) {
-        console.error("Error fetching products:", err);
-        setError("Failed to load products");
-      } finally {
-        setLoading(false);
-      }
-    };
-
-    loadProducts();
-  }, []);
 
   if (loading) {
     return <SearchPageLoading />;
@@ -161,5 +147,39 @@ export default function SearchPage() {
         <ProductListing searchQuery={q} initialProducts={initialProducts} />
       </div>
     </UserLayout>
+  );
+}
+
+export default function SearchPage() {
+  const [initialProducts, setInitialProducts] = useState<FlattenedProduct[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+
+  useEffect(() => {
+    const loadProducts = async () => {
+      try {
+        setLoading(true);
+        const productData: CompleteProduct[] = await fetchProducts();
+        const flattened = flattenProductVariants(productData);
+        setInitialProducts(flattened);
+      } catch (err) {
+        console.error("Error fetching products:", err);
+        setError("Failed to load products");
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    loadProducts();
+  }, []);
+
+  return (
+    <Suspense fallback={<SearchPageLoading />}>
+      <SearchContent
+        initialProducts={initialProducts}
+        loading={loading}
+        error={error}
+      />
+    </Suspense>
   );
 }
