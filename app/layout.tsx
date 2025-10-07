@@ -16,13 +16,10 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="en" className={gotham.className}>
-      <body
-        className={`antialiased`}
-      >
+      <body className={`antialiased`}>
         <StoreProvider>
-
-          <Toaster />
-          {children}
+            <Toaster />
+            {children}
         </StoreProvider>
       </body>
     </html>

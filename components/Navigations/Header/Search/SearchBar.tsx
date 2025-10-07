@@ -23,6 +23,8 @@ const SearchBar: React.FC<SearchProps> = ({
   const internalInputRef = useRef<HTMLInputElement>(null);
   const categoryDropdownRef = useRef<HTMLDivElement>(null);
   const router = useRouter();
+  const [isNavigating, setIsNavigating] = useState(false);
+
 
   const actualInputRef = inputRef || internalInputRef;
 
@@ -114,13 +116,20 @@ const SearchBar: React.FC<SearchProps> = ({
     localStorage.removeItem("recentSearches");
   };
 
-  const handleSearchItemClick = (search: string) => {
+  const handleSearchItemClick = async (search: string) => {
     setSearchQuery(search);
     addToRecentSearches(search);
-    if (onSearch) {
-      onSearch(search, category);
+
+    // Start navigation first
+    const params = new URLSearchParams();
+    params.append("q", search.trim());
+    if (category !== "All Categories") {
+      params.append("category", category);
     }
-    navigateToSearch(search, category);
+
+    await router.push(`/search?${params.toString()}`);
+
+    // Close modal *after* navigation is complete
     setShowSearchModal(false);
   };
 
@@ -128,6 +137,8 @@ const SearchBar: React.FC<SearchProps> = ({
     setCategory(cat);
     setShowCategories(false);
   };
+
+  
 
   return (
     <div className="relative w-full  sm:px-4 md:px-6">
