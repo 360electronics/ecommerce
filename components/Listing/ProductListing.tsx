@@ -38,7 +38,11 @@ const ProductListing = ({
     if (originalProducts.length > 0) {
       const fuseInstance = new Fuse(originalProducts, {
         keys: [
-          { name: "name", weight: 0.5, getFn: (obj) => (obj.name || "").toLowerCase() },
+          {
+            name: "name",
+            weight: 0.5,
+            getFn: (obj) => (obj.name || "").toLowerCase(),
+          },
           {
             name: "brand.name",
             weight: 0.2,
@@ -117,8 +121,9 @@ const ProductListing = ({
 
             if (fuse && words.length > 0) {
               // Try AND logic: intersection of results for each word
-              const resultSets = words.map((word) =>
-                new Set(fuse.search(`'${word}`).map((r) => r.refIndex))
+              const resultSets = words.map(
+                (word) =>
+                  new Set(fuse.search(`'${word}`).map((r) => r.refIndex))
               );
 
               let commonIndices = resultSets.reduce((a, b) => {
@@ -129,7 +134,9 @@ const ProductListing = ({
               if (commonIndices.size === 0 && words.length > 1) {
                 // Fallback to OR: union of indices
                 const allIndices = new Set(
-                  words.flatMap((word) => fuse.search(`'${word}`).map((r) => r.refIndex))
+                  words.flatMap((word) =>
+                    fuse.search(`'${word}`).map((r) => r.refIndex)
+                  )
                 );
                 commonIndices = allIndices;
                 isFallback = true;
@@ -138,10 +145,13 @@ const ProductListing = ({
               // Get results with average scores for sorting
               const resultsWithScores = [...commonIndices].map((index) => {
                 const scores = words.map((word) => {
-                  const res = fuse.search(`'${word}`).find((r) => r.refIndex === index);
-                  return res ? (res.score ?? 1) : 1;
+                  const res = fuse
+                    .search(`'${word}`)
+                    .find((r) => r.refIndex === index);
+                  return res ? res.score ?? 1 : 1;
                 });
-                const avgScore = scores.reduce((s, c) => s + c, 0) / scores.length;
+                const avgScore =
+                  scores.reduce((s, c) => s + c, 0) / scores.length;
                 return { item: originalProducts[index], score: avgScore };
               });
 
@@ -705,17 +715,45 @@ const ProductListing = ({
               </button>
             </div>
           ) : loading ? (
-            <div
-              className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6"
-              aria-live="polite"
-            >
-              {Array.from({ length: productsPerPage }).map((_, index) => (
-                <div key={index} className="animate-pulse">
-                  <div className="bg-gray-200 h-48 w-full rounded mb-4"></div>
-                  <div className="bg-gray-200 h-4 w-3/4 rounded mb-2"></div>
-                  <div className="bg-gray-200 h-4 w-1/2 rounded"></div>
+            <div className="flex flex-col md:flex-row gap-6">
+              {/* Left: Filter Sidebar Skeleton */}
+              <aside className="w-full md:w-1/4 bg-white p-4 rounded-lg shadow animate-pulse">
+                <div className="h-6 bg-gray-200 rounded mb-4 w-1/2"></div>
+                {[...Array(6)].map((_, i) => (
+                  <div key={i} className="mb-4">
+                    <div className="h-4 bg-gray-200 rounded w-2/3 mb-2"></div>
+                    <div className="h-4 bg-gray-200 rounded w-1/2"></div>
+                  </div>
+                ))}
+                <div className="h-10 bg-gray-200 rounded mt-6"></div>
+              </aside>
+
+              {/* Right: Product Cards Skeleton */}
+              <main className="w-full md:w-3/4">
+                <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-6 pb-4 border-b border-gray-200">
+                  <div className="h-6 bg-gray-200 rounded w-1/3 mb-2 animate-pulse"></div>
+                  <div className="hidden md:flex items-center gap-2">
+                    <div className="h-4 bg-gray-200 rounded w-20"></div>
+                    <div className="h-8 bg-gray-200 rounded w-32"></div>
+                  </div>
                 </div>
-              ))}
+
+                <div
+                  className="grid grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6"
+                  aria-live="polite"
+                >
+                  {[...Array(8)].map((_, index) => (
+                    <div
+                      key={index}
+                      className="bg-white p-4 rounded-lg shadow animate-pulse"
+                    >
+                      <div className="bg-gray-200 h-48 w-full rounded mb-4"></div>
+                      <div className="bg-gray-200 h-4 w-3/4 rounded mb-2"></div>
+                      <div className="bg-gray-200 h-4 w-1/2 rounded"></div>
+                    </div>
+                  ))}
+                </div>
+              </main>
             </div>
           ) : filteredProducts.length === 0 ? (
             <div
