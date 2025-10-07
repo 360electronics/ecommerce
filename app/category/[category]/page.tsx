@@ -1,5 +1,7 @@
 'use client'
-import React, { Suspense } from 'react';
+
+import React, { useState, useEffect, Suspense } from 'react';
+import { useParams } from 'next/navigation';
 import UserLayout from '@/components/Layouts/UserLayout';
 import ProductListing from '@/components/Listing/ProductListing';
 import { CompleteProduct, FlattenedProduct } from '@/types/product';
@@ -95,34 +97,88 @@ const CategoryPageLoading = () => (
   </UserLayout>
 );
 
-type Params = Promise<{ category: string }>;
-
-export default async function CategoryPage({ params }: { params: Params }) {
-  const {category} = await params;
-
-  // Fetch products on the server
-  let initialProducts: FlattenedProduct[] = [];
-  try {
-    const productData: CompleteProduct[] = await fetchProducts();
-    initialProducts = flattenProductVariants(productData);
-  } catch (err) {
-    console.error('Error fetching products:', err);
-    // You can handle error by rendering an error component here if needed
-  }
-
+function CategoryContent({
+  initialProducts,
+  loading,
+  error,
+  category,
+}: {
+  initialProducts: FlattenedProduct[];
+  loading: boolean;
+  error: string | null;
+  category: string;
+}) {
   // Capitalize the category for display (if needed, but passed as is)
   const categoryName = category
     ? category.charAt(0).toUpperCase() + category.slice(1)
     : '';
 
-  return (
-    <Suspense fallback={<CategoryPageLoading />}>
+  if (loading) {
+    return <CategoryPageLoading />;
+  }
+
+  if (error) {
+    return (
       <UserLayout>
-        <div className="mx-auto pt-4 pb-10">
-          {/* Product Listing Component */}
-          <ProductListing category={category} initialProducts={initialProducts} />
+        <div className="mx-auto pt-4 pb-10 flex items-center justify-center min-h-[400px]">
+          <div className="text-center">
+            <h3 className="text-xl font-medium text-red-600 mb-2">{error}</h3>
+            <button
+              onClick={() => window.location.reload()}
+              className="px-4 py-2 bg-blue-500 text-white rounded hover:bg-blue-600"
+            >
+              Retry
+            </button>
+          </div>
         </div>
       </UserLayout>
+    );
+  }
+
+  return (
+    <UserLayout>
+      <div className="mx-auto pt-4 pb-10">
+        {/* Product Listing Component */}
+        <ProductListing category={category} initialProducts={initialProducts} />
+      </div>
+    </UserLayout>
+  );
+}
+
+export default function CategoryPage() {
+  const params = useParams();
+  const category = (params.category as string) || '';
+
+  const [initialProducts, setInitialProducts] = useState<FlattenedProduct[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+
+  useEffect(() => {
+    const loadProducts = async () => {
+      try {
+        setLoading(true);
+        const productData: CompleteProduct[] = await fetchProducts();
+        const flattened = flattenProductVariants(productData);
+        setInitialProducts(flattened);
+      } catch (err) {
+        console.error('Error fetching products:', err);
+        setError("Failed to load products");
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    loadProducts();
+  }, []);
+
+  return (
+    <Suspense fallback={<CategoryPageLoading />}>
+      <CategoryContent
+        initialProducts={initialProducts}
+        loading={loading}
+        error={error}
+        category={category}
+      />
     </Suspense>
   );
-};
+}

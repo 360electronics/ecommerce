@@ -1,13 +1,13 @@
-'use client';
+"use client";
 
-import { useAuthStore } from '@/store/auth-store';
-import { useCartStore } from '@/store/cart-store';
-import { useCheckoutStore } from '@/store/checkout-store';
-import { useHomeStore } from '@/store/home-store';
-import { useProfileStore } from '@/store/profile-store';
-import { logError } from '@/store/store-utils';
-import { useWishlistStore } from '@/store/wishlist-store';
-import { useEffect, useRef, type ReactNode } from 'react';
+import { useAuthStore } from "@/store/auth-store";
+import { useCartStore } from "@/store/cart-store";
+import { useCheckoutStore } from "@/store/checkout-store";
+import { useHomeStore } from "@/store/home-store";
+import { useProfileStore } from "@/store/profile-store";
+import { logError } from "@/store/store-utils";
+import { useWishlistStore } from "@/store/wishlist-store";
+import { useEffect, useRef, type ReactNode } from "react";
 
 export const refetchWishlist = async () => {
   const { isLoggedIn, user } = useAuthStore.getState();
@@ -17,7 +17,7 @@ export const refetchWishlist = async () => {
       await fetchWishlist(true);
     }
   } catch (error) {
-    logError('refetchWishlist', error);
+    logError("refetchWishlist", error);
   }
 };
 
@@ -27,10 +27,10 @@ export const refetchCart = async () => {
   try {
     if (isLoggedIn && user?.id) {
       await fetchCart();
-      console.log('refetch success for cart');
+      console.log("refetch success for cart");
     }
   } catch (error) {
-    logError('refetchCart', error);
+    logError("refetchCart", error);
   }
 };
 
@@ -53,7 +53,7 @@ export const StoreProvider = ({ children }: { children: ReactNode }) => {
       try {
         await fetchAuthStatus();
       } catch (error) {
-        logError('initAuth', error);
+        logError("initAuth", error);
       }
     };
 
@@ -62,7 +62,8 @@ export const StoreProvider = ({ children }: { children: ReactNode }) => {
     return () => {
       abortControllerRef.current?.abort();
     };
-  }, [fetchAuthStatus]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []); // ✅ Only run once
 
   /**
    * 2. Only fetch user-related data once auth is resolved
@@ -85,12 +86,12 @@ export const StoreProvider = ({ children }: { children: ReactNode }) => {
         ]);
 
         results.forEach((res, i) => {
-          if (res.status === 'rejected') {
+          if (res.status === "rejected") {
             logError(`userStore[${i}]`, res.reason);
           }
         });
       } catch (error) {
-        logError('initUserStores', error);
+        logError("initUserStores", error);
       }
     };
 
@@ -112,10 +113,10 @@ export const StoreProvider = ({ children }: { children: ReactNode }) => {
    * 3. Fetch home data only on homepage
    */
   useEffect(() => {
-    if (typeof window !== 'undefined' && window.location.pathname === '/') {
+    if (typeof window !== "undefined" && window.location.pathname === "/") {
       fetchHomeData();
     }
-  }, [fetchHomeData]);
+  }, []);
 
   return <>{children}</>;
 };
