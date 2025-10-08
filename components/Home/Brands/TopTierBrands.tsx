@@ -31,10 +31,10 @@ interface BrandSelection {
 }
 
 const BRANDS: Brand[] = [
-  { name: 'apple', logoSrc: 'https://img.icons8.com/?size=100&id=95294&format=png&color=000000' },
+  { name: 'asus', logoSrc: 'https://press.asus.com/assets/w_854,h_640/e2c84986-7e34-40e3-8fa2-4053d3f17187/ASUS%20logo%20grey.png' },
   { name: 'hp', logoSrc: 'https://img.icons8.com/?size=100&id=38607&format=png&color=000000' },
   { name: 'dell', logoSrc: 'https://img.icons8.com/?size=100&id=63790&format=png&color=000000' },
-  { name: 'asus', logoSrc: 'https://press.asus.com/assets/w_854,h_640/e2c84986-7e34-40e3-8fa2-4053d3f17187/ASUS%20logo%20grey.png' },
+  { name: 'apple', logoSrc: 'https://img.icons8.com/?size=100&id=95294&format=png&color=000000' },
   { name: 'acer', logoSrc: 'https://1000logos.net/wp-content/uploads/2016/09/Acer-Logo-720x450.png' },
 ];
 
@@ -66,7 +66,7 @@ BrandLogo.displayName = 'BrandLogo';
 
 const TopTierBrands: React.FC = () => {
   const { brandProducts, isLoading, error } = useHomeStore();
-  const [activeBrand, setActiveBrand] = useState('apple');
+  const [activeBrand, setActiveBrand] = useState('asus');
   const [searchTerm, setSearchTerm] = useState('');
 
   const handleBrandClick = useCallback((brandName: string) => {

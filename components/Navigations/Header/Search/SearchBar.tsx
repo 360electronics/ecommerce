@@ -146,7 +146,7 @@ const SearchBar: React.FC<SearchProps> = ({
         onSubmit={handleSearch}
         className="flex w-full items-center rounded-full border border-gray-200 bg-white focus-within:ring-none  transition-all duration-200 "
       >
-        {/* Category Dropdown */}
+        {/* Category Dropdown
         <div ref={categoryDropdownRef} className="relative hidden  md:block">
           <button
             type="button"
@@ -176,7 +176,7 @@ const SearchBar: React.FC<SearchProps> = ({
               ))}
             </div>
           )}
-        </div>
+        </div> */}
 
         {/* Search Input */}
         <div className="relative flex-1">
@@ -184,7 +184,7 @@ const SearchBar: React.FC<SearchProps> = ({
             ref={actualInputRef}
             type="text"
             placeholder="Search for Products, Brands & More"
-            className="w-full px-4  text-xs md:text-sm bg-transparent focus:outline-none placeholder-gray-400"
+            className="w-full px-4  text-xs md:text-sm bg-transparent focus:outline-none placeholder-gray-400 rounded-l-full"
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
             onFocus={() => setShowSearchModal(true)}

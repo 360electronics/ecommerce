@@ -144,7 +144,7 @@ const ProductCardwithoutCart: React.FC<ProductCardProps> = ({
   return (
     <Link
       href={`/product/${slug}`}
-      target='_blank'
+      // target='_blank'
       className={cn(
         ' rounded-lg cursor-pointer ',
         className

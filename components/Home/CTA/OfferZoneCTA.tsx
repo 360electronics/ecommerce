@@ -2,6 +2,7 @@
 import React from 'react';
 import Image from 'next/image';
 import { useHomeStore } from '@/store/home-store';
+import Link from 'next/link';
 
 const OfferZoneCTA: React.FC = () => {
   const { banners } = useHomeStore();
@@ -33,9 +34,9 @@ const OfferZoneCTA: React.FC = () => {
           <p className="text-indigo-100 text-sm md:text-lg mb-6 max-w-xl">
             Discover exclusive deals on our premium gaming peripherals. Limited time offers on selected products.
           </p>
-          <button className="bg-white text-xs md:text-base text-primary hover:bg-indigo-50 transition-colors px-8 py-3 rounded-md font-medium">
+          <Link href={'/offer-zone'} className="bg-white text-xs md:text-base text-primary hover:bg-indigo-50 transition-colors px-8 py-3 rounded-md font-medium">
             Shop Now
-          </button>
+          </Link>
         </div>
       </div>
     </div>

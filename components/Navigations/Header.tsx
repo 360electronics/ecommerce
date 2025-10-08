@@ -9,7 +9,7 @@ import UserButton from './Header/UserButton';
 import CartButton from './Header/CartButton';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
-import { Menu, X, ShoppingBag, Heart, User, ChevronDown, Building } from 'lucide-react';
+import { Menu, X, ShoppingBag, Heart, User, ChevronDown, Building, ArrowBigRight, ArrowUpRight } from 'lucide-react';
 import { slugify } from '@/utils/slugify';
 import { fetchProducts } from '@/utils/products.util';
 
@@ -78,7 +78,9 @@ const Header = ({ isCategory = true }: HeaderProps) => {
   const [isSearchOpen, setIsSearchOpen] = useState(false);
   const [hoveredCategory, setHoveredCategory] = useState<string | null>(null);
   const [hoveredAttribute, setHoveredAttribute] = useState<string | null>(null);
+  const [hoveredAllCategories, setHoveredAllCategories] = useState(false);
   const [categories, setCategories] = useState<Category[]>([]);
+  const [allCategories, setAllCategories] = useState<Category[]>([]);
   const [hasFetched, setHasFetched] = useState(false);
   const router = useRouter();
   const menuRef = useRef<HTMLDivElement>(null);
@@ -92,20 +94,19 @@ const Header = ({ isCategory = true }: HeaderProps) => {
     if (typeof window !== "undefined") {
       const cachedData = sessionStorage.getItem(CACHE_KEY);
       if (cachedData) {
-        const { data, timestamp } = JSON.parse(cachedData);
-        const now = Date.now();
-        if (now - timestamp < CACHE_DURATION) {
-          // Normalize Graphics_card to Graphics Card for display
-          setCategories(
-            data
-              .map((category: Category) => ({
-                ...category,
-                name: category.name === 'Graphics_cards' ? 'Graphics Card' : category.name,
-              }))
-              .filter((category: Category) => allowedCategories.has(category.name))
-          );
-          setHasFetched(true);
-          return;
+        try {
+          const parsed = JSON.parse(cachedData);
+          const { categories: cachedCategories, allCategories: cachedAllCategories, timestamp } = parsed || {};
+          const now = Date.now();
+          if (now - timestamp < CACHE_DURATION && Array.isArray(cachedCategories) && Array.isArray(cachedAllCategories)) {
+            setCategories(cachedCategories);
+            setAllCategories(cachedAllCategories);
+            setHasFetched(true);
+            return;
+          }
+        } catch (e) {
+          console.error('Cache parse error:', e);
+          sessionStorage.removeItem(CACHE_KEY);
         }
       }
     }
@@ -207,7 +208,7 @@ const Header = ({ isCategory = true }: HeaderProps) => {
           });
         });
 
-        const categoryList = Object.values(categoryData)
+        const allTemp = Object.values(categoryData)
           .map(({ category, attributes, subcategories }) => ({
             ...category,
             // Normalize Graphics_card to Graphics Card for display
@@ -216,18 +217,28 @@ const Header = ({ isCategory = true }: HeaderProps) => {
             subCategories: subcategories,
             attributeValues: attributeValuesMap[category.id]
               ? Object.fromEntries(
-                Object.entries(attributeValuesMap[category.id]).map(([key, valueSet]) => [
-                  key,
-                  Array.from(valueSet).sort(),
-                ])
-              )
+                  Object.entries(attributeValuesMap[category.id]).map(([key, valueSet]) => [
+                    key,
+                    Array.from(valueSet).sort(),
+                  ])
+                )
               : {},
           }))
-          .filter(({ name }) => allowedCategories.has(name));
+          .sort((a, b) => parseInt(a.displayOrder) - parseInt(b.displayOrder));
+
+        const categoryList = allTemp.filter(({ name }) => allowedCategories.has(name));
 
         setCategories(categoryList);
+        setAllCategories(allTemp);
         if (typeof window !== "undefined") {
-          sessionStorage.setItem(CACHE_KEY, JSON.stringify({ data: categoryList, timestamp: Date.now() }));
+          sessionStorage.setItem(
+            CACHE_KEY,
+            JSON.stringify({
+              categories: categoryList,
+              allCategories: allTemp,
+              timestamp: Date.now(),
+            })
+          );
         }
         setHasFetched(true);
       } catch (error) {
@@ -297,6 +308,19 @@ const Header = ({ isCategory = true }: HeaderProps) => {
     dropdownTimeoutRef.current = setTimeout(() => {
       setHoveredCategory(null);
       setHoveredAttribute(null);
+    }, 200);
+  };
+
+  const handleMouseEnterAllCategories = () => {
+    if (dropdownTimeoutRef.current) {
+      clearTimeout(dropdownTimeoutRef.current);
+    }
+    setHoveredAllCategories(true);
+  };
+
+  const handleMouseLeaveAllCategories = () => {
+    dropdownTimeoutRef.current = setTimeout(() => {
+      setHoveredAllCategories(false);
     }, 200);
   };
 
@@ -509,13 +533,57 @@ const Header = ({ isCategory = true }: HeaderProps) => {
           <div className="hidden md:block z-40 bg-white">
             <div className="w-full flex items-center justify-center">
               <ul className="flex justify-between w-full space-x-8 py-2 relative">
-                <li>
-                  <Link
-                    href="/category/all"
-                    className="text-sm font-medium text-gray-800 hover:text-primary transition-colors"
-                  >
-                    All
-                  </Link>
+                <li
+                  className="relative"
+                  onMouseEnter={handleMouseEnterAllCategories}
+                  onMouseLeave={handleMouseLeaveAllCategories}
+                >
+                  <button className="text-sm font-medium text-gray-800 hover:text-primary transition-colors flex items-center">
+                    Categories
+                    <ChevronDown
+                      size={16}
+                      className={`ml-1 transition-transform ${hoveredAllCategories ? 'rotate-180' : ''}`}
+                    />
+                  </button>
+                  {hoveredAllCategories && (
+                    <div className="fixed left-0 right-0 top-22 bg-black/30 shadow-lg z-[100]">
+                      <div
+                        onMouseEnter={() => {
+                          if (dropdownTimeoutRef.current) {
+                            clearTimeout(dropdownTimeoutRef.current);
+                          }
+                        }}
+                        onMouseLeave={handleMouseLeaveAllCategories}
+                        className="max-w-[90%] bg-white mx-auto p-6 grid grid-cols-5 gap-6 h-[calc(100vh-6rem)] overflow-y-auto"
+                      >
+                        {hasFetched &&
+                          allCategories.map((category) => (
+                            <div key={category.id} className="w-full">
+                              <Link href={`/category/${category.slug}`} className="text-lg font-medium text-gray-800 mb-3 capitalize flex items-center gap-2">
+                                {category.name} <ArrowUpRight size={16} className=' text-primary' />
+                              </Link>
+                              {category.subCategories.length > 0 ? (
+                                <ul className="space-y-2">
+                                  {category.subCategories.map((subCat) => (
+                                    <li key={subCat.id}>
+                                      <Link
+                                        href={`/category/${category.slug}?subcategory=${subCat.slug}`}
+                                        className="block text-sm text-gray-600 hover:text-primary py-1 transition-colors"
+                                        onClick={() => setHoveredAllCategories(false)}
+                                      >
+                                        {subCat.name}
+                                      </Link>
+                                    </li>
+                                  ))}
+                                </ul>
+                              ) : (
+                                <p className="text-sm text-gray-500">No subcategories available</p>
+                              )}
+                            </div>
+                          ))}
+                      </div>
+                    </div>
+                  )}
                 </li>
                 {hasFetched && categories.length === 0 ? null : (
                   categories.map((category) => {
@@ -543,10 +611,10 @@ const Header = ({ isCategory = true }: HeaderProps) => {
               </ul>
             </div>
 
-            {/* Full-Screen Dropdown */}
+            {/* Full-Screen Dropdown for Individual Categories */}
             {hoveredCategory && (
               <div
-                className="fixed left-0 right-0 top-26 bg-black/30 shadow-lg z-[100] "
+                className="fixed left-0 right-0 top-22 bg-black/30 shadow-lg z-[100] "
               >
                 <div
                   onMouseEnter={() => {

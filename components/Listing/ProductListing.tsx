@@ -3,7 +3,7 @@
 import React, { useState, useEffect, useMemo, memo, useRef } from "react";
 import DynamicFilter from "@/components/Filter/DynamicFilter";
 import ProductCard from "@/components/Product/ProductCards/ProductCardwithCart";
-import { useSearchParams } from "next/navigation";
+import { usePathname, useSearchParams } from "next/navigation";
 import DOMPurify from "isomorphic-dompurify";
 import debounce from "lodash/debounce";
 import Fuse from "fuse.js";
@@ -32,6 +32,9 @@ const ProductListing = ({
   const [productsPerPage] = useState(50);
   const [fuse, setFuse] = useState<Fuse<FlattenedProduct> | null>(null);
   const searchParams = useSearchParams();
+
+  const pathname = usePathname();
+  const isOfferZonePage = pathname?.includes("offer-zone");
 
   // console.log("Og Products", originalProducts)
   useEffect(() => {
@@ -76,24 +79,20 @@ const ProductListing = ({
 
   // Memoized debounced filter function
   const debouncedApplyFilters = useMemo(
-    () =>
-      debounce(
-        (
-          productsList: FlattenedProduct[],
-          filters: Record<string, any>,
-          sortOpt: string,
-          query: string
-        ) => {
-          // console.log(productsList)
-          let filtered = productsList.filter(
-            (product) =>
-              product.status &&
-              ["active", "coming_soon"].includes(
-                product.status.trim().toLowerCase()
-              )
-          );
+  () =>
+    debounce(
+      (
+        productsList: FlattenedProduct[],
+        filters: Record<string, any>,
+        sortOpt: string,
+        query: string
+      ) => {
+        let filtered = [...productsList]; // start with all products
 
-          // Apply category filter with exact matching
+        const isOfferZone = pathname?.includes("offer-zone");
+
+        // Only apply category/subcategory filters if NOT Offer Zone
+        if (!isOfferZone) {
           if (category && category.toLowerCase() !== "all") {
             filtered = filtered.filter(
               (product) =>
@@ -103,7 +102,6 @@ const ProductListing = ({
             );
           }
 
-          // Apply subcategory filter if provided
           if (subcategory && subcategory.toLowerCase() !== "all") {
             filtered = filtered.filter(
               (product) =>
@@ -113,245 +111,128 @@ const ProductListing = ({
             );
           }
 
-          // Apply search query filter (with Fuse.js)
-          if (query?.trim()) {
-            const lowerQuery = query.trim().toLowerCase();
-            const words = lowerQuery.split(/\s+/);
-            let results: FlattenedProduct[] = [];
+          // Apply status filter for normal pages
+          filtered = filtered.filter(
+            (product) =>
+              product.status &&
+              ["active", "coming_soon"].includes(
+                product.status.trim().toLowerCase()
+              )
+          );
+        }
 
-            if (fuse && words.length > 0) {
-              // Try AND logic: intersection of results for each word
-              const resultSets = words.map(
-                (word) =>
-                  new Set(fuse.search(`'${word}`).map((r) => r.refIndex))
+        // Apply search query filter (Fuse.js or fallback) as usual
+        if (query?.trim()) {
+          const lowerQuery = query.trim().toLowerCase();
+          const words = lowerQuery.split(/\s+/);
+          let results: FlattenedProduct[] = [];
+
+          if (fuse && words.length > 0) {
+            const resultSets = words.map(
+              (word) => new Set(fuse.search(`'${word}`).map((r) => r.refIndex))
+            );
+
+            let commonIndices = resultSets.reduce((a, b) => {
+              return new Set([...a].filter((x) => b.has(x)));
+            }, resultSets[0]);
+
+            if (commonIndices.size === 0 && words.length > 1) {
+              // Fallback to OR
+              commonIndices = new Set(
+                words.flatMap((word) => fuse.search(`'${word}`).map((r) => r.refIndex))
               );
-
-              let commonIndices = resultSets.reduce((a, b) => {
-                return new Set([...a].filter((x) => b.has(x)));
-              }, resultSets[0]);
-
-              let isFallback = false;
-              if (commonIndices.size === 0 && words.length > 1) {
-                // Fallback to OR: union of indices
-                const allIndices = new Set(
-                  words.flatMap((word) =>
-                    fuse.search(`'${word}`).map((r) => r.refIndex)
-                  )
-                );
-                commonIndices = allIndices;
-                isFallback = true;
-              }
-
-              // Get results with average scores for sorting
-              const resultsWithScores = [...commonIndices].map((index) => {
-                const scores = words.map((word) => {
-                  const res = fuse
-                    .search(`'${word}`)
-                    .find((r) => r.refIndex === index);
-                  return res ? res.score ?? 1 : 1;
-                });
-                const avgScore =
-                  scores.reduce((s, c) => s + c, 0) / scores.length;
-                return { item: originalProducts[index], score: avgScore };
-              });
-
-              resultsWithScores.sort((a, b) => a.score - b.score); // Lower score is better
-              results = resultsWithScores.map((r) => r.item);
             }
 
-            // Fallback if Fuse found nothing or not initialized
-            if (results.length === 0) {
-              const textGetter = (p: FlattenedProduct) =>
-                [
-                  (p.name || "").toLowerCase(),
-                  (p.brand?.name || "").toLowerCase(),
-                  (p.category?.name || "").toLowerCase(),
-                  (p.subcategory?.name || "").toLowerCase(),
-                ].join(" ");
-
-              results = productsList.filter((p) => {
-                const text = textGetter(p);
-                return words.every((word) => text.includes(word));
+            const resultsWithScores = [...commonIndices].map((index) => {
+              const scores = words.map((word) => {
+                const res = fuse
+                  .search(`'${word}`)
+                  .find((r) => r.refIndex === index);
+                return res ? res.score ?? 1 : 1;
               });
+              const avgScore =
+                scores.reduce((s, c) => s + c, 0) / scores.length;
+              return { item: originalProducts[index], score: avgScore };
+            });
 
-              if (results.length === 0 && words.length > 1) {
-                // Fallback to OR
-                results = productsList.filter((p) => {
-                  const text = textGetter(p);
-                  return words.some((word) => text.includes(word));
-                });
-              }
+            resultsWithScores.sort((a, b) => a.score - b.score); // Lower score is better
+            results = resultsWithScores.map((r) => r.item);
+          }
+
+          // Fallback if Fuse fails
+          if (results.length === 0) {
+            const textGetter = (p: FlattenedProduct) =>
+              [
+                (p.name || "").toLowerCase(),
+                (p.brand?.name || "").toLowerCase(),
+                (p.category?.name || "").toLowerCase(),
+                (p.subcategory?.name || "").toLowerCase(),
+              ].join(" ");
+
+            results = productsList.filter((p) =>
+              words.every((word) => textGetter(p).includes(word))
+            );
+
+            if (results.length === 0 && words.length > 1) {
+              results = productsList.filter((p) =>
+                words.some((word) => textGetter(p).includes(word))
+              );
             }
-
-            filtered = results;
           }
 
-          // console.log('Final filtered products:', filtered);
+          filtered = results;
+        }
 
-          // Apply color filter
-          if (filters.color?.length > 0) {
-            filtered = filtered.filter(
-              (product) =>
-                product.color && filters.color.includes(product.color)
-            );
+        // Apply other dynamic filters (color, brand, rating, inStock, etc.) as usual
+        Object.keys(filters).forEach((key) => {
+          if (key === "color" && filters.color?.length > 0) {
+            filtered = filtered.filter((p) => p.color && filters.color.includes(p.color));
           }
-
-          // Apply storage filter
-          if (filters.storage?.length > 0) {
-            filtered = filtered.filter(
-              (product) =>
-                product.storage && filters.storage.includes(product.storage)
-            );
+          if (key === "brand" && filters.brand?.length > 0) {
+            filtered = filtered.filter((p) => p.brand && filters.brand.includes(p.brand.name));
           }
-
-          // Apply brand filter
-          if (filters.brand?.length > 0) {
-            filtered = filtered.filter(
-              (product) =>
-                product.brand && filters.brand.includes(product.brand.name)
-            );
+          if (key === "storage" && filters.storage?.length > 0) {
+            filtered = filtered.filter((p) => p.storage && filters.storage.includes(p.storage));
           }
-
-          // Apply rating filter
-          if (filters.rating?.length > 0) {
-            const minRating = Math.min(
-              ...filters.rating.map((r: string) => parseInt(r))
-            );
+          if (key === "rating" && filters.rating?.length > 0) {
+            const minRating = Math.min(...filters.rating.map((r: string) => parseInt(r)));
+            filtered = filtered.filter((p) => (Number(p.averageRating) || 0) >= minRating);
+          }
+          if (key === "inStock" && filters.inStock) {
+            filtered = filtered.filter((p) => Number(p.totalStocks) > 0);
+          }
+          // Dynamic attributes
+          if (!["color", "brand", "storage", "rating", "inStock", "ourPrice", "category"].includes(key) && Array.isArray(filters[key])) {
             filtered = filtered.filter((product) => {
-              return (Number(product.averageRating) || 0) >= minRating;
+              const val = product.attributes?.[key];
+              if (!val) return false;
+              return filters[key].includes(val);
             });
           }
+        });
 
-          // Apply stock filter
-          if (filters.inStock) {
-            filtered = filtered.filter(
-              (product) => Number(product.totalStocks) > 0
-            );
-          }
+        // Sorting
+        switch (sortOpt.toLowerCase()) {
+          case "ourprice-low-high":
+            filtered.sort((a, b) => (Number(a.ourPrice) || 0) - (Number(b.ourPrice) || 0));
+            break;
+          case "ourprice-high-low":
+            filtered.sort((a, b) => (Number(b.ourPrice) || 0) - (Number(a.ourPrice) || 0));
+            break;
+          case "featured":
+          default:
+            break;
+        }
 
-          const normalizeValue = (val: string): string => {
-            if (!val) return "";
+        setFilteredProducts(filtered);
+        setLoading(false);
+        setCurrentPage(1);
+      },
+      300
+    ),
+  [category, subcategory, searchQuery, fuse, pathname]
+);
 
-            let v = val.trim().replace(/\s+/g, " ").toLowerCase();
-            let brand = "";
-
-            // --- Detect explicit brand ---
-            if (/\bamd\b/i.test(v)) brand = "AMD";
-            else if (/\bintel\b/i.test(v)) brand = "Intel";
-            else if (/\bnvidia\b/i.test(v)) brand = "NVIDIA";
-            else if (/\bmsi\b/i.test(v)) brand = "MSI";
-            else if (/\basus\b/i.test(v)) brand = "Asus";
-
-            // --- Remove duplicate brand mentions ---
-            if (brand) {
-              const brandRegex = new RegExp(`\\b(${brand})\\b`, "ig");
-              v = v.replace(brandRegex, "").trim();
-            }
-
-            // --- Series inference ---
-            if (/ryzen\s*[3579]/i.test(v)) {
-              if (!brand) brand = "AMD";
-              v = v.replace(/ryzen\s*([3579]).*/i, "Ryzen $1");
-            }
-            if (/core\s*i\s*[3579]/i.test(v)) {
-              if (!brand) brand = "Intel";
-              v = v.replace(/core\s*i\s*([3579]).*/i, "Core i$1");
-            }
-            if (/rtx\s*\d+/i.test(v)) {
-              if (!brand) brand = "NVIDIA";
-              v = v.replace(/geforce\s*/i, "");
-              v = v.replace(/\brtx\s*(\d+).*/i, "RTX $1");
-            }
-
-            // --- Special inference for laptop lines ---
-            if (/tuf\s+gaming/i.test(v)) {
-              if (!brand) brand = "Asus";
-              v = v.replace(/tuf\s+gaming/i, "TUF Gaming");
-            }
-            if (/rog\s+/i.test(v)) {
-              if (!brand) brand = "Asus";
-              v = v.replace(/rog\s+/i, "ROG ");
-            }
-
-            // --- Storage normalization ---
-            v = v.replace(/(\d+)\s*(gb|ssd|hdd)/i, "$1 GB");
-            v = v.replace(/(\d+)(gb|ssd|hdd)/i, "$1 GB");
-
-            // --- Display sizes ---
-            v = v.replace(
-              /(\d+(\.\d+)?)\s*cm\s*\((\d+(\.\d+)?)\s*inch\)/i,
-              "$3 inch"
-            );
-
-            // --- Collapse duplicate words ---
-            v = v.replace(/\b(\w+)( \1\b)+/gi, "$1");
-
-            // --- Title case ---
-            v = v.replace(/\b\w/g, (c) => c.toUpperCase());
-
-            // --- Prepend brand (avoid duplicates) ---
-            if (brand && !v.startsWith(brand)) {
-              v = `${brand} ${v}`;
-            }
-
-            return v.trim();
-          };
-
-          // Apply dynamic attribute filters
-          Object.keys(filters).forEach((key) => {
-            if (
-              ![
-                "ourPrice",
-                "color",
-                "storage",
-                "brand",
-                "rating",
-                "inStock",
-                "category",
-              ].includes(key) &&
-              Array.isArray(filters[key])
-            ) {
-              filtered = filtered.filter((product) => {
-                const productVal = product.attributes?.[key];
-                if (!productVal) return false;
-
-                // Normalize both product attribute & filter values
-                const normalizedProductVal = normalizeValue(productVal);
-                const normalizedFilterVals = filters[key].map((v: string) =>
-                  normalizeValue(v)
-                );
-
-                return normalizedFilterVals.includes(normalizedProductVal);
-              });
-            }
-          });
-
-          // Apply sorting
-          const sorted = [...filtered];
-          switch (sortOpt.toLowerCase()) {
-            case "ourprice-low-high":
-              sorted.sort(
-                (a, b) => (Number(a.ourPrice) || 0) - (Number(b.ourPrice) || 0)
-              );
-              break;
-            case "ourprice-high-low":
-              sorted.sort(
-                (a, b) => (Number(b.ourPrice) || 0) - (Number(a.ourPrice) || 0)
-              );
-              break;
-            case "featured":
-            default:
-              break;
-          }
-
-          setFilteredProducts(sorted);
-          setLoading(false);
-          setCurrentPage(1);
-        },
-        300
-      ),
-    [category, subcategory, searchQuery, fuse]
-  );
 
   useEffect(() => {
     return () => {
@@ -522,7 +403,7 @@ const ProductListing = ({
         onClick={() => handlePageChange(1)}
         className={`px-3 py-1 mx-1 rounded ${
           currentPage === 1
-            ? "bg-blue-500 text-white"
+            ? "bg-primary text-white"
             : "bg-gray-200 hover:bg-gray-300"
         }`}
         disabled={currentPage === 1}
@@ -717,7 +598,7 @@ const ProductListing = ({
           ) : loading ? (
             <div className="flex flex-col md:flex-row gap-6">
               {/* Left: Filter Sidebar Skeleton */}
-              <aside className="w-full md:w-1/4 bg-white p-4 rounded-lg shadow animate-pulse">
+              <aside className="w-full md:w-1/4 bg-white rounded-lg border animate-pulse">
                 <div className="h-6 bg-gray-200 rounded mb-4 w-1/2"></div>
                 {[...Array(6)].map((_, i) => (
                   <div key={i} className="mb-4">
@@ -739,13 +620,13 @@ const ProductListing = ({
                 </div>
 
                 <div
-                  className="grid grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6"
+                  className="grid grid-cols-2 lg:grid-cols-3 gap-6"
                   aria-live="polite"
                 >
-                  {[...Array(8)].map((_, index) => (
+                  {[...Array(9)].map((_, index) => (
                     <div
                       key={index}
-                      className="bg-white p-4 rounded-lg shadow animate-pulse"
+                      className="bg-white p-4 rounded-lg border  animate-pulse"
                     >
                       <div className="bg-gray-200 h-48 w-full rounded mb-4"></div>
                       <div className="bg-gray-200 h-4 w-3/4 rounded mb-2"></div>
