@@ -49,7 +49,7 @@ const UserButton = () => {
   if (isLoading) {
     return (
       <div className="p-2 bg-slate-200 rounded-full animate-pulse">
-        <User size={24} />
+        <User size={24} className=" size-4 md:size-6" />
       </div>
     );
   }
@@ -64,7 +64,7 @@ const UserButton = () => {
         aria-controls="user-menu"
         id="user-menu-button"
       >
-        <User size={24} />
+        <User size={24} className=" size-4 md:size-6" />
       </button>
 
       {isDropdownOpen && (

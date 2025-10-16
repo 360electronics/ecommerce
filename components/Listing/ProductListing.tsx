@@ -545,7 +545,7 @@ const ProductListing = ({
             <div className="items-center flex md:hidden justify-center text-center w-full">
               <select
                 id="sort"
-                className="text-sm border-y border-l w-full border-gray-300 text-center flex items-center justify-center p-4 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                className="text-sm border-y border-r w-full border-gray-300 text-center flex items-center justify-center p-3.5 md:p-4 focus:outline-none focus:ring-2 focus:ring-primary"
                 value={sortOption}
                 onChange={handleSortChange}
                 aria-label="Sort products"
@@ -564,7 +564,7 @@ const ProductListing = ({
             filteredProducts.length > 0 ? "md:w-3/4" : "md:w-full"
           }`}
         >
-          <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-6 pb-4 border-b border-gray-200">
+          <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-6 md:pb-4 border-b border-gray-200">
             <div className="text-sm md:text-lg font-medium text-gray-800 mb-4 sm:mb-0">
               {getDisplayText()}
             </div>
@@ -619,7 +619,7 @@ const ProductListing = ({
 
               {/* Right: Product Cards Skeleton */}
               <main className="w-full md:w-3/4">
-                <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-6 pb-4 border-b border-gray-200">
+                <div className="grid grid-cols-2 md:grid-cols-3 mb-6 pb-4 border-b border-gray-200">
                   <div className="h-6 bg-gray-200 rounded w-1/3 mb-2 animate-pulse"></div>
                   <div className="hidden md:flex items-center gap-2">
                     <div className="h-4 bg-gray-200 rounded w-20"></div>
@@ -660,7 +660,7 @@ const ProductListing = ({
             </div>
           ) : (
             <>
-              <div className="grid grid-cols-2 lg:grid-cols-3 gap-6">
+              <div className="grid grid-cols-2 lg:grid-cols-3 gap-3 md:gap-6">
                 {displayedProducts.map((product, index) => (
                   <MemoizedProductCard
                     productId={product.productId}

@@ -16,7 +16,7 @@ const WishlistButton = () => {
         aria-label="View wishlist"
       >
         <div className="relative">
-          <Heart size={24} />
+          <Heart size={24} className=' size-4 md:size-6' />
           {wishlistCount > 0 && (
             <span className="absolute -top-3 -right-3 bg-red-500 text-white text-xs rounded-full w-5 h-5 flex items-center justify-center">
               {wishlistCount}

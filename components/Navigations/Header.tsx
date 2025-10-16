@@ -9,8 +9,21 @@ import UserButton from './Header/UserButton';
 import CartButton from './Header/CartButton';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
-import { Menu, X, ShoppingBag, Heart, User, ChevronDown, Building, ArrowBigRight, ArrowUpRight } from 'lucide-react';
-import { slugify } from '@/utils/slugify';
+import { 
+  Menu, X,  ChevronDown, Building, ArrowUpRight,
+  Laptop, Cpu, Monitor, Keyboard, Smartphone, Package, ArrowLeft, Home
+} from 'lucide-react';
+import { TbPlug as Power } from "react-icons/tb";
+import { LuWebcam as Webcam } from "react-icons/lu";
+import { BiCabinet as Cabinet } from "react-icons/bi";
+import { FaFan as Cooler } from "react-icons/fa";
+import { MdMemory as RAM } from "react-icons/md";
+import { IoMdPrint as Printer } from "react-icons/io";
+import { IoHeadset as Headset } from "react-icons/io5";
+import { PiGraphicsCard as GraphicsCard } from "react-icons/pi";
+import { BsMotherboard as Motherboard } from "react-icons/bs";
+
+import { motion, AnimatePresence } from 'framer-motion';
 import { fetchProducts } from '@/utils/products.util';
 
 interface HeaderProps {
@@ -70,7 +83,27 @@ interface Product {
 }
 
 const CACHE_KEY = 'header_data_cache';
-const CACHE_DURATION = 1000 * 60 * 60; // 1 hour
+const CACHE_DURATION = 1000 * 60 * 60;
+
+const getCategoryIcon = (categoryName: string) => {
+  const iconProps = { size: 20, className: 'text-primary size-5 md:size-6' };
+  const iconMap: { [key: string]: React.ReactNode } = {
+    'Laptops': <Laptop {...iconProps} />,
+    'Processors': <Cpu {...iconProps} />,
+    'Graphics Card': <GraphicsCard {...iconProps} />,
+    'Monitors': <Monitor {...iconProps} />,
+    'Peripherals': <Webcam {...iconProps} />,
+    'Motherboard': <Motherboard {...iconProps} />,
+    'Power Supply': <Power {...iconProps} />,
+    'Keyboard and Mouse': <Keyboard {...iconProps} />,
+    'Cabinets': <Cabinet {...iconProps} />,
+    'CPU Cooler': <Cooler {...iconProps} />,
+    'RAM': <RAM {...iconProps} />,
+    'Printer': <Printer {...iconProps} />,
+    'Headset': <Headset {...iconProps} />,
+  };
+  return iconMap[categoryName] || <Package {...iconProps} />;
+};
 
 const Header = ({ isCategory = true }: HeaderProps) => {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
@@ -79,6 +112,8 @@ const Header = ({ isCategory = true }: HeaderProps) => {
   const [hoveredCategory, setHoveredCategory] = useState<string | null>(null);
   const [hoveredAttribute, setHoveredAttribute] = useState<string | null>(null);
   const [hoveredAllCategories, setHoveredAllCategories] = useState(false);
+  const [selectedMobileCategory, setSelectedMobileCategory] = useState<Category | null>(null);
+  const [expandedFeature, setExpandedFeature] = useState<string | null>(null);
   const [categories, setCategories] = useState<Category[]>([]);
   const [allCategories, setAllCategories] = useState<Category[]>([]);
   const [hasFetched, setHasFetched] = useState(false);
@@ -87,10 +122,136 @@ const Header = ({ isCategory = true }: HeaderProps) => {
   const dropdownTimeoutRef = useRef<NodeJS.Timeout | null>(null);
   const attributeRef = useRef<HTMLDivElement>(null);
 
-  // Define allowed categories with corrected display name
   const allowedCategories = new Set(['Laptops', 'Processors', 'Graphics Card', 'Monitors', 'Motherboard', 'Peripherals']);
 
+  const categoryImages: Record<string, string> = {
+    'Laptops': '/header/categories/storage.jpg',
+    'Processors': '/header/categories/processor.jpg',
+    'Graphics Card': '/header/categories/graphics-card.jpg',
+    'Monitors': '/header/categories/monitors.jpg',
+    'Accessories': '/header/categories/accessories.jpg',
+  };
+
   useEffect(() => {
+    const fetchData = async () => {
+      try {
+        const [categoryResponse, productResponse] = await Promise.all([
+          fetch('/api/categories'),
+          fetchProducts()
+        ]);
+
+        if (!categoryResponse.ok) throw new Error('Failed to fetch categories');
+
+        const categoryData = await categoryResponse.json();
+        const productData = productResponse || [];
+
+        const normalizeValue = (val: string) => {
+          if (!val) return "";
+          let v = val.trim().replace(/\s+/g, " ").toLowerCase();
+          let brand = "";
+
+          if (/\bamd\b/i.test(v)) brand = "AMD";
+          else if (/\bintel\b/i.test(v)) brand = "Intel";
+          else if (/\bnvidia\b/i.test(v)) brand = "NVIDIA";
+          else if (/\bmsi\b/i.test(v)) brand = "MSI";
+          else if (/\basus\b/i.test(v)) brand = "Asus";
+
+          if (brand) {
+            const brandRegex = new RegExp(`\\b(${brand})\\b`, "ig");
+            v = v.replace(brandRegex, "").trim();
+          }
+
+          if (/ryzen\s*[3579]/i.test(v)) {
+            if (!brand) brand = "AMD";
+            v = v.replace(/ryzen\s*([3579]).*/i, "Ryzen $1");
+          }
+          if (/core\s*i\s*[3579]/i.test(v)) {
+            if (!brand) brand = "Intel";
+            v = v.replace(/core\s*i\s*([3579]).*/i, "Core i$1");
+          }
+          if (/rtx\s*\d+/i.test(v)) {
+            if (!brand) brand = "NVIDIA";
+            v = v.replace(/geforce\s*/i, "");
+            v = v.replace(/\brtx\s*(\d+).*/i, "RTX $1");
+          }
+
+          if (/tuf\s+gaming/i.test(v)) {
+            if (!brand) brand = "Asus";
+            v = v.replace(/tuf\s+gaming/i, "TUF Gaming");
+          }
+          if (/rog\s+/i.test(v)) {
+            if (!brand) brand = "Asus";
+            v = v.replace(/rog\s+/i, "ROG ");
+          }
+
+          v = v.replace(/(\d+)\s*(gb|ssd|hdd)/i, "$1 GB");
+          v = v.replace(/(\d+)(gb|ssd|hdd)/i, "$1 GB");
+          v = v.replace(/(\d+(\.\d+)?)\s*cm\s*\((\d+(\.\d+)?)\s*inch\)/i, "$3 inch");
+          v = v.replace(/\b(\w+)( \1\b)+/gi, "$1");
+          v = v.replace(/\b\w/g, (c) => c.toUpperCase());
+
+          if (brand && !v.startsWith(brand)) {
+            v = `${brand} ${v}`;
+          }
+
+          return v.trim();
+        };
+
+        const attributeValuesMap: Record<string, Record<string, Set<string>>> = {};
+        productData.forEach((product: Product) => {
+          const categoryId = product.categoryId;
+          if (!attributeValuesMap[categoryId]) {
+            attributeValuesMap[categoryId] = {};
+          }
+          product.variants.forEach((variant) => {
+            Object.entries(variant.attributes).forEach(([key, value]) => {
+              if (!attributeValuesMap[categoryId][key]) {
+                attributeValuesMap[categoryId][key] = new Set();
+              }
+              attributeValuesMap[categoryId][key].add(normalizeValue(value as string));
+            });
+          });
+        });
+
+        const allTemp: Category[] = Object.values(categoryData)
+          .map(({ category, attributes, subcategories }: any) => ({
+            ...category,
+            name: category.name === 'Graphics_cards' ? 'Graphics Card' : category.name,
+            attributes,
+            subCategories: subcategories,
+            attributeValues: attributeValuesMap[category.id]
+              ? Object.fromEntries(
+                  Object.entries(attributeValuesMap[category.id]).map(([key, valueSet]) => [
+                    key,
+                    Array.from(valueSet).sort(),
+                  ])
+                )
+              : {},
+          }))
+          .sort((a, b) => parseInt(a.displayOrder) - parseInt(b.displayOrder));
+
+        const categoryList = allTemp.filter(({ name }) => allowedCategories.has(name));
+
+        setCategories(categoryList);
+        setAllCategories(allTemp);
+        setHasFetched(true);
+
+        if (typeof window !== "undefined") {
+          sessionStorage.setItem(
+            CACHE_KEY,
+            JSON.stringify({
+              categories: categoryList,
+              allCategories: allTemp,
+              timestamp: Date.now(),
+            })
+          );
+        }
+      } catch (error) {
+        console.error('Error fetching data:', error);
+        setHasFetched(true);
+      }
+    };
+
     if (typeof window !== "undefined") {
       const cachedData = sessionStorage.getItem(CACHE_KEY);
       if (cachedData) {
@@ -111,146 +272,9 @@ const Header = ({ isCategory = true }: HeaderProps) => {
       }
     }
 
-    const normalizeValue = (val: string): string => {
-      if (!val) return "";
-
-      let v = val.trim().replace(/\s+/g, " ").toLowerCase();
-      let brand = "";
-
-      // --- Detect explicit brand ---
-      if (/\bamd\b/i.test(v)) brand = "AMD";
-      else if (/\bintel\b/i.test(v)) brand = "Intel";
-      else if (/\bnvidia\b/i.test(v)) brand = "NVIDIA";
-      else if (/\bmsi\b/i.test(v)) brand = "MSI";
-      else if (/\basus\b/i.test(v)) brand = "Asus";
-
-      // --- Remove duplicate brand mentions ---
-      if (brand) {
-        const brandRegex = new RegExp(`\\b(${brand})\\b`, "ig");
-        v = v.replace(brandRegex, "").trim();
-      }
-
-      // --- Series inference ---
-      if (/ryzen\s*[3579]/i.test(v)) {
-        if (!brand) brand = "AMD";
-        v = v.replace(/ryzen\s*([3579]).*/i, "Ryzen $1");
-      }
-      if (/core\s*i\s*[3579]/i.test(v)) {
-        if (!brand) brand = "Intel";
-        v = v.replace(/core\s*i\s*([3579]).*/i, "Core i$1");
-      }
-      if (/rtx\s*\d+/i.test(v)) {
-        if (!brand) brand = "NVIDIA";
-        v = v.replace(/geforce\s*/i, "");
-        v = v.replace(/\brtx\s*(\d+).*/i, "RTX $1");
-      }
-
-      // --- Special inference for laptop lines ---
-      if (/tuf\s+gaming/i.test(v)) {
-        if (!brand) brand = "Asus";
-        v = v.replace(/tuf\s+gaming/i, "TUF Gaming");
-      }
-      if (/rog\s+/i.test(v)) {
-        if (!brand) brand = "Asus";
-        v = v.replace(/rog\s+/i, "ROG ");
-      }
-
-      // --- Storage normalization ---
-      v = v.replace(/(\d+)\s*(gb|ssd|hdd)/i, "$1 GB");
-      v = v.replace(/(\d+)(gb|ssd|hdd)/i, "$1 GB");
-
-      // --- Display sizes ---
-      v = v.replace(/(\d+(\.\d+)?)\s*cm\s*\((\d+(\.\d+)?)\s*inch\)/i, "$3 inch");
-
-      // --- Collapse duplicate words ---
-      v = v.replace(/\b(\w+)( \1\b)+/gi, "$1");
-
-      // --- Title case ---
-      v = v.replace(/\b\w/g, (c) => c.toUpperCase());
-
-      // --- Prepend brand (avoid duplicates) ---
-      if (brand && !v.startsWith(brand)) {
-        v = `${brand} ${v}`;
-      }
-
-      return v.trim();
-    };
-
-
-    const fetchData = async () => {
-      try {
-        const [categoryResponse, productResponse] = await Promise.all([
-          fetch('/api/categories'),
-          fetchProducts()
-        ]);
-
-        console.log('Product Response:', productResponse)
-
-        if (!categoryResponse.ok) throw new Error('Failed to fetch categories');
-        // if (!productResponse || productResponse.length === 0) throw new Error('Failed to fetch products');
-
-        const categoryData: CategoryResponse = await categoryResponse.json();
-        const productData: Product[] = productResponse;
-
-        const attributeValuesMap: { [categoryId: string]: { [key: string]: Set<string> } } = {};
-        productData.forEach((product) => {
-          const categoryId = product.categoryId;
-          if (!attributeValuesMap[categoryId]) {
-            attributeValuesMap[categoryId] = {};
-          }
-          product.variants.forEach((variant) => {
-            Object.entries(variant.attributes).forEach(([key, value]) => {
-              if (!attributeValuesMap[categoryId][key]) {
-                attributeValuesMap[categoryId][key] = new Set();
-              }
-              attributeValuesMap[categoryId][key].add(normalizeValue(value));
-            });
-          });
-        });
-
-        const allTemp = Object.values(categoryData)
-          .map(({ category, attributes, subcategories }) => ({
-            ...category,
-            // Normalize Graphics_card to Graphics Card for display
-            name: category.name === 'Graphics_cards' ? 'Graphics Card' : category.name,
-            attributes,
-            subCategories: subcategories,
-            attributeValues: attributeValuesMap[category.id]
-              ? Object.fromEntries(
-                  Object.entries(attributeValuesMap[category.id]).map(([key, valueSet]) => [
-                    key,
-                    Array.from(valueSet).sort(),
-                  ])
-                )
-              : {},
-          }))
-          .sort((a, b) => parseInt(a.displayOrder) - parseInt(b.displayOrder));
-
-        const categoryList = allTemp.filter(({ name }) => allowedCategories.has(name));
-
-        setCategories(categoryList);
-        setAllCategories(allTemp);
-        if (typeof window !== "undefined") {
-          sessionStorage.setItem(
-            CACHE_KEY,
-            JSON.stringify({
-              categories: categoryList,
-              allCategories: allTemp,
-              timestamp: Date.now(),
-            })
-          );
-        }
-        setHasFetched(true);
-      } catch (error) {
-        console.error('Error fetching data:', error);
-        setHasFetched(true);
-      }
-    };
-
     fetchData();
   }, []);
 
-  // Handle scroll effect
   useEffect(() => {
     const handleScroll = () => {
       setIsScrolled(window.scrollY > 10);
@@ -259,16 +283,15 @@ const Header = ({ isCategory = true }: HeaderProps) => {
     return () => window.removeEventListener('scroll', handleScroll);
   }, []);
 
-  // Handle click outside to close mobile menu
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
-      if (menuRef.current && !menuRef.current.contains(event.target as Node) && isMenuOpen) {
+      if (menuRef.current && !menuRef.current.contains(event.target as Node) && isMenuOpen && !selectedMobileCategory) {
         closeMenu();
       }
     };
     document.addEventListener('mousedown', handleClickOutside);
     return () => document.removeEventListener('mousedown', handleClickOutside);
-  }, [isMenuOpen]);
+  }, [isMenuOpen, selectedMobileCategory]);
 
   const handleSearch = (query: string | number | boolean, category: string | number | boolean) => {
     router.push(`/search?q=${encodeURIComponent(query)}&category=${encodeURIComponent(category)}`);
@@ -292,6 +315,8 @@ const Header = ({ isCategory = true }: HeaderProps) => {
   const closeMenu = () => {
     setIsMenuOpen(false);
     setIsSearchOpen(false);
+    setSelectedMobileCategory(null);
+    setExpandedFeature(null);
     document.body.style.overflow = 'auto';
   };
 
@@ -299,7 +324,6 @@ const Header = ({ isCategory = true }: HeaderProps) => {
     if (dropdownTimeoutRef.current) {
       clearTimeout(dropdownTimeoutRef.current);
     }
-    // Use the normalized name for consistency
     setHoveredCategory(categoryName === 'Graphics_cards' ? 'Graphics Card' : categoryName);
     setHoveredAttribute(null);
   };
@@ -337,14 +361,6 @@ const Header = ({ isCategory = true }: HeaderProps) => {
     }
   };
 
-  const categoryImages: { [key: string]: string } = {
-    Laptops: '/header/categories/storage.jpg',
-    Processors: '/header/categories/processor.jpg',
-    'Graphics Card': '/header/categories/graphics-card.jpg',
-    Monitors: '/header/categories/monitors.jpg',
-    Accessories: '/header/categories/accessories.jpg',
-  };
-
   return (
     <>
       <header
@@ -353,7 +369,7 @@ const Header = ({ isCategory = true }: HeaderProps) => {
         <div className="mx-auto flex items-center justify-between gap-2">
           <div className="flex items-center">
             <button
-              className="mr-2 lg:hidden focus:outline-none"
+              className="mr-2 lg:hidden focus:outline-none hover:bg-gray-100 p-2 rounded-lg transition-colors"
               onClick={toggleMenu}
               aria-label="Toggle menu"
             >
@@ -376,9 +392,10 @@ const Header = ({ isCategory = true }: HeaderProps) => {
               <SearchBar onSearch={handleSearch} />
             </div>
           </div>
-          <div className=' px-2'>
-            <Link href={'/store-locator'} className=' flex items-center gap-2 font-medium text-sm'>
-              <span className=' text-primary'>
+
+          <div className='px-2'>
+            <Link href={'/store-locator'} className='hidden md:flex items-center gap-2 font-medium text-sm hover:text-primary transition-colors group'>
+              <span className='text-primary group-hover:scale-110 transition-transform'>
                 <Building size={20} />
               </span>
               Store Locator
@@ -393,6 +410,8 @@ const Header = ({ isCategory = true }: HeaderProps) => {
 
           <div className="flex items-center gap-2 lg:hidden">
             <CartButton />
+            <WishlistButton />
+            <UserButton />
           </div>
         </div>
 
@@ -405,130 +424,273 @@ const Header = ({ isCategory = true }: HeaderProps) => {
           </div>
         )}
 
-        {/* Mobile Menu */}
-        {isMenuOpen && (
-          <div
-            className="fixed inset-0 bg-white z-50 lg:hidden overflow-y-auto transition-all duration-300"
-            style={{ height: '100dvh' }}
-            ref={menuRef}
-          >
-            <div className="p-4 flex flex-col h-full">
-              <div className="flex justify-between items-center mb-4">
-                <h3 className="font-bold text-lg">Menu</h3>
-                <button
-                  className="p-2 focus:outline-none"
-                  onClick={closeMenu}
-                  aria-label="Close menu"
+        {/* Mobile Menu Overlay */}
+        <AnimatePresence>
+          {isMenuOpen && (
+            <motion.div
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              transition={{ duration: 0.2 }}
+              className="fixed inset-0 top-0 z-40 lg:hidden"
+              onClick={() => !selectedMobileCategory && closeMenu()}
+            >
+              <div className="absolute inset-0 bg-black/40" />
+            </motion.div>
+          )}
+        </AnimatePresence>
+
+        {/* Mobile Menu - Slide from Left */}
+        <AnimatePresence>
+          {isMenuOpen && (
+            <motion.div
+              initial={{ x: '-100%' }}
+              animate={{ x: 0 }}
+              exit={{ x: '-100%' }}
+              transition={{ duration: 0.3, ease: 'easeInOut' }}
+              className="fixed inset-y-0 left-0 z-50 lg:hidden bg-white overflow-hidden"
+              style={{ width: '80vw', maxWidth: '320px', height: '100dvh' }}
+              ref={menuRef}
+            >
+              {selectedMobileCategory ? (
+                // Category Details View
+                <motion.div
+                  initial={{ x: '100%', opacity: 0 }}
+                  animate={{ x: 0, opacity: 1 }}
+                  exit={{ x: '100%', opacity: 0 }}
+                  transition={{ duration: 0.3, ease: 'easeInOut' }}
+                  className="p-4 flex flex-col h-full"
                 >
-                  <X size={24} />
-                </button>
-              </div>
+                  <div className="flex justify-between items-center mb-4 pb-4 border-b border-gray-200">
+                    <div className="flex items-center gap-3">
+                      <motion.button
+                        whileHover={{ scale: 1.1, x: -4 }}
+                        whileTap={{ scale: 0.95 }}
+                        onClick={() => {
+                          setExpandedFeature(null);
+                          setSelectedMobileCategory(null);
+                        }}
+                        className="p-2 hover:bg-gray-100 rounded-lg transition-colors"
+                      >
+                        <ArrowLeft size={24} className="text-primary" />
+                      </motion.button>
+                      <motion.h3
+                        initial={{ opacity: 0, x: 20 }}
+                        animate={{ opacity: 1, x: 0 }}
+                        className="font-bold text-lg"
+                      >
+                        {selectedMobileCategory.name}
+                      </motion.h3>
+                    </div>
+                  </div>
 
-              <div className="py-4 border-b border-gray-200">
-                <Link href="/profile" className="flex items-center py-3" onClick={closeMenu}>
-                  <User size={20} className="mr-3 text-gray-700" />
-                  <span className="font-medium">My Account</span>
-                </Link>
-                <Link href="/profile/orders" className="flex items-center py-3" onClick={closeMenu}>
-                  <ShoppingBag size={20} className="mr-3 text-gray-700" />
-                  <span className="font-medium">My Orders</span>
-                </Link>
-                <Link href="/profile/wishlist" className="flex items-center py-3" onClick={closeMenu}>
-                  <Heart size={20} className="mr-3 text-gray-700" />
-                  <span className="font-medium">Wishlist</span>
-                </Link>
-              </div>
-
-              <div className="py-4 border-b border-gray-200">
-                {hasFetched && categories.length === 0 ? (
-                  <p className="text-gray-600">No categories available</p>
-                ) : (
-                  categories.map((category) => {
-                    const filterableAttributes = category.attributes.filter(attr => attr.isFilterable === true);
-                    return (
-                      <div key={category.id} className="mb-4">
-                        <Link
-                          href={`/category/${category.slug}`}
-                          className="block py-2 text-gray-700 hover:text-primary font-medium"
-                          onClick={closeMenu}
-                        >
-                          {category.name}
-                        </Link>
-                        {category.subCategories.length > 0 && (
-                          <div className="ml-4">
-                            <h4 className="text-sm font-semibold text-gray-700 mt-2">Explore Subcategories</h4>
-                            {category.subCategories.map((subCat) => (
+                  <div className="flex-grow overflow-y-auto space-y-4">
+                    {/* Subcategories */}
+                    {selectedMobileCategory.subCategories.length > 0 && (
+                      <div>
+                        <h4 className="text-xs font-bold text-gray-500 uppercase tracking-wide mb-3 flex items-center gap-2">
+                          <Smartphone size={16} className="text-primary" />
+                          Subcategories
+                        </h4>
+                        <div className="space-y-2">
+                          {selectedMobileCategory.subCategories.map((subCat) => (
+                            <motion.div
+                              key={subCat.id}
+                              whileHover={{ scale: 1.02 }}
+                              whileTap={{ scale: 0.98 }}
+                              transition={{ duration: 0.2 }}
+                            >
                               <Link
-                                key={subCat.id}
-                                href={`/category/${category.slug}?subcategory=${subCat.slug}`}
-                                className="block py-1 text-sm text-gray-600 hover:text-primary"
+                                href={`/category/${selectedMobileCategory.slug}?subcategory=${subCat.slug}`}
+                                className="flex items-center justify-between py-3 px-3 text-sm text-gray-700 hover:text-primary bg-gray-50 hover:bg-primary/5 rounded-lg transition-all group font-medium"
                                 onClick={closeMenu}
                               >
-                                {subCat.name}
+                                <span>{subCat.name}</span>
+                                <motion.div
+                                  initial={{ x: 0 }}
+                                  whileHover={{ x: 4 }}
+                                  transition={{ duration: 0.2 }}
+                                >
+                                  <ArrowUpRight size={16} className="text-primary opacity-60 group-hover:opacity-100" />
+                                </motion.div>
                               </Link>
-                            ))}
-                          </div>
-                        )}
-                        {filterableAttributes.length > 0 && Object.keys(category.attributeValues).length > 0 && (
-                          <div className="ml-4">
-                            <h4 className="text-sm font-semibold text-gray-700 mt-2">Filter by Features</h4>
-                            {filterableAttributes
-                              .filter(attr => category.attributeValues[attr.name!])
-                              .sort((a, b) => (a.name || '').localeCompare(b.name || ''))
-                              .map((attr) => (
-                                <div key={attr.name} className="py-1">
-                                  <button
-                                    className="text-sm text-gray-600 hover:text-primary flex items-center"
-                                    onClick={() =>
-                                      setHoveredAttribute(hoveredAttribute === attr.name ? null : attr.name)
-                                    }
-                                  >
-                                    {attr.name?.replace('_', ' ')}
-                                    <ChevronDown
-                                      size={14}
-                                      className={`ml-1 transform ${hoveredAttribute === attr.name ? 'rotate-180' : ''}`}
-                                    />
-                                  </button>
-                                  {hoveredAttribute === attr.name && (
-                                    <div className="ml-4 mt-1">
-                                      {category.attributeValues[attr.name!].map((value) => (
-                                        <Link
-                                          key={value}
-                                          href={`/category/${category.slug}?${attr.name}=${encodeURIComponent(value)}`}
-                                          className="block text-xs text-gray-500 hover:text-primary py-0.5"
-                                          onClick={closeMenu}
-                                        >
-                                          {value}
-                                        </Link>
-                                      ))}
-                                    </div>
-                                  )}
-                                </div>
-                              ))}
-                          </div>
-                        )}
+                            </motion.div>
+                          ))}
+                        </div>
                       </div>
-                    );
-                  })
-                )}
-              </div>
+                    )}
 
-              <div className="py-4 mt-auto">
-                <h3 className="font-bold text-lg mb-3">Help & Support</h3>
-                <Link
-                  href="/contact"
-                  className="block py-2 text-gray-700 hover:text-primary"
-                  onClick={closeMenu}
+                    {/* Filterable Attributes */}
+                    {selectedMobileCategory.attributes.filter(a => a.isFilterable).length > 0 && (
+                      <div>
+                        <h4 className="text-xs font-bold text-gray-500 uppercase tracking-wide mb-3 flex items-center gap-2">
+                          <Package size={16} className="text-primary" />
+                          Filter by Features
+                        </h4>
+                        <div className="space-y-2">
+                          {selectedMobileCategory.attributes
+                            .filter(attr => attr.isFilterable === true && selectedMobileCategory.attributeValues[attr.name!]?.length > 0)
+                            .sort((a, b) => (a.name || '').localeCompare(b.name || ''))
+                            .map((attr) => {
+                              const isExpanded = expandedFeature === attr.name;
+                              const values = selectedMobileCategory.attributeValues[attr.name!] || [];
+                              
+                              return (
+                                <div key={attr.name}>
+                                  <motion.button
+                                    whileHover={{ scale: 1.02 }}
+                                    whileTap={{ scale: 0.98 }}
+                                    onClick={() => setExpandedFeature(isExpanded ? null : attr.name)}
+                                    className="w-full flex items-center justify-between py-3 px-3 text-sm text-gray-700 hover:text-primary bg-gray-50 hover:bg-primary/5 rounded-lg transition-all group font-medium"
+                                  >
+                                    <span>{attr.name?.replace('_', ' ')}</span>
+                                    <motion.div
+                                      animate={{ rotate: isExpanded ? 180 : 0 }}
+                                      transition={{ duration: 0.3 }}
+                                    >
+                                      <ChevronDown size={16} className="text-primary" />
+                                    </motion.div>
+                                  </motion.button>
+
+                                  {/* Expanded Feature Values */}
+                                  <AnimatePresence>
+                                    {isExpanded && (
+                                      <motion.div
+                                        initial={{ opacity: 0, height: 0, x: 20 }}
+                                        animate={{ opacity: 1, height: 'auto', x: 0 }}
+                                        exit={{ opacity: 0, height: 0, x: 20 }}
+                                        transition={{ duration: 0.3, ease: 'easeInOut' }}
+                                        className="overflow-hidden mt-2 ml-2 border-l-2 border-primary/30 pl-3 space-y-2"
+                                      >
+                                        {values.map((value) => (
+                                          <motion.div
+                                            key={value}
+                                            initial={{ opacity: 0, x: 20 }}
+                                            animate={{ opacity: 1, x: 0 }}
+                                            transition={{ duration: 0.2 }}
+                                          >
+                                            <Link
+                                              href={`/category/${selectedMobileCategory.slug}?${attr.name}=${encodeURIComponent(value)}`}
+                                              className="flex items-center justify-between py-2 px-3 text-xs text-gray-600 hover:text-primary hover:bg-primary/5 rounded transition-all group"
+                                              onClick={closeMenu}
+                                            >
+                                              <span>{value}</span>
+                                              <motion.div
+                                                initial={{ x: 0 }}
+                                                whileHover={{ x: 4 }}
+                                                transition={{ duration: 0.2 }}
+                                              >
+                                                <ArrowUpRight size={14} className="text-primary opacity-0 group-hover:opacity-100" />
+                                              </motion.div>
+                                            </Link>
+                                          </motion.div>
+                                        ))}
+                                      </motion.div>
+                                    )}
+                                  </AnimatePresence>
+                                </div>
+                              );
+                            })}
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                </motion.div>
+              ) : (
+                // Main Categories View
+                <motion.div
+                  initial={{ x: '-100%', opacity: 0 }}
+                  animate={{ x: 0, opacity: 1 }}
+                  exit={{ x: '-100%', opacity: 0 }}
+                  transition={{ duration: 0.3, ease: 'easeInOut' }}
+                  className="p-4 flex flex-col h-full"
                 >
-                  Contact Us
-                </Link>
+                  <div className="flex justify-between items-center mb-4 pb-4 border-b border-gray-200">
+                    <h3 className="font-bold text-lg flex items-center gap-2">
+                      <Menu size={20} /> Menu
+                    </h3>
+                    <button
+                      className="p-2 hover:bg-gray-100 rounded-lg transition-colors"
+                      onClick={closeMenu}
+                      aria-label="Close menu"
+                    >
+                      <X size={24} />
+                    </button>
+                  </div>
 
-              </div>
-            </div>
-          </div>
-        )}
+                  {/* All Categories */}
+                  <div className="flex-grow overflow-y-auto space-y-2">
+                    {hasFetched && allCategories.length === 0 ? (
+                      <p className="text-gray-600 text-center py-8">No categories available</p>
+                    ) : (
+                      allCategories.map((category) => {
+                        const filterableAttributes = category.attributes.filter(attr => attr.isFilterable === true);
+                        const hasSubsOrFilters = category.subCategories.length > 0 || filterableAttributes.length > 0;
 
-        {/* Desktop Categories Row with Full-Screen Hover Dropdown */}
+                        return (
+                          <motion.div
+                            key={category.id}
+                            whileHover={{ backgroundColor: 'rgba(0, 0, 0, 0.02)' }}
+                            transition={{ duration: 0.2 }}
+                            className="rounded-lg overflow-hidden"
+                          >
+                            <div className="flex items-center justify-between">
+                              <Link
+                                href={`/category/${category.slug}`}
+                                className="flex-grow py-3 px-3 text-gray-800 hover:text-primary font-semibold text-sm flex items-center gap-2 transition-colors"
+                                onClick={closeMenu}
+                              >
+                                {getCategoryIcon(category.name)}
+                                {category.name}
+                              </Link>
+                        <motion.button
+                          whileHover={{ scale: 1.1 }}
+                          whileTap={{ scale: 0.95, rotate: 180 }}
+                          onClick={() => setSelectedMobileCategory(category)}
+                          className="p-2 hover:bg-gray-100 rounded-lg transition-colors"
+                        >
+                          <ChevronDown
+                            size={18}
+                            className="text-primary transition-transform"
+                          />
+                        </motion.button>
+                            </div>
+                          </motion.div>
+                        );
+                      })
+                    )}
+                  </div>
+
+                  {/* Store Locator & Footer */}
+                  <div className="pt-4 border-t border-gray-200 space-y-2">
+                    <motion.div whileHover={{ x: 4 }} transition={{ duration: 0.2 }}>
+                      <Link
+                        href="/store-locator"
+                        className="flex items-center gap-3 font-semibold text-sm text-gray-800 hover:text-primary py-3 px-3 rounded-lg hover:bg-primary/5 transition-all"
+                        onClick={closeMenu}
+                      >
+                        <Building size={18} />
+                        Store Locator
+                      </Link>
+                    </motion.div>
+                    <motion.div whileHover={{ x: 4 }} transition={{ duration: 0.2 }}>
+                      <Link
+                        href="/contact"
+                        className="flex items-center gap-3 font-semibold text-sm text-gray-800 hover:text-primary py-3 px-3 rounded-lg hover:bg-primary/5 transition-all"
+                        onClick={closeMenu}
+                      >
+                        <Package size={18} />
+                        Contact Us
+                      </Link>
+                    </motion.div>
+                  </div>
+                </motion.div>
+              )}
+            </motion.div>
+          )}
+        </AnimatePresence>
+
+        {/* Desktop Categories Row */}
         {isCategory && (
           <div className="hidden md:block z-40 bg-white">
             <div className="w-full flex items-center justify-center">
@@ -538,16 +700,23 @@ const Header = ({ isCategory = true }: HeaderProps) => {
                   onMouseEnter={handleMouseEnterAllCategories}
                   onMouseLeave={handleMouseLeaveAllCategories}
                 >
-                  <button className="text-sm font-medium text-gray-800 hover:text-primary transition-colors flex items-center">
+                  <motion.button
+                    whileHover={{ color: '#3b82f6' }}
+                    className="text-sm font-medium text-gray-800 transition-colors flex items-center"
+                  >
                     Categories
                     <ChevronDown
                       size={16}
                       className={`ml-1 transition-transform ${hoveredAllCategories ? 'rotate-180' : ''}`}
                     />
-                  </button>
+                  </motion.button>
                   {hoveredAllCategories && (
                     <div className="fixed left-0 right-0 top-22 bg-black/30 shadow-lg z-[100]">
-                      <div
+                      <motion.div
+                        initial={{ opacity: 0, y: -10 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        exit={{ opacity: 0, y: -10 }}
+                        transition={{ duration: 0.2 }}
                         onMouseEnter={() => {
                           if (dropdownTimeoutRef.current) {
                             clearTimeout(dropdownTimeoutRef.current);
@@ -558,14 +727,24 @@ const Header = ({ isCategory = true }: HeaderProps) => {
                       >
                         {hasFetched &&
                           allCategories.map((category) => (
-                            <div key={category.id} className="w-full">
-                              <Link href={`/category/${category.slug}`} className="text-lg font-medium text-gray-800 mb-3 capitalize flex items-center gap-2">
-                                {category.name} <ArrowUpRight size={16} className=' text-primary' />
+                            <motion.div
+                              key={category.id}
+                              whileHover={{ y: -4 }}
+                              transition={{ duration: 0.2 }}
+                              className="w-full"
+                            >
+                              <Link
+                                href={`/category/${category.slug}`}
+                                className="text-lg font-medium text-gray-800 mb-3 capitalize flex items-center gap-2 hover:text-primary transition-colors group"
+                              >
+                                {getCategoryIcon(category.name)}
+                                {category.name}
+                                <ArrowUpRight size={16} className='text-primary opacity-0 group-hover:opacity-100 transition-opacity' />
                               </Link>
                               {category.subCategories.length > 0 ? (
                                 <ul className="space-y-2">
                                   {category.subCategories.map((subCat) => (
-                                    <li key={subCat.id}>
+                                    <motion.li key={subCat.id} whileHover={{ x: 4 }} transition={{ duration: 0.2 }}>
                                       <Link
                                         href={`/category/${category.slug}?subcategory=${subCat.slug}`}
                                         className="block text-sm text-gray-600 hover:text-primary py-1 transition-colors"
@@ -573,57 +752,61 @@ const Header = ({ isCategory = true }: HeaderProps) => {
                                       >
                                         {subCat.name}
                                       </Link>
-                                    </li>
+                                    </motion.li>
                                   ))}
                                 </ul>
                               ) : (
                                 <p className="text-sm text-gray-500">No subcategories available</p>
                               )}
-                            </div>
+                            </motion.div>
                           ))}
-                      </div>
+                      </motion.div>
                     </div>
                   )}
                 </li>
-                {hasFetched && categories.length === 0 ? null : (
-                  categories.map((category) => {
-                    const hasFilterableAttributes = category.attributes.some(attr => attr.isFilterable === true);
-                    return (
-                      <li
-                        key={category.id}
-                        className="relative"
-                        onMouseEnter={() => handleMouseEnterCategory(category.name)}
-                        onMouseLeave={handleMouseLeaveCategory}
-                      >
-                        <Link
-                          href={`/category/${category.slug}`}
-                          className="text-sm font-medium text-gray-800 hover:text-primary transition-colors flex items-center"
+                {hasFetched && categories.length === 0
+                  ? null
+                  : categories.map((category) => {
+                      const hasFilterableAttributes = category.attributes.some(attr => attr.isFilterable === true);
+                      return (
+                        <motion.li
+                          key={category.id}
+                          className="relative"
+                          onMouseEnter={() => handleMouseEnterCategory(category.name)}
+                          onMouseLeave={handleMouseLeaveCategory}
+                          whileHover={{ scale: 1.05 }}
+                          transition={{ duration: 0.2 }}
                         >
-                          {category.name}
-                          {(category.subCategories.length > 0 || hasFilterableAttributes) && (
-                            <ChevronDown size={16} className="ml-1" />
-                          )}
-                        </Link>
-                      </li>
-                    );
-                  })
-                )}
+                          <Link
+                            href={`/category/${category.slug}`}
+                            className="text-sm font-medium text-gray-800 hover:text-primary transition-colors flex items-center gap-1"
+                          >
+                            {category.name}
+                            {(category.subCategories.length > 0 || hasFilterableAttributes) && (
+                              <ChevronDown size={16} className="ml-1" />
+                            )}
+                          </Link>
+                        </motion.li>
+                      );
+                    })}
               </ul>
             </div>
 
             {/* Full-Screen Dropdown for Individual Categories */}
             {hoveredCategory && (
-              <div
-                className="fixed left-0 right-0 top-22 bg-black/30 shadow-lg z-[100] "
-              >
-                <div
+              <div className="fixed left-0 right-0 top-22 bg-black/30 shadow-lg z-[100]">
+                <motion.div
+                  initial={{ opacity: 0, y: -10 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  exit={{ opacity: 0, y: -10 }}
+                  transition={{ duration: 0.2 }}
                   onMouseEnter={() => {
                     if (dropdownTimeoutRef.current) {
                       clearTimeout(dropdownTimeoutRef.current);
                     }
                   }}
                   onMouseLeave={handleMouseLeaveCategory}
-                  className="max-w-[90%] bg-white mx-auto p-6  flex flex-row gap-12 h-[calc(100vh-6rem)] overflow-y-auto"
+                  className="max-w-[90%] bg-white mx-auto p-6 flex flex-row gap-12 h-[calc(100vh-6rem)] overflow-y-auto"
                 >
                   {categories
                     .filter((category) => category.name === hoveredCategory)
@@ -632,20 +815,32 @@ const Header = ({ isCategory = true }: HeaderProps) => {
                       return (
                         <React.Fragment key={category.id}>
                           {/* Left: Subcategories */}
-                          <div className="w-1/2 ">
-                            <h3 className="text-lg font-semibold text-gray-800 mb-4">Explore Subcategories</h3>
+                          <motion.div
+                            initial={{ opacity: 0, x: -20 }}
+                            animate={{ opacity: 1, x: 0 }}
+                            transition={{ duration: 0.3 }}
+                            className="w-1/2"
+                          >
+                            <h3 className="text-lg font-semibold text-gray-800 mb-4 flex items-center gap-2">
+                              {getCategoryIcon(category.name)}
+                              Explore Subcategories
+                            </h3>
                             {category.subCategories.length > 0 ? (
                               <ul className="grid grid-cols-2 gap-2">
                                 {category.subCategories.map((subCat) => (
-                                  <li key={subCat.id}>
+                                  <motion.li
+                                    key={subCat.id}
+                                    whileHover={{ x: 4 }}
+                                    transition={{ duration: 0.2 }}
+                                  >
                                     <Link
                                       href={`/category/${category.slug}?subcategory=${subCat.slug}`}
-                                      className="block text-sm text-gray-600 hover:text-primary py-1 transition-colors"
+                                      className="block text-sm text-gray-600 hover:text-primary py-2 px-2 rounded hover:bg-primary/5 transition-all"
                                       onClick={() => setHoveredCategory(null)}
                                     >
                                       {subCat.name}
                                     </Link>
-                                  </li>
+                                  </motion.li>
                                 ))}
                               </ul>
                             ) : (
@@ -653,66 +848,92 @@ const Header = ({ isCategory = true }: HeaderProps) => {
                             )}
 
                             {/* Category Image */}
-                            <div className=" absolute bottom-10 w-full max-w-md">
+                            <motion.div
+                              initial={{ opacity: 0 }}
+                              animate={{ opacity: 1 }}
+                              transition={{ delay: 0.2, duration: 0.3 }}
+                              className="absolute bottom-10 w-full max-w-md"
+                            >
                               {categoryImages[category.name] && (
                                 <img
                                   src={categoryImages[category.name]}
                                   alt={category.name}
                                   width={500}
                                   height={300}
-                                  className="object-cover aspect-video"
+                                  className="object-cover aspect-video rounded-lg shadow-lg"
                                 />
                               )}
-                            </div>
-
-                          </div>
+                            </motion.div>
+                          </motion.div>
 
                           {/* Right: Attributes */}
                           {filterableAttributes.length > 0 && (
-                            <div className="w-1/2 relative" ref={attributeRef}>
-                              <h3 className="text-lg font-semibold text-gray-800 mb-4">Filter by Features</h3>
+                            <motion.div
+                              initial={{ opacity: 0, x: 20 }}
+                              animate={{ opacity: 1, x: 0 }}
+                              transition={{ duration: 0.3 }}
+                              className="w-1/2 relative"
+                              ref={attributeRef}
+                            >
+                              <h3 className="text-lg font-semibold text-gray-800 mb-4 flex items-center gap-2">
+                                <Package size={20} className="text-primary" />
+                                Filter by Features
+                              </h3>
                               <div className="flex flex-row gap-6">
-                                <ul className="w-1/2">
+                                <ul className="w-1/2 space-y-1">
                                   {filterableAttributes
                                     .filter(attr => category.attributeValues[attr.name!])
                                     .sort((a, b) => (a.name || '').localeCompare(b.name || ''))
                                     .map((attr) => (
-                                      <li
+                                      <motion.li
                                         key={attr.name}
                                         className="py-1"
                                         onMouseEnter={() => handleMouseEnterAttribute(attr.name!)}
+                                        whileHover={{ x: 4 }}
+                                        transition={{ duration: 0.2 }}
                                       >
                                         <button
-                                          className="text-sm cursor-pointer text-gray-600 hover:text-primary transition-colors capitalize"
+                                          className="text-sm cursor-pointer text-gray-600 hover:text-primary transition-colors capitalize rounded px-2 py-1 hover:bg-primary/5"
                                           onMouseLeave={handleMouseLeaveAttribute}
                                         >
                                           {attr.name?.replace('_', ' ')}
                                         </button>
-                                      </li>
+                                      </motion.li>
                                     ))}
                                 </ul>
                                 {hoveredAttribute && (
-                                  <ul className="w-1/2">
+                                  <motion.ul
+                                    initial={{ opacity: 0, x: 10 }}
+                                    animate={{ opacity: 1, x: 0 }}
+                                    exit={{ opacity: 0, x: 10 }}
+                                    transition={{ duration: 0.2 }}
+                                    className="w-1/2 space-y-1"
+                                  >
                                     {category.attributeValues[hoveredAttribute]?.map((value) => (
-                                      <li key={value} className="py-1">
+                                      <motion.li
+                                        key={value}
+                                        className="py-1"
+                                        whileHover={{ x: 4 }}
+                                        transition={{ duration: 0.2 }}
+                                      >
                                         <Link
                                           href={`/category/${category.slug}?${hoveredAttribute}=${encodeURIComponent(value)}`}
-                                          className="block text-sm text-gray-600 hover:text-primary transition-colors cursor-pointer"
+                                          className="block text-sm text-gray-600 hover:text-primary transition-colors cursor-pointer rounded px-2 py-1 hover:bg-primary/5"
                                           onClick={() => setHoveredCategory(null)}
                                         >
                                           {value}
                                         </Link>
-                                      </li>
+                                      </motion.li>
                                     ))}
-                                  </ul>
+                                  </motion.ul>
                                 )}
                               </div>
-                            </div>
+                            </motion.div>
                           )}
                         </React.Fragment>
                       );
                     })}
-                </div>
+                </motion.div>
               </div>
             )}
           </div>
