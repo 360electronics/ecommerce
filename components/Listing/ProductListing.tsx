@@ -201,6 +201,13 @@ const ProductListing = ({
           if (key === "inStock" && filters.inStock) {
             filtered = filtered.filter((p) => Number(p.totalStocks) > 0);
           }
+          if (key === "ourPrice" && filters.ourPrice && typeof filters.ourPrice === 'object' && 'min' in filters.ourPrice && 'max' in filters.ourPrice) {
+            const { min: priceMin, max: priceMax } = filters.ourPrice;
+            filtered = filtered.filter((p) => {
+              const price = Number(p.ourPrice) || 0;
+              return price >= priceMin && price <= priceMax;
+            });
+          }
           // Dynamic attributes
           if (!["color", "brand", "storage", "rating", "inStock", "ourPrice", "category"].includes(key) && Array.isArray(filters[key])) {
             filtered = filtered.filter((product) => {
@@ -320,12 +327,13 @@ const ProductListing = ({
 
     const filters: Record<string, any> = {};
     // console.log('Applied filters:', filters);
-    const maxPrice = searchParams.get("maxPrice");
 
-    if (maxPrice) {
+    const minPriceParam = searchParams.get('minPrice');
+    const maxPriceParam = searchParams.get('maxPrice');
+    if (minPriceParam !== null || maxPriceParam !== null) {
       filters.ourPrice = {
-        min: filterOptions.priceRange.min,
-        max: Number(maxPrice),
+        min: minPriceParam ? parseFloat(minPriceParam) : 0,
+        max: maxPriceParam ? parseFloat(maxPriceParam) : filterOptions.priceRange.max,
       };
     }
 

@@ -395,7 +395,7 @@ const HeroBanner: React.FC = () => {
                   assembly.
                 </p>
               </div>
-              <PrimaryLinkButton href="/customise-pc">
+              <PrimaryLinkButton href="https://forms.gle/XoqdMYRkiJrUTfDXA" target="_blank">
                 Start Building
               </PrimaryLinkButton>
             </div>
@@ -417,7 +417,7 @@ const HeroBanner: React.FC = () => {
                   assembly.
                 </p>
               </div>
-              <PrimaryLinkButton href="/customise-pc">
+              <PrimaryLinkButton href="https://forms.gle/XoqdMYRkiJrUTfDXA" target="_blank">
                 Start Building
               </PrimaryLinkButton>
             </div>

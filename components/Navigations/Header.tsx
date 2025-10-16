@@ -88,7 +88,7 @@ const Header = ({ isCategory = true }: HeaderProps) => {
   const attributeRef = useRef<HTMLDivElement>(null);
 
   // Define allowed categories with corrected display name
-  const allowedCategories = new Set(['Laptops', 'Processors', 'Graphics Card', 'Monitors', 'Accessories']);
+  const allowedCategories = new Set(['Laptops', 'Processors', 'Graphics Card', 'Monitors', 'Motherboard', 'Peripherals']);
 
   useEffect(() => {
     if (typeof window !== "undefined") {

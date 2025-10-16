@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useEffect, useMemo } from 'react';
+import React, { useState, useEffect, useMemo, useRef } from 'react';
 import { ChevronDown, ChevronUp, X } from 'lucide-react';
 import { useSearchParams } from 'next/navigation';
 import { Range } from 'react-range';
@@ -53,11 +53,12 @@ const DynamicFilter: React.FC<FilterProps> = ({ category, products, onFilterChan
   const [mobileFiltersOpen, setMobileFiltersOpen] = useState(false);
   const [visibleOptions, setVisibleOptions] = useState<{ [key: string]: number }>({});
   const searchParams = useSearchParams();
+  const isInitialized = useRef(false);
 
   const roundMaxPrice = (max: number): number => {
-    if (max <= 0) return 1000; // Fallback for invalid max
-    if (max <= 1000) return Math.ceil(max / 100) * 100; // Round to nearest 100
-    return Math.ceil(max / 1000) * 1000; // Round to nearest 1000
+    if (max <= 0) return 1000;
+    if (max <= 1000) return Math.ceil(max / 100) * 100;
+    return Math.ceil(max / 1000) * 1000;
   };
 
   const generateOptions = (products: FlattenedProduct[], key: keyof FlattenedProduct | string) => {
@@ -141,12 +142,12 @@ const DynamicFilter: React.FC<FilterProps> = ({ category, products, onFilterChan
       }
     });
 
-    // console.log('Generated Sections:', sections);
     return sections;
   }, [products, category, filterOptions]);
 
+  // Initialize filter sections once
   useEffect(() => {
-    if (generatedSections.length === 0) return;
+    if (generatedSections.length === 0 || isInitialized.current) return;
 
     setExpanded((prev) => {
       const newExpanded = { ...prev };
@@ -155,7 +156,6 @@ const DynamicFilter: React.FC<FilterProps> = ({ category, products, onFilterChan
           newExpanded[section.id] = index < 4;
         }
       });
-      // console.log('Expanded State:', newExpanded);
       return newExpanded;
     });
 
@@ -170,51 +170,53 @@ const DynamicFilter: React.FC<FilterProps> = ({ category, products, onFilterChan
     });
 
     setFilterSections(generatedSections);
+    isInitialized.current = true;
   }, [generatedSections]);
 
+  // Apply URL params only on initial load
   useEffect(() => {
-    if (filterSections.length === 0) return;
+    if (filterSections.length === 0 || !isInitialized.current) return;
 
-    let hasChanges = false;
+    const minPrice = searchParams.get('minPrice');
+    const maxPrice = searchParams.get('maxPrice');
+    const excludeOOS = searchParams.get('inStock') === 'true';
+
+    // Check if we have any URL params to apply
+    const hasUrlParams = minPrice || maxPrice || excludeOOS || 
+      filterConfig.some(config => config.type === 'checkbox' && searchParams.getAll(config.id).length > 0) ||
+      Object.keys(filterOptions.attributes).some(key => searchParams.getAll(key).length > 0);
+
+    if (!hasUrlParams) return;
+
     const updatedSections = filterSections.map((section) => {
       if (section.type === 'range' && section.id === 'price') {
-        const minPrice = searchParams.get('minPrice');
-        const maxPrice = searchParams.get('maxPrice');
-        const newMin = minPrice ? Math.max(Number(minPrice), 0) : 0;
-        const newMax = maxPrice ? Math.min(Number(maxPrice), section.max || 1000) : section.max || 1000;
-
-        if (!isNaN(newMin) && !isNaN(newMax) && (newMin !== section.currentMin || newMax !== section.currentMax)) {
-          hasChanges = true;
-          return { ...section, currentMin: newMin, currentMax: newMax };
+        if (minPrice || maxPrice) {
+          const newMin = minPrice ? Math.max(Number(minPrice), 0) : 0;
+          const newMax = maxPrice ? Math.min(Number(maxPrice), section.max || 1000) : section.max || 1000;
+          if (!isNaN(newMin) && !isNaN(newMax)) {
+            return { ...section, currentMin: newMin, currentMax: newMax };
+          }
         }
       } else if (section.type === 'checkbox' && section.options) {
         const paramValues = searchParams.getAll(section.id);
         if (paramValues.length > 0) {
-          const newOptions = section.options.map((option) => ({
-            ...option,
-            checked: paramValues.includes(option.id),
-          }));
-          if (JSON.stringify(newOptions) !== JSON.stringify(section.options)) {
-            hasChanges = true;
-            return { ...section, options: newOptions };
-          }
+          return {
+            ...section,
+            options: section.options.map((option) => ({
+              ...option,
+              checked: paramValues.includes(option.id),
+            })),
+          };
         }
       }
       return section;
     });
 
-    const excludeOOS = searchParams.get('inStock') === 'true';
-    if (excludeOOS !== excludeOutOfStock) {
-      hasChanges = true;
-      setExcludeOutOfStock(excludeOOS);
-    }
-
-    if (hasChanges) {
-      // console.log('Applying URL params to filters:', updatedSections);
-      setFilterSections(updatedSections);
-      onFilterChange(getFilterValues(updatedSections, excludeOOS));
-    }
-  }, [searchParams, filterSections, excludeOutOfStock, onFilterChange]);
+    setFilterSections(updatedSections);
+    setExcludeOutOfStock(excludeOOS);
+    const filters = getFilterValues(updatedSections, excludeOOS);
+    onFilterChange(filters);
+  }, []); // Empty dependency array - run only once on mount
 
   const getFilterValues = (sections: FilterSection[], excludeOOS: boolean) => {
     const filters: FilterValues = {};
@@ -225,7 +227,7 @@ const DynamicFilter: React.FC<FilterProps> = ({ category, products, onFilterChan
       priceSection.currentMax !== undefined &&
       (priceSection.currentMin !== 0 || priceSection.currentMax !== (priceSection.max || 1000))
     ) {
-      filters. Hawkins = {
+      filters.ourPrice = {
         min: Math.max(priceSection.currentMin, 0),
         max: Math.min(priceSection.currentMax, priceSection.max || 1000),
       };
@@ -246,17 +248,15 @@ const DynamicFilter: React.FC<FilterProps> = ({ category, products, onFilterChan
       filters.inStock = true;
     }
 
-    // console.log('Filter Values:', filters);
     return filters;
   };
 
   const toggleSection = (sectionId: string, event: React.MouseEvent | React.KeyboardEvent) => {
     event.stopPropagation();
-    setExpanded((prev) => {
-      const newExpanded = { ...prev, [sectionId]: !prev[sectionId] };
-      // console.log('Toggled Section:', { sectionId, expanded: newExpanded[sectionId] });
-      return newExpanded;
-    });
+    setExpanded((prev) => ({
+      ...prev,
+      [sectionId]: !prev[sectionId],
+    }));
   };
 
   const handleCheckboxChange = (sectionId: string, optionId: string) => {
@@ -289,7 +289,6 @@ const DynamicFilter: React.FC<FilterProps> = ({ category, products, onFilterChan
       return section;
     });
 
-    // console.log('Price Change:', { sectionId, newMin, newMax });
     setFilterSections(updatedSections);
     applyFilters(updatedSections, excludeOutOfStock);
   };
@@ -309,18 +308,16 @@ const DynamicFilter: React.FC<FilterProps> = ({ category, products, onFilterChan
       return section;
     });
 
-    // console.log('Price Input Change:', { sectionId, type, value });
     setFilterSections(updatedSections);
     applyFilters(updatedSections, excludeOutOfStock);
   };
 
   const handleViewMore = (sectionId: string, event: React.MouseEvent | React.KeyboardEvent) => {
     event.stopPropagation();
-    setVisibleOptions((prev) => {
-      const newVisible = { ...prev, [sectionId]: prev[sectionId] === 5 ? Number.MAX_SAFE_INTEGER : 5 };
-      // console.log('View More Toggled:', { sectionId, visible: newVisible[sectionId] });
-      return newVisible;
-    });
+    setVisibleOptions((prev) => ({
+      ...prev,
+      [sectionId]: prev[sectionId] === 5 ? Number.MAX_SAFE_INTEGER : 5,
+    }));
   };
 
   const handleOutOfStockChange = () => {
@@ -578,7 +575,7 @@ const DynamicFilter: React.FC<FilterProps> = ({ category, products, onFilterChan
                       <span>₹{section.max || 1000}</span>
                     </div>
                     <div className="text-center mt-2 text-xs text-gray-600">
-                    ₹{section.currentMin || 0} - ₹{section.currentMax || section.max || 1000}
+                      ₹{section.currentMin || 0} - ₹{section.currentMax || section.max || 1000}
                     </div>
                   </div>
                 )}
