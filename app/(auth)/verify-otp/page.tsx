@@ -55,6 +55,7 @@ function VerifyOTPContent() {
   const [banner, setBanner] = useState<Banner | null>(null);
   const [userId, setUserId] = useState<string | null>(null);
   const [type, setType] = useState<"email" | "phone">("email");
+  const [callbackUrl, setCallbackUrl] = useState<string>("/");
   const router = useRouter();
   const searchParams = useSearchParams(); // Use useSearchParams
   const inputRefs = useRef<(HTMLInputElement | null)[]>(Array(6).fill(null));
@@ -65,6 +66,9 @@ function VerifyOTPContent() {
     const userIdParam = searchParams.get("userId");
     const typeParam =
       (searchParams.get("type") as "email" | "phone") || "email";
+    const callbackUrlParam = searchParams.get("callbackUrl") || "/";
+
+    console.log('Raw callbackUrlParam:', callbackUrlParam); // Debug log
 
     if (!userIdParam) {
       toast.error("Invalid request: Missing user ID");
@@ -72,6 +76,7 @@ function VerifyOTPContent() {
 
     setUserId(userIdParam);
     setType(typeParam);
+    setCallbackUrl(decodeURIComponent(callbackUrlParam));
   }, [searchParams]);
 
   // Countdown timer
@@ -224,13 +229,22 @@ function VerifyOTPContent() {
         });
       }
 
-      // Navigate based on role with hard redirect to ensure middleware recognizes auth
-      if (data.user.role === "admin") {
-        window.location.href = "/admin/dashboard";
+      // Navigate with hard redirect to ensure middleware recognizes auth
+      // Prioritize callbackUrl if present (works for both users and admins)
+      let targetUrl: string;
+      if (callbackUrl && callbackUrl !== "/") {
+        targetUrl = callbackUrl;
+      } else if (data.user.role === "admin") {
+        targetUrl = "/admin/dashboard";
       } else {
-        // Use window.location for hard refresh to ensure middleware picks up auth state
-        window.location.href = "/";
+        targetUrl = "/";
       }
+
+      console.log('callbackUrl after decode:', callbackUrl); // Debug log
+      console.log('user role:', data.user.role); // Debug log
+      console.log('targetUrl:', targetUrl); // Debug log
+
+      window.location.href = targetUrl;
     } catch (err: unknown) {
       const errorMessage =
         err instanceof Error ? err.message : "Failed to verify OTP";

@@ -1,6 +1,5 @@
 // app/products/[slug]/page.tsx
 import { notFound } from 'next/navigation';
-import UserLayout from '@/components/Layouts/UserLayout';
 import ProductDetailPage from '@/components/Product/ProductDetails/ProductDetailsPage';
 import { FlattenedProduct } from '@/types/product';
 
@@ -37,8 +36,6 @@ export default async function Page({ params }: { params: Params }) {
   }
 
   return (
-    <UserLayout isCategory>
       <ProductDetailPage product={product} />
-    </UserLayout>
   );
 }

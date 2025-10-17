@@ -2,7 +2,6 @@
 
 import React, { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
-import UserLayout from "@/components/Layouts/UserLayout";
 import CheckoutLayout from "@/components/Layouts/CheckoutLayout";
 import toast from "react-hot-toast";
 import { Plus, Check, Truck, CreditCard, Loader2 } from "lucide-react";
@@ -617,13 +616,11 @@ const CheckoutPage: React.FC = () => {
 
   if (isLoading) {
     return (
-      <UserLayout>
         <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8 py-8">
           <p className="text-center text-gray-600 text-lg">
             Loading checkout...
           </p>
         </div>
-      </UserLayout>
     );
   }
 

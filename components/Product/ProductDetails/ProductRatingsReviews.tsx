@@ -338,15 +338,15 @@ export default function ProductRatingsReviews({ className }: ProductRatingsRevie
       {/* Reviews Section */}
       <div>
         <div className="flex justify-between items-center mb-4">
-          <h2 className="text-2xl font-medium">
+          <h2 className="text-2xl font-semibold">
             Ratings & Reviews
           </h2>
         </div>
 
         {/* Ratings Summary */}
-        <div className=" flex justify-between  gap-20 mb-4">
+        <div className=" flex flex-col md:flex-row justify-between  gap-20 mb-4">
           <div className="w-full max-w-xs ">
-            <div className="flex items-center">
+            <div className="flex  items-center">
               <span className="text-2xl font-semibold mr-1">
                 {Number(product?.averageRating || 0).toFixed(1)}
               </span>

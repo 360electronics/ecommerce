@@ -131,7 +131,7 @@ export default function ProductDetailPage({ product }: ProductDetailPageProps) {
         </div>
       </div>
       <div ref={specificationsRef} className=' flex md:gap-10 relative'>
-        <ProductSpecifications className="py-20 max-w-5xl w-full" />
+        <ProductSpecifications className=" py-10 md:py-20  w-full" />
         <div className=' sticky'>
           <ProductSpecsSideImages />
 

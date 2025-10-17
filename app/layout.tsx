@@ -1,8 +1,9 @@
 import type { Metadata } from "next";
 import "./globals.css";
-import { gotham } from "./fonts";
+import { gotham, inter } from "./fonts";
 import { Toaster } from "react-hot-toast";
 import { StoreProvider } from "./provider";
+import UserLayout from "@/components/Layouts/UserLayout";
 
 export const metadata: Metadata = {
   title: "360 Electronics",
@@ -15,11 +16,13 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="en" className={gotham.className}>
+    <html lang="en" className={inter.className}>
       <body className={`antialiased`}>
         <StoreProvider>
+          <UserLayout>
             <Toaster />
             {children}
+          </UserLayout>
         </StoreProvider>
       </body>
     </html>

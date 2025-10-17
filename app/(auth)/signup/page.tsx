@@ -40,7 +40,7 @@ interface SignupResponse {
 }
 
 // SignupForm component that doesn't directly use searchParams
-function SignupForm({ referralCode = "" }) {
+function SignupForm({ referralCode = "", callbackUrl = "/" }) {
   const [formData, setFormData] = useState<SignupFormData>({
     firstName: "",
     lastName: "",
@@ -154,7 +154,7 @@ function SignupForm({ referralCode = "" }) {
       }
 
       toast.success("Signup successful! OTP sent to your email/phone.");
-      router.push(`/verify-otp?userId=${data.userId}`);
+      router.push(`/verify-otp?userId=${data.userId}&type=email&callbackUrl=${encodeURIComponent(callbackUrl)}`);
     } catch (err: unknown) {
       const errorMessage =
         err instanceof Error ? err.message : "An unexpected error occurred";
@@ -449,7 +449,8 @@ export default function SignupPage() {
   function SearchParamsHandler() {
     const searchParams = useSearchParams();
     const referralCodeFromUrl = searchParams.get("ref") || "";
-    return <SignupForm referralCode={referralCodeFromUrl} />;
+    const callbackUrl = searchParams.get("callbackUrl") || "/";
+    return <SignupForm referralCode={referralCodeFromUrl} callbackUrl={callbackUrl} />;
   }
 
   return (

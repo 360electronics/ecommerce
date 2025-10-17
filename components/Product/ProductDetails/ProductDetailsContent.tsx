@@ -1,7 +1,7 @@
 'use client';
 import { Heart, Minus, Plus, Share2, Truck, Shield, Package, Phone, MapPin } from 'lucide-react';
 import { cn } from '@/lib/utils';
-import { useRouter } from 'next/navigation';
+import { useRouter, usePathname } from 'next/navigation';
 import { useEffect, useMemo, useState, useCallback, useRef, JSX } from 'react';
 import toast, { Toaster } from 'react-hot-toast';
 import { addToWishlist, removeFromWishlist } from '@/utils/wishlist.utils';
@@ -28,6 +28,7 @@ export default function ProductDetailsContent({ className, activeVariant }: Prod
     setProduct,
   } = useProductStore();
   const router = useRouter();
+  const pathname = usePathname();
   const { user } = useAuthStore();
   const { isInWishlist, fetchWishlist } = useWishlistStore();
   const { addToCart } = useCartStore();
@@ -401,7 +402,7 @@ export default function ProductDetailsContent({ className, activeVariant }: Prod
 
     if (!userId) {
       toast.error('Please login to manage wishlist.');
-      router.push('/signin');
+      router.push(`/signin?callbackUrl=${encodeURIComponent(pathname)}`);
       return;
     }
 
@@ -435,7 +436,7 @@ export default function ProductDetailsContent({ className, activeVariant }: Prod
 
     if (!userId) {
       toast.error('Please login to add to cart.');
-      router.push('/signin');
+      router.push(`/signin?callbackUrl=${encodeURIComponent(pathname)}`);
       return;
     }
 
@@ -468,7 +469,7 @@ export default function ProductDetailsContent({ className, activeVariant }: Prod
 
     if (!userId) {
       toast.error('Please login to proceed with purchase.');
-      router.push('/signin');
+      router.push(`/signin?callbackUrl=${encodeURIComponent(pathname)}`);
       return;
     }
 
@@ -561,9 +562,9 @@ export default function ProductDetailsContent({ className, activeVariant }: Prod
   }
 
   const Pricing = () => (
-    <div className="flex flex-col gap-2">
+    <div className="flex flex-col gap-2 w-full">
       <div className="flex items-center gap-3 flex-wrap">
-        <span className="text-3xl font-medium text-gray-900">
+        <span className="text-3xl font-semibold text-gray-900">
           ₹{activeVariant.ourPrice.toLocaleString()}
         </span>
         {activeVariant.mrp && activeVariant.mrp > activeVariant.ourPrice && (
@@ -576,7 +577,7 @@ export default function ProductDetailsContent({ className, activeVariant }: Prod
           </div>
         )}
         {discount > 0 && (
-          <span className="bg-green-100 text-green-800 text-xs font-semibold px-3 py-1 rounded-full">
+          <span className="bg-red-500 text-white text-xs font-semibold px-3 py-1 rounded-full">
             {discount}% OFF
           </span>
         )}
@@ -654,7 +655,7 @@ export default function ProductDetailsContent({ className, activeVariant }: Prod
     // Coming Soon
     if (status === 'coming_soon') {
       return (
-        <div className="fixed bottom-0 left-0 right-0 bg-yellow-50 border-t border-yellow-200 p-4 md:static md:border-t-0 md:p-4 z-10">
+        <div className="bg-yellow-50 border-t border-yellow-200 p-4 md:p-4">
           <div className="text-center w-full">
             <p className="text-yellow-800 font-semibold">🚀 Coming Soon</p>
             <p className="text-sm text-yellow-600">
@@ -668,7 +669,7 @@ export default function ProductDetailsContent({ className, activeVariant }: Prod
     // Inactive or Discontinued
     if (status === 'inactive' || status === 'discontinued') {
       return (
-        <div className="fixed bottom-0 left-0 right-0 bg-gray-50 border-t border-gray-200 p-4 md:static md:border-t-0 md:p-4 z-10">
+        <div className="bg-gray-50 border-t border-gray-200 p-4 md:p-4">
           <div className="text-center w-full">
             <p className="text-gray-700 font-semibold">❌ Not Available</p>
             <p className="text-sm text-gray-500">
@@ -681,7 +682,7 @@ export default function ProductDetailsContent({ className, activeVariant }: Prod
 
     // Default (Active)
     return (
-      <div className="fixed bottom-0 left-0 right-0 bg-white border-t border-gray-200 p-4 md:static md:border-t-0 md:p-0 z-10">
+      <div className="bg-white border-t border-gray-200 py-4 md:py-6">
         <div className="flex gap-4 max-w-3xl mx-auto">
           {/* Add to Cart */}
           <button
@@ -717,9 +718,9 @@ export default function ProductDetailsContent({ className, activeVariant }: Prod
 
 
   return (
-    <div className={cn('p-4 md:p-6 max-w-3xl mx-auto', className)}>
+    <div className={cn('p-2 md:p-6 w-full  mx-auto', className)}>
       <Toaster />
-      <div className="flex items-center justify-end mb-4">
+      <div className="flex items-center justify-end mb-4 w-full">
         <button
           onClick={handleShare}
           className="flex items-center gap-2 text-sm text-gray-600 hover:text-gray-800 transition-colors"
@@ -729,7 +730,7 @@ export default function ProductDetailsContent({ className, activeVariant }: Prod
         </button>
       </div>
 
-      <h1 className="text-xl md:text-2xl font-medium text-gray-900 mb-4">{product.name}</h1>
+      <h1 className="text-xl md:text-2xl font-semibold text-gray-900 mb-4">{product.name}</h1>
 
       <div className=' pb-4'>
         {/* Rating */}
@@ -737,7 +738,7 @@ export default function ProductDetailsContent({ className, activeVariant }: Prod
       </div>
 
       <Pricing />
-      <div className="my-6 bg-white rounded-lg border border-gray-100 p-4">
+      <div className=" my-3 md:my-6 bg-white rounded-lg border border-gray-100 p-2 md:p-4">
         <h3 className="text-sm font-semibold text-gray-900 mb-2 flex items-center gap-2">
           <MapPin className="w-4 h-4 text-gray-600" /> Check Delivery
         </h3>

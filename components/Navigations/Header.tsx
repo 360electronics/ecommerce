@@ -1,18 +1,29 @@
-'use client';
+"use client";
 
-import React, { useState, useEffect, useRef } from 'react';
-import Image from 'next/image';
-import LocationPicker from './Header/LocationPicker';
-import SearchBar from './Header/Search/SearchBar';
-import WishlistButton from './Header/WishlistButton';
-import UserButton from './Header/UserButton';
-import CartButton from './Header/CartButton';
-import { useRouter } from 'next/navigation';
-import Link from 'next/link';
-import { 
-  Menu, X,  ChevronDown, Building, ArrowUpRight,
-  Laptop, Cpu, Monitor, Keyboard, Smartphone, Package, ArrowLeft, Home
-} from 'lucide-react';
+import React, { useState, useEffect, useRef } from "react";
+import Image from "next/image";
+import LocationPicker from "./Header/LocationPicker";
+import SearchBar from "./Header/Search/SearchBar";
+import WishlistButton from "./Header/WishlistButton";
+import UserButton from "./Header/UserButton";
+import CartButton from "./Header/CartButton";
+import { useRouter } from "next/navigation";
+import Link from "next/link";
+import {
+  Menu,
+  X,
+  ChevronDown,
+  Building,
+  ArrowUpRight,
+  Laptop,
+  Cpu,
+  Monitor,
+  Keyboard,
+  Smartphone,
+  Package,
+  ArrowLeft,
+  Home,
+} from "lucide-react";
 import { TbPlug as Power } from "react-icons/tb";
 import { LuWebcam as Webcam } from "react-icons/lu";
 import { BiCabinet as Cabinet } from "react-icons/bi";
@@ -23,8 +34,8 @@ import { IoHeadset as Headset } from "react-icons/io5";
 import { PiGraphicsCard as GraphicsCard } from "react-icons/pi";
 import { BsMotherboard as Motherboard } from "react-icons/bs";
 
-import { motion, AnimatePresence } from 'framer-motion';
-import { fetchProducts } from '@/utils/products.util';
+import { motion, AnimatePresence } from "framer-motion";
+import { fetchProducts } from "@/utils/products.util";
 
 interface HeaderProps {
   isCategory?: boolean;
@@ -32,7 +43,7 @@ interface HeaderProps {
 
 interface Attribute {
   name: string | null;
-  type: 'text' | 'number' | 'boolean' | 'select' | null;
+  type: "text" | "number" | "boolean" | "select" | null;
   unit?: string | null;
   options?: string[] | null;
   isRequired: boolean | null;
@@ -82,25 +93,25 @@ interface Product {
   }>;
 }
 
-const CACHE_KEY = 'header_data_cache';
+const CACHE_KEY = "header_data_cache";
 const CACHE_DURATION = 1000 * 60 * 60;
 
 const getCategoryIcon = (categoryName: string) => {
-  const iconProps = { size: 20, className: 'text-primary size-5 md:size-6' };
+  const iconProps = { size: 20, className: "text-primary size-5 md:size-6" };
   const iconMap: { [key: string]: React.ReactNode } = {
-    'Laptops': <Laptop {...iconProps} />,
-    'Processors': <Cpu {...iconProps} />,
-    'Graphics Card': <GraphicsCard {...iconProps} />,
-    'Monitors': <Monitor {...iconProps} />,
-    'Peripherals': <Webcam {...iconProps} />,
-    'Motherboard': <Motherboard {...iconProps} />,
-    'Power Supply': <Power {...iconProps} />,
-    'Keyboard and Mouse': <Keyboard {...iconProps} />,
-    'Cabinets': <Cabinet {...iconProps} />,
-    'CPU Cooler': <Cooler {...iconProps} />,
-    'RAM': <RAM {...iconProps} />,
-    'Printer': <Printer {...iconProps} />,
-    'Headset': <Headset {...iconProps} />,
+    Laptops: <Laptop {...iconProps} />,
+    Processors: <Cpu {...iconProps} />,
+    "Graphics Card": <GraphicsCard {...iconProps} />,
+    Monitors: <Monitor {...iconProps} />,
+    Peripherals: <Webcam {...iconProps} />,
+    Motherboard: <Motherboard {...iconProps} />,
+    "Power Supply": <Power {...iconProps} />,
+    "Keyboard and Mouse": <Keyboard {...iconProps} />,
+    Cabinets: <Cabinet {...iconProps} />,
+    "CPU Cooler": <Cooler {...iconProps} />,
+    RAM: <RAM {...iconProps} />,
+    Printer: <Printer {...iconProps} />,
+    Headset: <Headset {...iconProps} />,
   };
   return iconMap[categoryName] || <Package {...iconProps} />;
 };
@@ -112,7 +123,8 @@ const Header = ({ isCategory = true }: HeaderProps) => {
   const [hoveredCategory, setHoveredCategory] = useState<string | null>(null);
   const [hoveredAttribute, setHoveredAttribute] = useState<string | null>(null);
   const [hoveredAllCategories, setHoveredAllCategories] = useState(false);
-  const [selectedMobileCategory, setSelectedMobileCategory] = useState<Category | null>(null);
+  const [selectedMobileCategory, setSelectedMobileCategory] =
+    useState<Category | null>(null);
   const [expandedFeature, setExpandedFeature] = useState<string | null>(null);
   const [categories, setCategories] = useState<Category[]>([]);
   const [allCategories, setAllCategories] = useState<Category[]>([]);
@@ -122,28 +134,31 @@ const Header = ({ isCategory = true }: HeaderProps) => {
   const dropdownTimeoutRef = useRef<NodeJS.Timeout | null>(null);
   const attributeRef = useRef<HTMLDivElement>(null);
 
-  const allowedCategories = new Set(['Laptops', 'Processors', 'Graphics Card', 'Monitors', 'Motherboard', 'Peripherals']);
+  const allowedCategories = new Set([
+    "Laptops",
+    "Processors",
+    "Graphics Card",
+    "Monitors",
+    "Motherboard",
+    "Peripherals",
+  ]);
 
   const categoryImages: Record<string, string> = {
-    'Laptops': '/header/categories/storage.jpg',
-    'Processors': '/header/categories/processor.jpg',
-    'Graphics Card': '/header/categories/graphics-card.jpg',
-    'Monitors': '/header/categories/monitors.jpg',
-    'Accessories': '/header/categories/accessories.jpg',
+    Laptops: "/header/categories/storage.jpg",
+    Processors: "/header/categories/processor.jpg",
+    "Graphics Card": "/header/categories/graphics-card.jpg",
+    Monitors: "/header/categories/monitors.jpg",
+    Accessories: "/header/categories/accessories.jpg",
   };
 
   useEffect(() => {
     const fetchData = async () => {
       try {
-        const [categoryResponse, productResponse] = await Promise.all([
-          fetch('/api/categories'),
-          fetchProducts()
-        ]);
-
-        if (!categoryResponse.ok) throw new Error('Failed to fetch categories');
+        // Fetch categories first for instant display
+        const categoryResponse = await fetch("/api/categories");
+        if (!categoryResponse.ok) throw new Error("Failed to fetch categories");
 
         const categoryData = await categoryResponse.json();
-        const productData = productResponse || [];
 
         const normalizeValue = (val: string) => {
           if (!val) return "";
@@ -186,7 +201,10 @@ const Header = ({ isCategory = true }: HeaderProps) => {
 
           v = v.replace(/(\d+)\s*(gb|ssd|hdd)/i, "$1 GB");
           v = v.replace(/(\d+)(gb|ssd|hdd)/i, "$1 GB");
-          v = v.replace(/(\d+(\.\d+)?)\s*cm\s*\((\d+(\.\d+)?)\s*inch\)/i, "$3 inch");
+          v = v.replace(
+            /(\d+(\.\d+)?)\s*cm\s*\((\d+(\.\d+)?)\s*inch\)/i,
+            "$3 inch"
+          );
           v = v.replace(/\b(\w+)( \1\b)+/gi, "$1");
           v = v.replace(/\b\w/g, (c) => c.toUpperCase());
 
@@ -197,7 +215,36 @@ const Header = ({ isCategory = true }: HeaderProps) => {
           return v.trim();
         };
 
-        const attributeValuesMap: Record<string, Record<string, Set<string>>> = {};
+        // Set partial data immediately (without attribute values)
+        const allTemp: Category[] = Object.values(categoryData)
+          .map(({ category, attributes, subcategories }: any) => ({
+            ...category,
+            name:
+              category.name === "Graphics_cards"
+                ? "Graphics Card"
+                : category.name,
+            attributes,
+            subCategories: subcategories,
+            attributeValues: {}, // Empty initially
+          }))
+          .sort((a, b) => parseInt(a.displayOrder) - parseInt(b.displayOrder));
+
+        const categoryList = allTemp.filter(({ name }) =>
+          allowedCategories.has(name)
+        );
+
+        setCategories(categoryList);
+        setAllCategories(allTemp);
+        setHasFetched(true);
+
+        // Now fetch products and compute attribute values asynchronously
+        const productResponse = await fetchProducts();
+        const productData = productResponse || [];
+
+        const attributeValuesMap: Record<
+          string,
+          Record<string, Set<string>>
+        > = {};
         productData.forEach((product: Product) => {
           const categoryId = product.categoryId;
           if (!attributeValuesMap[categoryId]) {
@@ -208,46 +255,45 @@ const Header = ({ isCategory = true }: HeaderProps) => {
               if (!attributeValuesMap[categoryId][key]) {
                 attributeValuesMap[categoryId][key] = new Set();
               }
-              attributeValuesMap[categoryId][key].add(normalizeValue(value as string));
+              attributeValuesMap[categoryId][key].add(
+                normalizeValue(value as string)
+              );
             });
           });
         });
 
-        const allTemp: Category[] = Object.values(categoryData)
-          .map(({ category, attributes, subcategories }: any) => ({
-            ...category,
-            name: category.name === 'Graphics_cards' ? 'Graphics Card' : category.name,
-            attributes,
-            subCategories: subcategories,
-            attributeValues: attributeValuesMap[category.id]
-              ? Object.fromEntries(
-                  Object.entries(attributeValuesMap[category.id]).map(([key, valueSet]) => [
-                    key,
-                    Array.from(valueSet).sort(),
-                  ])
+        // Update states with attribute values
+        const updatedAllTemp = allTemp.map((cat) => ({
+          ...cat,
+          attributeValues: attributeValuesMap[cat.id]
+            ? Object.fromEntries(
+                Object.entries(attributeValuesMap[cat.id]).map(
+                  ([key, valueSet]) => [key, Array.from(valueSet).sort()]
                 )
-              : {},
-          }))
-          .sort((a, b) => parseInt(a.displayOrder) - parseInt(b.displayOrder));
+              )
+            : {},
+        }));
 
-        const categoryList = allTemp.filter(({ name }) => allowedCategories.has(name));
+        const updatedCategoryList = updatedAllTemp.filter(({ name }) =>
+          allowedCategories.has(name)
+        );
 
-        setCategories(categoryList);
-        setAllCategories(allTemp);
-        setHasFetched(true);
+        setAllCategories(updatedAllTemp);
+        setCategories(updatedCategoryList);
 
+        // Cache the full data
         if (typeof window !== "undefined") {
           sessionStorage.setItem(
             CACHE_KEY,
             JSON.stringify({
-              categories: categoryList,
-              allCategories: allTemp,
+              categories: updatedCategoryList,
+              allCategories: updatedAllTemp,
               timestamp: Date.now(),
             })
           );
         }
       } catch (error) {
-        console.error('Error fetching data:', error);
+        console.error("Error fetching data:", error);
         setHasFetched(true);
       }
     };
@@ -257,16 +303,24 @@ const Header = ({ isCategory = true }: HeaderProps) => {
       if (cachedData) {
         try {
           const parsed = JSON.parse(cachedData);
-          const { categories: cachedCategories, allCategories: cachedAllCategories, timestamp } = parsed || {};
+          const {
+            categories: cachedCategories,
+            allCategories: cachedAllCategories,
+            timestamp,
+          } = parsed || {};
           const now = Date.now();
-          if (now - timestamp < CACHE_DURATION && Array.isArray(cachedCategories) && Array.isArray(cachedAllCategories)) {
+          if (
+            now - timestamp < CACHE_DURATION &&
+            Array.isArray(cachedCategories) &&
+            Array.isArray(cachedAllCategories)
+          ) {
             setCategories(cachedCategories);
             setAllCategories(cachedAllCategories);
             setHasFetched(true);
             return;
           }
         } catch (e) {
-          console.error('Cache parse error:', e);
+          console.error("Cache parse error:", e);
           sessionStorage.removeItem(CACHE_KEY);
         }
       }
@@ -279,22 +333,34 @@ const Header = ({ isCategory = true }: HeaderProps) => {
     const handleScroll = () => {
       setIsScrolled(window.scrollY > 10);
     };
-    window.addEventListener('scroll', handleScroll);
-    return () => window.removeEventListener('scroll', handleScroll);
+    window.addEventListener("scroll", handleScroll);
+    return () => window.removeEventListener("scroll", handleScroll);
   }, []);
 
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
-      if (menuRef.current && !menuRef.current.contains(event.target as Node) && isMenuOpen && !selectedMobileCategory) {
+      if (
+        menuRef.current &&
+        !menuRef.current.contains(event.target as Node) &&
+        isMenuOpen &&
+        !selectedMobileCategory
+      ) {
         closeMenu();
       }
     };
-    document.addEventListener('mousedown', handleClickOutside);
-    return () => document.removeEventListener('mousedown', handleClickOutside);
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => document.removeEventListener("mousedown", handleClickOutside);
   }, [isMenuOpen, selectedMobileCategory]);
 
-  const handleSearch = (query: string | number | boolean, category: string | number | boolean) => {
-    router.push(`/search?q=${encodeURIComponent(query)}&category=${encodeURIComponent(category)}`);
+  const handleSearch = (
+    query: string | number | boolean,
+    category: string | number | boolean
+  ) => {
+    router.push(
+      `/search?q=${encodeURIComponent(query)}&category=${encodeURIComponent(
+        category
+      )}`
+    );
     closeMenu();
     setIsSearchOpen(false);
   };
@@ -309,7 +375,7 @@ const Header = ({ isCategory = true }: HeaderProps) => {
 
   const openMenu = () => {
     setIsMenuOpen(true);
-    document.body.style.overflow = 'hidden';
+    document.body.style.overflow = "hidden";
   };
 
   const closeMenu = () => {
@@ -317,14 +383,16 @@ const Header = ({ isCategory = true }: HeaderProps) => {
     setIsSearchOpen(false);
     setSelectedMobileCategory(null);
     setExpandedFeature(null);
-    document.body.style.overflow = 'auto';
+    document.body.style.overflow = "auto";
   };
 
   const handleMouseEnterCategory = (categoryName: string) => {
     if (dropdownTimeoutRef.current) {
       clearTimeout(dropdownTimeoutRef.current);
     }
-    setHoveredCategory(categoryName === 'Graphics_cards' ? 'Graphics Card' : categoryName);
+    setHoveredCategory(
+      categoryName === "Graphics_cards" ? "Graphics Card" : categoryName
+    );
     setHoveredAttribute(null);
   };
 
@@ -356,7 +424,10 @@ const Header = ({ isCategory = true }: HeaderProps) => {
   };
 
   const handleMouseLeaveAttribute = (event: React.MouseEvent) => {
-    if (attributeRef.current && !attributeRef.current.contains(event.relatedTarget as Node)) {
+    if (
+      attributeRef.current &&
+      !attributeRef.current.contains(event.relatedTarget as Node)
+    ) {
       setHoveredAttribute(null);
     }
   };
@@ -364,7 +435,9 @@ const Header = ({ isCategory = true }: HeaderProps) => {
   return (
     <>
       <header
-        className={`w-full bg-white pt-3 px-4 md:px-12 fixed top-0 left-0 z-50 transition-all duration-300 ${isScrolled ? 'shadow-md' : ''}`}
+        className={`w-full bg-white pt-3 px-4 md:px-12 fixed top-0 left-0 z-50 transition-all duration-300 ${
+          isScrolled ? "shadow-md" : ""
+        }`}
       >
         <div className="mx-auto flex items-center justify-between gap-2">
           <div className="flex items-center">
@@ -393,9 +466,12 @@ const Header = ({ isCategory = true }: HeaderProps) => {
             </div>
           </div>
 
-          <div className='px-2'>
-            <Link href={'/store-locator'} className='hidden md:flex items-center gap-2 font-medium text-sm hover:text-primary transition-colors group'>
-              <span className='text-primary group-hover:scale-110 transition-transform'>
+          <div className="px-2">
+            <Link
+              href={"/store-locator"}
+              className="hidden md:flex items-center gap-2 font-medium text-sm hover:text-primary transition-colors group"
+            >
+              <span className="text-primary group-hover:scale-110 transition-transform">
                 <Building size={20} />
               </span>
               Store Locator
@@ -444,21 +520,21 @@ const Header = ({ isCategory = true }: HeaderProps) => {
         <AnimatePresence>
           {isMenuOpen && (
             <motion.div
-              initial={{ x: '-100%' }}
+              initial={{ x: "-100%" }}
               animate={{ x: 0 }}
-              exit={{ x: '-100%' }}
-              transition={{ duration: 0.3, ease: 'easeInOut' }}
+              exit={{ x: "-100%" }}
+              transition={{ duration: 0.3, ease: "easeInOut" }}
               className="fixed inset-y-0 left-0 z-50 lg:hidden bg-white overflow-hidden"
-              style={{ width: '80vw', maxWidth: '320px', height: '100dvh' }}
+              style={{ width: "80vw", maxWidth: "320px", height: "100dvh" }}
               ref={menuRef}
             >
               {selectedMobileCategory ? (
                 // Category Details View
                 <motion.div
-                  initial={{ x: '100%', opacity: 0 }}
+                  initial={{ x: "100%", opacity: 0 }}
                   animate={{ x: 0, opacity: 1 }}
-                  exit={{ x: '100%', opacity: 0 }}
-                  transition={{ duration: 0.3, ease: 'easeInOut' }}
+                  exit={{ x: "100%", opacity: 0 }}
+                  transition={{ duration: 0.3, ease: "easeInOut" }}
                   className="p-4 flex flex-col h-full"
                 >
                   <div className="flex justify-between items-center mb-4 pb-4 border-b border-gray-200">
@@ -493,35 +569,42 @@ const Header = ({ isCategory = true }: HeaderProps) => {
                           Subcategories
                         </h4>
                         <div className="space-y-2">
-                          {selectedMobileCategory.subCategories.map((subCat) => (
-                            <motion.div
-                              key={subCat.id}
-                              whileHover={{ scale: 1.02 }}
-                              whileTap={{ scale: 0.98 }}
-                              transition={{ duration: 0.2 }}
-                            >
-                              <Link
-                                href={`/category/${selectedMobileCategory.slug}?subcategory=${subCat.slug}`}
-                                className="flex items-center justify-between py-3 px-3 text-sm text-gray-700 hover:text-primary bg-gray-50 hover:bg-primary/5 rounded-lg transition-all group font-medium"
-                                onClick={closeMenu}
+                          {selectedMobileCategory.subCategories.map(
+                            (subCat) => (
+                              <motion.div
+                                key={subCat.id}
+                                whileHover={{ scale: 1.02 }}
+                                whileTap={{ scale: 0.98 }}
+                                transition={{ duration: 0.2 }}
                               >
-                                <span>{subCat.name}</span>
-                                <motion.div
-                                  initial={{ x: 0 }}
-                                  whileHover={{ x: 4 }}
-                                  transition={{ duration: 0.2 }}
+                                <Link
+                                  href={`/category/${selectedMobileCategory.slug}?subcategory=${subCat.slug}`}
+                                  className="flex items-center justify-between py-3 px-3 text-sm text-gray-700 hover:text-primary bg-gray-50 hover:bg-primary/5 rounded-lg transition-all group font-medium"
+                                  onClick={closeMenu}
                                 >
-                                  <ArrowUpRight size={16} className="text-primary opacity-60 group-hover:opacity-100" />
-                                </motion.div>
-                              </Link>
-                            </motion.div>
-                          ))}
+                                  <span>{subCat.name}</span>
+                                  <motion.div
+                                    initial={{ x: 0 }}
+                                    whileHover={{ x: 4 }}
+                                    transition={{ duration: 0.2 }}
+                                  >
+                                    <ArrowUpRight
+                                      size={16}
+                                      className="text-primary opacity-60 group-hover:opacity-100"
+                                    />
+                                  </motion.div>
+                                </Link>
+                              </motion.div>
+                            )
+                          )}
                         </div>
                       </div>
                     )}
 
                     {/* Filterable Attributes */}
-                    {selectedMobileCategory.attributes.filter(a => a.isFilterable).length > 0 && (
+                    {selectedMobileCategory.attributes.filter(
+                      (a) => a.isFilterable
+                    ).length > 0 && (
                       <div>
                         <h4 className="text-xs font-bold text-gray-500 uppercase tracking-wide mb-3 flex items-center gap-2">
                           <Package size={16} className="text-primary" />
@@ -529,26 +612,44 @@ const Header = ({ isCategory = true }: HeaderProps) => {
                         </h4>
                         <div className="space-y-2">
                           {selectedMobileCategory.attributes
-                            .filter(attr => attr.isFilterable === true && selectedMobileCategory.attributeValues[attr.name!]?.length > 0)
-                            .sort((a, b) => (a.name || '').localeCompare(b.name || ''))
+                            .filter(
+                              (attr) =>
+                                attr.isFilterable === true &&
+                                selectedMobileCategory.attributeValues[
+                                  attr.name!
+                                ]?.length > 0
+                            )
+                            .sort((a, b) =>
+                              (a.name || "").localeCompare(b.name || "")
+                            )
                             .map((attr) => {
                               const isExpanded = expandedFeature === attr.name;
-                              const values = selectedMobileCategory.attributeValues[attr.name!] || [];
-                              
+                              const values =
+                                selectedMobileCategory.attributeValues[
+                                  attr.name!
+                                ] || [];
+
                               return (
                                 <div key={attr.name}>
                                   <motion.button
                                     whileHover={{ scale: 1.02 }}
                                     whileTap={{ scale: 0.98 }}
-                                    onClick={() => setExpandedFeature(isExpanded ? null : attr.name)}
+                                    onClick={() =>
+                                      setExpandedFeature(
+                                        isExpanded ? null : attr.name
+                                      )
+                                    }
                                     className="w-full flex items-center justify-between py-3 px-3 text-sm text-gray-700 hover:text-primary bg-gray-50 hover:bg-primary/5 rounded-lg transition-all group font-medium"
                                   >
-                                    <span>{attr.name?.replace('_', ' ')}</span>
+                                    <span>{attr.name?.replace("_", " ")}</span>
                                     <motion.div
                                       animate={{ rotate: isExpanded ? 180 : 0 }}
                                       transition={{ duration: 0.3 }}
                                     >
-                                      <ChevronDown size={16} className="text-primary" />
+                                      <ChevronDown
+                                        size={16}
+                                        className="text-primary"
+                                      />
                                     </motion.div>
                                   </motion.button>
 
@@ -556,10 +657,21 @@ const Header = ({ isCategory = true }: HeaderProps) => {
                                   <AnimatePresence>
                                     {isExpanded && (
                                       <motion.div
-                                        initial={{ opacity: 0, height: 0, x: 20 }}
-                                        animate={{ opacity: 1, height: 'auto', x: 0 }}
+                                        initial={{
+                                          opacity: 0,
+                                          height: 0,
+                                          x: 20,
+                                        }}
+                                        animate={{
+                                          opacity: 1,
+                                          height: "auto",
+                                          x: 0,
+                                        }}
                                         exit={{ opacity: 0, height: 0, x: 20 }}
-                                        transition={{ duration: 0.3, ease: 'easeInOut' }}
+                                        transition={{
+                                          duration: 0.3,
+                                          ease: "easeInOut",
+                                        }}
                                         className="overflow-hidden mt-2 ml-2 border-l-2 border-primary/30 pl-3 space-y-2"
                                       >
                                         {values.map((value) => (
@@ -570,7 +682,11 @@ const Header = ({ isCategory = true }: HeaderProps) => {
                                             transition={{ duration: 0.2 }}
                                           >
                                             <Link
-                                              href={`/category/${selectedMobileCategory.slug}?${attr.name}=${encodeURIComponent(value)}`}
+                                              href={`/category/${
+                                                selectedMobileCategory.slug
+                                              }?${
+                                                attr.name
+                                              }=${encodeURIComponent(value)}`}
                                               className="flex items-center justify-between py-2 px-3 text-xs text-gray-600 hover:text-primary hover:bg-primary/5 rounded transition-all group"
                                               onClick={closeMenu}
                                             >
@@ -580,7 +696,10 @@ const Header = ({ isCategory = true }: HeaderProps) => {
                                                 whileHover={{ x: 4 }}
                                                 transition={{ duration: 0.2 }}
                                               >
-                                                <ArrowUpRight size={14} className="text-primary opacity-0 group-hover:opacity-100" />
+                                                <ArrowUpRight
+                                                  size={14}
+                                                  className="text-primary opacity-0 group-hover:opacity-100"
+                                                />
                                               </motion.div>
                                             </Link>
                                           </motion.div>
@@ -599,10 +718,10 @@ const Header = ({ isCategory = true }: HeaderProps) => {
               ) : (
                 // Main Categories View
                 <motion.div
-                  initial={{ x: '-100%', opacity: 0 }}
+                  initial={{ x: "-100%", opacity: 0 }}
                   animate={{ x: 0, opacity: 1 }}
-                  exit={{ x: '-100%', opacity: 0 }}
-                  transition={{ duration: 0.3, ease: 'easeInOut' }}
+                  exit={{ x: "-100%", opacity: 0 }}
+                  transition={{ duration: 0.3, ease: "easeInOut" }}
                   className="p-4 flex flex-col h-full"
                 >
                   <div className="flex justify-between items-center mb-4 pb-4 border-b border-gray-200">
@@ -621,16 +740,24 @@ const Header = ({ isCategory = true }: HeaderProps) => {
                   {/* All Categories */}
                   <div className="flex-grow overflow-y-auto space-y-2">
                     {hasFetched && allCategories.length === 0 ? (
-                      <p className="text-gray-600 text-center py-8">No categories available</p>
+                      <p className="text-gray-600 text-center py-8">
+                        No categories available
+                      </p>
                     ) : (
                       allCategories.map((category) => {
-                        const filterableAttributes = category.attributes.filter(attr => attr.isFilterable === true);
-                        const hasSubsOrFilters = category.subCategories.length > 0 || filterableAttributes.length > 0;
+                        const filterableAttributes = category.attributes.filter(
+                          (attr) => attr.isFilterable === true
+                        );
+                        const hasSubsOrFilters =
+                          category.subCategories.length > 0 ||
+                          filterableAttributes.length > 0;
 
                         return (
                           <motion.div
                             key={category.id}
-                            whileHover={{ backgroundColor: 'rgba(0, 0, 0, 0.02)' }}
+                            whileHover={{
+                              backgroundColor: "rgba(0, 0, 0, 0.02)",
+                            }}
                             transition={{ duration: 0.2 }}
                             className="rounded-lg overflow-hidden"
                           >
@@ -643,17 +770,19 @@ const Header = ({ isCategory = true }: HeaderProps) => {
                                 {getCategoryIcon(category.name)}
                                 {category.name}
                               </Link>
-                        <motion.button
-                          whileHover={{ scale: 1.1 }}
-                          whileTap={{ scale: 0.95, rotate: 180 }}
-                          onClick={() => setSelectedMobileCategory(category)}
-                          className="p-2 hover:bg-gray-100 rounded-lg transition-colors"
-                        >
-                          <ChevronDown
-                            size={18}
-                            className="text-primary transition-transform"
-                          />
-                        </motion.button>
+                              <motion.button
+                                whileHover={{ scale: 1.1 }}
+                                whileTap={{ scale: 0.95, rotate: 180 }}
+                                onClick={() =>
+                                  setSelectedMobileCategory(category)
+                                }
+                                className="p-2 hover:bg-gray-100 rounded-lg transition-colors"
+                              >
+                                <ChevronDown
+                                  size={18}
+                                  className="text-primary transition-transform"
+                                />
+                              </motion.button>
                             </div>
                           </motion.div>
                         );
@@ -663,7 +792,10 @@ const Header = ({ isCategory = true }: HeaderProps) => {
 
                   {/* Store Locator & Footer */}
                   <div className="pt-4 border-t border-gray-200 space-y-2">
-                    <motion.div whileHover={{ x: 4 }} transition={{ duration: 0.2 }}>
+                    <motion.div
+                      whileHover={{ x: 4 }}
+                      transition={{ duration: 0.2 }}
+                    >
                       <Link
                         href="/store-locator"
                         className="flex items-center gap-3 font-semibold text-sm text-gray-800 hover:text-primary py-3 px-3 rounded-lg hover:bg-primary/5 transition-all"
@@ -673,7 +805,10 @@ const Header = ({ isCategory = true }: HeaderProps) => {
                         Store Locator
                       </Link>
                     </motion.div>
-                    <motion.div whileHover={{ x: 4 }} transition={{ duration: 0.2 }}>
+                    <motion.div
+                      whileHover={{ x: 4 }}
+                      transition={{ duration: 0.2 }}
+                    >
                       <Link
                         href="/contact"
                         className="flex items-center gap-3 font-semibold text-sm text-gray-800 hover:text-primary py-3 px-3 rounded-lg hover:bg-primary/5 transition-all"
@@ -701,13 +836,15 @@ const Header = ({ isCategory = true }: HeaderProps) => {
                   onMouseLeave={handleMouseLeaveAllCategories}
                 >
                   <motion.button
-                    whileHover={{ color: '#3b82f6' }}
+                    whileHover={{ color: "#3b82f6" }}
                     className="text-sm font-medium text-gray-800 transition-colors flex items-center"
                   >
                     Categories
                     <ChevronDown
                       size={16}
-                      className={`ml-1 transition-transform ${hoveredAllCategories ? 'rotate-180' : ''}`}
+                      className={`ml-1 transition-transform ${
+                        hoveredAllCategories ? "rotate-180" : ""
+                      }`}
                     />
                   </motion.button>
                   {hoveredAllCategories && (
@@ -739,16 +876,25 @@ const Header = ({ isCategory = true }: HeaderProps) => {
                               >
                                 {getCategoryIcon(category.name)}
                                 {category.name}
-                                <ArrowUpRight size={16} className='text-primary opacity-0 group-hover:opacity-100 transition-opacity' />
+                                <ArrowUpRight
+                                  size={16}
+                                  className="text-primary opacity-0 group-hover:opacity-100 transition-opacity"
+                                />
                               </Link>
                               {category.subCategories.length > 0 ? (
                                 <ul className="space-y-2">
                                   {category.subCategories.map((subCat) => (
-                                    <motion.li key={subCat.id} whileHover={{ x: 4 }} transition={{ duration: 0.2 }}>
+                                    <motion.li
+                                      key={subCat.id}
+                                      whileHover={{ x: 4 }}
+                                      transition={{ duration: 0.2 }}
+                                    >
                                       <Link
                                         href={`/category/${category.slug}?subcategory=${subCat.slug}`}
                                         className="block text-sm text-gray-600 hover:text-primary py-1 transition-colors"
-                                        onClick={() => setHoveredAllCategories(false)}
+                                        onClick={() =>
+                                          setHoveredAllCategories(false)
+                                        }
                                       >
                                         {subCat.name}
                                       </Link>
@@ -756,7 +902,9 @@ const Header = ({ isCategory = true }: HeaderProps) => {
                                   ))}
                                 </ul>
                               ) : (
-                                <p className="text-sm text-gray-500">No subcategories available</p>
+                                <p className="text-sm text-gray-500">
+                                  No subcategories available
+                                </p>
                               )}
                             </motion.div>
                           ))}
@@ -767,12 +915,16 @@ const Header = ({ isCategory = true }: HeaderProps) => {
                 {hasFetched && categories.length === 0
                   ? null
                   : categories.map((category) => {
-                      const hasFilterableAttributes = category.attributes.some(attr => attr.isFilterable === true);
+                      const hasFilterableAttributes = category.attributes.some(
+                        (attr) => attr.isFilterable === true
+                      );
                       return (
                         <motion.li
                           key={category.id}
                           className="relative"
-                          onMouseEnter={() => handleMouseEnterCategory(category.name)}
+                          onMouseEnter={() =>
+                            handleMouseEnterCategory(category.name)
+                          }
                           onMouseLeave={handleMouseLeaveCategory}
                           whileHover={{ scale: 1.05 }}
                           transition={{ duration: 0.2 }}
@@ -782,7 +934,8 @@ const Header = ({ isCategory = true }: HeaderProps) => {
                             className="text-sm font-medium text-gray-800 hover:text-primary transition-colors flex items-center gap-1"
                           >
                             {category.name}
-                            {(category.subCategories.length > 0 || hasFilterableAttributes) && (
+                            {(category.subCategories.length > 0 ||
+                              hasFilterableAttributes) && (
                               <ChevronDown size={16} className="ml-1" />
                             )}
                           </Link>
@@ -811,7 +964,9 @@ const Header = ({ isCategory = true }: HeaderProps) => {
                   {categories
                     .filter((category) => category.name === hoveredCategory)
                     .map((category) => {
-                      const filterableAttributes = category.attributes.filter(attr => attr.isFilterable === true);
+                      const filterableAttributes = category.attributes.filter(
+                        (attr) => attr.isFilterable === true
+                      );
                       return (
                         <React.Fragment key={category.id}>
                           {/* Left: Subcategories */}
@@ -844,7 +999,9 @@ const Header = ({ isCategory = true }: HeaderProps) => {
                                 ))}
                               </ul>
                             ) : (
-                              <p className="text-sm text-gray-500">No subcategories available</p>
+                              <p className="text-sm text-gray-500">
+                                No subcategories available
+                              </p>
                             )}
 
                             {/* Category Image */}
@@ -882,21 +1039,30 @@ const Header = ({ isCategory = true }: HeaderProps) => {
                               <div className="flex flex-row gap-6">
                                 <ul className="w-1/2 space-y-1">
                                   {filterableAttributes
-                                    .filter(attr => category.attributeValues[attr.name!])
-                                    .sort((a, b) => (a.name || '').localeCompare(b.name || ''))
+                                    .filter(
+                                      (attr) =>
+                                        category.attributeValues[attr.name!]
+                                    )
+                                    .sort((a, b) =>
+                                      (a.name || "").localeCompare(b.name || "")
+                                    )
                                     .map((attr) => (
                                       <motion.li
                                         key={attr.name}
                                         className="py-1"
-                                        onMouseEnter={() => handleMouseEnterAttribute(attr.name!)}
+                                        onMouseEnter={() =>
+                                          handleMouseEnterAttribute(attr.name!)
+                                        }
                                         whileHover={{ x: 4 }}
                                         transition={{ duration: 0.2 }}
                                       >
                                         <button
                                           className="text-sm cursor-pointer text-gray-600 hover:text-primary transition-colors capitalize rounded px-2 py-1 hover:bg-primary/5"
-                                          onMouseLeave={handleMouseLeaveAttribute}
+                                          onMouseLeave={
+                                            handleMouseLeaveAttribute
+                                          }
                                         >
-                                          {attr.name?.replace('_', ' ')}
+                                          {attr.name?.replace("_", " ")}
                                         </button>
                                       </motion.li>
                                     ))}
@@ -909,7 +1075,9 @@ const Header = ({ isCategory = true }: HeaderProps) => {
                                     transition={{ duration: 0.2 }}
                                     className="w-1/2 space-y-1"
                                   >
-                                    {category.attributeValues[hoveredAttribute]?.map((value) => (
+                                    {category.attributeValues[
+                                      hoveredAttribute
+                                    ]?.map((value) => (
                                       <motion.li
                                         key={value}
                                         className="py-1"
@@ -917,9 +1085,15 @@ const Header = ({ isCategory = true }: HeaderProps) => {
                                         transition={{ duration: 0.2 }}
                                       >
                                         <Link
-                                          href={`/category/${category.slug}?${hoveredAttribute}=${encodeURIComponent(value)}`}
+                                          href={`/category/${
+                                            category.slug
+                                          }?${hoveredAttribute}=${encodeURIComponent(
+                                            value
+                                          )}`}
                                           className="block text-sm text-gray-600 hover:text-primary transition-colors cursor-pointer rounded px-2 py-1 hover:bg-primary/5"
-                                          onClick={() => setHoveredCategory(null)}
+                                          onClick={() =>
+                                            setHoveredCategory(null)
+                                          }
                                         >
                                           {value}
                                         </Link>

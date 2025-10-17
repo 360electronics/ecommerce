@@ -44,8 +44,8 @@ const UserButton = () => {
     setIsDropdownOpen(false);
   };
 
-  if (!isMounted) return null; // Prevent SSR mismatch
-
+  if (!isMounted) return null; 
+  
   if (isLoading) {
     return (
       <div className="p-2 bg-slate-200 rounded-full animate-pulse">

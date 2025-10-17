@@ -1,7 +1,7 @@
 "use client";
 
-import { useEffect, useState, useCallback } from "react";
-import { useRouter } from "next/navigation";
+import { useEffect, useState, useCallback, Suspense } from "react";
+import { useRouter, useSearchParams } from "next/navigation";
 import Image from "next/image";
 import { toast } from "react-hot-toast";
 import Link from "next/link";
@@ -13,7 +13,6 @@ interface ImageUrls {
   sm?: string;
   lg?: string;
 }
-
 
 interface Banner {
   id: string;
@@ -31,13 +30,15 @@ interface LoginResponse {
   error?: string;
 }
 
-export default function LoginPage() {
+function LoginContent() {
   const [identifier, setIdentifier] = useState("");
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
   const [isBannerLoading, setIsBannerLoading] = useState(true);
   const [banner, setBanner] = useState<Banner | null>(null);
   const router = useRouter();
+  const searchParams = useSearchParams();
+  const callbackUrl = searchParams.get("callbackUrl") || "/";
 
   // Fetch banners with memoized callback
   const fetchBanners = useCallback(async () => {
@@ -121,7 +122,7 @@ export default function LoginPage() {
       }
 
       toast.success("OTP sent successfully!");
-      router.push(`/verify-otp?userId=${data.userId}&type=${type}`);
+      router.push(`/verify-otp?userId=${data.userId}&type=${type}&callbackUrl=${encodeURIComponent(callbackUrl)}`);
     } catch (err: unknown) {
       const errorMessage = err instanceof Error ? err.message : "An unexpected error occurred";
       setError(errorMessage);
@@ -135,15 +136,14 @@ export default function LoginPage() {
     <div className="flex min-h-screen bg-gray-50">
       {/* Banner Section */}
       <div className="hidden md:block w-full md:w-[40%] relative">
-   
-          <Link href={banner?.link || "#"} className="block w-full h-full">
-            <img
-              src={banner?.imageUrls.default || "/auth_placeholder.webp"}
-              alt={banner?.title || "Promotional Banner"}
-              sizes="40vw"
-              className="object-cover w-full h-full aspect-[3/4]"
-            />
-          </Link>
+        <Link href={banner?.link || "#"} className="block w-full h-full">
+          <img
+            src={banner?.imageUrls.default || "/auth_placeholder.webp"}
+            alt={banner?.title || "Promotional Banner"}
+            sizes="40vw"
+            className="object-cover w-full h-full aspect-[3/4] sticky top-0"
+          />
+        </Link>
       </div>
 
       {/* Login Form Section */}
@@ -273,5 +273,22 @@ export default function LoginPage() {
         </div>
       </div>
     </div>
+  );
+}
+
+export default function LoginPage() {
+  return (
+    <Suspense
+      fallback={
+        <div className="flex min-h-screen bg-gray-50 items-center justify-center">
+          <div className="text-center">
+            <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary mx-auto"></div>
+            <p className="mt-4 text-gray-600">Loading...</p>
+          </div>
+        </div>
+      }
+    >
+      <LoginContent />
+    </Suspense>
   );
 }

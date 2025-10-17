@@ -1,13 +1,23 @@
+'use client'
 import React, { ReactNode } from 'react';
+import { usePathname } from 'next/navigation';
 import Header from '../Navigations/Header';
 import Footer from '../Navigations/Footer';
 
 interface UserLayoutProps {
   children: ReactNode;
-  isCategory?:boolean
+  isCategory?: boolean
 }
 
-const UserLayout: React.FC<UserLayoutProps> = ({ children,isCategory }) => {
+const UserLayout: React.FC<UserLayoutProps> = ({ children, isCategory }) => {
+  const pathname = usePathname();
+  const pathsToHide = ['/signin', '/signup', '/verify-otp', '/checkout'];
+  const shouldHideLayout = pathsToHide.includes(pathname) || pathname.startsWith('/admin');
+
+  if (shouldHideLayout) {
+    return <>{children}</>;
+  }
+
   return (
     <>
       <Header isCategory={isCategory} />

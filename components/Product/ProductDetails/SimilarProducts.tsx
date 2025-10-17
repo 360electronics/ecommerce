@@ -1,15 +1,17 @@
-'use client';
+"use client";
 
-import React, { useEffect, useState } from 'react';
-import ProductCardwithCart from '../ProductCards/ProductCardwithCart';
-import { FlattenedProduct } from '@/types/product';
+import React, { useEffect, useState } from "react";
+import ProductCardwithCart from "../ProductCards/ProductCardwithCart";
+import { FlattenedProduct } from "@/types/product";
 
 interface SimilarProductsProps {
   product: FlattenedProduct | null;
 }
 
 const SimilarProducts: React.FC<SimilarProductsProps> = ({ product }) => {
-  const [similarProducts, setSimilarProducts] = useState<FlattenedProduct[]>([]);
+  const [similarProducts, setSimilarProducts] = useState<FlattenedProduct[]>(
+    []
+  );
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
@@ -21,22 +23,26 @@ const SimilarProducts: React.FC<SimilarProductsProps> = ({ product }) => {
       }
 
       try {
-        const res = await fetch(`/api/products/similar?variantId=${product.id}`, {
-          headers: {
-            'x-super-secure-key': process.env.NEXT_PUBLIC_API_SECRET_KEY ?? '',
-          },
-          cache: 'no-store', // always fresh, no accidental stale cache
-        });
+        const res = await fetch(
+          `/api/products/similar?variantId=${product.id}`,
+          {
+            headers: {
+              "x-super-secure-key":
+                process.env.NEXT_PUBLIC_API_SECRET_KEY ?? "",
+            },
+            cache: "no-store", // always fresh, no accidental stale cache
+          }
+        );
 
         if (!res.ok) {
-          console.error('Failed to fetch similar products:', res.statusText);
+          console.error("Failed to fetch similar products:", res.statusText);
           setSimilarProducts([]);
         } else {
           const data = await res.json();
           setSimilarProducts(Array.isArray(data) ? data : []);
         }
       } catch (err) {
-        console.error('Error loading similar products:', err);
+        console.error("Error loading similar products:", err);
         setSimilarProducts([]);
       } finally {
         setLoading(false);
@@ -49,7 +55,7 @@ const SimilarProducts: React.FC<SimilarProductsProps> = ({ product }) => {
   if (loading) {
     return (
       <div className="mx-auto px-4 max-w-7xl">
-        <h2 className="text-2xl font-bold mb-6">Similar Products</h2>
+        <h2 className="text-2xl font-semibold mb-6">Similar Products</h2>
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
           {Array.from({ length: 4 }).map((_, index) => (
             <div key={index} className="animate-pulse">
@@ -75,42 +81,48 @@ const SimilarProducts: React.FC<SimilarProductsProps> = ({ product }) => {
 
   return (
     <div className="mx-auto py-10">
-      <h2 className="text-2xl font-medium mb-6">Similar Products</h2>
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
-        {similarProducts.map((variant) => (
-          <ProductCardwithCart
-            key={variant.id}
-            image={
-              Array.isArray(variant.productImages)
-                ? (
-                    variant.productImages.find((img: { isFeatured?: boolean }) => img.isFeatured)?.url ||
+      <h2 className="text-2xl font-semibold mb-6">Similar Products</h2>
+      <div className="flex overflow-x-auto pb-10 snap-x snap-mandatory minimal-scrollbar gap-6">
+        {similarProducts.map((variant, idx) => (
+          <div
+            key={`${idx}`}
+            className="snap-start flex-shrink-0 relative"
+            style={{ width: "calc(60vw - 32px)", maxWidth: "15rem" }}
+          >
+            <ProductCardwithCart
+              
+              image={
+                Array.isArray(variant.productImages)
+                  ? variant.productImages.find(
+                      (img: { isFeatured?: boolean }) => img.isFeatured
+                    )?.url ||
                     variant.productImages[0]?.url ||
-                    ''
-                  )
-                : ''
-            }
-            name={variant.name}
-            rating={
-              typeof variant.averageRating === 'number'
-                ? variant.averageRating
-                : Number(variant.averageRating) || 0
-            }
-            ourPrice={
-              typeof variant.ourPrice === 'number'
-                ? variant.ourPrice
-                : Number(variant.ourPrice) || 0
-            }
-            mrp={
-              typeof variant.mrp === 'number'
-                ? variant.mrp
-                : Number(variant.mrp) || 0
-            }
-            slug={variant.slug}
-            productId={variant.productId}
-            variantId={variant.id}
-            showViewDetails={true}
-            className="w-full"
-          />
+                    ""
+                  : ""
+              }
+              name={variant.name}
+              rating={
+                typeof variant.averageRating === "number"
+                  ? variant.averageRating
+                  : Number(variant.averageRating) || 0
+              }
+              ourPrice={
+                typeof variant.ourPrice === "number"
+                  ? variant.ourPrice
+                  : Number(variant.ourPrice) || 0
+              }
+              mrp={
+                typeof variant.mrp === "number"
+                  ? variant.mrp
+                  : Number(variant.mrp) || 0
+              }
+              slug={variant.slug}
+              productId={variant.productId}
+              variantId={variant.id}
+              showViewDetails={true}
+              className="w-full"
+            />
+          </div>
         ))}
       </div>
     </div>

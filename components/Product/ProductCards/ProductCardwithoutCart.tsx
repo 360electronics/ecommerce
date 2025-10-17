@@ -205,7 +205,7 @@ const ProductCardwithoutCart: React.FC<ProductCardProps> = ({
 
         {/* Product Info */}
         <div className="space-y-1 sm:space-y-2">
-          <h3 className="text-[10px] sm:text-xs md:text-base font-medium text-gray-900 line-clamp-2">{name}</h3>
+          <h3 className="text-[10px] sm:text-xs md:text-base font-semibold text-gray-900 line-clamp-2">{name}</h3>
 
           {/* Rating */}
           {renderRating()}

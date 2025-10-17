@@ -2,7 +2,6 @@
 
 import { useState, useEffect, useMemo } from "react";
 import dynamic from "next/dynamic";
-import UserLayout from "@/components/Layouts/UserLayout";
 
 // Dynamically import StoreMap (no Leaflet here)
 const Map = dynamic(() => import("../../components/Store/StoreMap"), { ssr: false });
@@ -45,7 +44,6 @@ export default function StoreLocator() {
   }, [query, stores]);
 
   return (
-    <UserLayout>
       <div className="py-4 mx-auto flex flex-col md:flex-row gap-6 relative">
         <div className="w-full md:w-[30%]">
           <h1 className="text-3xl font-bold text-primary mb-6">
@@ -98,6 +96,5 @@ export default function StoreLocator() {
           <Map stores={filteredStores} />
         </div>
       </div>
-    </UserLayout>
   );
 }

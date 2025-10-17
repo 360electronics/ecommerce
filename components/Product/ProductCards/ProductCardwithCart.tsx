@@ -273,7 +273,7 @@ const ProductCardwithCart: React.FC<ProductCardProps> = ({
 
         {/* Product Info */}
         <div className="space-y-2">
-          <h3 className=" text-xs md:text-base font-medium text-gray-900 line-clamp-2">
+          <h3 className=" text-xs md:text-base font-semibold text-gray-900 line-clamp-2">
             {name}
           </h3>
 

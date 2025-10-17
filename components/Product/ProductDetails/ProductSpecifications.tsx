@@ -55,15 +55,15 @@ export default function ProductSpecifications({ className }: ProductSpecificatio
 
   return (
     <div className={`${className}`}>
-      <h2 className="md:text-4xl text-lg md:font-bold font-medium mb-4 ">Description</h2>
+      <h2 className="md:text-4xl text-lg md:font-bold font-semibold mb-4 ">Description</h2>
       <div className="border rounded-lg p-6 bg-gray-100 w-full">
-        <h2 className="md:text-xl md:font-bold font-medium mb-4">Product Features & Specification</h2>
+        <h2 className="md:text-xl md:font-bold font-semibold mb-4">Product Features & Specification</h2>
         <p className="text-gray-600 mb-8 text-sm md:text-base">Specifications Of {product.name}</p>
 
         {hasSpecifications ? (
           specifications.map((section, sectionIndex) => (
             <div key={sectionIndex} className={sectionIndex > 0 ? 'mt-8 pt-8 border-t' : ''}>
-              <h3 className="md:font-bold font-medium md:text-base text-sm mb-4">
+              <h3 className="md:font-semibold font-medium md:text-base text-sm mb-4">
                 {section.groupName}
               </h3>
               <div>
@@ -72,7 +72,7 @@ export default function ProductSpecifications({ className }: ProductSpecificatio
                     key={itemIndex}
                     className="grid grid-cols-[1fr_1.5fr] gap-2 py-2 text-xs md:text-base"
                   >
-                    <div className="font-medium">{item.fieldName}</div>
+                    <div className="font-semibold md:font-medium">{item.fieldName}</div>
                     <div>{item.fieldValue}</div>
                   </div>
                 ))}

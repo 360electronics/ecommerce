@@ -2,7 +2,6 @@
 
 import React, { useState, useEffect, Suspense } from "react";
 import { useParams } from "next/navigation";
-import UserLayout from "@/components/Layouts/UserLayout";
 import ProductListing from "@/components/Listing/ProductListing";
 import { CompleteProduct, FlattenedProduct } from "@/types/product";
 import { fetchProducts } from "@/utils/products.util";
@@ -89,7 +88,6 @@ const flattenProductVariants = (
 };
 
 const CategoryPageLoading = () => (
-  <UserLayout>
     <div className="mx-auto ">
       <div className="flex flex-col md:flex-row gap-8">
         {/* Left: Filter Sidebar Skeleton (25%) */}
@@ -127,7 +125,6 @@ const CategoryPageLoading = () => (
         </div>
       </div>
     </div>
-  </UserLayout>
 );
 
 function CategoryContent({
@@ -152,7 +149,6 @@ function CategoryContent({
 
   if (error) {
     return (
-      <UserLayout>
         <div className="mx-auto pt-4 pb-10 flex items-center justify-center min-h-[400px]">
           <div className="text-center">
             <h3 className="text-xl font-medium text-red-600 mb-2">{error}</h3>
@@ -164,17 +160,14 @@ function CategoryContent({
             </button>
           </div>
         </div>
-      </UserLayout>
     );
   }
 
   return (
-    <UserLayout>
       <div className="mx-auto pt-4 pb-10">
         {/* Product Listing Component */}
         <ProductListing category={category} initialProducts={initialProducts} />
       </div>
-    </UserLayout>
   );
 }
 

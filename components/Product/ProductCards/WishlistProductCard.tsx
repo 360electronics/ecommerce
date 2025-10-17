@@ -225,7 +225,7 @@ const WishlistProductCard: React.FC<ProductCardProps> = ({
 
         {/* Product Info */}
         <div className="space-y-2">
-          <h3 className="text-base font-medium text-gray-900 line-clamp-2">{name}</h3>
+          <h3 className="text-base font-semibold text-gray-900 line-clamp-2">{name}</h3>
 
           {/* Rating */}
           {renderRating()}

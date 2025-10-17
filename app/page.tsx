@@ -1,4 +1,3 @@
-// app/page.tsx
 import UserLayout from '@/components/Layouts/UserLayout';
 import HomeContent from '@/components/Home/HomeContent';
 import { fetchWithRetry } from '@/store/store-utils';
@@ -80,8 +79,6 @@ export default async function Home() {
   const initialData = await fetchHomeData();
 
   return (
-    <UserLayout>
       <HomeContent initialData={initialData} />
-    </UserLayout>
   );
 }
