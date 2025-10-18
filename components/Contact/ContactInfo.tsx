@@ -3,7 +3,8 @@ import { Phone, Mail, Map } from 'lucide-react';
 import Link from 'next/link';
 
 const ContactInfo = () => {
-    const mapEmbedUrl = "https://www.google.com/maps/embed?pb=!1m18!1m12!1m3!1d3022.9663095343008!2d-74.00425968459391!3d40.74844097932681!2m3!1f0!2f0!3f0!3m2!1i1024!2i768!4f13.1!3m3!1m2!1s0x89c259a9b3117469%3A0xd134e199a405a163!2sEmpire%20State%20Building!5e0!3m2!1sen!2sus!4v1609459200000!5m2!1sen!2sus";
+    const mapEmbedUrl = "https://www.google.com/maps/embed?pb=!1m14!1m8!1m3!1d8020451.191950306!2d67.2161867!3d11.020917!3m2!1i1024!2i768!4f13.1!3m3!1m2!1s0x3ba859547cf93e8d%3A0x5707da2004001b97!2sComputer%20Garage%20360!5e0!3m2!1sen!2sin!4v1760786665374!5m2!1sen!2sin";
+
 
     return (
         <div className="w-full mx-auto bg-white">

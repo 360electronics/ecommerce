@@ -522,8 +522,8 @@ const CartPage: React.FC = ({ initialCartItems }: any) => {
             )}
           </div>
 
-          <div className="lg:w-1/3">
-            <div className="bg-white border border-gray-200 rounded-lg p-6 sticky top-4">
+          <div className="lg:w-1/3 pb-10">
+            <div className="bg-white border border-gray-200 rounded-lg p-6 sticky top-32">
               <h2 className="text-xl font-semibold text-gray-900 mb-4 nohemi-bold">
                 Order Summary
               </h2>
@@ -644,7 +644,7 @@ const CartPage: React.FC = ({ initialCartItems }: any) => {
               </div>
               <button
                 onClick={handleCheckout}
-                className="w-full mt-6 bg-primary text-white py-3 rounded-full hover:bg-primary-HOVER transition-colors disabled:opacity-50 text-base font-medium"
+                className="w-full mt-6 bg-primary text-white py-3 rounded-full hover:bg-primary-HOVER transition-colors disabled:opacity-50 text-base font-medium cursor-pointer"
                 disabled={cartItems.length === 0 || isUpdating !== null}
                 aria-label="Proceed to checkout"
               >

@@ -410,7 +410,7 @@ export default function Referrals() {
             </div>
             <div className="mt-6 text-center">
               <a
-                href="/referral-terms"
+                href="/terms-and-conditions"
                 className="inline-flex items-center text-sm font-medium text-orange-600 hover:text-orange-500"
               >
                 View full terms and conditions

@@ -33,7 +33,7 @@ const ContactForm: React.FC = () => {
                     Get in{" "}
                     <span className="inline-block relative">
                         <span className="relative z-10">touch</span>
-                        <span className="absolute left-0 bottom-0 w-full h-[4px] bg-[#2874F0] rounded-full z-0"></span>
+                        <span className="absolute left-0 bottom-0 w-full h-[4px] bg-primary rounded-full z-0"></span>
                     </span>
                 </h2>
 

@@ -835,10 +835,7 @@ const Header = ({ isCategory = true }: HeaderProps) => {
                   onMouseEnter={handleMouseEnterAllCategories}
                   onMouseLeave={handleMouseLeaveAllCategories}
                 >
-                  <motion.button
-                    whileHover={{ color: "#3b82f6" }}
-                    className="text-sm font-medium text-gray-800 transition-colors flex items-center"
-                  >
+                  <motion.button className="text-sm font-medium text-gray-800 hover:!text-primary cursor-pointer transition-colors flex items-center">
                     Categories
                     <ChevronDown
                       size={16}
@@ -860,7 +857,7 @@ const Header = ({ isCategory = true }: HeaderProps) => {
                           }
                         }}
                         onMouseLeave={handleMouseLeaveAllCategories}
-                        className="max-w-[90%] bg-white mx-auto p-6 grid grid-cols-5 gap-6 h-[calc(100vh-6rem)] overflow-y-auto"
+                        className="max-w-[95%] bg-white mx-auto p-6 grid grid-cols-5 gap-6 h-[calc(100vh-6rem)] overflow-y-auto"
                       >
                         {hasFetched &&
                           allCategories.map((category) => (
@@ -873,6 +870,7 @@ const Header = ({ isCategory = true }: HeaderProps) => {
                               <Link
                                 href={`/category/${category.slug}`}
                                 className="text-lg font-medium text-gray-800 mb-3 capitalize flex items-center gap-2 hover:text-primary transition-colors group"
+                                onClick={() => setHoveredAllCategories(false)}
                               >
                                 {getCategoryIcon(category.name)}
                                 {category.name}
