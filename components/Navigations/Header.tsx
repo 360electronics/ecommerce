@@ -1,7 +1,6 @@
 "use client";
 
 import React, { useState, useEffect, useRef } from "react";
-import Image from "next/image";
 import LocationPicker from "./Header/LocationPicker";
 import SearchBar from "./Header/Search/SearchBar";
 import WishlistButton from "./Header/WishlistButton";
@@ -33,6 +32,7 @@ import { IoMdPrint as Printer } from "react-icons/io";
 import { IoHeadset as Headset } from "react-icons/io5";
 import { PiGraphicsCard as GraphicsCard } from "react-icons/pi";
 import { BsMotherboard as Motherboard } from "react-icons/bs";
+import categoryData from "@/data/categories.json";
 
 import { motion, AnimatePresence } from "framer-motion";
 import { fetchProducts } from "@/utils/products.util";
@@ -69,32 +69,159 @@ interface Category {
   attributeValues: { [key: string]: string[] };
 }
 
-interface CategoryResponse {
-  [slug: string]: {
-    category: {
-      id: string;
-      name: string;
-      slug: string;
-      description?: string | null;
-      isActive: boolean;
-      displayOrder: string;
-    };
-    attributes: Attribute[];
-    subcategories: SubCategory[];
+export const categoryFeatures: Record<string, { [feature: string]: string[] }> =
+  {
+    // 🧰 Laptops
+    Laptops: {
+      brand: ["HP", "DELL", "ASUS", "LENOVO", "ACER", "MSI"],
+      Processor: [
+        "Intel Core i3",
+        "Intel Core i5",
+        "Intel Core i7",
+        "AMD Ryzen 5",
+        "AMD Ryzen 7",
+        "Apple M3",
+      ],
+      Graphics: [
+        "RTX 4050",
+        "RTX 4060",
+        "RTX 3050",
+        "RTX 3060",
+        "Integrated Graphics",
+        "AMD Radeon Graphics",
+        "13650HX",
+        "14650HX",
+      ],
+      Ram: ["8 GB", "16 GB", "32 GB"],
+      Storage: ["512 GB SSD", "1 TB SSD", "2 TB SSD"],
+      "Display Size": [
+        "13 inches",
+        "14 inches",
+        "15.6 inches",
+        "16 inches",
+        "17 inches",
+      ],
+    },
+
+    // ⚙️ Processors
+    Processors: {
+      Cpu: [
+        "AMD Athlon",
+        "AMD Ryzen 3",
+        "AMD Ryzen 5",
+        "AMD Ryzen 7",
+        "AMD Ryzen 9",
+        "Intel Core i3",
+        "Intel Core i5",
+        "Intel Core i7",
+        "Intel Core i9",
+        "Intel Ultra 5",
+        "Intel Ultra 7",
+        "Intel Ultra 9",
+      ],
+      Series: [
+        "AMD 3000 Series",
+        "AMD 4000 Series",
+        "AMD 5000 Series",
+        "AMD 7000 Series",
+        "AMD 8000 Series",
+        "AMD 9000 Series",
+        "Intel 10th Gen",
+        "Intel 11th Gen",
+        "Intel 12th Gen",
+        "Intel 13th Gen",
+        "Intel 14th Gen",
+      ],
+    },
+
+    // 🎮 Graphics Card
+    "Graphics Card": {
+      brand: ["Asrock", "ASUS", "Galax", "GIGABYTE", "Inno3D", "MSI"],
+      Series: [
+        "3000 Series",
+        "3050 Series",
+        "3060 Series",
+        "4000 Series",
+        "4060 Series",
+        "5000 Series",
+        "5050 Series",
+        "5060 Series",
+        "5070 Series",
+        "5080 Series",
+        "5090 Series",
+        "6000 Series",
+        "6500 Series",
+        "9000 Series",
+        "9060 Series",
+        "9070 Series",
+        "GT 1000 Series",
+        "GT 700 Series",
+        "RTX 3000 Series",
+        "RTX 5000 Series",
+        "RX 500 Series",
+        "RX 7000 Series",
+        "RX 9000 Series",
+      ],
+      "Memory Type": ["DDR3", "GDDR3", "GDDR5", "GDDR6", "GDDR6X", "GDDR7"],
+      Chipset: ["AMD Radeon", "NVIDIA GeForce", "NVIDIA Quadro"],
+    },
+
+    // 🖥 Monitors
+    Monitors: {
+      Brand: ["LG", "Samsung", "ACER", "ASUS", "MSI", "BenQ"],
+      "Screen Size": [
+        "15.6 Inches",
+        "16 Inches",
+        "18.5 Inches",
+        "19 Inches",
+        "20 Inches",
+        "21.5 Inches",
+        "22 Inches",
+        "23 Inches",
+        "24 Inches",
+        "24.5 Inches",
+        "25 Inches",
+        "27 Inches",
+        "28 Inches",
+        "29 Inches",
+        "30 Inches",
+        "31.5 Inches",
+        "32 Inches",
+        "34 Inches",
+        "35 Inches",
+        "38 Inches",
+        "39 Inches",
+        "43 Inches",
+        "49 Inches",
+        "52 Inches",
+      ],
+      Display: [
+        "HD 1280x720",
+        "HD+ 1600x900",
+        "FHD 1920x1080",
+        "FHD Ultra Wide 2560x1080",
+        "QHD 2560x1440",
+        "QHD Ultra Wide 3440x1440",
+        "WQHD 3440x1440",
+        "WQHD 3840x1600",
+        "UHD 2560x1600",
+        "4K UHD 3840x2160",
+        "5K QHD 5120x2880",
+      ],
+    },
+    // 🧬 Motherboard
+    Motherboard: {
+      brand: ["ASUS", "GIGABYTE", "MSI", "Asrock"],
+      Chipset: ["Z790", "B760", "B550", "X870"],
+    },
+
+    // 🎧 Peripherals
+    Peripherals: {
+      brand: ["Logitech", "Razer", "Corsair", "HP", "Canon"],
+      Connectivity: ["Wired", "Wireless", "Bluetooth"],
+      Features: ["RGB Lighting", "Noise Cancellation", "Adjustable DPI"],
+    },
   };
-}
-
-interface Product {
-  id: string;
-  categoryId: string;
-  subcategoryId: string;
-  variants: Array<{
-    attributes: { [key: string]: string };
-  }>;
-}
-
-const CACHE_KEY = "header_data_cache";
-const CACHE_DURATION = 1000 * 60 * 60;
 
 const getCategoryIcon = (categoryName: string) => {
   const iconProps = { size: 20, className: "text-primary size-5 md:size-6" };
@@ -133,200 +260,68 @@ const Header = ({ isCategory = true }: HeaderProps) => {
   const menuRef = useRef<HTMLDivElement>(null);
   const dropdownTimeoutRef = useRef<NodeJS.Timeout | null>(null);
   const attributeRef = useRef<HTMLDivElement>(null);
-
-  const allowedCategories = new Set([
-    "Laptops",
-    "Processors",
-    "Graphics Card",
-    "Monitors",
-    "Motherboard",
-    "Peripherals",
-  ]);
-
-  const categoryImages: Record<string, string> = {
-    Laptops: "/header/categories/storage.jpg",
-    Processors: "/header/categories/processor.jpg",
-    "Graphics Card": "/header/categories/graphics-card.jpg",
-    Monitors: "/header/categories/monitors.jpg",
-    Accessories: "/header/categories/accessories.jpg",
-  };
+  const [expandedFeatures, setExpandedFeatures] = useState<
+    Record<string, boolean>
+  >({});
 
   useEffect(() => {
-    const fetchData = async () => {
+    // Step 1: render categories immediately
+    const baseCategories = categoryData.map((cat: any) => ({
+      ...cat,
+      name: cat.name === "Graphics_cards" ? "Graphics Card" : cat.name,
+      subCategories: cat.subcategories,
+      attributes: cat.attributes,
+      attributeValues: {}, // empty initially
+    }));
+
+    const allowed = new Set([
+      "Laptops",
+      "Processors",
+      "Graphics Card",
+      "Monitors",
+      "Motherboard",
+      "Peripherals",
+    ]);
+
+    setAllCategories(baseCategories);
+    setCategories(baseCategories.filter((c) => allowed.has(c.name)));
+    setHasFetched(true); // instantly visible
+
+    // Step 2: enrich asynchronously
+    (async () => {
       try {
-        // Fetch categories first for instant display
-        const categoryResponse = await fetch("/api/categories");
-        if (!categoryResponse.ok) throw new Error("Failed to fetch categories");
+        const products = await fetchProducts();
+        const attrMap: Record<string, Record<string, Set<string>>> = {};
 
-        const categoryData = await categoryResponse.json();
-
-        const normalizeValue = (val: string) => {
-          if (!val) return "";
-          let v = val.trim().replace(/\s+/g, " ").toLowerCase();
-          let brand = "";
-
-          if (/\bamd\b/i.test(v)) brand = "AMD";
-          else if (/\bintel\b/i.test(v)) brand = "Intel";
-          else if (/\bnvidia\b/i.test(v)) brand = "NVIDIA";
-          else if (/\bmsi\b/i.test(v)) brand = "MSI";
-          else if (/\basus\b/i.test(v)) brand = "Asus";
-
-          if (brand) {
-            const brandRegex = new RegExp(`\\b(${brand})\\b`, "ig");
-            v = v.replace(brandRegex, "").trim();
-          }
-
-          if (/ryzen\s*[3579]/i.test(v)) {
-            if (!brand) brand = "AMD";
-            v = v.replace(/ryzen\s*([3579]).*/i, "Ryzen $1");
-          }
-          if (/core\s*i\s*[3579]/i.test(v)) {
-            if (!brand) brand = "Intel";
-            v = v.replace(/core\s*i\s*([3579]).*/i, "Core i$1");
-          }
-          if (/rtx\s*\d+/i.test(v)) {
-            if (!brand) brand = "NVIDIA";
-            v = v.replace(/geforce\s*/i, "");
-            v = v.replace(/\brtx\s*(\d+).*/i, "RTX $1");
-          }
-
-          if (/tuf\s+gaming/i.test(v)) {
-            if (!brand) brand = "Asus";
-            v = v.replace(/tuf\s+gaming/i, "TUF Gaming");
-          }
-          if (/rog\s+/i.test(v)) {
-            if (!brand) brand = "Asus";
-            v = v.replace(/rog\s+/i, "ROG ");
-          }
-
-          v = v.replace(/(\d+)\s*(gb|ssd|hdd)/i, "$1 GB");
-          v = v.replace(/(\d+)(gb|ssd|hdd)/i, "$1 GB");
-          v = v.replace(
-            /(\d+(\.\d+)?)\s*cm\s*\((\d+(\.\d+)?)\s*inch\)/i,
-            "$3 inch"
-          );
-          v = v.replace(/\b(\w+)( \1\b)+/gi, "$1");
-          v = v.replace(/\b\w/g, (c) => c.toUpperCase());
-
-          if (brand && !v.startsWith(brand)) {
-            v = `${brand} ${v}`;
-          }
-
-          return v.trim();
-        };
-
-        // Set partial data immediately (without attribute values)
-        const allTemp: Category[] = Object.values(categoryData)
-          .map(({ category, attributes, subcategories }: any) => ({
-            ...category,
-            name:
-              category.name === "Graphics_cards"
-                ? "Graphics Card"
-                : category.name,
-            attributes,
-            subCategories: subcategories,
-            attributeValues: {}, // Empty initially
-          }))
-          .sort((a, b) => parseInt(a.displayOrder) - parseInt(b.displayOrder));
-
-        const categoryList = allTemp.filter(({ name }) =>
-          allowedCategories.has(name)
-        );
-
-        setCategories(categoryList);
-        setAllCategories(allTemp);
-        setHasFetched(true);
-
-        // Now fetch products and compute attribute values asynchronously
-        const productResponse = await fetchProducts();
-        const productData = productResponse || [];
-
-        const attributeValuesMap: Record<
-          string,
-          Record<string, Set<string>>
-        > = {};
-        productData.forEach((product: Product) => {
-          const categoryId = product.categoryId;
-          if (!attributeValuesMap[categoryId]) {
-            attributeValuesMap[categoryId] = {};
-          }
-          product.variants.forEach((variant) => {
-            Object.entries(variant.attributes).forEach(([key, value]) => {
-              if (!attributeValuesMap[categoryId][key]) {
-                attributeValuesMap[categoryId][key] = new Set();
-              }
-              attributeValuesMap[categoryId][key].add(
-                normalizeValue(value as string)
-              );
+        products.forEach((p: any) => {
+          const cid = p.categoryId;
+          if (!attrMap[cid]) attrMap[cid] = {};
+          p.variants.forEach((v: any) => {
+            Object.entries(v.attributes).forEach(([key, value]) => {
+              if (!attrMap[cid][key]) attrMap[cid][key] = new Set();
+              attrMap[cid][key].add(value as string);
             });
           });
         });
 
-        // Update states with attribute values
-        const updatedAllTemp = allTemp.map((cat) => ({
+        const enriched = baseCategories.map((cat) => ({
           ...cat,
-          attributeValues: attributeValuesMap[cat.id]
+          attributeValues: attrMap[cat.id]
             ? Object.fromEntries(
-                Object.entries(attributeValuesMap[cat.id]).map(
-                  ([key, valueSet]) => [key, Array.from(valueSet).sort()]
-                )
+                Object.entries(attrMap[cat.id]).map(([k, v]) => [
+                  k,
+                  Array.from(v),
+                ])
               )
             : {},
         }));
 
-        const updatedCategoryList = updatedAllTemp.filter(({ name }) =>
-          allowedCategories.has(name)
-        );
-
-        setAllCategories(updatedAllTemp);
-        setCategories(updatedCategoryList);
-
-        // Cache the full data
-        if (typeof window !== "undefined") {
-          sessionStorage.setItem(
-            CACHE_KEY,
-            JSON.stringify({
-              categories: updatedCategoryList,
-              allCategories: updatedAllTemp,
-              timestamp: Date.now(),
-            })
-          );
-        }
-      } catch (error) {
-        console.error("Error fetching data:", error);
-        setHasFetched(true);
+        setAllCategories(enriched);
+        setCategories(enriched.filter((c) => allowed.has(c.name)));
+      } catch (err) {
+        console.error("Product enrichment failed:", err);
       }
-    };
-
-    if (typeof window !== "undefined") {
-      const cachedData = sessionStorage.getItem(CACHE_KEY);
-      if (cachedData) {
-        try {
-          const parsed = JSON.parse(cachedData);
-          const {
-            categories: cachedCategories,
-            allCategories: cachedAllCategories,
-            timestamp,
-          } = parsed || {};
-          const now = Date.now();
-          if (
-            now - timestamp < CACHE_DURATION &&
-            Array.isArray(cachedCategories) &&
-            Array.isArray(cachedAllCategories)
-          ) {
-            setCategories(cachedCategories);
-            setAllCategories(cachedAllCategories);
-            setHasFetched(true);
-            return;
-          }
-        } catch (e) {
-          console.error("Cache parse error:", e);
-          sessionStorage.removeItem(CACHE_KEY);
-        }
-      }
-    }
-
-    fetchData();
+    })();
   }, []);
 
   useEffect(() => {
@@ -845,67 +840,81 @@ const Header = ({ isCategory = true }: HeaderProps) => {
                     />
                   </motion.button>
                   {hoveredAllCategories && (
-                    <div className="fixed left-0 right-0 top-22 bg-black/30 shadow-lg z-[100]">
+                    <div className="fixed left-0 right-0 top-22 h-dvh bg-black/30 z-[100]">
                       <motion.div
                         initial={{ opacity: 0, y: -10 }}
                         animate={{ opacity: 1, y: 0 }}
                         exit={{ opacity: 0, y: -10 }}
                         transition={{ duration: 0.2 }}
                         onMouseEnter={() => {
-                          if (dropdownTimeoutRef.current) {
+                          if (dropdownTimeoutRef.current)
                             clearTimeout(dropdownTimeoutRef.current);
-                          }
                         }}
                         onMouseLeave={handleMouseLeaveAllCategories}
-                        className="max-w-[95%] bg-white mx-auto p-6 grid grid-cols-5 gap-6 h-[calc(100vh-6rem)] overflow-y-auto"
+                        className="max-w-[90%] mx-auto bg-white rounded-lg shadow-xl p-8 mt-2 grid grid-cols-4 gap-8 overflow-y-auto max-h-[70vh]"
                       >
-                        {hasFetched &&
-                          allCategories.map((category) => (
-                            <motion.div
-                              key={category.id}
-                              whileHover={{ y: -4 }}
-                              transition={{ duration: 0.2 }}
-                              className="w-full"
-                            >
+                        {allCategories.map((category) => (
+                          <motion.div
+                            key={category.id}
+                            whileHover={{ y: -3 }}
+                            transition={{ duration: 0.2 }}
+                            className="flex flex-col justify-between border border-gray-100 rounded-xl hover:shadow-md hover:border-primary/20 transition-all duration-200"
+                          >
+                            <div className="p-4">
                               <Link
                                 href={`/category/${category.slug}`}
-                                className="text-lg font-medium text-gray-800 mb-3 capitalize flex items-center gap-2 hover:text-primary transition-colors group"
+                                className="flex items-center gap-2 mb-3 text-gray-900 hover:text-primary transition-colors"
                                 onClick={() => setHoveredAllCategories(false)}
                               >
                                 {getCategoryIcon(category.name)}
-                                {category.name}
-                                <ArrowUpRight
-                                  size={16}
-                                  className="text-primary opacity-0 group-hover:opacity-100 transition-opacity"
-                                />
+                                <span className="font-semibold text-base">
+                                  {category.name}
+                                </span>
                               </Link>
+
                               {category.subCategories.length > 0 ? (
-                                <ul className="space-y-2">
-                                  {category.subCategories.map((subCat) => (
-                                    <motion.li
-                                      key={subCat.id}
-                                      whileHover={{ x: 4 }}
-                                      transition={{ duration: 0.2 }}
-                                    >
+                                <ul className="space-y-1">
+                                  {category.subCategories
+                                    .slice(0, 5)
+                                    .map((subCat) => (
+                                      <motion.li
+                                        key={subCat.id}
+                                        whileHover={{ x: 4 }}
+                                        transition={{ duration: 0.2 }}
+                                      >
+                                        <Link
+                                          href={`/category/${category.slug}?subcategory=${subCat.slug}`}
+                                          className="text-sm text-gray-600 hover:text-primary transition-colors block truncate"
+                                          onClick={() =>
+                                            setHoveredAllCategories(false)
+                                          }
+                                        >
+                                          {subCat.name}
+                                        </Link>
+                                      </motion.li>
+                                    ))}
+                                  {category.subCategories.length > 5 && (
+                                    <li>
                                       <Link
-                                        href={`/category/${category.slug}?subcategory=${subCat.slug}`}
-                                        className="block text-sm text-gray-600 hover:text-primary py-1 transition-colors"
+                                        href={`/category/${category.slug}`}
+                                        className="text-sm text-primary font-medium hover:underline"
                                         onClick={() =>
                                           setHoveredAllCategories(false)
                                         }
                                       >
-                                        {subCat.name}
+                                        View all →
                                       </Link>
-                                    </motion.li>
-                                  ))}
+                                    </li>
+                                  )}
                                 </ul>
                               ) : (
-                                <p className="text-sm text-gray-500">
-                                  No subcategories available
+                                <p className="text-gray-500 text-sm italic">
+                                  No subcategories
                                 </p>
                               )}
-                            </motion.div>
-                          ))}
+                            </div>
+                          </motion.div>
+                        ))}
                       </motion.div>
                     </div>
                   )}
@@ -945,41 +954,40 @@ const Header = ({ isCategory = true }: HeaderProps) => {
 
             {/* Full-Screen Dropdown for Individual Categories */}
             {hoveredCategory && (
-              <div className="fixed left-0 right-0 top-22 bg-black/30 shadow-lg z-[100]">
+              <div className="fixed left-0 right-0 top-22 h-dvh bg-black/30  z-[100]">
                 <motion.div
-                  initial={{ opacity: 0, y: -10 }}
+                  initial={{ opacity: 0, y: -8 }}
                   animate={{ opacity: 1, y: 0 }}
-                  exit={{ opacity: 0, y: -10 }}
-                  transition={{ duration: 0.2 }}
+                  exit={{ opacity: 0, y: -8 }}
+                  transition={{ duration: 0.25 }}
                   onMouseEnter={() => {
-                    if (dropdownTimeoutRef.current) {
+                    if (dropdownTimeoutRef.current)
                       clearTimeout(dropdownTimeoutRef.current);
-                    }
                   }}
                   onMouseLeave={handleMouseLeaveCategory}
-                  className="max-w-[90%] bg-white mx-auto p-6 flex flex-row gap-12 h-[calc(100vh-6rem)] overflow-y-auto"
+                  className="max-w-[95%] mx-auto bg-white rounded-lg shadow-2xl mt-2 grid grid-cols-2 gap-10 p-8 overflow-hidden border border-gray-100 "
+                  style={{ maxHeight: "85dvh" }}
                 >
                   {categories
                     .filter((category) => category.name === hoveredCategory)
                     .map((category) => {
                       const filterableAttributes = category.attributes.filter(
-                        (attr) => attr.isFilterable === true
+                        (a) => a.isFilterable
                       );
+
                       return (
                         <React.Fragment key={category.id}>
-                          {/* Left: Subcategories */}
-                          <motion.div
-                            initial={{ opacity: 0, x: -20 }}
-                            animate={{ opacity: 1, x: 0 }}
-                            transition={{ duration: 0.3 }}
-                            className="w-1/2"
-                          >
-                            <h3 className="text-lg font-semibold text-gray-800 mb-4 flex items-center gap-2">
+                          {/* LEFT — Subcategories */}
+                          <div className="flex flex-col min-h-[50dvh] max-h-[50dvh] overflow-y-auto pr-4">
+                            <div className="flex items-center gap-2 mb-5 sticky top-0 bg-white pb-2 border-b border-gray-100 z-10">
                               {getCategoryIcon(category.name)}
-                              Explore Subcategories
-                            </h3>
+                              <h3 className="text-lg font-semibold text-gray-800">
+                                {category.name}
+                              </h3>
+                            </div>
+
                             {category.subCategories.length > 0 ? (
-                              <ul className="grid grid-cols-2 gap-2">
+                              <ul className="grid grid-cols-2 gap-x-4 gap-y-2">
                                 {category.subCategories.map((subCat) => (
                                   <motion.li
                                     key={subCat.id}
@@ -988,8 +996,8 @@ const Header = ({ isCategory = true }: HeaderProps) => {
                                   >
                                     <Link
                                       href={`/category/${category.slug}?subcategory=${subCat.slug}`}
-                                      className="block text-sm text-gray-600 hover:text-primary py-2 px-2 rounded hover:bg-primary/5 transition-all"
                                       onClick={() => setHoveredCategory(null)}
+                                      className="block text-sm text-gray-700 hover:text-primary px-2 py-1.5 rounded-md hover:bg-primary/5 transition-colors font-medium"
                                     >
                                       {subCat.name}
                                     </Link>
@@ -997,111 +1005,75 @@ const Header = ({ isCategory = true }: HeaderProps) => {
                                 ))}
                               </ul>
                             ) : (
-                              <p className="text-sm text-gray-500">
+                              <p className="text-gray-500 text-sm italic mt-4">
                                 No subcategories available
                               </p>
                             )}
+                          </div>
 
-                            {/* Category Image */}
-                            <motion.div
-                              initial={{ opacity: 0 }}
-                              animate={{ opacity: 1 }}
-                              transition={{ delay: 0.2, duration: 0.3 }}
-                              className="absolute bottom-10 w-full max-w-md"
-                            >
-                              {categoryImages[category.name] && (
-                                <img
-                                  src={categoryImages[category.name]}
-                                  alt={category.name}
-                                  width={500}
-                                  height={300}
-                                  className="object-cover aspect-video rounded-lg shadow-lg"
-                                />
-                              )}
-                            </motion.div>
-                          </motion.div>
+                          {/* RIGHT — Filter by Features */}
+                          <div className="min-h-[50dvh] max-h-[50dvh] overflow-y-auto">
+                            <h3 className="text-lg font-semibold text-gray-800 mb-4 flex items-center gap-2 sticky top-0 bg-white pb-2 border-b border-gray-100 z-10">
+                              <Package size={20} className="text-primary" />
+                              Filter by Features
+                            </h3>
 
-                          {/* Right: Attributes */}
-                          {filterableAttributes.length > 0 && (
-                            <motion.div
-                              initial={{ opacity: 0, x: 20 }}
-                              animate={{ opacity: 1, x: 0 }}
-                              transition={{ duration: 0.3 }}
-                              className="w-1/2 relative"
-                              ref={attributeRef}
-                            >
-                              <h3 className="text-lg font-semibold text-gray-800 mb-4 flex items-center gap-2">
-                                <Package size={20} className="text-primary" />
-                                Filter by Features
-                              </h3>
-                              <div className="flex flex-row gap-6">
-                                <ul className="w-1/2 space-y-1">
-                                  {filterableAttributes
-                                    .filter(
-                                      (attr) =>
-                                        category.attributeValues[attr.name!]
-                                    )
-                                    .sort((a, b) =>
-                                      (a.name || "").localeCompare(b.name || "")
-                                    )
-                                    .map((attr) => (
-                                      <motion.li
-                                        key={attr.name}
-                                        className="py-1"
-                                        onMouseEnter={() =>
-                                          handleMouseEnterAttribute(attr.name!)
-                                        }
-                                        whileHover={{ x: 4 }}
-                                        transition={{ duration: 0.2 }}
-                                      >
-                                        <button
-                                          className="text-sm cursor-pointer text-gray-600 hover:text-primary transition-colors capitalize rounded px-2 py-1 hover:bg-primary/5"
-                                          onMouseLeave={
-                                            handleMouseLeaveAttribute
-                                          }
-                                        >
-                                          {attr.name?.replace("_", " ")}
-                                        </button>
-                                      </motion.li>
-                                    ))}
-                                </ul>
-                                {hoveredAttribute && (
-                                  <motion.ul
-                                    initial={{ opacity: 0, x: 10 }}
-                                    animate={{ opacity: 1, x: 0 }}
-                                    exit={{ opacity: 0, x: 10 }}
-                                    transition={{ duration: 0.2 }}
-                                    className="w-1/2 space-y-1"
-                                  >
-                                    {category.attributeValues[
-                                      hoveredAttribute
-                                    ]?.map((value) => (
-                                      <motion.li
-                                        key={value}
-                                        className="py-1"
-                                        whileHover={{ x: 4 }}
-                                        transition={{ duration: 0.2 }}
-                                      >
+                            {categoryFeatures[category.name] ? (
+                              <div className="flex flex-col gap-6">
+                                {Object.entries(
+                                  categoryFeatures[category.name]
+                                ).map(([feature, values]) => (
+                                  <div key={feature}>
+                                    <div className="flex items-center justify-between mb-1">
+                                      <p className="text-sm font-medium text-gray-700 capitalize">
+                                        {feature}
+                                      </p>
+                                    </div>
+                                    <div className="flex flex-wrap gap-1.5 mt-1">
+                                      {(expandedFeatures[feature]
+                                        ? values
+                                        : values.slice(0, 6)
+                                      ).map((value) => (
                                         <Link
+                                          key={value}
                                           href={`/category/${
                                             category.slug
-                                          }?${hoveredAttribute}=${encodeURIComponent(
-                                            value
-                                          )}`}
-                                          className="block text-sm text-gray-600 hover:text-primary transition-colors cursor-pointer rounded px-2 py-1 hover:bg-primary/5"
+                                          }?${encodeURIComponent(
+                                            feature
+                                          )}=${encodeURIComponent(value)}`}
                                           onClick={() =>
                                             setHoveredCategory(null)
                                           }
+                                          className="text-xs bg-gray-100 hover:bg-primary/10 hover:text-primary text-gray-700 px-2 py-1 rounded-md border border-gray-200 hover:border-primary/30 transition-colors"
                                         >
                                           {value}
                                         </Link>
-                                      </motion.li>
-                                    ))}
-                                  </motion.ul>
-                                )}
+                                      ))}
+                                      {values.length > 6 && (
+                                        <button
+                                          onClick={() =>
+                                            setExpandedFeatures((prev) => ({
+                                              ...prev,
+                                              [feature]: !prev[feature],
+                                            }))
+                                          }
+                                          className="text-xs text-primary ml-2 hover:underline focus:outline-none"
+                                        >
+                                          {expandedFeatures[feature]
+                                            ? "Show less"
+                                            : "View more"}
+                                        </button>
+                                      )}
+                                    </div>
+                                  </div>
+                                ))}
                               </div>
-                            </motion.div>
-                          )}
+                            ) : (
+                              <p className="text-gray-500 text-sm italic mt-2">
+                                No filterable features available
+                              </p>
+                            )}
+                          </div>
                         </React.Fragment>
                       );
                     })}

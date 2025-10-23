@@ -1,0 +1,992 @@
+[
+  {
+    "id": "ce729d1a-affc-4757-9d37-85a71746986d",
+    "name": "RAM",
+    "slug": "ram",
+    "description": null,
+    "imageUrl": null,
+    "isActive": true,
+    "displayOrder": "0",
+    "createdAt": "2025-07-24T12:15:36.285Z",
+    "updatedAt": "2025-10-12T14:40:54.559Z",
+    "attributes": [
+      {
+        "name": "Manufacturer",
+        "type": "text",
+        "isRequired": true,
+        "displayOrder": 0,
+        "isFilterable": true
+      },
+      {
+        "name": "Memory Type",
+        "type": "text",
+        "isRequired": true,
+        "displayOrder": 1,
+        "isFilterable": true
+      },
+      {
+        "name": "Capacity",
+        "type": "text",
+        "isRequired": true,
+        "displayOrder": 2,
+        "isFilterable": true
+      },
+      {
+        "name": "Kit Type",
+        "type": "text",
+        "isRequired": true,
+        "displayOrder": 3,
+        "isFilterable": false
+      },
+      {
+        "name": "Speed",
+        "type": "text",
+        "isRequired": true,
+        "displayOrder": 4,
+        "isFilterable": false
+      }
+    ],
+    "subcategories": [
+      {
+        "id": "c2ed3d9b-26a6-4dd3-82ee-4633b85c781c",
+        "name": "DDR3",
+        "slug": "ddr3",
+        "displayOrder": "0",
+        "isActive": true
+      },
+      {
+        "id": "101d98b9-5d7c-46d4-b74b-cb1fb98f006a",
+        "name": "DDR4",
+        "slug": "ddr4",
+        "displayOrder": "1",
+        "isActive": true
+      },
+      {
+        "id": "8f6cc990-e82f-448f-ac8d-0ab6575e66bc",
+        "name": "DDR5",
+        "slug": "ddr5",
+        "displayOrder": "2",
+        "isActive": true
+      }
+    ]
+  },
+  {
+    "id": "4cd7d526-9f70-4b6b-8178-9a3673f1367f",
+    "name": "Storage",
+    "slug": "storage",
+    "description": null,
+    "imageUrl": null,
+    "isActive": true,
+    "displayOrder": "0",
+    "createdAt": "2025-07-08T17:51:38.234Z",
+    "updatedAt": "2025-10-13T10:09:58.603Z",
+    "attributes": [
+      {
+        "name": "Manufacturer",
+        "type": "text",
+        "isRequired": true,
+        "displayOrder": 0,
+        "isFilterable": false
+      },
+      {
+        "name": "Category",
+        "type": "text",
+        "isRequired": true,
+        "displayOrder": 1,
+        "isFilterable": true
+      },
+      {
+        "name": "Capacity",
+        "type": "text",
+        "isRequired": true,
+        "displayOrder": 2,
+        "isFilterable": false
+      }
+    ],
+    "subcategories": [
+      {
+        "id": "9dc2b80f-493e-4cea-a9d5-c13e135eeefa",
+        "name": "SSD",
+        "slug": "ssd",
+        "displayOrder": "0",
+        "isActive": true
+      },
+      {
+        "id": "44002226-1776-4893-b175-6de4a42a0a66",
+        "name": "HDD",
+        "slug": "hdd",
+        "displayOrder": "1",
+        "isActive": true
+      },
+      {
+        "id": "07053fad-a2c9-47d4-8f6e-7e14e3938ba3",
+        "name": "NVMe SSDs",
+        "slug": "nvme-ssds",
+        "displayOrder": "2",
+        "isActive": true
+      },
+      {
+        "id": "ff579fa6-9f05-4820-b800-d0fa9b9863ed",
+        "name": "External Storage",
+        "slug": "external-storage",
+        "displayOrder": "3",
+        "isActive": true
+      },
+      {
+        "id": "ca526c97-f5ac-492f-8056-54a2c2495f8c",
+        "name": "USB Flash Drives",
+        "slug": "usb-flash-drives",
+        "displayOrder": "4",
+        "isActive": true
+      }
+    ]
+  },
+  {
+    "id": "692bbe40-857a-4e1f-84a1-d3acb39ef519",
+    "name": "Printer",
+    "slug": "printer",
+    "description": null,
+    "imageUrl": null,
+    "isActive": true,
+    "displayOrder": "0",
+    "createdAt": "2025-09-22T12:53:05.265Z",
+    "updatedAt": "2025-10-13T10:53:27.179Z",
+    "attributes": [
+      {
+        "name": "Manufacturer",
+        "type": "text",
+        "isRequired": true,
+        "displayOrder": 0,
+        "isFilterable": true
+      }
+    ],
+    "subcategories": [
+      {
+        "id": "49cbda7c-3f21-4601-9f43-6b6aa0f97625",
+        "name": "Laser Printer",
+        "slug": "laser-printer",
+        "displayOrder": "2",
+        "isActive": true
+      },
+      {
+        "id": "bd5d7b7d-d4fc-4ccd-91cb-bad22893f1c1",
+        "name": "Inktank Printer",
+        "slug": "inktank-printer",
+        "displayOrder": "3",
+        "isActive": true
+      },
+      {
+        "id": "24d3c690-e8cb-403f-864d-f3b6fdda7991",
+        "name": "Inkjet Printer",
+        "slug": "inkjet-printer",
+        "displayOrder": "4",
+        "isActive": true
+      },
+      {
+        "id": "c1a3aa31-74a2-4734-8198-3c34be5d9f12",
+        "name": "Catridge Printer",
+        "slug": "catridge-printer",
+        "displayOrder": "5",
+        "isActive": true
+      },
+      {
+        "id": "9925029d-146e-4869-80f9-5df607f39d12",
+        "name": "Non-Wifi",
+        "slug": "non-wifi",
+        "displayOrder": "0",
+        "isActive": true
+      },
+      {
+        "id": "0be874f4-d159-4a3a-9ee6-120538cd5e07",
+        "name": "Wifi",
+        "slug": "wifi",
+        "displayOrder": "1",
+        "isActive": true
+      }
+    ]
+  },
+  {
+    "id": "e8fcdca3-a5cf-4e09-a15f-341d823a027a",
+    "name": "Peripherals",
+    "slug": "peripherals",
+    "description": null,
+    "imageUrl": null,
+    "isActive": true,
+    "displayOrder": "0",
+    "createdAt": "2025-07-08T17:51:38.948Z",
+    "updatedAt": "2025-10-13T10:56:29.685Z",
+    "attributes": [],
+    "subcategories": [
+      {
+        "id": "467b117c-3517-4e54-91f2-fb7a9642a4b8",
+        "name": "Adapters",
+        "slug": "adapters",
+        "displayOrder": "4",
+        "isActive": true
+      },
+      {
+        "id": "31525014-6410-4056-8a60-4549718a7cdf",
+        "name": "Webcams",
+        "slug": "webcams",
+        "displayOrder": "0",
+        "isActive": true
+      },
+      {
+        "id": "770fcb68-f66c-4dd0-a14c-f6fa744ce7fd",
+        "name": "Microphones",
+        "slug": "microphones",
+        "displayOrder": "1",
+        "isActive": true
+      },
+      {
+        "id": "b9e5f85e-ae97-40c5-aeb2-3db464abe9a5",
+        "name": "Controllers",
+        "slug": "controllers",
+        "displayOrder": "2",
+        "isActive": true
+      },
+      {
+        "id": "1e140140-0682-43f7-8512-67c6fb9374bd",
+        "name": "Cables",
+        "slug": "cables",
+        "displayOrder": "3",
+        "isActive": true
+      }
+    ]
+  },
+  {
+    "id": "6ea9c3f9-af5a-4c6d-b7dd-c943eabd8103",
+    "name": "Headset",
+    "slug": "headset",
+    "description": null,
+    "imageUrl": null,
+    "isActive": true,
+    "displayOrder": "0",
+    "createdAt": "2025-10-13T11:05:08.727Z",
+    "updatedAt": "2025-10-13T11:06:59.536Z",
+    "attributes": [
+      {
+        "name": "Manufacturer",
+        "type": "text",
+        "isRequired": true,
+        "displayOrder": 0,
+        "isFilterable": false
+      }
+    ],
+    "subcategories": [
+      {
+        "id": "536ce949-6e56-4fcd-bd1d-3d86e82f44db",
+        "name": "Wired Headphones",
+        "slug": "wired-headphones",
+        "displayOrder": "0",
+        "isActive": true
+      },
+      {
+        "id": "f2b2029d-354d-44bf-8bd1-350dd080d65c",
+        "name": "Wireless Headphones",
+        "slug": "wireless-headphones",
+        "displayOrder": "1",
+        "isActive": true
+      },
+      {
+        "id": "a2a1d8d5-8cf1-4cdd-9a00-23f194ef542b",
+        "name": "Bluetooth Headphones",
+        "slug": "bluetooth-headphones",
+        "displayOrder": "2",
+        "isActive": true
+      },
+      {
+        "id": "86713691-5e0c-4314-92b0-45a17ae357c7",
+        "name": "Gaming Headphones",
+        "slug": "gaming-headphones",
+        "displayOrder": "3",
+        "isActive": true
+      }
+    ]
+  },
+  {
+    "id": "1e5df3a5-8ba5-4f63-8131-10ad924a727c",
+    "name": "Keyboard and Mouse",
+    "slug": "keyboard-and-mouse",
+    "description": null,
+    "imageUrl": null,
+    "isActive": true,
+    "displayOrder": "0",
+    "createdAt": "2025-10-13T11:00:04.444Z",
+    "updatedAt": "2025-10-13T11:07:52.677Z",
+    "attributes": [
+      {
+        "name": "Manufacturer",
+        "type": "text",
+        "isRequired": true,
+        "displayOrder": 0,
+        "isFilterable": false
+      }
+    ],
+    "subcategories": [
+      {
+        "id": "ef57318b-ca0e-4880-bec1-2cd0dbe8c666",
+        "name": "Wired Keyboard",
+        "slug": "wired-keyboard",
+        "displayOrder": "0",
+        "isActive": true
+      },
+      {
+        "id": "266b7776-c807-486a-b49f-86c207b4def1",
+        "name": "Wireless Keyboard",
+        "slug": "wireless-keyboard",
+        "displayOrder": "1",
+        "isActive": true
+      },
+      {
+        "id": "9900b315-033a-46df-9d0e-e5ef150f7921",
+        "name": "Gaming Keyboard",
+        "slug": "gaming-keyboard",
+        "displayOrder": "2",
+        "isActive": true
+      },
+      {
+        "id": "af5841ab-71ab-44f0-bd4b-5da948205621",
+        "name": "Keyboard Mouse Combo",
+        "slug": "keyboard-mouse-combo",
+        "displayOrder": "3",
+        "isActive": true
+      },
+      {
+        "id": "bfa11730-ecb0-4acb-bc7d-68cd13e5d309",
+        "name": "Wired Mouse",
+        "slug": "wired-mouse",
+        "displayOrder": "4",
+        "isActive": true
+      },
+      {
+        "id": "854c9908-2fb2-4675-8cb2-e7a95ee9e383",
+        "name": "Wireless Mouse",
+        "slug": "wireless-mouse",
+        "displayOrder": "5",
+        "isActive": true
+      },
+      {
+        "id": "0c2cd69f-d2e8-48a1-b0a8-62b70e030e38",
+        "name": "Gaming Mouse",
+        "slug": "gaming-mouse",
+        "displayOrder": "6",
+        "isActive": true
+      }
+    ]
+  },
+  {
+    "id": "e5078814-6f04-4b2e-9a43-023386699515",
+    "name": "Laptops",
+    "slug": "laptops",
+    "description": null,
+    "imageUrl": null,
+    "isActive": true,
+    "displayOrder": "0",
+    "createdAt": "2025-07-08T17:51:36.767Z",
+    "updatedAt": "2025-10-14T15:40:26.377Z",
+    "attributes": [
+      {
+        "name": "Processor",
+        "type": "text",
+        "unit": null,
+        "options": null,
+        "isRequired": true,
+        "displayOrder": 1,
+        "isFilterable": true
+      },
+      {
+        "name": "Series",
+        "type": "text",
+        "unit": null,
+        "options": null,
+        "isRequired": true,
+        "displayOrder": 2,
+        "isFilterable": false
+      },
+      {
+        "name": "Ram",
+        "type": "text",
+        "unit": null,
+        "options": null,
+        "isRequired": true,
+        "displayOrder": 3,
+        "isFilterable": false
+      },
+      {
+        "name": "Storage",
+        "type": "text",
+        "unit": null,
+        "options": null,
+        "isRequired": true,
+        "displayOrder": 4,
+        "isFilterable": false
+      },
+      {
+        "name": "Graphics",
+        "type": "text",
+        "unit": null,
+        "options": null,
+        "isRequired": true,
+        "displayOrder": 5,
+        "isFilterable": true
+      },
+      {
+        "name": "Display Size",
+        "type": "text",
+        "unit": null,
+        "options": null,
+        "isRequired": true,
+        "displayOrder": 6,
+        "isFilterable": true
+      },
+      {
+        "name": "Resolution",
+        "type": "text",
+        "unit": null,
+        "options": null,
+        "isRequired": true,
+        "displayOrder": 7,
+        "isFilterable": false
+      },
+      {
+        "name": "Operating System",
+        "type": "text",
+        "unit": null,
+        "options": null,
+        "isRequired": true,
+        "displayOrder": 8,
+        "isFilterable": false
+      },
+      {
+        "name": "Weight",
+        "type": "text",
+        "unit": null,
+        "options": null,
+        "isRequired": true,
+        "displayOrder": 10,
+        "isFilterable": false
+      }
+    ],
+    "subcategories": [
+      {
+        "id": "51a33038-abd2-4462-97ff-7d7c0f505fe2",
+        "name": "Gaming Laptops",
+        "slug": "gaming-laptops",
+        "displayOrder": "0",
+        "isActive": true
+      },
+      {
+        "id": "ed1625a2-a83f-40e6-ba83-9f5f617876b1",
+        "name": "Business Laptops",
+        "slug": "business-laptops",
+        "displayOrder": "1",
+        "isActive": true
+      },
+      {
+        "id": "865dd8d1-e754-4c69-84b7-5f99bfc2bd08",
+        "name": "ASUS",
+        "slug": "asus",
+        "displayOrder": "2",
+        "isActive": true
+      },
+      {
+        "id": "a1231b55-b1fc-4edc-8482-cbbad80302d7",
+        "name": "Student Laptops",
+        "slug": "student-laptops",
+        "displayOrder": "6",
+        "isActive": true
+      },
+      {
+        "id": "a99199e3-6231-4886-8c7b-64983179793e",
+        "name": "Workstation Laptops",
+        "slug": "workstation-laptops",
+        "displayOrder": "7",
+        "isActive": true
+      },
+      {
+        "id": "89537f39-ff8b-4b7e-b723-a44ca685c64a",
+        "name": "ACER",
+        "slug": "acer",
+        "displayOrder": "3",
+        "isActive": true
+      },
+      {
+        "id": "4539cb40-80cb-48d2-892a-0824169f2bb2",
+        "name": "LENOVO",
+        "slug": "lenovo",
+        "displayOrder": "8",
+        "isActive": true
+      },
+      {
+        "id": "0843a325-d4f4-4118-8596-be8d8556cd3a",
+        "name": "GIGABYTE",
+        "slug": "gigabyte",
+        "displayOrder": "4",
+        "isActive": true
+      },
+      {
+        "id": "b88642f4-5a4b-4bd5-a3ea-2d06b793f313",
+        "name": "Budget Laptops",
+        "slug": "budget-laptops",
+        "displayOrder": "5",
+        "isActive": true
+      },
+      {
+        "id": "880fba4d-6ea7-4afe-ab14-3f759668f191",
+        "name": "MSI",
+        "slug": "msi",
+        "displayOrder": "9",
+        "isActive": true
+      },
+      {
+        "id": "fc1ed705-b9e0-44f4-9d9f-c8540216f5b0",
+        "name": "DELL",
+        "slug": "dell",
+        "displayOrder": "10",
+        "isActive": true
+      },
+      {
+        "id": "c929418b-591e-461f-8f3b-9bfa03710bda",
+        "name": "HP",
+        "slug": "hp",
+        "displayOrder": "11",
+        "isActive": true
+      }
+    ]
+  },
+  {
+    "id": "4b387dfc-0a8f-45d5-a490-f847e8bcc37a",
+    "name": "Processors",
+    "slug": "processors",
+    "description": null,
+    "imageUrl": null,
+    "isActive": true,
+    "displayOrder": "2",
+    "createdAt": "2025-07-08T17:51:37.523Z",
+    "updatedAt": "2025-10-14T15:40:45.214Z",
+    "attributes": [
+      {
+        "name": "Manufacturer",
+        "type": "text",
+        "isRequired": true,
+        "displayOrder": 0,
+        "isFilterable": false
+      },
+      {
+        "name": "Cpu",
+        "type": "text",
+        "isRequired": true,
+        "displayOrder": 1,
+        "isFilterable": true
+      },
+      {
+        "name": "Series",
+        "type": "text",
+        "isRequired": true,
+        "displayOrder": 2,
+        "isFilterable": true
+      }
+    ],
+    "subcategories": [
+      {
+        "id": "b374eee6-f079-44eb-bfa1-f838f4c43c1a",
+        "name": "INTEL",
+        "slug": "intel",
+        "displayOrder": "0",
+        "isActive": true
+      },
+      {
+        "id": "bedf69dd-37ee-4dd7-a0b1-4903a08f97be",
+        "name": "AMD",
+        "slug": "amd",
+        "displayOrder": "1",
+        "isActive": true
+      }
+    ]
+  },
+  {
+    "id": "f401ea53-b321-4198-9b5c-72f1d8f64034",
+    "name": "Graphics_cards",
+    "slug": "graphics_cards",
+    "description": null,
+    "imageUrl": null,
+    "isActive": true,
+    "displayOrder": "3",
+    "createdAt": "2025-07-08T17:51:37.879Z",
+    "updatedAt": "2025-10-14T15:41:10.152Z",
+    "attributes": [
+      {
+        "name": "Manufacturer",
+        "type": "text",
+        "isRequired": true,
+        "displayOrder": 0,
+        "isFilterable": false
+      },
+      {
+        "name": "Chipset",
+        "type": "text",
+        "isRequired": true,
+        "displayOrder": 1,
+        "isFilterable": true
+      },
+      {
+        "name": "Memory Type",
+        "type": "text",
+        "isRequired": true,
+        "displayOrder": 2,
+        "isFilterable": false
+      },
+      {
+        "name": "Series",
+        "type": "text",
+        "isRequired": true,
+        "displayOrder": 3,
+        "isFilterable": true
+      }
+    ],
+    "subcategories": [
+      {
+        "id": "74b6da75-801e-4ab7-89d1-ef379ecb81da",
+        "name": "NVIDIA GeForce",
+        "slug": "nvidia-geforce",
+        "displayOrder": "0",
+        "isActive": true
+      },
+      {
+        "id": "53e27526-0eea-4b15-81b8-c025dc0e3511",
+        "name": "AMD Radeon",
+        "slug": "amd-radeon",
+        "displayOrder": "1",
+        "isActive": true
+      }
+    ]
+  },
+  {
+    "id": "db65c8be-5f23-45be-b544-0a2e6a388ef7",
+    "name": "Monitors",
+    "slug": "monitors",
+    "description": null,
+    "imageUrl": null,
+    "isActive": true,
+    "displayOrder": "4",
+    "createdAt": "2025-07-08T17:51:37.153Z",
+    "updatedAt": "2025-10-14T15:41:40.117Z",
+    "attributes": [
+      {
+        "name": "Manufacturer",
+        "type": "text",
+        "isRequired": true,
+        "displayOrder": 0,
+        "isFilterable": true
+      },
+      {
+        "name": "Screen Size",
+        "type": "text",
+        "isRequired": true,
+        "displayOrder": 1,
+        "isFilterable": true
+      },
+      {
+        "name": "Display",
+        "type": "text",
+        "isRequired": true,
+        "displayOrder": 2,
+        "isFilterable": false
+      },
+      {
+        "name": "Panel",
+        "type": "text",
+        "isRequired": true,
+        "displayOrder": 3,
+        "isFilterable": false
+      },
+      {
+        "name": "Refresh Rate",
+        "type": "text",
+        "isRequired": true,
+        "displayOrder": 4,
+        "isFilterable": false
+      },
+      {
+        "name": "Screen Surface",
+        "type": "text",
+        "isRequired": true,
+        "displayOrder": 5,
+        "isFilterable": false
+      },
+      {
+        "name": "Resolution",
+        "type": "text",
+        "isRequired": true,
+        "displayOrder": 6,
+        "isFilterable": false
+      }
+    ],
+    "subcategories": [
+      {
+        "id": "ccefef68-673d-43e1-894e-8d1714830357",
+        "name": "Gaming Monitors",
+        "slug": "gaming-monitors",
+        "displayOrder": "0",
+        "isActive": true
+      },
+      {
+        "id": "dc196697-2c5b-43b6-a351-e1169d780777",
+        "name": "UltraWide Monitors",
+        "slug": "ultrawide-monitors",
+        "displayOrder": "1",
+        "isActive": true
+      },
+      {
+        "id": "17eb2b63-1501-4a28-ab78-d0aa8fd150f8",
+        "name": "Professional Monitors",
+        "slug": "professional-monitors",
+        "displayOrder": "2",
+        "isActive": true
+      },
+      {
+        "id": "7b5120c5-5c37-47d8-869e-267925a8d1e0",
+        "name": "2K Monitors",
+        "slug": "2k-monitors",
+        "displayOrder": "3",
+        "isActive": true
+      },
+      {
+        "id": "bddfc5d9-2ba6-4752-b7f5-c41508a517ee",
+        "name": "4K Monitors",
+        "slug": "4k-monitors",
+        "displayOrder": "4",
+        "isActive": true
+      },
+      {
+        "id": "5c06ea2d-1270-4ab4-99c9-4c90d020f110",
+        "name": "Curved Monitors",
+        "slug": "curved-monitors",
+        "displayOrder": "5",
+        "isActive": true
+      }
+    ]
+  },
+  {
+    "id": "61a80cdd-36c0-4f89-8239-6032b610eff5",
+    "name": "Motherboard",
+    "slug": "motherboard",
+    "description": null,
+    "imageUrl": null,
+    "isActive": true,
+    "displayOrder": "4",
+    "createdAt": "2025-07-23T11:45:32.079Z",
+    "updatedAt": "2025-10-14T15:42:07.198Z",
+    "attributes": [
+      {
+        "name": "Manufacturer",
+        "type": "text",
+        "isRequired": true,
+        "displayOrder": 5,
+        "isFilterable": true
+      },
+      {
+        "name": "Platform",
+        "type": "text",
+        "isRequired": true,
+        "displayOrder": 1,
+        "isFilterable": false
+      },
+      {
+        "name": "Chipset",
+        "type": "text",
+        "isRequired": true,
+        "displayOrder": 2,
+        "isFilterable": false
+      }
+    ],
+    "subcategories": [
+      {
+        "id": "f8481aa5-5e7e-4f35-a9f7-2622b40b732f",
+        "name": "AMD Platform",
+        "slug": "amd-platform",
+        "displayOrder": "0",
+        "isActive": true
+      },
+      {
+        "id": "c7a88541-ab6e-4a39-bb51-147bea15d52d",
+        "name": "INTEL Platform",
+        "slug": "intel-platform",
+        "displayOrder": "1",
+        "isActive": true
+      }
+    ]
+  },
+  {
+    "id": "5e0a17a3-37bb-4897-9a85-88f25da30f91",
+    "name": "Cabinets",
+    "slug": "cabinets",
+    "description": null,
+    "imageUrl": null,
+    "isActive": true,
+    "displayOrder": "0",
+    "createdAt": "2025-07-08T17:51:38.593Z",
+    "updatedAt": "2025-08-29T21:37:35.716Z",
+    "attributes": [
+      {
+        "name": "Manufacturer",
+        "type": "text",
+        "isRequired": true,
+        "displayOrder": 0,
+        "isFilterable": false
+      },
+      {
+        "name": "Cabinet Size",
+        "type": "text",
+        "isRequired": true,
+        "displayOrder": 1,
+        "isFilterable": false
+      },
+      {
+        "name": "Radiator Support",
+        "type": "text",
+        "isRequired": true,
+        "displayOrder": 2,
+        "isFilterable": false
+      }
+    ],
+    "subcategories": [
+      {
+        "id": "9054b6bf-7c0e-4af1-aac0-6ba6569987ba",
+        "name": "Mini Tower",
+        "slug": "mini-tower",
+        "displayOrder": "0",
+        "isActive": true
+      },
+      {
+        "id": "70ace2bf-d359-434d-9f97-547c11ac8c29",
+        "name": "Full Tower",
+        "slug": "full-tower",
+        "displayOrder": "1",
+        "isActive": true
+      },
+      {
+        "id": "0f8be312-52aa-4754-bfc8-5e5b98ed5936",
+        "name": "Mid Tower",
+        "slug": "mid-tower",
+        "displayOrder": "2",
+        "isActive": true
+      }
+    ]
+  },
+  {
+    "id": "808c494e-04e6-402c-8c9c-a962c67c8ccb",
+    "name": "Power Supply",
+    "slug": "power-supply",
+    "description": null,
+    "imageUrl": null,
+    "isActive": true,
+    "displayOrder": "0",
+    "createdAt": "2025-07-24T14:02:37.158Z",
+    "updatedAt": "2025-08-29T21:38:52.328Z",
+    "attributes": [
+      {
+        "name": "Manufacturer",
+        "type": "text",
+        "isRequired": true,
+        "displayOrder": 0,
+        "isFilterable": true
+      },
+      {
+        "name": "Wattage",
+        "type": "text",
+        "isRequired": true,
+        "displayOrder": 1,
+        "isFilterable": false
+      },
+      {
+        "name": "Modular",
+        "type": "text",
+        "isRequired": true,
+        "displayOrder": 2,
+        "isFilterable": true
+      },
+      {
+        "name": "Certification",
+        "type": "text",
+        "isRequired": true,
+        "displayOrder": 3,
+        "isFilterable": false
+      }
+    ],
+    "subcategories": [
+      {
+        "id": "e0453b75-39b6-4eb6-923b-467a2d39f017",
+        "name": "80 PLUS BRONZE",
+        "slug": "80-plus-bronze",
+        "displayOrder": "0",
+        "isActive": true
+      },
+      {
+        "id": "2f8f0b05-692b-47d6-930a-e468457f2cae",
+        "name": "80 PLUS GOLD",
+        "slug": "80-plus-gold",
+        "displayOrder": "1",
+        "isActive": true
+      },
+      {
+        "id": "3cd7a96c-a975-4544-ab66-dee842c1bc1a",
+        "name": "80 PLUS PLATINUM",
+        "slug": "80-plus-platinum",
+        "displayOrder": "2",
+        "isActive": true
+      }
+    ]
+  },
+  {
+    "id": "5ca85c66-e6be-4011-9329-09eea0870fef",
+    "name": "CPU Cooler",
+    "slug": "cpu-cooler",
+    "description": null,
+    "imageUrl": null,
+    "isActive": true,
+    "displayOrder": "0",
+    "createdAt": "2025-09-18T15:26:09.207Z",
+    "updatedAt": "2025-09-18T15:26:09.207Z",
+    "attributes": [
+      {
+        "name": "Manufacturer",
+        "type": "text",
+        "isRequired": true,
+        "displayOrder": 0,
+        "isFilterable": true
+      },
+      {
+        "name": "Cooling Type",
+        "type": "text",
+        "isRequired": true,
+        "displayOrder": 1,
+        "isFilterable": true
+      },
+      {
+        "name": "Radiator Size",
+        "type": "text",
+        "isRequired": false,
+        "displayOrder": 2,
+        "isFilterable": false
+      }
+    ],
+    "subcategories": [
+      {
+        "id": "d5726216-41f6-4eba-a5f2-80cb5314d21e",
+        "name": "Air Cooler",
+        "slug": "air-cooler",
+        "displayOrder": "0",
+        "isActive": true
+      },
+      {
+        "id": "4aef7426-1cf5-4d26-9e98-99b80f161262",
+        "name": "Liquid Cooler",
+        "slug": "liquid-cooler",
+        "displayOrder": "1",
+        "isActive": true
+      }
+    ]
+  }
+]

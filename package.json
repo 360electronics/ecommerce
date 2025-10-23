@@ -5,8 +5,10 @@
   "scripts": {
     "dev": "next dev --turbopack",
     "build": "next build",
+    "postbuild": "npm run dump:categories",
     "start": "next start",
-    "lint": "next lint"
+    "lint": "next lint",
+    "dump:categories": "tsx scripts/dumpCategories.ts"
   },
   "dependencies": {
     "@auth/drizzle-adapter": "^1.8.0",

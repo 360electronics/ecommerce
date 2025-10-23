@@ -40,24 +40,33 @@ export default function HomeContent({
   } = useHomeStore();
 
   useEffect(() => {
-    // Always set the initial data from server on mount
-    setInitialData(initialData);
+  // 🔒 Deep clone initialData to prevent serialization loss
+  const safeData = JSON.parse(JSON.stringify(initialData));
 
-    // Check if the initial data is empty and refetch client-side if needed
-    const noData =
-      !initialData.banners.length &&
-      !initialData.featuredProducts.length &&
-      !initialData.newArrivals.length &&
-      !Object.values(initialData.gamersZoneProducts).some(
+  // Always set the initial data from server on mount
+  setInitialData(safeData);
+
+  // Check if the initial data is empty and refetch client-side if needed
+  const noData =
+    !safeData.banners.length &&
+    !safeData.featuredProducts.length &&
+    !safeData.newArrivals.length &&
+    !Object.values(initialData.gamersZoneProducts).some(
         (arr) => arr.length
       ) &&
       !initialData.brandProducts.length;
 
-    if (noData) {
-      fetchHomeData();
-    }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []); // Runs once on mount
+  if (noData) {
+    console.warn("[HomeContent] Empty initial data, refetching client-side...");
+    fetchHomeData();
+  }
+
+  // Debug
+  // console.log("[HomeContent] Hydrating with:", safeData.brandProducts);
+
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+}, []); // Runs once on mount
+
 
   const hasData =
     banners.length > 0 ||

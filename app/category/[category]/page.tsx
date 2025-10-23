@@ -1,12 +1,12 @@
 "use client";
 
 import React, { useState, useEffect, Suspense } from "react";
-import { useParams } from "next/navigation";
+import { useParams, useSearchParams } from "next/navigation";
 import ProductListing from "@/components/Listing/ProductListing";
 import { CompleteProduct, FlattenedProduct } from "@/types/product";
-import { fetchProducts } from "@/utils/products.util";
+import { fetchCategoryProducts } from "@/utils/products.util";
 
-// Helper function to safely convert to ISO string
+// ✅ Utility to safely handle date serialization
 const safeToISOString = (
   dateValue: Date | string | undefined | null
 ): string => {
@@ -18,6 +18,7 @@ const safeToISOString = (
     : parsedDate.toISOString();
 };
 
+// ✅ Flatten variants for fast rendering
 const flattenProductVariants = (
   products: CompleteProduct[]
 ): FlattenedProduct[] => {
@@ -87,44 +88,42 @@ const flattenProductVariants = (
   return flattened;
 };
 
+// ✅ Loading Skeleton
 const CategoryPageLoading = () => (
-    <div className="mx-auto ">
-      <div className="flex flex-col md:flex-row gap-8">
-        {/* Left: Filter Sidebar Skeleton (25%) */}
-        <div className=" hidden md:block w-full md:w-1/4 bg-white p-4 rounded-lg border animate-pulse">
-          <div className="h-6 bg-gray-200 rounded mb-4 w-1/2"></div>
-          {[...Array(5)].map((_, i) => (
-            <div key={i} className="mb-4">
-              <div className="h-4 bg-gray-200 rounded w-2/3 mb-2"></div>
+  <div className="mx-auto">
+    <div className="flex flex-col md:flex-row gap-8">
+      <div className="hidden md:block w-full md:w-1/4 bg-white p-4 rounded-lg border animate-pulse">
+        <div className="h-6 bg-gray-200 rounded mb-4 w-1/2"></div>
+        {[...Array(5)].map((_, i) => (
+          <div key={i} className="mb-4">
+            <div className="h-4 bg-gray-200 rounded w-2/3 mb-2"></div>
+            <div className="h-4 bg-gray-200 rounded w-1/2"></div>
+          </div>
+        ))}
+        <div className="h-10 bg-gray-200 rounded mt-6"></div>
+      </div>
+      <div className="block md:hidden w-full bg-white p-4 rounded-lg border animate-pulse">
+        <div className="flex gap-2 justify-between items-center">
+          <div className="h-8 bg-gray-200 rounded w-1/2"></div>
+          <div className="h-8 bg-gray-200 rounded w-1/2"></div>
+        </div>
+      </div>
+      <div className="w-full md:w-3/4">
+        <div className="grid grid-cols-2 sm:grid-cols-2 lg:grid-cols-3 gap-2 md:gap-6">
+          {[...Array(8)].map((_, i) => (
+            <div
+              key={i}
+              className="bg-white p-4 rounded-lg animate-pulse border"
+            >
+              <div className="w-full h-36 md:h-48 bg-gray-200 rounded mb-4"></div>
+              <div className="h-5 bg-gray-200 rounded w-2/3 mb-2"></div>
               <div className="h-4 bg-gray-200 rounded w-1/2"></div>
             </div>
           ))}
-          <div className="h-10 bg-gray-200 rounded mt-6"></div>
-        </div>
-        <div className=" block md:hidden w-full  bg-white p-4 rounded-lg border animate-pulse">
-          <div className=" flex gap-2 justify-between items-center">
-            <div className="h-8 bg-gray-200 rounded w-1/2 "></div>
-            <div className="h-8 bg-gray-200 rounded w-1/2"></div>
-          </div>
-        </div>
-
-        {/* Right: Product Grid Skeleton (75%) */}
-        <div className="w-full md:w-3/4">
-          <div className="grid grid-cols-2 sm:grid-cols-2 lg:grid-cols-3 gap-2  md:gap-6">
-            {[...Array(8)].map((_, i) => (
-              <div
-                key={i}
-                className="bg-white p-4 rounded-lg  animate-pulse border"
-              >
-                <div className="w-full h-36 md:h-48 bg-gray-200 rounded mb-4"></div>
-                <div className="h-5 bg-gray-200 rounded w-2/3 mb-2"></div>
-                <div className="h-4 bg-gray-200 rounded w-1/2"></div>
-              </div>
-            ))}
-          </div>
         </div>
       </div>
     </div>
+  </div>
 );
 
 function CategoryContent({
@@ -138,42 +137,36 @@ function CategoryContent({
   error: string | null;
   category: string;
 }) {
-  // Capitalize the category for display (if needed, but passed as is)
-  const categoryName = category
-    ? category.charAt(0).toUpperCase() + category.slice(1)
-    : "";
-
-  if (loading) {
-    return <CategoryPageLoading />;
-  }
+  if (loading) return <CategoryPageLoading />;
 
   if (error) {
     return (
-        <div className="mx-auto pt-4 pb-10 flex items-center justify-center min-h-[400px]">
-          <div className="text-center">
-            <h3 className="text-xl font-medium text-red-600 mb-2">{error}</h3>
-            <button
-              onClick={() => window.location.reload()}
-              className="px-4 py-2 bg-blue-500 text-white rounded hover:bg-blue-600"
-            >
-              Retry
-            </button>
-          </div>
+      <div className="mx-auto pt-4 pb-10 flex items-center justify-center min-h-[400px]">
+        <div className="text-center">
+          <h3 className="text-xl font-medium text-red-600 mb-2">{error}</h3>
+          <button
+            onClick={() => window.location.reload()}
+            className="px-4 py-2 bg-blue-500 text-white rounded hover:bg-blue-600"
+          >
+            Retry
+          </button>
         </div>
+      </div>
     );
   }
 
   return (
-      <div className="mx-auto pt-4 pb-10">
-        {/* Product Listing Component */}
-        <ProductListing category={category} initialProducts={initialProducts} />
-      </div>
+    <div className="mx-auto pt-4 pb-10">
+      <ProductListing category={category} initialProducts={initialProducts} />
+    </div>
   );
 }
 
 export default function CategoryPage() {
   const params = useParams();
+  const searchParams = useSearchParams();
   const category = (params.category as string) || "";
+  const subcategory = searchParams.get("subcategory") || undefined;
 
   const [initialProducts, setInitialProducts] = useState<FlattenedProduct[]>(
     []
@@ -182,22 +175,39 @@ export default function CategoryPage() {
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
+    let isMounted = true;
+
     const loadProducts = async () => {
       try {
         setLoading(true);
-        const productData: CompleteProduct[] = await fetchProducts();
-        const flattened = flattenProductVariants(productData);
-        setInitialProducts(flattened);
+        const productData: CompleteProduct[] = await fetchCategoryProducts({
+          category,
+          subcategory,
+        });
+
+        // ✅ Flatten asynchronously to prevent blocking render
+        const flattened = await Promise.resolve(
+          flattenProductVariants(productData)
+        );
+
+        if (isMounted) {
+          setInitialProducts(flattened);
+          setError(null);
+        }
       } catch (err) {
         console.error("Error fetching products:", err);
-        setError("Failed to load products");
+        if (isMounted) setError("Failed to load products");
       } finally {
-        setLoading(false);
+        if (isMounted) setLoading(false);
       }
     };
 
     loadProducts();
-  }, []);
+
+    return () => {
+      isMounted = false;
+    };
+  }, [category, subcategory]);
 
   return (
     <Suspense fallback={<CategoryPageLoading />}>

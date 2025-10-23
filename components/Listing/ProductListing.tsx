@@ -8,8 +8,10 @@ import DOMPurify from "isomorphic-dompurify";
 import debounce from "lodash/debounce";
 import Fuse from "fuse.js";
 import { FlattenedProduct } from "@/types/product";
+import { getNormalizer } from "@/utils/normalisers";
 
 const MemoizedProductCard = memo(ProductCard);
+
 
 const ProductListing = ({
   category,
@@ -79,167 +81,211 @@ const ProductListing = ({
 
   // Memoized debounced filter function
   const debouncedApplyFilters = useMemo(
-  () =>
-    debounce(
-      (
-        productsList: FlattenedProduct[],
-        filters: Record<string, any>,
-        sortOpt: string,
-        query: string
-      ) => {
-        let filtered = [...productsList]; // start with all products
+    () =>
+      debounce(
+        (
+          productsList: FlattenedProduct[],
+          filters: Record<string, any>,
+          sortOpt: string,
+          query: string
+        ) => {
+          let filtered = [...productsList];
 
-        const isOfferZone = pathname?.includes("offer-zone");
+          const isOfferZone = pathname?.includes("offer-zone");
 
-        // Only apply category/subcategory filters if NOT Offer Zone
-        if (!isOfferZone) {
-          if (category && category.toLowerCase() !== "all") {
-            filtered = filtered.filter(
-              (product) =>
-                product.category &&
-                (product.category as unknown as string).toLowerCase() ===
-                  category.toLowerCase()
-            );
-          }
-
-          if (subcategory && subcategory.toLowerCase() !== "all") {
-            filtered = filtered.filter(
-              (product) =>
-                product.subcategory &&
-                (product.subcategory as unknown as string).toLowerCase() ===
-                  subcategory.toLowerCase()
-            );
-          }
-
-          // Apply status filter for normal pages
-          filtered = filtered.filter(
-            (product) =>
-              product.status &&
-              ["active", "coming_soon"].includes(
-                product.status.trim().toLowerCase()
-              )
-          );
-        }
-
-        // Apply search query filter (Fuse.js or fallback) as usual
-        if (query?.trim()) {
-          const lowerQuery = query.trim().toLowerCase();
-          const words = lowerQuery.split(/\s+/);
-          let results: FlattenedProduct[] = [];
-
-          if (fuse && words.length > 0) {
-            const resultSets = words.map(
-              (word) => new Set(fuse.search(`'${word}`).map((r) => r.refIndex))
-            );
-
-            let commonIndices = resultSets.reduce((a, b) => {
-              return new Set([...a].filter((x) => b.has(x)));
-            }, resultSets[0]);
-
-            if (commonIndices.size === 0 && words.length > 1) {
-              // Fallback to OR
-              commonIndices = new Set(
-                words.flatMap((word) => fuse.search(`'${word}`).map((r) => r.refIndex))
+          // Only apply category/subcategory filters if NOT Offer Zone
+          if (!isOfferZone) {
+            if (category && category.toLowerCase() !== "all") {
+              filtered = filtered.filter(
+                (product) =>
+                  product.category &&
+                  (product.category as unknown as string).toLowerCase() ===
+                    category.toLowerCase()
               );
             }
 
-            const resultsWithScores = [...commonIndices].map((index) => {
-              const scores = words.map((word) => {
-                const res = fuse
-                  .search(`'${word}`)
-                  .find((r) => r.refIndex === index);
-                return res ? res.score ?? 1 : 1;
+            if (subcategory && subcategory.toLowerCase() !== "all") {
+              filtered = filtered.filter(
+                (product) =>
+                  product.subcategory &&
+                  (product.subcategory as unknown as string).toLowerCase() ===
+                    subcategory.toLowerCase()
+              );
+            }
+
+            // Apply status filter for normal pages
+            filtered = filtered.filter(
+              (product) =>
+                product.status &&
+                ["active", "coming_soon"].includes(
+                  product.status.trim().toLowerCase()
+                )
+            );
+          }
+
+          // Apply search query filter (Fuse.js or fallback) as usual
+          if (query?.trim()) {
+            const lowerQuery = query.trim().toLowerCase();
+            const words = lowerQuery.split(/\s+/);
+            let results: FlattenedProduct[] = [];
+
+            if (fuse && words.length > 0) {
+              const resultSets = words.map(
+                (word) =>
+                  new Set(fuse.search(`'${word}`).map((r) => r.refIndex))
+              );
+
+              let commonIndices = resultSets.reduce((a, b) => {
+                return new Set([...a].filter((x) => b.has(x)));
+              }, resultSets[0]);
+
+              if (commonIndices.size === 0 && words.length > 1) {
+                // Fallback to OR
+                commonIndices = new Set(
+                  words.flatMap((word) =>
+                    fuse.search(`'${word}`).map((r) => r.refIndex)
+                  )
+                );
+              }
+
+              const resultsWithScores = [...commonIndices].map((index) => {
+                const scores = words.map((word) => {
+                  const res = fuse
+                    .search(`'${word}`)
+                    .find((r) => r.refIndex === index);
+                  return res ? res.score ?? 1 : 1;
+                });
+                const avgScore =
+                  scores.reduce((s, c) => s + c, 0) / scores.length;
+                return { item: originalProducts[index], score: avgScore };
               });
-              const avgScore =
-                scores.reduce((s, c) => s + c, 0) / scores.length;
-              return { item: originalProducts[index], score: avgScore };
-            });
 
-            resultsWithScores.sort((a, b) => a.score - b.score); // Lower score is better
-            results = resultsWithScores.map((r) => r.item);
+              resultsWithScores.sort((a, b) => a.score - b.score); // Lower score is better
+              results = resultsWithScores.map((r) => r.item);
+            }
+
+            // Fallback if Fuse fails
+            if (results.length === 0) {
+              const textGetter = (p: FlattenedProduct) =>
+                [
+                  (p.name || "").toLowerCase(),
+                  (p.brand?.name || "").toLowerCase(),
+                  (p.category?.name || "").toLowerCase(),
+                  (p.subcategory?.name || "").toLowerCase(),
+                ].join(" ");
+
+              results = productsList.filter((p) =>
+                words.every((word) => textGetter(p).includes(word))
+              );
+
+              if (results.length === 0 && words.length > 1) {
+                results = productsList.filter((p) =>
+                  words.some((word) => textGetter(p).includes(word))
+                );
+              }
+            }
+
+            filtered = results;
           }
 
-          // Fallback if Fuse fails
-          if (results.length === 0) {
-            const textGetter = (p: FlattenedProduct) =>
-              [
-                (p.name || "").toLowerCase(),
-                (p.brand?.name || "").toLowerCase(),
-                (p.category?.name || "").toLowerCase(),
-                (p.subcategory?.name || "").toLowerCase(),
-              ].join(" ");
-
-            results = productsList.filter((p) =>
-              words.every((word) => textGetter(p).includes(word))
-            );
-
-            if (results.length === 0 && words.length > 1) {
-              results = productsList.filter((p) =>
-                words.some((word) => textGetter(p).includes(word))
+          // Apply other dynamic filters (color, brand, rating, inStock, etc.) as usual
+          Object.keys(filters).forEach((key) => {
+            if (key === "color" && filters.color?.length > 0) {
+              filtered = filtered.filter(
+                (p) => p.color && filters.color.includes(p.color)
               );
             }
+            if (key === "brand" && filters.brand?.length > 0) {
+              filtered = filtered.filter(
+                (p) => p.brand && filters.brand.includes(p.brand.name)
+              );
+            }
+            if (key === "storage" && filters.storage?.length > 0) {
+              filtered = filtered.filter(
+                (p) => p.storage && filters.storage.includes(p.storage)
+              );
+            }
+            if (key === "rating" && filters.rating?.length > 0) {
+              const minRating = Math.min(
+                ...filters.rating.map((r: string) => parseInt(r))
+              );
+              filtered = filtered.filter(
+                (p) => (Number(p.averageRating) || 0) >= minRating
+              );
+            }
+            if (key === "inStock" && filters.inStock) {
+              filtered = filtered.filter((p) => Number(p.totalStocks) > 0);
+            }
+            if (
+              key === "ourPrice" &&
+              filters.ourPrice &&
+              typeof filters.ourPrice === "object" &&
+              "min" in filters.ourPrice &&
+              "max" in filters.ourPrice
+            ) {
+              const { min: priceMin, max: priceMax } = filters.ourPrice;
+              filtered = filtered.filter((p) => {
+                const price = Number(p.ourPrice) || 0;
+                return price >= priceMin && price <= priceMax;
+              });
+            }
+            // Dynamic attributes
+            if (
+              ![
+                "color",
+                "brand",
+                "storage",
+                "rating",
+                "inStock",
+                "ourPrice",
+                "category",
+              ].includes(key) &&
+              Array.isArray(filters[key])
+            ) {
+              const normalizer = getNormalizer(key);
+
+              // Normalize incoming filter values
+              const normalizedFilters = filters[key].map((val: string) =>
+                normalizer(val)
+              );
+
+              // Filter products using normalized product values
+              filtered = filtered.filter((product) => {
+                const val = product.attributes?.[key];
+                if (!val) return false;
+                const normVal = normalizer(val as string).toLowerCase();
+                return normalizedFilters
+                  .map((v) => v.toLowerCase())
+                  .includes(normVal);
+              });
+            }
+          });
+
+          // Sorting
+          switch (sortOpt.toLowerCase()) {
+            case "ourprice-low-high":
+              filtered.sort(
+                (a, b) => (Number(a.ourPrice) || 0) - (Number(b.ourPrice) || 0)
+              );
+              break;
+            case "ourprice-high-low":
+              filtered.sort(
+                (a, b) => (Number(b.ourPrice) || 0) - (Number(a.ourPrice) || 0)
+              );
+              break;
+            case "featured":
+            default:
+              break;
           }
 
-          filtered = results;
-        }
-
-        // Apply other dynamic filters (color, brand, rating, inStock, etc.) as usual
-        Object.keys(filters).forEach((key) => {
-          if (key === "color" && filters.color?.length > 0) {
-            filtered = filtered.filter((p) => p.color && filters.color.includes(p.color));
-          }
-          if (key === "brand" && filters.brand?.length > 0) {
-            filtered = filtered.filter((p) => p.brand && filters.brand.includes(p.brand.name));
-          }
-          if (key === "storage" && filters.storage?.length > 0) {
-            filtered = filtered.filter((p) => p.storage && filters.storage.includes(p.storage));
-          }
-          if (key === "rating" && filters.rating?.length > 0) {
-            const minRating = Math.min(...filters.rating.map((r: string) => parseInt(r)));
-            filtered = filtered.filter((p) => (Number(p.averageRating) || 0) >= minRating);
-          }
-          if (key === "inStock" && filters.inStock) {
-            filtered = filtered.filter((p) => Number(p.totalStocks) > 0);
-          }
-          if (key === "ourPrice" && filters.ourPrice && typeof filters.ourPrice === 'object' && 'min' in filters.ourPrice && 'max' in filters.ourPrice) {
-            const { min: priceMin, max: priceMax } = filters.ourPrice;
-            filtered = filtered.filter((p) => {
-              const price = Number(p.ourPrice) || 0;
-              return price >= priceMin && price <= priceMax;
-            });
-          }
-          // Dynamic attributes
-          if (!["color", "brand", "storage", "rating", "inStock", "ourPrice", "category"].includes(key) && Array.isArray(filters[key])) {
-            filtered = filtered.filter((product) => {
-              const val = product.attributes?.[key];
-              if (!val) return false;
-              return filters[key].includes(val);
-            });
-          }
-        });
-
-        // Sorting
-        switch (sortOpt.toLowerCase()) {
-          case "ourprice-low-high":
-            filtered.sort((a, b) => (Number(a.ourPrice) || 0) - (Number(b.ourPrice) || 0));
-            break;
-          case "ourprice-high-low":
-            filtered.sort((a, b) => (Number(b.ourPrice) || 0) - (Number(a.ourPrice) || 0));
-            break;
-          case "featured":
-          default:
-            break;
-        }
-
-        setFilteredProducts(filtered);
-        setLoading(false);
-        setCurrentPage(1);
-      },
-      300
-    ),
-  [category, subcategory, searchQuery, fuse, pathname]
-);
-
+          setFilteredProducts(filtered);
+          setLoading(false);
+          setCurrentPage(1);
+        },
+        300
+      ),
+    [category, subcategory, searchQuery, fuse, pathname]
+  );
 
   useEffect(() => {
     return () => {
@@ -328,12 +374,14 @@ const ProductListing = ({
     const filters: Record<string, any> = {};
     // console.log('Applied filters:', filters);
 
-    const minPriceParam = searchParams.get('minPrice');
-    const maxPriceParam = searchParams.get('maxPrice');
+    const minPriceParam = searchParams.get("minPrice");
+    const maxPriceParam = searchParams.get("maxPrice");
     if (minPriceParam !== null || maxPriceParam !== null) {
       filters.ourPrice = {
         min: minPriceParam ? parseFloat(minPriceParam) : 0,
-        max: maxPriceParam ? parseFloat(maxPriceParam) : filterOptions.priceRange.max,
+        max: maxPriceParam
+          ? parseFloat(maxPriceParam)
+          : filterOptions.priceRange.max,
       };
     }
 

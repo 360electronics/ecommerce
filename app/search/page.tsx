@@ -4,18 +4,12 @@ import React, { useState, useEffect, Suspense } from "react";
 import { useSearchParams } from "next/navigation";
 import ProductListing from "@/components/Listing/ProductListing";
 import { CompleteProduct, FlattenedProduct } from "@/types/product";
-import { fetchProducts } from "@/utils/products.util";
+import { fetchSearchProducts } from "@/utils/products.util";
 
-// Helper function to safely convert to ISO string
-const safeToISOString = (
-  dateValue: Date | string | undefined | null
-): string => {
-  if (!dateValue) return new Date().toISOString();
-  if (dateValue instanceof Date) return dateValue.toISOString();
-  const parsedDate = new Date(dateValue);
-  return isNaN(parsedDate.getTime())
-    ? new Date().toISOString()
-    : parsedDate.toISOString();
+const safeToISOString = (value: Date | string | null | undefined) => {
+  if (!value) return new Date().toISOString();
+  const d = value instanceof Date ? value : new Date(value);
+  return isNaN(d.getTime()) ? new Date().toISOString() : d.toISOString();
 };
 
 const flattenProductVariants = (
@@ -24,6 +18,7 @@ const flattenProductVariants = (
   const flattened: FlattenedProduct[] = [];
 
   products.forEach((product) => {
+    // console.log(product.subcategory?.slug === 'ASUS MOTHERBOARD')
     if (Array.isArray(product.variants) && product.variants.length > 0) {
       product.variants.forEach((variant) => {
         flattened.push({
@@ -33,6 +28,7 @@ const flattenProductVariants = (
           category: product.category?.slug || "",
           subcategory: product.subcategory?.slug || "",
           brand: product.brand,
+          status: product.status,
           averageRating: product.averageRating?.toString() || "0",
           tags: Array.isArray(product.tags)
             ? product.tags
@@ -74,6 +70,7 @@ const flattenProductVariants = (
         category: product.category?.slug || "",
         subcategory: product.subcategory?.slug || "",
         brand: product.brand,
+        status: product.status,
         averageRating: product.averageRating?.toString() || "0",
         totalStocks: product.totalStocks?.toString() || "0",
         description: product.description || "",
@@ -83,15 +80,10 @@ const flattenProductVariants = (
 
   return flattened;
 };
-
-const SearchPageLoading = () => (
-  <div className="mx-auto">
-    {/* Page Title Skeleton */}
-    <div className="h-12 bg-gray-200 rounded mb-8 animate-pulse w-1/3"></div>
-
+const SearchLoading = () => (
+ <div className="mx-auto">
     <div className="flex flex-col md:flex-row gap-8">
-      {/* Left: Filter Sidebar Skeleton (25%) */}
-      <div className=" hidden md:block w-full md:w-1/4 bg-white p-4 rounded-lg border animate-pulse">
+      <div className="hidden md:block w-full md:w-1/4 bg-white p-4 rounded-lg border animate-pulse">
         <div className="h-6 bg-gray-200 rounded mb-4 w-1/2"></div>
         {[...Array(5)].map((_, i) => (
           <div key={i} className="mb-4">
@@ -101,20 +93,18 @@ const SearchPageLoading = () => (
         ))}
         <div className="h-10 bg-gray-200 rounded mt-6"></div>
       </div>
-      <div className=" block md:hidden w-full  bg-white p-4 rounded-lg border animate-pulse">
-        <div className=" flex gap-2 justify-between items-center">
-          <div className="h-8 bg-gray-200 rounded w-1/2 "></div>
+      <div className="block md:hidden w-full bg-white p-4 rounded-lg border animate-pulse">
+        <div className="flex gap-2 justify-between items-center">
+          <div className="h-8 bg-gray-200 rounded w-1/2"></div>
           <div className="h-8 bg-gray-200 rounded w-1/2"></div>
         </div>
       </div>
-
-      {/* Right: Product Grid Skeleton (75%) */}
       <div className="w-full md:w-3/4">
-        <div className="grid grid-cols-2 sm:grid-cols-2 lg:grid-cols-3 gap-6">
+        <div className="grid grid-cols-2 sm:grid-cols-2 lg:grid-cols-3 gap-2 md:gap-6">
           {[...Array(8)].map((_, i) => (
             <div
               key={i}
-              className="bg-white p-4 rounded-lg border animate-pulse"
+              className="bg-white p-4 rounded-lg animate-pulse border"
             >
               <div className="w-full h-36 md:h-48 bg-gray-200 rounded mb-4"></div>
               <div className="h-5 bg-gray-200 rounded w-2/3 mb-2"></div>
@@ -128,75 +118,89 @@ const SearchPageLoading = () => (
 );
 
 function SearchContent({
-  initialProducts,
+  products,
   loading,
   error,
+  query,
 }: {
-  initialProducts: FlattenedProduct[];
+  products: FlattenedProduct[];
   loading: boolean;
   error: string | null;
+  query: string;
 }) {
-  const searchParams = useSearchParams();
-  const q = searchParams.get("q") || "";
+  if (loading) return <SearchLoading />;
 
-  if (loading) {
-    return <SearchPageLoading />;
-  }
-
-  if (error) {
+  if (error)
     return (
-      <div className="mx-auto pt-4 pb-10 flex items-center justify-center min-h-[400px]">
-        <div className="text-center">
-          <h3 className="text-xl font-medium text-red-600 mb-2">{error}</h3>
-          <button
-            onClick={() => window.location.reload()}
-            className="px-4 py-2 bg-blue-500 text-white rounded hover:bg-blue-600"
-          >
-            Retry
-          </button>
-        </div>
+      <div className="flex justify-center items-center min-h-[300px] text-red-500">
+        {error}
       </div>
     );
-  }
+
+  if (products.length === 0)
+    return (
+      <div className="text-center py-20">
+        <div className="text-5xl mb-4">🔍</div>
+        <h3 className="text-xl font-medium mb-2">No results found</h3>
+        <p className="text-gray-600">
+          Try searching with a different keyword.
+        </p>
+      </div>
+    );
 
   return (
-      <div className="mx-auto pt-4 pb-10">
-        <ProductListing searchQuery={q} initialProducts={initialProducts} />
-      </div>
+    <div className="mx-auto pt-6">
+      
+      <ProductListing searchQuery={query} initialProducts={products} />
+    </div>
   );
 }
 
 export default function SearchPage() {
-  const [initialProducts, setInitialProducts] = useState<FlattenedProduct[]>(
-    []
-  );
+  const searchParams = useSearchParams();
+  const query = searchParams.get("q") || "";
+
+  const [products, setProducts] = useState<FlattenedProduct[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
-    const loadProducts = async () => {
+    let mounted = true;
+
+    async function load() {
+      if (!query.trim()) {
+        setProducts([]);
+        setLoading(false);
+        return;
+      }
+
       try {
         setLoading(true);
-        const productData: CompleteProduct[] = await fetchProducts();
-        const flattened = flattenProductVariants(productData);
-        setInitialProducts(flattened);
+        const data: CompleteProduct[] = await fetchSearchProducts(query);
+        if (!mounted) return;
+        setProducts(flattenProductVariants(data));
+        setError(null);
       } catch (err) {
-        console.error("Error fetching products:", err);
-        setError("Failed to load products");
+        console.error(err);
+        setError("Failed to load search results");
       } finally {
-        setLoading(false);
+        if (mounted) setLoading(false);
       }
-    };
+    }
 
-    loadProducts();
-  }, []);
+    load();
+    return () => {
+      mounted = false;
+    };
+  }, [query]);
 
   return (
-    <Suspense fallback={<SearchPageLoading />}>
+    <Suspense fallback={<SearchLoading />}>
       <SearchContent
-        initialProducts={initialProducts}
+        products={products}
         loading={loading}
         error={error}
+        query={query}
       />
     </Suspense>
   );
