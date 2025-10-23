@@ -6,6 +6,8 @@ import ProductListing from "@/components/Listing/ProductListing";
 import { CompleteProduct, FlattenedProduct } from "@/types/product";
 import { fetchSearchProducts } from "@/utils/products.util";
 
+export const dynamic = "force-dynamic"; // 🚀 Prevents prerendering issues with search params
+
 const safeToISOString = (value: Date | string | null | undefined) => {
   if (!value) return new Date().toISOString();
   const d = value instanceof Date ? value : new Date(value);
@@ -18,7 +20,6 @@ const flattenProductVariants = (
   const flattened: FlattenedProduct[] = [];
 
   products.forEach((product) => {
-    // console.log(product.subcategory?.slug === 'ASUS MOTHERBOARD')
     if (Array.isArray(product.variants) && product.variants.length > 0) {
       product.variants.forEach((variant) => {
         flattened.push({
@@ -80,8 +81,9 @@ const flattenProductVariants = (
 
   return flattened;
 };
+
 const SearchLoading = () => (
- <div className="mx-auto">
+  <div className="mx-auto">
     <div className="flex flex-col md:flex-row gap-8">
       <div className="hidden md:block w-full md:w-1/4 bg-white p-4 rounded-lg border animate-pulse">
         <div className="h-6 bg-gray-200 rounded mb-4 w-1/2"></div>
@@ -118,48 +120,10 @@ const SearchLoading = () => (
 );
 
 function SearchContent({
-  products,
-  loading,
-  error,
   query,
 }: {
-  products: FlattenedProduct[];
-  loading: boolean;
-  error: string | null;
   query: string;
 }) {
-  if (loading) return <SearchLoading />;
-
-  if (error)
-    return (
-      <div className="flex justify-center items-center min-h-[300px] text-red-500">
-        {error}
-      </div>
-    );
-
-  if (products.length === 0)
-    return (
-      <div className="text-center py-20">
-        <div className="text-5xl mb-4">🔍</div>
-        <h3 className="text-xl font-medium mb-2">No results found</h3>
-        <p className="text-gray-600">
-          Try searching with a different keyword.
-        </p>
-      </div>
-    );
-
-  return (
-    <div className="mx-auto pt-6">
-      
-      <ProductListing searchQuery={query} initialProducts={products} />
-    </div>
-  );
-}
-
-export default function SearchPage() {
-  const searchParams = useSearchParams();
-  const query = searchParams.get("q") || "";
-
   const [products, setProducts] = useState<FlattenedProduct[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -194,14 +158,44 @@ export default function SearchPage() {
     };
   }, [query]);
 
+  if (loading) return <SearchLoading />;
+
+  if (error)
+    return (
+      <div className="flex justify-center items-center min-h-[300px] text-red-500">
+        {error}
+      </div>
+    );
+
+  if (products.length === 0)
+    return (
+      <div className="text-center py-20">
+        <div className="text-5xl mb-4">🔍</div>
+        <h3 className="text-xl font-medium mb-2">No results found</h3>
+        <p className="text-gray-600">
+          Try searching with a different keyword.
+        </p>
+      </div>
+    );
+
+  return (
+    <div className="mx-auto pt-6">
+      <ProductListing searchQuery={query} initialProducts={products} />
+    </div>
+  );
+}
+
+// ✅ The critical change:
+function SearchPageInner() {
+  const searchParams = useSearchParams();
+  const query = searchParams.get("q") || "";
+  return <SearchContent query={query} />;
+}
+
+export default function SearchPage() {
   return (
     <Suspense fallback={<SearchLoading />}>
-      <SearchContent
-        products={products}
-        loading={loading}
-        error={error}
-        query={query}
-      />
+      <SearchPageInner />
     </Suspense>
   );
 }
