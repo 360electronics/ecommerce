@@ -3,7 +3,10 @@
 import { useEffect, useState, useMemo } from "react";
 import { useRouter } from "next/navigation";
 import Image from "next/image";
-import { EnhancedTable, type ColumnDefinition } from "@/components/Layouts/TableLayout";
+import {
+  EnhancedTable,
+  type ColumnDefinition,
+} from "@/components/Layouts/TableLayout";
 import { fetchProducts } from "@/utils/products.util";
 import toast, { Toaster } from "react-hot-toast";
 
@@ -110,14 +113,14 @@ export type ProductVariant = {
   inStock: boolean;
   discountPercentage: number | null;
   isLowStock: boolean;
-  availabilityStatus: 'in_stock' | 'low_stock' | 'out_of_stock' | 'backorder';
+  availabilityStatus: "in_stock" | "low_stock" | "out_of_stock" | "backorder";
 };
 
 export type ProductPromotion = {
   id: string;
   name: string;
   description: string | null;
-  promoType: 'percentage' | 'fixed_amount' | 'buy_x_get_y' | 'bundle';
+  promoType: "percentage" | "fixed_amount" | "buy_x_get_y" | "bundle";
   value: number;
   code: string | null;
   minPurchase: number | null;
@@ -136,7 +139,7 @@ export type RelatedProductSummary = {
   shortName: string;
   fullName: string;
   slug: string;
-  status: 'active' | 'inactive' | 'coming_soon' | 'discontinued';
+  status: "active" | "inactive" | "coming_soon" | "discontinued";
   averageRating: number;
   ratingCount: number;
   brandName: string;
@@ -159,10 +162,10 @@ export type CompleteProduct = {
   category: Category;
   subcategory: Subcategory | null;
   brand: Brand;
-  status: 'active' | 'inactive' | 'coming_soon' | 'discontinued';
+  status: "active" | "inactive" | "coming_soon" | "discontinued";
   isFeatured: boolean;
   totalStocks: number;
-  deliveryMode: 'standard' | 'express' | 'same_day' | 'pickup';
+  deliveryMode: "standard" | "express" | "same_day" | "pickup";
   tags: string[];
   attributes: Record<string, string | number | boolean>;
   specifications: ProductSpecification[];
@@ -174,7 +177,7 @@ export type CompleteProduct = {
   variants: ProductVariant[];
   defaultVariant: ProductVariant;
   relatedProducts: Array<{
-    relationType: 'similar' | 'accessory' | 'replacement' | 'bundle' | 'upsell';
+    relationType: "similar" | "accessory" | "replacement" | "bundle" | "upsell";
     displayOrder: number;
     product: RelatedProductSummary;
   }>;
@@ -186,10 +189,15 @@ export type CompleteProduct = {
   isInOfferZone: boolean;
   isNewArrival: boolean;
   isInGamersZone: boolean;
-  gamersZoneCategory?: 'laptops' | 'desktops' | 'accessories' | 'consoles';
+  gamersZoneCategory?: "laptops" | "desktops" | "accessories" | "consoles";
   activePromotions: Array<{
     promotion: ProductPromotion;
-    applicableEntityType: 'product' | 'variant' | 'category' | 'subcategory' | 'brand';
+    applicableEntityType:
+      | "product"
+      | "variant"
+      | "category"
+      | "subcategory"
+      | "brand";
   }>;
   createdAt: Date;
   updatedAt: Date;
@@ -218,7 +226,7 @@ interface TableRow {
   category: string;
   subcategory?: string;
   brand: string;
-  status: 'active' | 'inactive' | 'coming_soon' | 'discontinued';
+  status: "active" | "inactive" | "coming_soon" | "discontinued";
   isFeatured: boolean;
   isInOfferZone: boolean;
   averageRating: number;
@@ -236,12 +244,11 @@ interface TableRow {
   hasMultipleVariants: boolean;
 }
 
-
 export const deleteProducts = async (ids: string[]) => {
   try {
-    const res = await fetch('/api/products', {
-      method: 'PATCH',
-      headers: { 'Content-Type': 'application/json' },
+    const res = await fetch("/api/products", {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ ids }),
     });
 
@@ -252,11 +259,10 @@ export const deleteProducts = async (ids: string[]) => {
     const data = await res.json();
     return data;
   } catch (error) {
-    console.error('Delete request failed:', error);
+    console.error("Delete request failed:", error);
     return null;
   }
 };
-
 
 export function ProductsTable() {
   const router = useRouter();
@@ -267,7 +273,10 @@ export function ProductsTable() {
   const [error, setError] = useState<string | null>(null);
 
   // Memoized filters
-  const productCategories = useMemo(() => getProductCategories(products), [products]);
+  const productCategories = useMemo(
+    () => getProductCategories(products),
+    [products]
+  );
   const productBrands = useMemo(() => getProductBrands(products), [products]);
 
   // Column definitions
@@ -277,7 +286,9 @@ export function ProductsTable() {
       header: "Thumbnail",
       width: "80px",
       renderCell: (_, row) => {
-        const featuredImage = row.productImages.find((img) => img.isFeatured) || row.productImages[0];
+        const featuredImage =
+          row.productImages.find((img) => img.isFeatured) ||
+          row.productImages[0];
         return featuredImage ? (
           <img
             src={featuredImage.url}
@@ -341,7 +352,9 @@ export function ProductsTable() {
       width: "12%",
       renderCell: (_, row) => (
         <div className="flex flex-col">
-          <span className="text-green-600">₹{Number(row.ourPrice).toLocaleString()}</span>
+          <span className="text-green-600">
+            ₹{Number(row.ourPrice).toLocaleString()}
+          </span>
           {row.salePrice != null && (
             <span className="text-sm text-red-500 line-through">
               ₹{Number(row.mrp).toLocaleString()}
@@ -364,7 +377,9 @@ export function ProductsTable() {
       renderCell: (_, row) => (
         <span>
           {row.category}
-          {row.subcategory && <span className="text-gray-500"> / {row.subcategory}</span>}
+          {row.subcategory && (
+            <span className="text-gray-500"> / {row.subcategory}</span>
+          )}
         </span>
       ),
     },
@@ -384,9 +399,11 @@ export function ProductsTable() {
       renderCell: (_, row) => {
         const stockLevel = Number(row.stock);
         const stockClass =
-          stockLevel <= 5 ? "text-red-600 font-bold" :
-            stockLevel <= 20 ? "text-amber-600" :
-              "text-green-600";
+          stockLevel <= 5
+            ? "text-red-600 font-bold"
+            : stockLevel <= 20
+            ? "text-amber-600"
+            : "text-green-600";
         return <span className={stockClass}>{stockLevel}</span>;
       },
     },
@@ -397,9 +414,10 @@ export function ProductsTable() {
       width: "8%",
       renderCell: (_, row) => (
         <span className="flex items-center">
-          {typeof row.averageRating === 'number' && !isNaN(row.averageRating)
+          {typeof row.averageRating === "number" && !isNaN(row.averageRating)
             ? row.averageRating.toFixed(1)
-            : 'N/A'} ⭐
+            : "N/A"}{" "}
+          ⭐
         </span>
       ),
     },
@@ -426,10 +444,14 @@ export function ProductsTable() {
 
         return (
           <span
-            className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium capitalize ${statusStyles[row.status.toLowerCase()]}`}
+            className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium capitalize ${
+              statusStyles[row.status.toLowerCase()]
+            }`}
           >
             <span
-              className={`w-2 h-2 rounded-full mr-1.5 ${dotStyles[row.status.toLowerCase()]}`}
+              className={`w-2 h-2 rounded-full mr-1.5 ${
+                dotStyles[row.status.toLowerCase()]
+              }`}
             ></span>
             {row.status.replace("_", " ")}
             {row.isInOfferZone && (
@@ -437,7 +459,7 @@ export function ProductsTable() {
             )}
           </span>
         );
-      }
+      },
     },
   ];
 
@@ -467,11 +489,12 @@ export function ProductsTable() {
         productImages: variant.productImages,
         activePromotions: Array.isArray(product.activePromotions)
           ? product.activePromotions
-            .filter((promo) =>
-              promo.applicableEntityType === "product" ||
-              promo.applicableEntityType === "variant"
-            )
-            .map((p) => p.promotion)
+              .filter(
+                (promo) =>
+                  promo.applicableEntityType === "product" ||
+                  promo.applicableEntityType === "variant"
+              )
+              .map((p) => p.promotion)
           : [],
         priceRange: product.priceRange,
         hasMultipleVariants: product.hasMultipleVariants,
@@ -485,7 +508,10 @@ export function ProductsTable() {
   const handleEditProduct = (rows: TableRow[]) => {
     console.log("Edit action triggered with rows:", rows);
     if (rows.length === 1) {
-      window.open(`/admin/products/edit-product/${rows[0].productId}`, "_blank");
+      window.open(
+        `/admin/products/edit-product/${rows[0].productId}`,
+        "_blank"
+      );
     }
   };
 
@@ -497,7 +523,9 @@ export function ProductsTable() {
     if (window.confirm(`Delete ${row.fullName} (${row.variantName})?`)) {
       try {
         await deleteProducts([row.productId]);
-        setTableData((prev) => prev.filter((r) => r.productId !== row.productId));
+        setTableData((prev) =>
+          prev.filter((r) => r.productId !== row.productId)
+        );
         setProducts((prev) => prev.filter((p) => p.id !== row.productId));
         toast.success(`${row.fullName} deleted successfully.`);
       } catch (error) {
@@ -513,7 +541,9 @@ export function ProductsTable() {
     if (window.confirm(`Delete ${productIds.length} products?`)) {
       try {
         await deleteProducts(productIds);
-        setTableData((prev) => prev.filter((r) => !productIds.includes(r.productId)));
+        setTableData((prev) =>
+          prev.filter((r) => !productIds.includes(r.productId))
+        );
         setProducts((prev) => prev.filter((p) => !productIds.includes(p.id)));
         toast.success(`${productIds.length} products deleted successfully.`);
       } catch (error) {
@@ -536,7 +566,7 @@ export function ProductsTable() {
         setLoading(true);
         setError(null);
         const response = await fetchProducts();
-        const data: CompleteProduct[] = response;
+        const data: CompleteProduct[] = response.data ?? []; // ✅ fix here
         setProducts(data);
         setTableData(flattenProducts(data));
       } catch (err) {
@@ -551,24 +581,26 @@ export function ProductsTable() {
     loadProducts();
   }, []);
 
-  if (error) return (
-    <div className="text-red-600 p-4 bg-red-50 rounded-md">
-      {error}
-      <button
-        className="ml-4 text-primary underline"
-        onClick={() => window.location.reload()}
-      >
-        Retry
-      </button>
-    </div>
-  );
+  if (error)
+    return (
+      <div className="text-red-600 p-4 bg-red-50 rounded-md">
+        {error}
+        <button
+          className="ml-4 text-primary underline"
+          onClick={() => window.location.reload()}
+        >
+          Retry
+        </button>
+      </div>
+    );
 
-  if (loading) return (
-    <div className="p-4 flex items-center justify-center">
-      <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-gray-900"></div>
-      <span className="ml-2">Loading products...</span>
-    </div>
-  );
+  if (loading)
+    return (
+      <div className="p-4 flex items-center justify-center">
+        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-gray-900"></div>
+        <span className="ml-2">Loading products...</span>
+      </div>
+    );
 
   return (
     <div className=" mx-auto ">
@@ -577,8 +609,12 @@ export function ProductsTable() {
       <div className="mb-8">
         <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between">
           <div className="mb-4 sm:mb-0">
-            <h1 className="text-3xl font-bold text-gray-900">Product Management</h1>
-            <p className="mt-2 text-gray-600">Manage your product catalog and settings</p>
+            <h1 className="text-3xl font-bold text-gray-900">
+              Product Management
+            </h1>
+            <p className="mt-2 text-gray-600">
+              Manage your product catalog and settings
+            </p>
           </div>
         </div>
       </div>
@@ -588,30 +624,57 @@ export function ProductsTable() {
         <div className="bg-white p-6 rounded-xl border border-gray-200   transition-shadow duration-300">
           <div className="flex items-center">
             <div className="p-3 bg-blue-100 rounded-lg">
-              <svg className="w-6 h-6 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 11V7a4 4 0 00-8 0v4M5 9h14l1 12H4L5 9z" />
+              <svg
+                className="w-6 h-6 text-blue-600"
+                fill="none"
+                stroke="currentColor"
+                viewBox="0 0 24 24"
+              >
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  strokeWidth={2}
+                  d="M16 11V7a4 4 0 00-8 0v4M5 9h14l1 12H4L5 9z"
+                />
               </svg>
             </div>
             <div className="ml-4">
-              <p className="text-sm font-medium text-gray-600">Total Products</p>
-              <p className="text-2xl font-bold text-gray-900">{products.length}</p>
+              <p className="text-sm font-medium text-gray-600">
+                Total Products
+              </p>
+              <p className="text-2xl font-bold text-gray-900">
+                {products.length}
+              </p>
             </div>
           </div>
         </div>
         <div className="bg-white p-6 rounded-xl border border-gray-200   transition-shadow duration-300">
           <div className="flex items-center">
             <div className="p-3 bg-green-100 rounded-lg">
-              <svg className="w-6 h-6 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+              <svg
+                className="w-6 h-6 text-green-600"
+                fill="none"
+                stroke="currentColor"
+                viewBox="0 0 24 24"
+              >
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  strokeWidth={2}
+                  d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"
+                />
               </svg>
             </div>
             <div className="ml-4">
-              <p className="text-sm font-medium text-gray-600">Active Products</p>
-              <p className="text-2xl font-bold text-gray-900">{products.filter(p => p.status === 'active').length}</p>
+              <p className="text-sm font-medium text-gray-600">
+                Active Products
+              </p>
+              <p className="text-2xl font-bold text-gray-900">
+                {products.filter((p) => p.status === "active").length}
+              </p>
             </div>
           </div>
         </div>
-
       </div>
 
       {/* Table */}
@@ -626,31 +689,19 @@ export function ProductsTable() {
         }}
         search={{
           enabled: true,
-          keys: ["fullName", "shortName", "variantName", "sku", "category", "subcategory", "brand"],
+          keys: [
+            "fullName",
+            "shortName",
+            "variantName",
+            "sku",
+            "category",
+            "subcategory",
+            "brand",
+          ],
           placeholder: "Search products, variants, or brands...",
         }}
         filters={{
           enabled: true,
-          customFilters: [
-            {
-              key: "isFeatured",
-              label: "Featured Products",
-              type: "boolean",
-              defaultValue: false,
-            },
-            {
-              key: "isInOfferZone",
-              label: "Offer Zone Products",
-              type: "boolean",
-              defaultValue: false,
-            },
-            {
-              key: "hasMultipleVariants",
-              label: "Multiple Variants",
-              type: "boolean",
-              defaultValue: false,
-            },
-          ],
         }}
         pagination={{
           enabled: true,
@@ -679,7 +730,7 @@ export function ProductsTable() {
         customization={{
           rowHoverEffect: true,
           zebraStriping: true,
-          stickyHeader: true
+          stickyHeader: true,
         }}
         onRowClick={(row) => {
           window.open(`/product/${row.slug}`, "_blank");
@@ -688,4 +739,3 @@ export function ProductsTable() {
     </div>
   );
 }
-

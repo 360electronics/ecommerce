@@ -1,13 +1,16 @@
-'use client';
+"use client";
 
-import { useState, useRef, useEffect, useMemo, useCallback } from 'react';
-import { Search, Save, Check, X, AlertCircle, Tag } from 'lucide-react';
-import { Input } from '@/components/ui/input';
-import { Button } from '@/components/ui/button';
-import { fetchProducts as fetchAllProducts, fetchOfferZoneProducts } from '@/utils/products.util';
-import Image from 'next/image';
-import { cn } from '@/lib/utils';
-import toast from 'react-hot-toast';
+import { useState, useRef, useEffect, useMemo, useCallback } from "react";
+import { Search, Save, Check, X, AlertCircle, Tag } from "lucide-react";
+import { Input } from "@/components/ui/input";
+import { Button } from "@/components/ui/button";
+import {
+  fetchProducts as fetchAllProducts,
+  fetchOfferZoneProducts,
+} from "@/utils/products.util";
+import Image from "next/image";
+import { cn } from "@/lib/utils";
+import toast from "react-hot-toast";
 
 // Types
 interface Product {
@@ -22,7 +25,12 @@ interface Product {
 interface Variant {
   id: string;
   name: string;
-  productImages: { url: string; alt: string; isFeatured: boolean; displayOrder: number }[];
+  productImages: {
+    url: string;
+    alt: string;
+    isFeatured: boolean;
+    displayOrder: number;
+  }[];
   ourPrice: string;
   mrp: string;
   sku: string;
@@ -37,9 +45,11 @@ interface OfferZoneSelection {
 }
 
 export default function OfferZonePage() {
-  const [searchTerm, setSearchTerm] = useState('');
+  const [searchTerm, setSearchTerm] = useState("");
   const [searchResults, setSearchResults] = useState<OfferZoneSelection[]>([]);
-  const [offerZoneVariants, setOfferZoneVariants] = useState<OfferZoneSelection[]>([]);
+  const [offerZoneVariants, setOfferZoneVariants] = useState<
+    OfferZoneSelection[]
+  >([]);
   const [showResults, setShowResults] = useState(false);
   const [isSaved, setIsSaved] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
@@ -56,25 +66,34 @@ export default function OfferZonePage() {
       setIsFetching(true);
       setError(null);
       try {
-        const [products, offerZone] = await Promise.all([
+        const [productsRes, offerZoneRes] = await Promise.all([
           fetchAllProducts(),
           fetchOfferZoneProducts(),
         ]);
 
+        const products = Array.isArray(productsRes.data)
+          ? productsRes.data
+          : productsRes;
+        const offerZone = Array.isArray(offerZoneRes.data)
+          ? offerZoneRes.data
+          : offerZoneRes;
+
         setAllProducts(products || []);
         setOfferZoneVariants(
-          offerZone?.map(({ productId, variantId, product, variant }: any) => ({
-            productId,
-            variantId,
-            product,
-            variant,
-            displayName: `${product.shortName} - ${variant.name}`,
-          })) || []
+          (offerZone || []).map(
+            ({ productId, variantId, product, variant }: any) => ({
+              productId,
+              variantId,
+              product,
+              variant,
+              displayName: `${product.shortName} - ${variant.name}`,
+            })
+          )
         );
       } catch (error) {
-        console.error('Error fetching data:', error);
-        setError('Failed to load products. Please try again.');
-        toast.error('Failed to load products. Please try again.');
+        console.error("Error fetching data:", error);
+        setError("Failed to load products. Please try again.");
+        toast.error("Failed to load products. Please try again.");
       } finally {
         setIsFetching(false);
       }
@@ -101,7 +120,9 @@ export default function OfferZonePage() {
   const filteredVariants = useMemo(() => {
     if (!searchTerm.trim()) return [];
 
-    const offerZoneVariantIds = new Set(offerZoneVariants.map((v) => v.variantId));
+    const offerZoneVariantIds = new Set(
+      offerZoneVariants.map((v) => v.variantId)
+    );
 
     return allProducts
       .flatMap((product) =>
@@ -122,8 +143,10 @@ export default function OfferZonePage() {
           selection.variant.name,
           selection.variant.id,
           selection.variant.sku,
-          selection.product.description || '',
-        ].some((field) => field.toLowerCase().includes(searchTerm.toLowerCase()))
+          selection.product.description || "",
+        ].some((field) =>
+          field.toLowerCase().includes(searchTerm.toLowerCase())
+        )
       );
   }, [allProducts, offerZoneVariants, searchTerm]);
 
@@ -145,8 +168,8 @@ export default function OfferZonePage() {
       }
     };
 
-    document.addEventListener('mousedown', handleClickOutside);
-    return () => document.removeEventListener('mousedown', handleClickOutside);
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => document.removeEventListener("mousedown", handleClickOutside);
   }, []);
 
   // Handle search with debouncing
@@ -175,82 +198,88 @@ export default function OfferZonePage() {
     async (selection: OfferZoneSelection) => {
       try {
         setOfferZoneVariants((prev) => [...prev, selection]);
-        setSearchResults((prev) => prev.filter((v) => v.variantId !== selection.variantId));
+        setSearchResults((prev) =>
+          prev.filter((v) => v.variantId !== selection.variantId)
+        );
         setIsSaved(false);
-        setSearchTerm('');
+        setSearchTerm("");
         setShowResults(false);
-        toast.success('Variant added to Offer Zone');
+        toast.success("Variant added to Offer Zone");
       } catch (error) {
-        console.error('Error selecting variant:', error);
-        toast.error('Failed to add variant');
+        console.error("Error selecting variant:", error);
+        toast.error("Failed to add variant");
       }
     },
     []
   );
 
   // Handle variant removal
-  const handleRemoveVariant = useCallback(
-    async (variantId: string) => {
-      setIsLoading(true);
-      try {
-        const res = await fetch('/api/products/offer-zone', {
-          method: 'DELETE',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ variantId }),
-        });
+  const handleRemoveVariant = useCallback(async (variantId: string) => {
+    setIsLoading(true);
+    try {
+      const res = await fetch("/api/products/offer-zone", {
+        method: "DELETE",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ variantId }),
+      });
 
-        if (!res.ok) throw new Error('Failed to remove variant');
+      if (!res.ok) throw new Error("Failed to remove variant");
 
-        setOfferZoneVariants((prev) => prev.filter((v) => v.variantId !== variantId));
-        setIsSaved(false);
-        toast.success('Variant removed from Offer Zone');
-      } catch (error) {
-        console.error('Remove variant error:', error);
-        toast.error('Failed to remove variant');
-      } finally {
-        setIsLoading(false);
-      }
-    },
-    []
-  );
+      setOfferZoneVariants((prev) =>
+        prev.filter((v) => v.variantId !== variantId)
+      );
+      setIsSaved(false);
+      toast.success("Variant removed from Offer Zone");
+    } catch (error) {
+      console.error("Remove variant error:", error);
+      toast.error("Failed to remove variant");
+    } finally {
+      setIsLoading(false);
+    }
+  }, []);
 
   // Handle save
-  const handleSave = useCallback(
-    async () => {
-      setIsLoading(true);
-      try {
-        const variantSelections = offerZoneVariants.map(({ productId, variantId }) => ({
+  const handleSave = useCallback(async () => {
+    setIsLoading(true);
+    try {
+      const variantSelections = offerZoneVariants.map(
+        ({ productId, variantId }) => ({
           productId,
           variantId,
-        }));
+        })
+      );
 
-        const response = await fetch('/api/products/offer-zone', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ variantSelections }),
-        });
+      const response = await fetch("/api/products/offer-zone", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ variantSelections }),
+      });
 
-        if (!response.ok) {
-          const errorData = await response.json();
-          throw new Error(errorData.message || 'Failed to save featured variants');
-        }
-
-        setIsSaved(true);
-        toast.success('Offer Zone variants saved successfully');
-        setTimeout(() => setIsSaved(false), 3000);
-      } catch (error) {
-        console.error('Error saving featured variants:', error);
-        toast.error(error instanceof Error ? error.message : 'Failed to save featured variants');
-      } finally {
-        setIsLoading(false);
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(
+          errorData.message || "Failed to save featured variants"
+        );
       }
-    },
-    [offerZoneVariants]
-  );
+
+      setIsSaved(true);
+      toast.success("Offer Zone variants saved successfully");
+      setTimeout(() => setIsSaved(false), 3000);
+    } catch (error) {
+      console.error("Error saving featured variants:", error);
+      toast.error(
+        error instanceof Error
+          ? error.message
+          : "Failed to save featured variants"
+      );
+    } finally {
+      setIsLoading(false);
+    }
+  }, [offerZoneVariants]);
 
   // Clear search
   const clearSearch = useCallback(() => {
-    setSearchTerm('');
+    setSearchTerm("");
     setShowResults(false);
     searchInputRef.current?.focus();
   }, []);
@@ -293,8 +322,12 @@ export default function OfferZonePage() {
       <div className="mb-8">
         <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between">
           <div className="mb-4 sm:mb-0">
-            <h1 className="text-3xl font-bold text-gray-900">Offer Zone Management</h1>
-            <p className="mt-2 text-gray-600">Manage featured variants for the Offer Zone</p>
+            <h1 className="text-3xl font-bold text-gray-900">
+              Offer Zone Management
+            </h1>
+            <p className="mt-2 text-gray-600">
+              Manage featured variants for the Offer Zone
+            </p>
           </div>
         </div>
       </div>
@@ -307,7 +340,9 @@ export default function OfferZonePage() {
               <Tag className="w-6 h-6 text-blue-600" />
             </div>
             <div className="ml-4">
-              <p className="text-sm font-medium text-gray-600">Total Variants</p>
+              <p className="text-sm font-medium text-gray-600">
+                Total Variants
+              </p>
               <p className="text-2xl font-bold text-gray-900">
                 {allProducts.reduce((sum, p) => sum + p.variants.length, 0)}
               </p>
@@ -320,12 +355,15 @@ export default function OfferZonePage() {
               <Check className="w-6 h-6 text-green-600" />
             </div>
             <div className="ml-4">
-              <p className="text-sm font-medium text-gray-600">Offer Zone Variants</p>
-              <p className="text-2xl font-bold text-gray-900">{offerZoneVariants.length}</p>
+              <p className="text-sm font-medium text-gray-600">
+                Offer Zone Variants
+              </p>
+              <p className="text-2xl font-bold text-gray-900">
+                {offerZoneVariants.length}
+              </p>
             </div>
           </div>
         </div>
-        
       </div>
 
       {/* Success Message */}
@@ -379,7 +417,7 @@ export default function OfferZonePage() {
           aria-label="Save offer zone variants"
         >
           <Save className="h-5 w-5" />
-          {isLoading ? 'Saving...' : 'Save'}
+          {isLoading ? "Saving..." : "Save"}
         </Button>
       </div>
 
@@ -388,7 +426,8 @@ export default function OfferZonePage() {
         <div ref={searchResultsRef} className="mb-8">
           <div className="flex justify-between items-center mb-4">
             <h3 className="text-lg font-semibold text-gray-900">
-              Search Results {searchResults.length > 0 ? `(${searchResults.length})` : ''}
+              Search Results{" "}
+              {searchResults.length > 0 ? `(${searchResults.length})` : ""}
             </h3>
             <Button
               variant="ghost"
@@ -411,7 +450,9 @@ export default function OfferZonePage() {
                 <VariantCard
                   key={selection.variantId}
                   selection={selection}
-                  onSelect={(sel) => handleSelectVariant(sel as OfferZoneSelection)}
+                  onSelect={(sel) =>
+                    handleSelectVariant(sel as OfferZoneSelection)
+                  }
                   actionLabel="Add to Offer Zone"
                   actionVariant="secondary"
                 />
@@ -421,8 +462,8 @@ export default function OfferZonePage() {
             <div className="rounded-lg border border-gray-200 bg-white p-8 text-center shadow-sm">
               <p className="text-gray-500">
                 {searchTerm.trim()
-                  ? 'No variants found or all matching variants are already in Offer Zone.'
-                  : 'Type to search for variants to add to Offer Zone.'}
+                  ? "No variants found or all matching variants are already in Offer Zone."
+                  : "Type to search for variants to add to Offer Zone."}
               </p>
             </div>
           )}
@@ -463,10 +504,15 @@ interface VariantCardProps {
   selection: OfferZoneSelection;
   onSelect: (selection: OfferZoneSelection | string) => void;
   actionLabel: string;
-  actionVariant: 'secondary' | 'destructive';
+  actionVariant: "secondary" | "destructive";
 }
 
-function VariantCard({ selection, onSelect, actionLabel, actionVariant }: VariantCardProps) {
+function VariantCard({
+  selection,
+  onSelect,
+  actionLabel,
+  actionVariant,
+}: VariantCardProps) {
   const discount = useMemo(() => {
     const ourPrice = parseFloat(selection.variant.ourPrice);
     const mrp = parseFloat(selection.variant.mrp);
@@ -480,8 +526,10 @@ function VariantCard({ selection, onSelect, actionLabel, actionVariant }: Varian
     <div className="relative group transition-transform hover:scale-[1.02] duration-200">
       <div
         className={cn(
-          'absolute right-4 top-4 z-10 transition-opacity',
-          actionVariant === 'destructive' ? 'opacity-0 group-hover:opacity-100' : 'opacity-100'
+          "absolute right-4 top-4 z-10 transition-opacity",
+          actionVariant === "destructive"
+            ? "opacity-0 group-hover:opacity-100"
+            : "opacity-100"
         )}
       >
         <Button
@@ -489,12 +537,16 @@ function VariantCard({ selection, onSelect, actionLabel, actionVariant }: Varian
           variant={actionVariant}
           onClick={(e) => {
             e.stopPropagation();
-            onSelect(actionVariant === 'destructive' ? selection.variantId : selection);
+            onSelect(
+              actionVariant === "destructive" ? selection.variantId : selection
+            );
           }}
           className={cn(
-            'rounded-lg ',
-            actionVariant === 'secondary' && 'bg-primary hover:bg-primary-hover text-black',
-            actionVariant === 'destructive' && 'bg-red-600 hover:bg-red-700 text-white'
+            "rounded-lg ",
+            actionVariant === "secondary" &&
+              "bg-primary hover:bg-primary-hover text-black",
+            actionVariant === "destructive" &&
+              "bg-red-600 hover:bg-red-700 text-white"
           )}
           aria-label={actionLabel}
         >
@@ -506,16 +558,22 @@ function VariantCard({ selection, onSelect, actionLabel, actionVariant }: Varian
         role="button"
         tabIndex={0}
         onKeyDown={(e) => {
-          if (e.key === 'Enter' || e.key === ' ') {
+          if (e.key === "Enter" || e.key === " ") {
             e.preventDefault();
-            onSelect(actionVariant === 'destructive' ? selection.variantId : selection);
+            onSelect(
+              actionVariant === "destructive" ? selection.variantId : selection
+            );
           }
         }}
       >
         <div className="relative w-full aspect-square bg-gray-50">
           <img
-            src={selection.variant.productImages?.[0]?.url ?? '/placeholder.png'}
-            alt={selection.variant.productImages?.[0]?.alt ?? selection.displayName}
+            src={
+              selection.variant.productImages?.[0]?.url ?? "/placeholder.png"
+            }
+            alt={
+              selection.variant.productImages?.[0]?.alt ?? selection.displayName
+            }
             className="object-contain w-full h-full aspect-square p-6 group-hover:scale-105 transition-transform duration-200"
             sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 33vw"
           />
@@ -526,18 +584,23 @@ function VariantCard({ selection, onSelect, actionLabel, actionVariant }: Varian
           )}
         </div>
         <div className="p-4 space-y-2">
-          <h3 className="text-base font-semibold text-gray-900 line-clamp-2">{selection.displayName}</h3>
-          <p className="text-sm text-gray-600 line-clamp-2">{selection.product.description || 'No description available'}</p>
+          <h3 className="text-base font-semibold text-gray-900 line-clamp-2">
+            {selection.displayName}
+          </h3>
+          <p className="text-sm text-gray-600 line-clamp-2">
+            {selection.product.description || "No description available"}
+          </p>
           <div className="flex items-center gap-2">
             {selection.variant.ourPrice && (
               <span className="text-lg font-bold text-gray-900">
-                ₹{Number(selection.variant.ourPrice).toLocaleString('en-IN')}
+                ₹{Number(selection.variant.ourPrice).toLocaleString("en-IN")}
               </span>
             )}
             {selection.variant.mrp &&
-              Number(selection.variant.mrp) > Number(selection.variant.ourPrice) && (
+              Number(selection.variant.mrp) >
+                Number(selection.variant.ourPrice) && (
                 <span className="text-sm text-gray-500 line-through">
-                  ₹{Number(selection.variant.mrp).toLocaleString('en-IN')}
+                  ₹{Number(selection.variant.mrp).toLocaleString("en-IN")}
                 </span>
               )}
           </div>

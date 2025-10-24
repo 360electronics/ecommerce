@@ -473,7 +473,7 @@ export function EnhancedTable<T extends Record<string, any>>({
             <ArrowUpDown
               className={cn(
                 "h-4 w-4 transition-transform duration-200",
-                sortConfig.key === column.key ? "text-blue-600" : "text-gray-400",
+                sortConfig.key === column.key ? "text-primary" : "text-gray-400",
                 sortConfig.key === column.key && sortConfig.direction === "desc" && "rotate-180",
               )}
             />
@@ -575,7 +575,7 @@ export function EnhancedTable<T extends Record<string, any>>({
             {actions.bulkActions.edit && (
               <button
                 onClick={() => actions.bulkActions?.edit?.(selectedItems)}
-                className="group flex items-center gap-2 px-4 py-2 rounded-xl bg-blue-50 text-primary hover:bg-primary hover:text-white transition-all duration-300"
+                className="group flex items-center gap-2 px-4 py-2 rounded-xl bg-primary/10 text-primary hover:bg-primary hover:text-white transition-all duration-300"
                 title="Edit"
               >
                 <Edit className="h-5 w-5 text-primary group-hover:text-white transition-transform duration-300 group-hover:rotate-12" />
@@ -618,17 +618,17 @@ export function EnhancedTable<T extends Record<string, any>>({
 
       {/* Filters */}
       {filters.enabled && (
-        <div className="flex items-center gap-3">
-          <span className="text-sm font-semibold text-gray-700">Filter:</span>
-          <div className="flex gap-2 rounded-xl bg-white p-2 ">
+        <div className="flex items-center gap-3 ">
+          <span className="text-sm font-semibold text-gray-700 ">Filter:</span>
+          <div className="flex gap-2 rounded-xl bg-white p-2 overflow-x-auto snap-x snap-mandatory minimal-scrollbar w-screen">
             <button
               key="all"
               onClick={() => handleFilterChange("All")}
               className={cn(
-                "px-4 py-2 text-sm rounded-lg font-medium transition-all duration-300",
+                "px-4 py-2 text-sm rounded-lg font-medium transition-all duration-300 ",
                 activeFilter === "All"
                   ? "bg-primary text-white "
-                  : "text-gray-600 hover:bg-gray-100"
+                  : "text-gray-600 hover:bg-gray-100 "
               )}
             >
               All
@@ -641,9 +641,9 @@ export function EnhancedTable<T extends Record<string, any>>({
                   key={value}
                   onClick={() => handleFilterChange(value)}
                   className={cn(
-                    "px-4 py-2 text-sm rounded-lg font-medium transition-all duration-300",
+                    "px-4 py-2 text-sm rounded-lg font-medium transition-all duration-300 w-full min-w-[120px]",
                     activeFilter === value
-                      ? "bg-blue-600 text-white "
+                      ? "bg-primary text-white "
                       : "text-gray-600 hover:bg-gray-100"
                   )}
                 >
