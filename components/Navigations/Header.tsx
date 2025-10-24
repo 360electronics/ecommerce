@@ -285,43 +285,7 @@ const Header = ({ isCategory = true }: HeaderProps) => {
 
     setAllCategories(baseCategories);
     setCategories(baseCategories.filter((c) => allowed.has(c.name)));
-    setHasFetched(true); // instantly visible
-
-    // Step 2: enrich asynchronously
-    (async () => {
-      try {
-        const products = await fetchProducts();
-        const attrMap: Record<string, Record<string, Set<string>>> = {};
-
-        products.forEach((p: any) => {
-          const cid = p.categoryId;
-          if (!attrMap[cid]) attrMap[cid] = {};
-          p.variants.forEach((v: any) => {
-            Object.entries(v.attributes).forEach(([key, value]) => {
-              if (!attrMap[cid][key]) attrMap[cid][key] = new Set();
-              attrMap[cid][key].add(value as string);
-            });
-          });
-        });
-
-        const enriched = baseCategories.map((cat) => ({
-          ...cat,
-          attributeValues: attrMap[cat.id]
-            ? Object.fromEntries(
-                Object.entries(attrMap[cat.id]).map(([k, v]) => [
-                  k,
-                  Array.from(v),
-                ])
-              )
-            : {},
-        }));
-
-        setAllCategories(enriched);
-        setCategories(enriched.filter((c) => allowed.has(c.name)));
-      } catch (err) {
-        console.error("Product enrichment failed:", err);
-      }
-    })();
+    setHasFetched(true); 
   }, []);
 
   useEffect(() => {
@@ -411,22 +375,6 @@ const Header = ({ isCategory = true }: HeaderProps) => {
     }, 200);
   };
 
-  const handleMouseEnterAttribute = (attrName: string) => {
-    if (dropdownTimeoutRef.current) {
-      clearTimeout(dropdownTimeoutRef.current);
-    }
-    setHoveredAttribute(attrName);
-  };
-
-  const handleMouseLeaveAttribute = (event: React.MouseEvent) => {
-    if (
-      attributeRef.current &&
-      !attributeRef.current.contains(event.relatedTarget as Node)
-    ) {
-      setHoveredAttribute(null);
-    }
-  };
-
   return (
     <>
       <header
@@ -434,6 +382,7 @@ const Header = ({ isCategory = true }: HeaderProps) => {
           isScrolled ? "shadow-md" : ""
         }`}
       >
+
         <div className="mx-auto flex items-center justify-between gap-2">
           <div className="flex items-center">
             <button
@@ -597,117 +546,163 @@ const Header = ({ isCategory = true }: HeaderProps) => {
                     )}
 
                     {/* Filterable Attributes */}
-                    {selectedMobileCategory.attributes.filter(
-                      (a) => a.isFilterable
-                    ).length > 0 && (
-                      <div>
-                        <h4 className="text-xs font-bold text-gray-500 uppercase tracking-wide mb-3 flex items-center gap-2">
-                          <Package size={16} className="text-primary" />
-                          Filter by Features
-                        </h4>
-                        <div className="space-y-2">
-                          {selectedMobileCategory.attributes
-                            .filter(
-                              (attr) =>
-                                attr.isFilterable === true &&
-                                selectedMobileCategory.attributeValues[
-                                  attr.name!
-                                ]?.length > 0
-                            )
-                            .sort((a, b) =>
-                              (a.name || "").localeCompare(b.name || "")
-                            )
-                            .map((attr) => {
-                              const isExpanded = expandedFeature === attr.name;
-                              const values =
-                                selectedMobileCategory.attributeValues[
-                                  attr.name!
-                                ] || [];
+                    {/* Filterable Attributes */}
+                    {(() => {
+                      // dynamic attribute values or fallback to static categoryFeatures
+                      const dynamicAttrs =
+                        selectedMobileCategory.attributes.filter(
+                          (a) =>
+                            a.isFilterable === true &&
+                            selectedMobileCategory.attributeValues[a.name!]
+                              ?.length > 0
+                        );
 
-                              return (
-                                <div key={attr.name}>
-                                  <motion.button
-                                    whileHover={{ scale: 1.02 }}
-                                    whileTap={{ scale: 0.98 }}
-                                    onClick={() =>
-                                      setExpandedFeature(
-                                        isExpanded ? null : attr.name
-                                      )
-                                    }
-                                    className="w-full flex items-center justify-between py-3 px-3 text-sm text-gray-700 hover:text-primary bg-gray-50 hover:bg-primary/5 rounded-lg transition-all group font-medium"
-                                  >
-                                    <span>{attr.name?.replace("_", " ")}</span>
-                                    <motion.div
-                                      animate={{ rotate: isExpanded ? 180 : 0 }}
-                                      transition={{ duration: 0.3 }}
-                                    >
-                                      <ChevronDown
-                                        size={16}
-                                        className="text-primary"
-                                      />
-                                    </motion.div>
-                                  </motion.button>
+                      const staticFeatures =
+                        categoryFeatures[selectedMobileCategory.name] || {};
 
-                                  {/* Expanded Feature Values */}
-                                  <AnimatePresence>
-                                    {isExpanded && (
-                                      <motion.div
-                                        initial={{
-                                          opacity: 0,
-                                          height: 0,
-                                          x: 20,
-                                        }}
-                                        animate={{
-                                          opacity: 1,
-                                          height: "auto",
-                                          x: 0,
-                                        }}
-                                        exit={{ opacity: 0, height: 0, x: 20 }}
-                                        transition={{
-                                          duration: 0.3,
-                                          ease: "easeInOut",
-                                        }}
-                                        className="overflow-hidden mt-2 ml-2 border-l-2 border-primary/30 pl-3 space-y-2"
+                      const showFallback =
+                        dynamicAttrs.length === 0 &&
+                        Object.keys(staticFeatures).length > 0;
+
+                      return (
+                        <div>
+                          <h4 className="text-xs font-bold text-gray-500 uppercase tracking-wide mb-3 flex items-center gap-2">
+                            <Package size={16} className="text-primary" />
+                            Filter by Features
+                          </h4>
+
+                          <div className="space-y-2">
+                            {showFallback
+                              ? Object.entries(staticFeatures).map(
+                                  ([feature, values]) => (
+                                    <div key={feature}>
+                                      <button
+                                        onClick={() =>
+                                          setExpandedFeature(
+                                            expandedFeature === feature
+                                              ? null
+                                              : feature
+                                          )
+                                        }
+                                        className="w-full flex items-center justify-between py-3 px-3 text-sm text-gray-700 hover:text-primary bg-gray-50 hover:bg-primary/5 rounded-lg transition-all group font-medium"
                                       >
-                                        {values.map((value) => (
+                                        <span>{feature}</span>
+                                        <ChevronDown
+                                          size={16}
+                                          className={`text-primary transition-transform ${
+                                            expandedFeature === feature
+                                              ? "rotate-180"
+                                              : ""
+                                          }`}
+                                        />
+                                      </button>
+
+                                      <AnimatePresence>
+                                        {expandedFeature === feature && (
                                           <motion.div
-                                            key={value}
-                                            initial={{ opacity: 0, x: 20 }}
-                                            animate={{ opacity: 1, x: 0 }}
-                                            transition={{ duration: 0.2 }}
+                                            initial={{ opacity: 0, height: 0 }}
+                                            animate={{
+                                              opacity: 1,
+                                              height: "auto",
+                                            }}
+                                            exit={{ opacity: 0, height: 0 }}
+                                            transition={{ duration: 0.3 }}
+                                            className="overflow-hidden mt-2 ml-2 border-l-2 border-primary/30 pl-3 space-y-2"
                                           >
-                                            <Link
-                                              href={`/category/${
-                                                selectedMobileCategory.slug
-                                              }?${
-                                                attr.name
-                                              }=${encodeURIComponent(value)}`}
-                                              className="flex items-center justify-between py-2 px-3 text-xs text-gray-600 hover:text-primary hover:bg-primary/5 rounded transition-all group"
-                                              onClick={closeMenu}
-                                            >
-                                              <span>{value}</span>
-                                              <motion.div
-                                                initial={{ x: 0 }}
-                                                whileHover={{ x: 4 }}
-                                                transition={{ duration: 0.2 }}
+                                            {values.map((value) => (
+                                              <Link
+                                                key={value}
+                                                href={`/category/${
+                                                  selectedMobileCategory.slug
+                                                }?${encodeURIComponent(
+                                                  feature
+                                                )}=${encodeURIComponent(
+                                                  value
+                                                )}`}
+                                                onClick={closeMenu}
+                                                className="flex items-center justify-between py-2 px-3 text-xs text-gray-600 hover:text-primary hover:bg-primary/5 rounded transition-all group"
                                               >
+                                                <span>{value}</span>
                                                 <ArrowUpRight
                                                   size={14}
                                                   className="text-primary opacity-0 group-hover:opacity-100"
                                                 />
-                                              </motion.div>
-                                            </Link>
+                                              </Link>
+                                            ))}
                                           </motion.div>
-                                        ))}
-                                      </motion.div>
-                                    )}
-                                  </AnimatePresence>
-                                </div>
-                              );
-                            })}
+                                        )}
+                                      </AnimatePresence>
+                                    </div>
+                                  )
+                                )
+                              : dynamicAttrs.map((attr) => {
+                                  const isExpanded =
+                                    expandedFeature === attr.name;
+                                  const values =
+                                    selectedMobileCategory.attributeValues[
+                                      attr.name!
+                                    ] || [];
+                                  return (
+                                    <div key={attr.name}>
+                                      <button
+                                        onClick={() =>
+                                          setExpandedFeature(
+                                            isExpanded ? null : attr.name
+                                          )
+                                        }
+                                        className="w-full flex items-center justify-between py-3 px-3 text-sm text-gray-700 hover:text-primary bg-gray-50 hover:bg-primary/5 rounded-lg transition-all group font-medium"
+                                      >
+                                        <span>
+                                          {attr.name?.replace("_", " ")}
+                                        </span>
+                                        <ChevronDown
+                                          size={16}
+                                          className={`text-primary transition-transform ${
+                                            isExpanded ? "rotate-180" : ""
+                                          }`}
+                                        />
+                                      </button>
+
+                                      <AnimatePresence>
+                                        {isExpanded && (
+                                          <motion.div
+                                            initial={{ opacity: 0, height: 0 }}
+                                            animate={{
+                                              opacity: 1,
+                                              height: "auto",
+                                            }}
+                                            exit={{ opacity: 0, height: 0 }}
+                                            transition={{ duration: 0.3 }}
+                                            className="overflow-hidden mt-2 ml-2 border-l-2 border-primary/30 pl-3 space-y-2"
+                                          >
+                                            {values.map((value) => (
+                                              <Link
+                                                key={value}
+                                                href={`/category/${
+                                                  selectedMobileCategory.slug
+                                                }?${
+                                                  attr.name
+                                                }=${encodeURIComponent(value)}`}
+                                                onClick={closeMenu}
+                                                className="flex items-center justify-between py-2 px-3 text-xs text-gray-600 hover:text-primary hover:bg-primary/5 rounded transition-all group"
+                                              >
+                                                <span>{value}</span>
+                                                <ArrowUpRight
+                                                  size={14}
+                                                  className="text-primary opacity-0 group-hover:opacity-100"
+                                                />
+                                              </Link>
+                                            ))}
+                                          </motion.div>
+                                        )}
+                                      </AnimatePresence>
+                                    </div>
+                                  );
+                                })}
+                          </div>
                         </div>
-                      </div>
-                    )}
+                      );
+                    })()}
                   </div>
                 </motion.div>
               ) : (
@@ -1082,6 +1077,7 @@ const Header = ({ isCategory = true }: HeaderProps) => {
             )}
           </div>
         )}
+
       </header>
     </>
   );
