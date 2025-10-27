@@ -14,7 +14,13 @@ import { categories, attributeTemplates, subcategories } from '../db/schema';
 // Where to save the output
 const OUTPUT_PATH = path.join(process.cwd(), "data", "categories.json");
 
-const sql = neon('postgresql://neondb_owner:npg_nPvBRUd4j7lI@ep-wild-voice-a1wu0vsb-pooler.ap-southeast-1.aws.neon.tech/360electronics?sslmode=require&channel_binding=require');
+const DB_URL = process.env.DATABASE_URL;
+if (!DB_URL) {
+  console.error("❌ DATABASE_URL environment variable is not set.");
+  process.exit(1);
+}
+
+const sql = neon(DB_URL);
 const db = drizzle(sql, { schema: { categories, attributeTemplates, subcategories } });
 
 

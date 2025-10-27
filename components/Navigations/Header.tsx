@@ -221,6 +221,89 @@ export const categoryFeatures: Record<string, { [feature: string]: string[] }> =
       Connectivity: ["Wired", "Wireless", "Bluetooth"],
       Features: ["RGB Lighting", "Noise Cancellation", "Adjustable DPI"],
     },
+
+    // 🖨️ Printer
+    Printer: {
+      brand: ["HP", "EPSON", "CANON", "BROTHER", "Dell"],
+    },
+
+    // // ❄️ CPU Cooler
+    // "CPU Cooler": {
+    //   Type: ["Air Cooler", "Liquid Cooler", "AIO Liquid Cooler"],
+    //   Brand: ["Noctua", "Corsair", "Cooler Master", "NZXT", "Arctic"],
+    //   Socket: ["AM4", "AM5", "LGA 1700", "LGA 1200", "LGA 1151"],
+    // },
+
+    // 💾 RAM
+    RAM: {
+      "Memory Type": ["DDR4", "DDR5"],
+      Capacity: ["8 GB", "16 GB", "32 GB", "64 GB", "128 GB"],
+      Speed: ["3200 MHz", "3600 MHz", "6000 MHz", "7200 MHz"],
+    },
+
+    // 💿 Storage
+    Storage: {
+      Category: ["SDD", "External SSD", "NVMe", "SSD"],
+      Capacity: ["256GB", "512GB", "1TB", "2TB", "4TB", "8TB"],
+    },
+
+    // 🔌 Power Supply
+    "Power Supply": {
+      Wattage: [
+        "500 Watt",
+        "650 Watt",
+        "750 Watt",
+        "850 Watt",
+        "1000 Watt",
+        "1200 Watt",
+      ],
+      Certification: [
+        "80 PLUS BRONZE",
+        "80 Plus Gold",
+        "80 Plus Platinum",
+        "80 Plus Titanium",
+      ],
+      Modular: [
+        "Non Modular",
+        "Semi Modular",
+        "Fully Modular",
+        "80 Plus Platinum",
+      ],
+    },
+
+    // 🗄️ Cabinets
+    Cabinets: {
+      "Cabinet Size": ["Mid Tower", "Full Tower", "Mini Tower"],
+      brand: ["MSI", "FRACTAL DESIGN", "NZXT", "COOLER MASTER", "LIAN LI"],
+    },
+
+    // ⌨️ Keyboard and Mouse
+    "Keyboard and Mouse": {
+      brand: [
+        "ACER",
+        "ANT ESPORTS",
+        "ASUS",
+        "COOLER MASTER",
+        "HyperX",
+        "Logitech",
+        "RAZER",
+      ],
+    },
+
+    // 🎧 Headset
+    Headset: {
+      brand: [
+        "Adata",
+        "ANT ESPORTS",
+        "Boat",
+        "Cosmic Byte",
+        "HyperX",
+        "Logitech",
+        "Dawg",
+        "RAPOO",
+        "RAZER"
+      ],
+    },
   };
 
 const getCategoryIcon = (categoryName: string) => {
@@ -274,18 +357,45 @@ const Header = ({ isCategory = true }: HeaderProps) => {
       attributeValues: {}, // empty initially
     }));
 
+    const orderMap: Record<string, number> = {
+      Laptops: 0,
+      Processors: 1,
+      "Graphics Card": 2,
+      Monitors: 3,
+      Printer: 4,
+      Motherboard: 5,
+      "CPU Cooler": 6,
+      RAM: 7,
+      Storage: 8,
+      "Power Supply": 9,
+      Cabinets: 10,
+      "Keyboard and Mouse": 11,
+      Headset: 12,
+      Peripherals: 13,
+    };
+
+    const sortedAllCategories = [...baseCategories].sort((a, b) => {
+      const aOrder = orderMap[a.name] ?? 99;
+      const bOrder = orderMap[b.name] ?? 99;
+      return aOrder - bOrder;
+    });
+
     const allowed = new Set([
       "Laptops",
       "Processors",
       "Graphics Card",
       "Monitors",
+      "Printer",
       "Motherboard",
-      "Peripherals",
     ]);
 
-    setAllCategories(baseCategories);
-    setCategories(baseCategories.filter((c) => allowed.has(c.name)));
-    setHasFetched(true); 
+    const sortedCategories = sortedAllCategories.filter((c) =>
+      allowed.has(c.name)
+    );
+
+    setAllCategories(sortedAllCategories);
+    setCategories(sortedCategories);
+    setHasFetched(true);
   }, []);
 
   useEffect(() => {
@@ -382,7 +492,6 @@ const Header = ({ isCategory = true }: HeaderProps) => {
           isScrolled ? "shadow-md" : ""
         }`}
       >
-
         <div className="mx-auto flex items-center justify-between gap-2">
           <div className="flex items-center">
             <button
@@ -468,7 +577,7 @@ const Header = ({ isCategory = true }: HeaderProps) => {
               animate={{ x: 0 }}
               exit={{ x: "-100%" }}
               transition={{ duration: 0.3, ease: "easeInOut" }}
-              className="fixed inset-y-0 left-0 z-50 lg:hidden bg-white overflow-hidden"
+              className="fixed inset-y-0 left-0 z-100 lg:hidden bg-white overflow-hidden"
               style={{ width: "80vw", maxWidth: "320px", height: "100dvh" }}
               ref={menuRef}
             >
@@ -1077,7 +1186,6 @@ const Header = ({ isCategory = true }: HeaderProps) => {
             )}
           </div>
         )}
-
       </header>
     </>
   );

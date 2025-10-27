@@ -938,55 +938,5 @@
         "isActive": true
       }
     ]
-  },
-  {
-    "id": "5ca85c66-e6be-4011-9329-09eea0870fef",
-    "name": "CPU Cooler",
-    "slug": "cpu-cooler",
-    "description": null,
-    "imageUrl": null,
-    "isActive": true,
-    "displayOrder": "0",
-    "createdAt": "2025-09-18T15:26:09.207Z",
-    "updatedAt": "2025-09-18T15:26:09.207Z",
-    "attributes": [
-      {
-        "name": "Manufacturer",
-        "type": "text",
-        "isRequired": true,
-        "displayOrder": 0,
-        "isFilterable": true
-      },
-      {
-        "name": "Cooling Type",
-        "type": "text",
-        "isRequired": true,
-        "displayOrder": 1,
-        "isFilterable": true
-      },
-      {
-        "name": "Radiator Size",
-        "type": "text",
-        "isRequired": false,
-        "displayOrder": 2,
-        "isFilterable": false
-      }
-    ],
-    "subcategories": [
-      {
-        "id": "d5726216-41f6-4eba-a5f2-80cb5314d21e",
-        "name": "Air Cooler",
-        "slug": "air-cooler",
-        "displayOrder": "0",
-        "isActive": true
-      },
-      {
-        "id": "4aef7426-1cf5-4d26-9e98-99b80f161262",
-        "name": "Liquid Cooler",
-        "slug": "liquid-cooler",
-        "displayOrder": "1",
-        "isActive": true
-      }
-    ]
   }
 ]

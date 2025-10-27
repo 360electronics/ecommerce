@@ -72,7 +72,7 @@ export async function GET(req: Request) {
           ne(variants.id, variantId)
         )
       )
-      .limit(4);
+      .limit(15);
 
     return NextResponse.json(similar);
   } catch (err) {

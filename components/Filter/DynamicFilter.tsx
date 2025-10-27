@@ -454,7 +454,7 @@ const DynamicFilter: React.FC<FilterProps> = ({ category, products, onFilterChan
               animate={{ scale: 1, opacity: 1 }}
               exit={{ scale: 0.95, opacity: 0 }}
               transition={{ type: 'spring', damping: 25, stiffness: 300 }}
-              className="fixed bottom-0 left-0 w-full z-50 md:hidden flex items-center justify-center"
+              className="fixed bottom-0 left-0 w-full z-100 md:hidden flex items-center justify-center"
             >
               <div className="bg-white  w-full h-[92dvh] flex flex-col shadow-2xl overflow-hidden">
                 {/* Header */}
