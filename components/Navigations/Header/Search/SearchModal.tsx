@@ -1,9 +1,9 @@
-'use client'
-import React, { useEffect, useRef, useState } from 'react';
-import { X, Clock, TrendingUp } from 'lucide-react';
-import { motion, AnimatePresence } from 'framer-motion';
-import { fetchProducts } from '@/utils/products.util';
-import Fuse from 'fuse.js';
+"use client";
+import React, { useEffect, useRef, useState, useCallback } from "react";
+import { X, Clock, TrendingUp } from "lucide-react";
+import { motion, AnimatePresence } from "framer-motion";
+import Fuse from "fuse.js";
+import { fetchSearchProducts } from "@/utils/products.util";
 
 interface SearchModalProps {
   searchQuery: string;
@@ -26,6 +26,9 @@ interface Product {
   }[];
 }
 
+const CACHE_KEY = "search-products-cache";
+const CACHE_TTL = 24 * 60 * 60 * 1000; // 24 hours in ms
+
 const SearchModal: React.FC<SearchModalProps> = ({
   searchQuery,
   setSearchQuery,
@@ -37,114 +40,133 @@ const SearchModal: React.FC<SearchModalProps> = ({
 }) => {
   const modalRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
-  const [products, setProducts] = useState<Product[]>([]);
+  const [allProducts, setAllProducts] = useState<Product[]>([]);
   const [fuse, setFuse] = useState<Fuse<Product> | null>(null);
+  const [loading, setLoading] = useState(false);
+  const [hasLoaded, setHasLoaded] = useState(false);
 
-  // Fetch products on mount
-  useEffect(() => {
-    const loadProducts = async () => {
-      try {
-        const fetchedProducts = await fetchProducts();
-        setProducts(fetchedProducts);
-      } catch (error) {
-        console.error('Error fetching products:', error);
+  // Helper to get cached products
+  const getCachedProducts = useCallback((): Product[] | null => {
+    try {
+      const cached = localStorage.getItem(CACHE_KEY);
+      if (!cached) return null;
+      const { data, timestamp } = JSON.parse(cached);
+      if (Date.now() - timestamp > CACHE_TTL) {
+        localStorage.removeItem(CACHE_KEY);
+        return null;
       }
-    };
-    loadProducts();
+      return data;
+    } catch {
+      localStorage.removeItem(CACHE_KEY);
+      return null;
+    }
   }, []);
 
-  // Initialize Fuse.js with weighted keys for better relevance
+  // Helper to cache products
+  const cacheProducts = useCallback((products: Product[]) => {
+    try {
+      localStorage.setItem(
+        CACHE_KEY,
+        JSON.stringify({ data: products, timestamp: Date.now() })
+      );
+    } catch {
+      // Ignore cache errors (e.g., storage quota)
+    }
+  }, []);
+
+  // Load products (from cache or API)
+  const loadProducts = useCallback(async (forceFetch = false) => {
+    if (loading || (allProducts.length > 0 && !forceFetch)) return;
+
+    const cached = getCachedProducts();
+    if (cached && !forceFetch) {
+      setAllProducts(cached);
+      setHasLoaded(true);
+      return;
+    }
+
+    try {
+      setLoading(true);
+      const results = await fetchSearchProducts('');
+      const products = Array.isArray(results) ? results : [];
+      setAllProducts(products);
+      cacheProducts(products);
+      setHasLoaded(true);
+    } catch (err) {
+      console.error("Failed to load products:", err);
+      setAllProducts([]);
+      // Optional: Fall back to debounced API for searches in this session
+    } finally {
+      setLoading(false);
+    }
+  }, [loading, allProducts.length, getCachedProducts, cacheProducts]);
+
+  // Trigger load on first search (or force if needed)
   useEffect(() => {
-    if (products.length > 0) {
-      const fuseInstance = new Fuse(products, {
+    if (searchQuery.trim() && !hasLoaded) {
+      loadProducts();
+    }
+  }, [searchQuery, hasLoaded, loadProducts]);
+
+  // Initialize Fuse.js on loaded products (only name fields for lighter index)
+  useEffect(() => {
+    if (allProducts.length > 0 && searchQuery.trim()) {
+      const fuseInstance = new Fuse(allProducts, {
         keys: [
-          { name: 'shortName', weight: 0.5 },
-          { name: 'fullName', weight: 0.4 },
+          { name: "shortName", weight: 0.6 },
+          { name: "fullName", weight: 0.4 },
+          // Exclude description from index to save memory/CPU; use it only for display
         ],
-        threshold: 0.35,         // allow partial fuzzy matches
-        minMatchCharLength: 2,
-        ignoreLocation: true,    // match anywhere in string
+        threshold: 0.35,
         includeScore: true,
-        shouldSort: true,
-        useExtendedSearch: true, // lets "asus laptop" behave better
+        ignoreLocation: true,
       });
       setFuse(fuseInstance);
+    } else if (!searchQuery.trim()) {
+      setFuse(null);
     }
-  }, [products]);
+  }, [allProducts, searchQuery]);
 
-  // Focus trap for accessibility
-  useEffect(() => {
-    inputRef.current?.focus();
-    const handleKeyDown = (e: KeyboardEvent) => {
-      if (e.key === 'Escape') {
-        onClose();
-      }
-      if (e.key === 'Tab') {
-        const focusableElements = modalRef.current?.querySelectorAll(
-          'button, [href], input, select, textarea, [tabindex]:not([tabindex="-1"])'
-        );
-        if (focusableElements) {
-          const firstElement = focusableElements[0] as HTMLElement;
-          const lastElement = focusableElements[focusableElements.length - 1] as HTMLElement;
-          if (e.shiftKey && document.activeElement === firstElement) {
-            lastElement.focus();
-            e.preventDefault();
-          } else if (!e.shiftKey && document.activeElement === lastElement) {
-            firstElement.focus();
-            e.preventDefault();
-          }
-        }
-      }
-    };
-    document.addEventListener('keydown', handleKeyDown);
-    return () => document.removeEventListener('keydown', handleKeyDown);
-  }, [onClose]);
-
-  // Perform search and sort results by relevance (lower score = better match)
+  // Derive ranked results (now capped early)
   const searchResults = (() => {
-    if (!fuse || !searchQuery) return [];
+    if (!fuse || !searchQuery.trim()) return [];
 
     const results = fuse.search(searchQuery);
-
-    // ✅ If Fuse returned nothing, fallback to simple "includes" match
-    if (results.length === 0) {
-      const lowerQ = searchQuery.toLowerCase();
-      return products
-        .filter(
-          (p) =>
-            p.shortName?.toLowerCase().includes(lowerQ) ||
-            p.fullName?.toLowerCase().includes(lowerQ) ||
-            p.description?.toLowerCase().includes(lowerQ)
-        )
-        .map((item) => ({ item, score: 1 })); 
-    }
-
+    // Already limited by Fuse's `limit`, but sort explicitly
     return results.sort((a, b) => (a.score || 0) - (b.score || 0));
   })();
 
-  // Extract suggestions and matching products, limited to 5 and 4 respectively
-  const suggestions = searchResults
-    .map((result) => result.item.shortName || result.item.fullName || '')
-    .slice(0, 5);
+  // Suggestions: Full product titles that start with the query
+  const suggestions = Array.from(
+    new Set<string>(
+      searchResults
+        .slice(0, 5)
+        .map((res) => {
+          const title = res.item.shortName || res.item.fullName || "";
+          return title.toLowerCase().startsWith(searchQuery.toLowerCase()) &&
+            title.toLowerCase() !== searchQuery.toLowerCase()
+            ? title
+            : null;
+        })
+        .filter((t): t is string => !!t)
+    )
+  ).slice(0, 5);
 
-  const matchingProducts = searchResults
-    .map((result) => result.item)
-    .slice(0, 4);
-
-  // Trending searches
   const trendingSearches = [
-    'MacBook',
-    'White Keyboard',
-    'Asus Laptop',
-    'Gaming Headphone',
-    'Gaming Chair',
-    'Mouse Pad',
-    'HP Mouse',
-    'Acer ALG',
-    'Dell Laptop',
-    'Monitor',
-    'RGB Gaming Keyboard',
+    "MacBook",
+    "White Keyboard",
+    "Asus Laptop",
+    "Gaming Headphone",
+    "Gaming Chair",
+    "Mouse Pad",
+    "HP Mouse",
+    "Acer ALG",
+    "Dell Laptop",
+    "Monitor",
   ];
+
+  // Show loading if searching but not ready
+  const isSearching = searchQuery.trim() && (loading || !hasLoaded);
 
   return (
     <AnimatePresence>
@@ -157,7 +179,6 @@ const SearchModal: React.FC<SearchModalProps> = ({
           className="fixed inset-0 z-50 bg-white md:bg-black/80 flex justify-center items-start md:items-center"
           role="dialog"
           aria-modal="true"
-          aria-label="Search modal"
         >
           <motion.div
             ref={modalRef}
@@ -176,16 +197,12 @@ const SearchModal: React.FC<SearchModalProps> = ({
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
                 onKeyDown={(e) => {
-                  if (e.key === 'Enter') {
-                    handleSearchItemClick(searchQuery);
-                  }
+                  if (e.key === "Enter") handleSearchItemClick(searchQuery);
                 }}
-                aria-label="Search input"
               />
               <button
                 onClick={onClose}
-                className=" cursor-pointer text-gray-500 hover:text-gray-800 p-1 rounded-full hover:bg-gray-100 transition-colors"
-                aria-label="Close search modal"
+                className="text-gray-500 hover:text-gray-800 p-1 rounded-full hover:bg-gray-100 transition-colors"
               >
                 <X size={20} />
               </button>
@@ -193,23 +210,22 @@ const SearchModal: React.FC<SearchModalProps> = ({
 
             {/* Content */}
             <div className="p-6 max-h-[70vh] overflow-y-auto">
-              {searchQuery ? (
+              {isSearching ? (
+                <p className="text-sm text-gray-500">Loading products...</p>
+              ) : searchQuery ? (
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  {/* Suggestions (Left) */}
+                  {/* Suggestions */}
                   <div>
-                    <div className="flex items-center mb-3 text-gray-700">
-                      <span className="font-medium text-sm">Suggestions</span>
-                    </div>
+                    <h3 className="font-medium text-sm mb-3 text-gray-700">Suggestions</h3>
                     <ul className="space-y-2">
                       {suggestions.length > 0 ? (
-                        suggestions.map((suggestion, index) => (
-                          <li key={index}>
+                        suggestions.map((title, i) => (
+                          <li key={i}>
                             <button
-                              className=" cursor-pointer w-full text-left text-sm text-gray-700 hover:bg-gray-100 rounded px-3 py-2 transition-colors"
-                              onClick={() => handleSearchItemClick(suggestion)}
-                              aria-label={`Search for ${suggestion}`}
+                              onClick={() => handleSearchItemClick(title)}
+                              className="w-full text-left text-sm text-gray-700 hover:bg-gray-100 rounded px-3 py-2 transition-colors"
                             >
-                              {suggestion}
+                              {title}
                             </button>
                           </li>
                         ))
@@ -219,51 +235,53 @@ const SearchModal: React.FC<SearchModalProps> = ({
                     </ul>
                   </div>
 
-                  {/* Matching Products (Right) */}
+                  {/* Ranked Products */}
                   <div>
-                    <div className="flex items-center mb-3 text-gray-700">
-                      <span className="font-medium text-sm">Matching Products</span>
-                    </div>
-                    <div className="space-y-4">
-                      {matchingProducts.length > 0 ? (
-                        matchingProducts.map((product) => (
-                          <div
-                            key={product.id}
-                            className="flex items-center bg-gray-50 rounded-lg p-3 hover:bg-gray-100 transition-colors cursor-pointer"
-                          >
-                            {product.variants[0]?.productImages[0]?.url && (
-                              <img
-                                src={product.variants[0].productImages[0].url}
-                                alt={product.shortName || product.fullName || 'Product image'}
-                                className="w-16 h-16 object-contain mr-4"
-                              />
-                            )}
-                            <div>
-                              <button
-                                className="text-sm font-medium text-gray-800 hover:text-primary"
-                                onClick={() => handleSearchItemClick(product.shortName || product.fullName || '')}
-                                aria-label={`View ${product.shortName || product.fullName}`}
-                              >
-                                {product.shortName || product.fullName}
-                              </button>
-                              <p className="text-xs text-gray-500 line-clamp-2">{product.description}</p>
-                              {product.variants[0]?.ourPrice && (
-                                <p className="text-sm font-bold text-gray-800">
-                                  ₹{parseFloat(product.variants[0].ourPrice).toLocaleString('en-IN')}
-                                </p>
-                              )}
+                    <h3 className="font-medium text-sm mb-3 text-gray-700">Matching Products</h3>
+                    {searchResults.length > 0 ? (
+                      searchResults.slice(0, 6).map(({ item: product }) => (
+                        <div
+                          key={product.id}
+                          className="flex items-center bg-gray-50 rounded-lg p-3 hover:bg-gray-100 transition-colors cursor-pointer"
+                          onClick={() =>
+                            handleSearchItemClick(product.shortName || product.fullName || "")
+                          }
+                        >
+                          {product.variants?.[0]?.productImages?.[0]?.url ? (
+                            <img
+                              src={product.variants[0].productImages[0].url}
+                              alt={product.shortName || product.fullName || "Product"}
+                              loading="eager"
+                              className="w-16 h-16 object-contain mr-4"
+                            />
+                          ) : (
+                            <div className="w-16 h-16 bg-gray-200 mr-4 rounded flex items-center justify-center text-xs text-gray-400">
+                              No Image
                             </div>
+                          )}
+                          <div className="flex-grow min-w-0">
+                            <p className="text-sm font-medium text-gray-800 truncate">
+                              {product.shortName || product.fullName}
+                            </p>
+                            {product.variants?.[0]?.ourPrice && (
+                              <p className="text-sm font-semibold text-gray-700">
+                                ₹{parseFloat(product.variants[0].ourPrice).toLocaleString("en-IN")}
+                              </p>
+                            )}
+                            <p className="text-xs text-gray-500 mt-1 line-clamp-2">
+                              {product.description}
+                            </p>
                           </div>
-                        ))
-                      ) : (
-                        <p className="text-sm text-gray-500">No products found.</p>
-                      )}
-                    </div>
+                        </div>
+                      ))
+                    ) : (
+                      <p className="text-sm text-gray-500">No products found.</p>
+                    )}
                   </div>
                 </div>
               ) : (
                 <>
-                  {/* Recent Searches */}
+                  {/* Recent + Trending (unaffected by loading) */}
                   {recentSearches.length > 0 && (
                     <div className="mb-6">
                       <div className="flex items-center justify-between mb-3">
@@ -273,25 +291,22 @@ const SearchModal: React.FC<SearchModalProps> = ({
                         </div>
                         <button
                           onClick={clearAllRecentSearches}
-                          className="text-sm text-primary hover:text-primary-hover cursor-pointer transition-colors"
-                          aria-label="Clear all recent searches"
+                          className="text-sm text-primary hover:text-primary-hover"
                         >
                           Clear All
                         </button>
                       </div>
                       <div className="flex flex-wrap gap-2">
-                        {recentSearches.map((search, index) => (
+                        {recentSearches.map((search, i) => (
                           <button
-                            key={index}
-                            className="flex cursor-pointer items-center bg-gray-100 rounded-full px-3 py-1 text-sm text-gray-700 hover:bg-gray-200 transition-colors"
+                            key={i}
+                            className="flex items-center bg-gray-100 rounded-full px-3 py-1 text-sm text-gray-700 hover:bg-gray-200"
                             onClick={() => handleSearchItemClick(search)}
-                            aria-label={`Search for ${search}`}
                           >
                             {search}
                             <button
                               onClick={(e) => removeRecentSearch(search, e)}
-                              className=" cursor-pointer ml-2 text-gray-500 hover:text-gray-700 p-1 rounded-full hover:bg-gray-300"
-                              aria-label={`Remove ${search} from recent searches`}
+                              className="ml-2 text-gray-500 hover:text-gray-700 p-1 rounded-full hover:bg-gray-300"
                             >
                               <X size={14} />
                             </button>
@@ -300,28 +315,23 @@ const SearchModal: React.FC<SearchModalProps> = ({
                       </div>
                     </div>
                   )}
-
-                  {/* Trending Searches */}
-                  <div className="mb-6">
+                  <div>
                     <div className="flex items-center mb-3 text-gray-700">
                       <TrendingUp size={16} className="mr-2" />
                       <span className="font-medium text-sm">Trending Searches</span>
                     </div>
                     <div className="flex flex-wrap gap-2">
-                      {trendingSearches.map((search, index) => (
+                      {trendingSearches.map((search, i) => (
                         <button
-                          key={index}
-                          className="bg-gray-100 cursor-pointer rounded-full px-3 py-1 text-sm text-gray-700 hover:bg-gray-200 transition-colors"
+                          key={i}
+                          className="bg-gray-100 rounded-full px-3 py-1 text-sm text-gray-700 hover:bg-gray-200"
                           onClick={() => handleSearchItemClick(search)}
-                          aria-label={`Search for ${search}`}
                         >
                           {search}
                         </button>
                       ))}
                     </div>
                   </div>
-
-
                 </>
               )}
             </div>

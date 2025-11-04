@@ -35,7 +35,7 @@ import { BsMotherboard as Motherboard } from "react-icons/bs";
 import categoryData from "@/data/categories.json";
 
 import { motion, AnimatePresence } from "framer-motion";
-import { fetchProducts } from "@/utils/products.util";
+
 
 interface HeaderProps {
   isCategory?: boolean;
@@ -373,6 +373,8 @@ const Header = ({ isCategory = true }: HeaderProps) => {
       Headset: 12,
       Peripherals: 13,
     };
+
+    
 
     const sortedAllCategories = [...baseCategories].sort((a, b) => {
       const aOrder = orderMap[a.name] ?? 99;
