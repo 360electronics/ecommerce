@@ -95,56 +95,73 @@ const DynamicFilter: React.FC<FilterProps> = ({ category, products, onFilterChan
   };
 
   const generatedSections = useMemo(() => {
-    if (products.length === 0) return [];
+  if (products.length === 0) return [];
 
-    const sections: FilterSection[] = [];
-    const optionsMap: { [key: string]: { id: string; label: string; checked: boolean }[] } = {
-      color: filterOptions.colors.map((value) => ({ id: value, label: value, checked: false })),
-      brand: filterOptions.brands.map((value) => ({ id: value, label: value, checked: false })),
-      storage: filterOptions.storageOptions.map((value) => ({ id: value, label: value, checked: false })),
-      category: category ? [] : generateOptions(products, 'category'),
-      rating: generateRatingOptions(products),
+  const sections: FilterSection[] = [];
+
+  Object.keys(filterOptions.attributes).forEach((attrKey) => {
+    const values = filterOptions.attributes[attrKey];
+    if (!values || values.length === 0) return;
+
+    // 🔹 Robust normalization for attribute values
+    const normalize = (v: string) => {
+      return v
+        ?.toString()
+        .normalize("NFKD")
+        .replace(/[\u200E\u200F\u00A0]/g, "") // remove invisible chars
+        .replace(/[^a-zA-Z0-9+]/g, " ")
+        .replace(/\s+/g, " ")
+        .trim()
+        .toLowerCase();
     };
 
-    filterConfig.forEach((config) => {
-      if (!config.enabled) return;
-      if (config.type === 'range' && config.id === 'price') {
-        const maxPrice = roundMaxPrice(filterOptions.priceRange.max || 1000);
-        sections.push({
-          id: 'price',
-          title: config.title,
-          type: 'range',
-          min: 0,
-          max: maxPrice,
-          currentMin: 0,
-          currentMax: maxPrice,
-          step: config.step,
-        });
-      } else if (config.type === 'checkbox' && optionsMap[config.id]?.length > 0) {
-        sections.push({
-          id: config.id,
-          title: config.title,
-          type: 'checkbox',
-          options: optionsMap[config.id],
-        });
+    // 🔹 Deduplicate by normalized string
+    const uniqueNormalized = new Map<string, string>();
+    values.forEach((val) => {
+      const norm = normalize(val);
+      if (!uniqueNormalized.has(norm)) {
+        uniqueNormalized.set(norm, val.trim());
       }
     });
 
-    Object.keys(filterOptions.attributes).forEach((attrKey) => {
-      if (filterConfig.some((config) => config.id === attrKey)) return;
-      const values = filterOptions.attributes[attrKey];
-      if (values.length > 0) {
-        sections.push({
-          id: attrKey,
-          title: attrKey.charAt(0).toUpperCase() + attrKey.slice(1).replace(/([A-Z])/g, ' $1'),
-          type: 'checkbox',
-          options: values.map((value) => ({ id: value, label: value, checked: false })),
-        });
-      }
-    });
+    // 🔹 Filter valid values (exist in current products)
+    const validValues = Array.from(uniqueNormalized.values()).filter((val) =>
+      products.some(
+        (p) =>
+          p.attributes &&
+          p.attributes[attrKey] &&
+          normalize(p.attributes[attrKey] as string) === normalize(val)
+      )
+    );
 
-    return sections;
-  }, [products, category, filterOptions]);
+    if (validValues.length > 0) {
+      // 🔹 Format label for display (pretty title case)
+      const formatLabel = (val: string) =>
+        val
+          .replace(/[\u200E\u200F\u00A0]/g, "")
+          .replace(/\s+/g, " ")
+          .trim()
+          .toLowerCase()
+          .replace(/\b\w/g, (c) => c.toUpperCase());
+
+      sections.push({
+        id: attrKey,
+        title:
+          attrKey.charAt(0).toUpperCase() +
+          attrKey.slice(1).replace(/([A-Z])/g, " $1"),
+        type: "checkbox",
+        options: validValues.map((value) => ({
+          id: value.trim(),
+          label: formatLabel(value),
+          checked: false,
+        })),
+      });
+    }
+  });
+
+  return sections;
+}, [products, filterOptions]);
+
 
   useEffect(() => {
     if (generatedSections.length === 0 || isInitialized.current) return;
@@ -678,7 +695,7 @@ const DynamicFilter: React.FC<FilterProps> = ({ category, products, onFilterChan
                             />
                             <label
                               htmlFor={`${section.id}-${option.id}`}
-                              className="ml-2 text-sm text-gray-600"
+                              className="ml-2 text-sm text-gray-600 uppercase"
                             >
                               {option.label}
                             </label>
