@@ -25,14 +25,17 @@ const range: Record<string, string> = {
   1000: 'Above ₹1,000',
   5000: 'Above ₹5,000',
   10000: 'Above ₹10,000',
-  25000: 'Above ₹25,000',
+  30000: 'Above ₹30,000',
+  50000: 'Above ₹50,000',
+  
 };
 
 const CATEGORIES: Record<string, string> = {
   1000: 'Above ₹1,000',
   5000: 'Above ₹5,000',
   10000: 'Above ₹10,000',
-  25000: 'Above ₹25,000',
+  30000: 'Above ₹30,000',
+  50000: 'Above ₹50,000',
 };
 
 export default function CartOfferProductsPage() {
@@ -40,7 +43,8 @@ export default function CartOfferProductsPage() {
     1000: [],
     5000: [],
     10000: [],
-    25000: [],
+    30000: [],
+    50000: [],
   });
   const [activeCategory, setActiveCategory] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
@@ -65,7 +69,7 @@ export default function CartOfferProductsPage() {
         const response = await fetch('/api/cart/range-offers');
         if (!response.ok) throw new Error('Failed to fetch');
         const products: CartOfferProduct[] = await response.json();
-        const categorized: CategorizedProducts = { 1000: [], 5000: [], 10000: [], 25000: [] };
+        const categorized: CategorizedProducts = { 1000: [], 5000: [], 10000: [], 30000: [], 50000: [] };
         products.forEach((product) => {
           categorized[product.range].push({
             ...product,
