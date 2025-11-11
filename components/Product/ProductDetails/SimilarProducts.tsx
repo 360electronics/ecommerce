@@ -3,6 +3,7 @@
 import React, { useEffect, useState } from "react";
 import ProductCardwithCart from "../ProductCards/ProductCardwithCart";
 import { FlattenedProduct } from "@/types/product";
+import ProductCardwithoutCart from "../ProductCards/ProductCardwithoutCart";
 
 interface SimilarProductsProps {
   product: FlattenedProduct | null;
@@ -89,7 +90,7 @@ const SimilarProducts: React.FC<SimilarProductsProps> = ({ product }) => {
             className="snap-start flex-shrink-0 relative"
             style={{ width: "calc(60vw - 32px)", maxWidth: "15rem" }}
           >
-            <ProductCardwithCart
+            <ProductCardwithoutCart
               
               image={
                 Array.isArray(variant.productImages)
@@ -120,6 +121,7 @@ const SimilarProducts: React.FC<SimilarProductsProps> = ({ product }) => {
               productId={variant.productId}
               variantId={variant.id}
               showViewDetails={true}
+              isHeartNeed={false}
               className="w-full"
             />
           </div>
