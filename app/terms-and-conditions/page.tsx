@@ -1,7 +1,7 @@
 import Header from "@/components/Navigations/Header";
 
 export default function TermsAndConditions() {
-  const lastUpdated = "July 1, 2025";
+  const lastUpdated = "Dec 01, 2025";
 
   return (
     <>

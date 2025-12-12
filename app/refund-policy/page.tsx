@@ -1,5 +1,5 @@
 export default function RefundPolicy() {
-    const lastUpdated = "August 1, 2025";
+    const lastUpdated = "Dec 01, 2025";
     
     return (
       <div className="min-h-screen bg-gray-50 py-8">
