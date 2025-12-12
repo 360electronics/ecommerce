@@ -188,20 +188,6 @@
         "slug": "catridge-printer",
         "displayOrder": "5",
         "isActive": true
-      },
-      {
-        "id": "9925029d-146e-4869-80f9-5df607f39d12",
-        "name": "Non-Wifi",
-        "slug": "non-wifi",
-        "displayOrder": "0",
-        "isActive": true
-      },
-      {
-        "id": "0be874f4-d159-4a3a-9ee6-120538cd5e07",
-        "name": "Wifi",
-        "slug": "wifi",
-        "displayOrder": "1",
-        "isActive": true
       }
     ]
   },
@@ -470,38 +456,10 @@
     ],
     "subcategories": [
       {
-        "id": "51a33038-abd2-4462-97ff-7d7c0f505fe2",
-        "name": "Gaming Laptops",
-        "slug": "gaming-laptops",
-        "displayOrder": "0",
-        "isActive": true
-      },
-      {
-        "id": "ed1625a2-a83f-40e6-ba83-9f5f617876b1",
-        "name": "Business Laptops",
-        "slug": "business-laptops",
-        "displayOrder": "1",
-        "isActive": true
-      },
-      {
         "id": "865dd8d1-e754-4c69-84b7-5f99bfc2bd08",
         "name": "ASUS",
         "slug": "asus",
         "displayOrder": "2",
-        "isActive": true
-      },
-      {
-        "id": "a1231b55-b1fc-4edc-8482-cbbad80302d7",
-        "name": "Student Laptops",
-        "slug": "student-laptops",
-        "displayOrder": "6",
-        "isActive": true
-      },
-      {
-        "id": "a99199e3-6231-4886-8c7b-64983179793e",
-        "name": "Workstation Laptops",
-        "slug": "workstation-laptops",
-        "displayOrder": "7",
         "isActive": true
       },
       {
@@ -523,13 +481,6 @@
         "name": "GIGABYTE",
         "slug": "gigabyte",
         "displayOrder": "4",
-        "isActive": true
-      },
-      {
-        "id": "b88642f4-5a4b-4bd5-a3ea-2d06b793f313",
-        "name": "Budget Laptops",
-        "slug": "budget-laptops",
-        "displayOrder": "5",
         "isActive": true
       },
       {
@@ -732,13 +683,6 @@
         "isActive": true
       },
       {
-        "id": "dc196697-2c5b-43b6-a351-e1169d780777",
-        "name": "UltraWide Monitors",
-        "slug": "ultrawide-monitors",
-        "displayOrder": "1",
-        "isActive": true
-      },
-      {
         "id": "17eb2b63-1501-4a28-ab78-d0aa8fd150f8",
         "name": "Professional Monitors",
         "slug": "professional-monitors",
@@ -757,13 +701,6 @@
         "name": "4K Monitors",
         "slug": "4k-monitors",
         "displayOrder": "4",
-        "isActive": true
-      },
-      {
-        "id": "5c06ea2d-1270-4ab4-99c9-4c90d020f110",
-        "name": "Curved Monitors",
-        "slug": "curved-monitors",
-        "displayOrder": "5",
         "isActive": true
       }
     ]

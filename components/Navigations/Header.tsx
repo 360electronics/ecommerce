@@ -141,13 +141,14 @@ export const categoryFeatures: Record<string, { [feature: string]: string[] }> =
         "GT 1000 Series",
         "GT 700 Series",
         "RTX 3000 Series",
+        "RTX 4000 Series",
         "RTX 5000 Series",
         "RX 500 Series",
         "RX 7000 Series",
         "RX 9000 Series",
       ],
-      "Memory Type": ["DDR3", "GDDR3", "GDDR5", "GDDR6", "GDDR6X", "GDDR7"],
-      Chipset: ["AMD Radeon", "NVIDIA GeForce", "NVIDIA Quadro"],
+      "Memory Type": ["GDDR3", "GDDR5", "GDDR6",  "GDDR7"],
+      Chipset: ["AMD Radeon", "NVIDIA GeForce"],
     },
 
     // 🖥 Monitors

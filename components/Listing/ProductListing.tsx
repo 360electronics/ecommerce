@@ -12,7 +12,6 @@ import { getNormalizer } from "@/utils/normalisers";
 
 const MemoizedProductCard = memo(ProductCard);
 
-
 const ProductListing = ({
   category,
   searchQuery,
@@ -245,8 +244,8 @@ const ProductListing = ({
               const normalizer = getNormalizer(key);
 
               // Normalize incoming filter values
-              const normalizedFilters = filters[key].map((val: string) =>
-                normalizer(val)
+              const normalizedFilters = filters[key].map((val) =>
+                normalizer(val).toLowerCase()
               );
 
               // Filter products using normalized product values
@@ -328,7 +327,10 @@ const ProductListing = ({
 
     productsForOptions.forEach((product) => {
       if (product.color) options.colors.add(product.color);
-      if (product.brand?.name) options.brands.add(product.brand.name);
+      if (product.brand?.name) {
+        console.log("ADDING BRAND:", product.brand.name);
+        options.brands.add(product.brand.name);
+      }
       if (product.storage) options.storageOptions.add(product.storage);
       const price = Number(product.ourPrice) || 0;
       if (price > 0) {
@@ -340,10 +342,14 @@ const ProductListing = ({
       if (product.attributes) {
         Object.entries(product.attributes).forEach(([key, value]) => {
           if (typeof value === "string" && value.trim()) {
+            const normalizer = getNormalizer(key);
+            const normalizedValue = normalizer(value);
+
             if (!options.attributes[key]) {
               options.attributes[key] = new Set<string>();
             }
-            options.attributes[key].add(value);
+
+            options.attributes[key].add(normalizedValue);
           }
         });
       }

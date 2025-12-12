@@ -1,31 +1,14 @@
-'use client';
-import React, { memo, useState } from 'react';
-import Link from 'next/link';
-import Image from 'next/image';
-import { FaInstagram as Instagram, FaFacebook as Facebook, FaYoutube as Youtube, FaWhatsapp as Whatsapp } from "react-icons/fa";
+"use client";
+import React, { memo } from "react";
+import Link from "next/link";
+import Image from "next/image";
+import { FaInstagram, FaFacebook, FaYoutube, FaWhatsapp } from "react-icons/fa";
 import { FaLocationDot } from "react-icons/fa6";
 
 type FeatureCardProps = {
   icon: React.ReactNode;
   title: string;
   description: string;
-};
-
-type FooterLinkProps = {
-  href: string;
-  label: string;
-  external?: boolean;
-};
-
-type SocialLinkProps = {
-  href: string;
-  icon: React.ReactNode;
-  label: string;
-};
-
-type Location = {
-  name: string;
-  address: string[];
 };
 
 const FeatureCard = memo(({ icon, title, description }: FeatureCardProps) => (
@@ -35,119 +18,97 @@ const FeatureCard = memo(({ icon, title, description }: FeatureCardProps) => (
     <p className="text-xs md:text-sm text-gray-600 mt-1">{description}</p>
   </div>
 ));
-FeatureCard.displayName = 'FeatureCard';
-
-// Reusable FooterLink component
-const FooterLink = ({ href, label, external = false }: FooterLinkProps) => (
-  <li>
-    <Link 
-      href={href} 
-      className="text-gray-300 hover:text-white text-sm transition-colors duration-200"
-      {...(external ? { target: "_blank", rel: "noopener noreferrer" } : {})}
-    >
-      {label}
-    </Link>
-  </li>
-);
-
-// Reusable SocialLink component
-const SocialLink = ({ href, icon, label }: SocialLinkProps) => (
-  <Link
-    href={href}
-    className="text-white hover:text-primary transition-colors duration-200"
-    aria-label={`Follow us on ${label}`}
-    target="_blank"
-    rel="noopener noreferrer"
-  >
-    {icon}
-  </Link>
-);
+FeatureCard.displayName = "FeatureCard";
 
 const Footer = () => {
-  // Define locations data
-  const locations: Location[] = [
-    {
-      name: "Coimbatore",
-      address: [
-        "Aruksan Arcade, 173-178,",
-        "Chinnasamy Naidu Rd, Siddhapudur,",
-        "New Siddhapudur, Coimbatore, Tamil Nadu 641044"
-      ]
-    },
-    {
-      name: "Chennai",
-      address: [
-        "No 8 B, 3 Rd Street ",
-        "Suramaniya Bharathi Nagar,",
-        "Tirumullaivayal,",
-        "Chennai - 600062"
-      ]
-    }
-  ];
-
-  // State for selected location
-  const [selectedLocation, setSelectedLocation] = useState(0); // Default is Coimbatore (index 0)
-  const [email, setEmail] = useState("");
-  const [isPrivacyChecked, setIsPrivacyChecked] = useState(false);
-
-  // Feature data
   const features = [
     {
-      icon: <img src="/footer/truck-bolts.svg" alt="Fast Delivery" width={24} height={24} />,
-      title: 'Fast Delivery',
-      description: 'Fast & reliable delivery options',
+      icon: (
+        <img
+          src="/footer/truck-bolts.svg"
+          alt="Fast Delivery"
+          width={24}
+          height={24}
+        />
+      ),
+      title: "Fast Delivery",
+      description: "Fast & reliable delivery options",
     },
     {
-      icon: <img src="/footer/digital-payments.svg" alt="Online payment" width={24} height={24} />,
-      title: 'Online Payment',
-      description: '100% secure & shop with confidence',
+      icon: (
+        <img
+          src="/footer/digital-payments.svg"
+          alt="Online payment"
+          width={24}
+          height={24}
+        />
+      ),
+      title: "Online Payment",
+      description: "100% secure & shop with confidence",
     },
     {
-      icon: <img src="/footer/shield-checks.svg" alt="Warranty" width={24} height={24} />,
-      title: 'Extended Warranty',
-      description: 'Extended protection for peace of mind',
+      icon: (
+        <img
+          src="/footer/shield-checks.svg"
+          alt="Warranty"
+          width={24}
+          height={24}
+        />
+      ),
+      title: "Extended Warranty",
+      description: "Extended protection for peace of mind",
     },
     {
-      icon: <img src="/footer/user-headsets.svg" alt="Customer Support" width={24} height={24} />,
-      title: 'Customer Support',
-      description: 'Expert help available 24/7',
+      icon: (
+        <img
+          src="/footer/user-headsets.svg"
+          alt="Customer Support"
+          width={24}
+          height={24}
+        />
+      ),
+      title: "Customer Support",
+      description: "Expert help available 24/7",
     },
   ];
 
   const categoryLinks = [
-    { href: '/category/laptops', label: 'Laptops' },
-    { href: '/category/monitors', label: 'Monitors' },
-    { href: '/category/accessories', label: 'Mouse & Keyboards' },
-    { href: '/category/processors', label: 'Processors' },
-    { href: '/category/graphics-card', label: 'Graphics Card' },
+    { href: "/category/laptops", label: "Laptops" },
+    { href: "/category/monitors", label: "Monitors" },
+    { href: "/category/accessories", label: "Mouse & Keyboards" },
+    { href: "/category/processors", label: "Processors" },
+    { href: "/category/graphics-card", label: "Graphics Card" },
   ];
 
   const accountLinks = [
-    { href: '/profile/info', label: 'My Account' },
-    { href: '/profile/orders', label: 'Order History' },
-    { href: '/profile/wishlist', label: 'Favourites' },
-    { href: '/profile/referrals', label: 'Referrals' },
-    { href: '/profile/help', label: 'Help Center' },
+    { href: "/profile/info", label: "My Account" },
+    { href: "/profile/orders", label: "Order History" },
+    { href: "/profile/wishlist", label: "Favourites" },
+    { href: "/profile/referrals", label: "Referrals" },
+    { href: "/profile/help", label: "Help Center" },
   ];
 
   const socialLinks = [
-    { href: 'https://www.instagram.com/computergarage360?igsh=MWFqbTdqcml2ZTQ5&utm_source=qr', icon: <Instagram size={24} />, label: 'Instagram' },
-    { href: 'https://wa.me/7558132543?text=Hello', icon: <Whatsapp size={24} />, label: 'WhatsApp' },
-    { href: 'https://youtube.com/@computergarage360?si=hg6lHMk8852pw_92', icon: <Youtube size={24} />, label: 'YouTube' },
+    {
+      href: "https://www.instagram.com/computergarage360",
+      icon: <FaInstagram size={22} />,
+      label: "Instagram",
+    },
+    {
+      href: "https://wa.me/7558132543?text=Hello",
+      icon: <FaWhatsapp size={22} />,
+      label: "WhatsApp",
+    },
+    {
+      href: "https://youtube.com/@computergarage360",
+      icon: <FaYoutube size={22} />,
+      label: "YouTube",
+    },
   ];
-
-  const handleNewsletterSubmit = () => {
-    if (email && isPrivacyChecked) {
-      console.log('Newsletter form submitted with email:', email);
-      // Add newsletter subscription logic here
-      setEmail("");
-      setIsPrivacyChecked(false);
-    }
-  };
 
   return (
     <footer className="bg-gray-100 w-full">
-      {/* Features section */}
+      {/* Features */}
       <div className="mx-auto px-4 md:px-10 py-8">
         <div className="grid grid-cols-2 md:grid-cols-4 gap-6 md:gap-12">
           {features.map((feature, index) => (
@@ -161,157 +122,143 @@ const Footer = () => {
         </div>
       </div>
 
-      {/* Main footer content */}
-      <div className="bg-black text-white py-12 w-full">
+      {/* Main Footer */}
+      <div className="bg-black text-white py-12">
         <div className="mx-auto px-4 md:px-10">
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-8">
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-12">
             {/* Categories */}
-            <nav aria-labelledby="categories-heading">
-              <h3 id="categories-heading" className="text-lg font-medium mb-4">Categories</h3>
+            <div>
+              <h3 className="text-lg font-medium mb-4">Categories</h3>
               <ul className="space-y-2">
                 {categoryLinks.map((item) => (
-                  <FooterLink key={item.href} href={item.href} label={item.label} />
+                  <li key={item.href}>
+                    <Link
+                      href={item.href}
+                      className="text-gray-300 hover:text-white text-sm transition"
+                    >
+                      {item.label}
+                    </Link>
+                  </li>
                 ))}
               </ul>
-            </nav>
+            </div>
 
             {/* My Account */}
-            <nav aria-labelledby="account-heading">
-              <h3 id="account-heading" className="text-lg font-medium mb-4">My Account</h3>
+            <div>
+              <h3 className="text-lg font-medium mb-4">My Account</h3>
               <ul className="space-y-2">
                 {accountLinks.map((item) => (
-                  <FooterLink key={item.href} href={item.href} label={item.label} />
+                  <li key={item.href}>
+                    <Link
+                      href={item.href}
+                      className="text-gray-300 hover:text-white text-sm transition"
+                    >
+                      {item.label}
+                    </Link>
+                  </li>
                 ))}
               </ul>
-            </nav>
-
-            {/* Newsletter */}
-            <div>
-              <h3 id="newsletter-heading" className="text-lg font-medium mb-4">Newsletter</h3>
-              <div className="mt-4 space-y-4">
-                <div>
-                  <label htmlFor="email" className="sr-only">
-                    Email Address
-                  </label>
-                  <input
-                    id="email"
-                    type="email"
-                    placeholder="Enter Email Address"
-                    className="w-full px-4 py-3 bg-transparent border border-gray-600 rounded focus:outline-none focus:border-primary text-white"
-                    required
-                    aria-describedby="email-error"
-                    value={email}
-                    onChange={(e) => setEmail(e.target.value)}
-                  />
-                </div>
-                <div className="flex items-start">
-                  <input
-                    type="checkbox"
-                    id="privacy"
-                    className="mt-1"
-                    required
-                    aria-describedby="privacy-label"
-                    checked={isPrivacyChecked}
-                    onChange={(e) => setIsPrivacyChecked(e.target.checked)}
-                  />
-                  <label htmlFor="privacy" className="ml-2 text-xs text-gray-400 space-x-1" id="privacy-label">
-                    I agree to the{' '}
-                    <Link href="/privacy" className="underline hover:text-white transition-colors duration-200">
-                      Privacy Policy
-                    </Link>{''}
-                    and{' '} 
-                    <Link href="/terms-and-conditions" className="underline hover:text-white transition-colors duration-200">
-                      Terms & Conditions
-                    </Link>
-                    .
-                  </label>
-                </div>
-                <button
-                  onClick={handleNewsletterSubmit}
-                  className="w-full py-3 cursor-pointer bg-gradient-to-r from-[#ff6b00] to-[#ff9f00] hover:to-primary-hover text-white font-medium rounded transition duration-200"
-                  aria-label="Subscribe to newsletter"
-                >
-                  Subscribe
-                </button>
-              </div>
             </div>
 
-            {/* Location */}
+            {/* Headquarters Only */}
             <div>
-              <h3 className="text-lg font-medium mb-4">Our Locations</h3>
-              <div className="flex space-x-4 mb-4">
-                {locations.map((location, index) => (
-                  <button
-                    key={index}
-                    className={`px-4 py-2  text-sm transition duration-200 ${
-                      selectedLocation === index
-                        ? "border-b-primary border-b text-white"
-                        : "text-gray-400 hover:text-white"
-                    }`}
-                    onClick={() => setSelectedLocation(index)}
-                    aria-pressed={selectedLocation === index}
-                    aria-label={`Select ${location.name} location`}
-                  >
-                    {location.name}
-                  </button>
-                ))}
-              </div>
-              
+              <h3 className="text-lg font-medium mb-4">Headquarters</h3>
+
               <div className="flex items-start">
-                <FaLocationDot className="text-primary mt-1 mr-2 flex-shrink-0" />
-                <address className="not-italic text-sm text-gray-300">
-                  {locations[selectedLocation].address.map((line, i) => (
-                    <React.Fragment key={i}>
-                      {line}
-                      <br />
-                    </React.Fragment>
-                  ))}
+                <FaLocationDot className="text-primary mt-1 mr-2" />
+
+                <address className="not-italic text-sm text-gray-300 leading-relaxed">
+                  Aruksan Arcade, 173-178,
+                  <br />
+                  Chinnasamy Naidu Rd, Siddhapudur,
+                  <br />
+                  Coimbatore, Tamil Nadu 641044
+                  <br />
                 </address>
               </div>
+
+              <Link
+                href="/store-locator"
+                className="inline-block mt-4 text-primary hover:text-primary/80 text-sm underline transition"
+              >
+                Find All Stores →
+              </Link>
+            </div>
+
+            {/* Legal */}
+            <div>
+              <h3 className="text-lg font-medium mb-4">Legal</h3>
+              <ul className="space-y-2">
+                <li>
+                  <Link
+                    href="/privacy"
+                    className="text-gray-300 hover:text-white text-sm transition"
+                  >
+                    Privacy Policy
+                  </Link>
+                </li>
+                <li>
+                  <Link
+                    href="/terms-and-conditions"
+                    className="text-gray-300 hover:text-white text-sm transition"
+                  >
+                    Terms & Conditions
+                  </Link>
+                </li>
+                <li>
+                  <Link
+                    href="/refund-policy"
+                    className="text-gray-300 hover:text-white text-sm transition"
+                  >
+                    Refund Policy
+                  </Link>
+                </li>
+                <li>
+                  <Link
+                    href="/cancellation-policy"
+                    className="text-gray-300 hover:text-white text-sm transition"
+                  >
+                    Cancellation Policy
+                  </Link>
+                </li>
+              </ul>
             </div>
           </div>
 
-          {/* About, Contact, and Social */}
-          <div className="mt-12">
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
-              {/* About and Contact */}
-              <nav aria-label="Company Links" className="flex flex-col space-y-2 md:space-y-0 md:flex-row md:space-x-6">
-                <Link href="/about" className="text-gray-300 hover:text-white text-sm transition-colors duration-200">
-                  About Us
-                </Link>
-                <Link href="/contact" className="text-gray-300 hover:text-white text-sm transition-colors duration-200">
-                  Contact Us
-                </Link>
-              </nav>
+        
 
-              {/* Social Icons */}
-              <div className="md:text-right">
-                <p className="mb-4 text-sm">Follow us</p>
-                <div className="flex space-x-4 md:justify-end">
-                  {socialLinks.map((social) => (
-                    <SocialLink
-                      key={social.href}
-                      href={social.href}
-                      icon={social.icon}
-                      label={social.label}
-                    />
-                  ))}
-                </div>
-              </div>
+          {/* Social */}
+          <div className="mt-12 flex flex-col md:flex-row md:items-center md:justify-between">
+            <div className="flex space-x-4 mb-4 md:mb-0">
+              {socialLinks.map((item) => (
+                <Link
+                  key={item.href}
+                  href={item.href}
+                  className="text-white hover:text-primary transition"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                >
+                  {item.icon}
+                </Link>
+              ))}
             </div>
+
+            <div></div>
           </div>
 
-          {/* Copyright and Developed By */}
-          <div className="mt-8 w-full flex flex-col md:flex-row md:items-center md:justify-between pt-4 border-t border-gray-800 text-xs text-gray-400">
-            <p>360 Electronics© 2020 - 2025. All Rights Reserved.</p>
-            <p className="mt-2 md:mt-0">
-              Designed & Developed by{' '}
+          {/* Bottom-most bar */}
+          <div className="mt-8 pt-6 border-t border-gray-800 text-center text-xs text-gray-400 flex flec-col md:flex-row justify-between items-center">
+            <p className="mb-2">
+              © 360 Electronics {new Date().getFullYear()}. All Rights Reserved.
+            </p>
+
+            <p>
+              Designed & Developed by{" "}
               <Link
                 href="https://redefyne.in"
-                className="underline text-primary hover:text-primary-hover transition-colors duration-200"
+                className="underline text-primary hover:text-primary/80 transition"
                 target="_blank"
                 rel="noopener noreferrer"
-                aria-label="Visit developer website"
               >
                 ReDefyne Labs
               </Link>
