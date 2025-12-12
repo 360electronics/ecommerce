@@ -42,7 +42,7 @@ export default function CancellationPolicy() {
 
                 <p><strong>4.</strong> The above charges apply only when such requests are initiated by the buyer. No charges are applicable if cancellation or modification steps are initiated by us.</p>
 
-                <p><strong>5.</strong> In case of complaints regarding products that come with a manufacturer's warranty, please contact the respective brand. 360 Electronics believes in assisting customers as much as possible and follows a liberal cancellation policy, subject to the above terms.</p>
+                <p><strong>5.</strong> In case of complaints regarding products that come with a manufacturer&apos;s warranty, please contact the respective brand. 360 Electronics believes in assisting customers as much as possible and follows a liberal cancellation policy, subject to the above terms.</p>
               </div>
             </section>
 
