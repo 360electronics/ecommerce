@@ -1,269 +1,317 @@
-"use client"
+"use client";
 
-import { useState, useEffect } from "react"
-import { useRouter } from "next/navigation"
-import { EnhancedTable, type ColumnDefinition } from "@/components/Layouts/TableLayout"
+import { useState, useEffect, useMemo, useCallback } from "react";
+import { useRouter } from "next/navigation";
+import { EnhancedTable, type ColumnDefinition } from "@/components/Layouts/TableLayout";
+import { Button } from "@/components/ui/button";
 
-// Define Order type
+/* -------------------------------- TYPES -------------------------------- */
+
 interface Order {
-  id: string
-  customer: string
-  email: string
-  date: string
-  status: string
-  payment: string
-  total: number
-  items: number
-  shippingMethod: string
+  id: string;
+  customer: string;
+  email: string;
+  date: string;
+  status: string;
+  payment: string;
+  total: number;
+  items: number;
+  shippingMethod: string;
 }
 
-// Available order statuses and payment statuses
-const orderStatuses = ["Processing", "Shipped", "Delivered", "Cancelled", "Returned", "All"]
-const paymentStatuses = ["Paid", "Pending", "Refunded", "All"]
+type OrderTab = "confirmed" | "pending" | "cancelled" | "others" | "all";
+
+/* --------------------------- UPDATE STATUS MODAL ------------------------- */
+
+function UpdateOrderStatusModal({
+  order,
+  onClose,
+  onSuccess,
+}: {
+  order: Order;
+  onClose: () => void;
+  onSuccess: (orderId: string, newStatus: string) => void;
+}) {
+  const [newStatus, setNewStatus] = useState(order.status);
+  const [updateLoading, setUpdateLoading] = useState(false);
+  const [updateError, setUpdateError] = useState<string | null>(null);
+
+  const handleUpdateStatus = async () => {
+    if (!order || !newStatus) return;
+
+    try {
+      setUpdateLoading(true);
+      setUpdateError(null);
+
+      const response = await fetch(`/api/orders/${order.id}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ status: newStatus }),
+      });
+
+      const result = await response.json();
+
+      if (!response.ok || !result.success) {
+        throw new Error(result.message || "Failed to update order status");
+      }
+
+      onSuccess(order.id, newStatus);
+      onClose();
+    } catch (err) {
+      console.error("[UpdateOrderStatusModal] error:", err);
+      setUpdateError(
+        err instanceof Error ? err.message : "Failed to update order status"
+      );
+    } finally {
+      setUpdateLoading(false);
+    }
+  };
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40">
+      <div className="w-full max-w-md rounded-xl bg-white p-6 shadow-xl">
+        <h2 className="text-xl font-semibold mb-2">Update Order Status</h2>
+        <p className="text-sm text-gray-600 mb-4">
+          Order ID: <strong>{order.id}</strong>
+        </p>
+
+        <select
+          value={newStatus}
+          onChange={(e) => setNewStatus(e.target.value)}
+          className="w-full rounded-md border px-3 py-2 text-sm"
+        >
+          <option value="confirmed">Confirmed</option>
+          <option value="shipped">Shipped</option>
+          <option value="cancelled">Cancelled</option>
+          <option value="delivered">Delivered</option>
+          <option value="returned">Returned</option>
+        </select>
+
+        {updateError && (
+          <p className="mt-3 text-sm text-red-600">{updateError}</p>
+        )}
+
+        <div className="mt-6 flex justify-end gap-3">
+          <Button variant="outline" onClick={onClose} disabled={updateLoading}>
+            Cancel
+          </Button>
+          <Button
+            onClick={handleUpdateStatus}
+            disabled={updateLoading}
+            className="bg-primary text-white"
+          >
+            {updateLoading ? "Updating..." : "Update"}
+          </Button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+/* ------------------------------- COMPONENT ------------------------------ */
 
 export function OrdersTable() {
-  const router = useRouter()
-  const [selectedOrders, setSelectedOrders] = useState<Order[]>([])
-  const [orders, setOrders] = useState<Order[]>([])
-  const [loading, setLoading] = useState(true)
-  const [error, setError] = useState<string | null>(null)
+  const router = useRouter();
 
-  // Fetch orders from API
+  const [orders, setOrders] = useState<Order[]>([]);
+  const [selectedOrders, setSelectedOrders] = useState<Order[]>([]);
+  const [activeTab, setActiveTab] = useState<OrderTab>("confirmed");
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+
+  const [editingOrder, setEditingOrder] = useState<Order | null>(null);
+  const [isUpdateModalOpen, setIsUpdateModalOpen] = useState(false);
+
+  /* ------------------------------ FETCH DATA ----------------------------- */
+
   useEffect(() => {
     const fetchOrders = async () => {
       try {
-        setLoading(true)
-        const response = await fetch("/api/orders")
-        const result = await response.json()
+        setLoading(true);
+        const res = await fetch("/api/orders");
+        const result = await res.json();
 
         if (!result.success) {
-          throw new Error(result.message || "Failed to fetch orders")
+          throw new Error(result.message || "Failed to fetch orders");
         }
 
-        // Transform API data to match Order interface
-        const transformedOrders: Order[] = result.data.map((order: any) => ({
-          id: order.orders.id,
-          customer: order.savedAddresses.fullName,
-          email: "", // Note: Email is not available in the provided API response
-          date: new Date(order.orders.createdAt).toISOString().split("T")[0], // Format as YYYY-MM-DD
-          status: order.orders.status,
-          payment: order.orders.paymentStatus,
-          total: parseFloat(order.orders.totalAmount),
-          items: order.orderItems ? 1 : 0, // Since the response shows one item per order, adjust if multiple items are possible
-          shippingMethod: order.orders.deliveryMode.charAt(0).toUpperCase() + order.orders.deliveryMode.slice(1), // Capitalize first letter
-        }))
+        const transformed: Order[] = result.data.map((o: any) => ({
+          id: o.orders.id,
+          customer: o.savedAddresses.fullName,
+          email: "",
+          date: new Date(o.orders.createdAt).toISOString().split("T")[0],
+          status: o.orders.status.toLowerCase(),
+          payment: o.orders.paymentStatus.toLowerCase(),
+          total: Number(o.orders.totalAmount),
+          items: o.orderItems?.length || 1,
+          shippingMethod:
+            o.orders.deliveryMode.charAt(0).toUpperCase() +
+            o.orders.deliveryMode.slice(1),
+        }));
 
-        setOrders(transformedOrders)
-        setError(null)
-      } catch (err) {
-        console.error("[OrdersTable] Fetch error:", err)
-        setError(err instanceof Error ? err.message : "Failed to fetch orders")
+        setOrders(transformed);
+        setError(null);
+      } catch (err: any) {
+        setError(err.message || "Failed to load orders");
       } finally {
-        setLoading(false)
+        setLoading(false);
       }
-    }
+    };
 
-    fetchOrders()
-  }, [])
+    fetchOrders();
+  }, []);
 
-  // Column definitions for Order Table
-  const orderColumns: ColumnDefinition<Order>[] = [
-    {
-      key: "id",
-      header: "Order ID",
-      sortable: true,
-      width: "15%",
-    },
-    {
-      key: "customer",
-      header: "Customer",
-      sortable: true,
-      width: "20%",
-    },
-    {
-      key: "date",
-      header: "Date",
-      sortable: true,
-      width: "15%",
-    },
-    {
-      key: "status",
-      header: "Status",
-      sortable: true,
-      width: "15%",
-      align: "center",
-      filterOptions: orderStatuses,
-    },
-    {
-      key: "payment",
-      header: "Payment",
-      sortable: true,
-      width: "15%",
-      align: "center",
-      filterOptions: paymentStatuses,
-    },
+  /* ----------------------------- TAB FILTER ------------------------------ */
+
+  const filteredOrders = useMemo(() => {
+    return orders.filter((order) => {
+      switch (activeTab) {
+        case "confirmed":
+          return order.status === "confirmed";
+        case "pending":
+          return order.status === "pending";
+        case "cancelled":
+          return order.status === "cancelled";
+        case "others":
+          return ["failed", "returned"].includes(order.status);
+        case "all":
+        default:
+          return true;
+      }
+    });
+  }, [orders, activeTab]);
+
+  const countByStatus = (status: OrderTab) => {
+    if (status === "all") return orders.length;
+    if (status === "others")
+      return orders.filter((o) =>
+        ["failed", "returned"].includes(o.status)
+      ).length;
+
+    return orders.filter((o) => o.status === status).length;
+  };
+
+  /* ----------------------------- TABLE COLUMNS ---------------------------- */
+
+  const columns: ColumnDefinition<Order>[] = [
+    { key: "id", header: "Order ID", sortable: true },
+    { key: "customer", header: "Customer", sortable: true },
+    { key: "date", header: "Date", sortable: true },
+    { key: "status", header: "Status", sortable: true, align: "center" },
+    { key: "payment", header: "Payment", sortable: true, align: "center" },
     {
       key: "total",
       header: "Total",
       sortable: true,
-      width: "15%",
       align: "right",
-      renderCell: (value) => {
-        return new Intl.NumberFormat("en-IN", {
+      renderCell: (v) =>
+        new Intl.NumberFormat("en-IN", {
           style: "currency",
           currency: "INR",
           maximumFractionDigits: 0,
-        }).format(Number(value))
-      },
+        }).format(Number(v)),
     },
-    {
-      key: "items",
-      header: "Items",
-      sortable: true,
-      width: "10%",
-      align: "center",
-    },
-    {
-      key: "shippingMethod",
-      header: "Shipping",
-      sortable: true,
-      width: "15%",
-    },
-  ]
+    { key: "items", header: "Items", sortable: true, align: "center" },
+    { key: "shippingMethod", header: "Shipping", sortable: true },
+  ];
 
-  // Handle order actions
-  const handleEditOrder = (orders: Order[]) => {
-    if (orders.length === 1) {
-      router.push(`/admin/orders/edit/${orders[0].id}`)
-    } else {
-      router.push(`/admin/orders/bulk-edit?ids=${orders.map((o) => o.id).join(",")}`)
-    }
-  }
+  /* -------------------------- BULK EDIT HANDLER -------------------------- */
 
-  const handleViewOrder = (order: Order) => {
-    router.push(`/admin/orders/${order.id}`)
-  }
+  const handleEditOrder = useCallback((items: Order[]) => {
+    if (items.length !== 1) return;
+    setEditingOrder(items[0]);
+    setIsUpdateModalOpen(true);
+  }, []);
 
-  const handleDeleteOrder = (order: Order) => {
-    if (window.confirm(`Are you sure you want to delete order ${order.id}?`)) {
-      console.log("Delete order:", order)
-      // Implement delete logic here
-    }
-  }
+  const handleStatusUpdated = (orderId: string, newStatus: string) => {
+    setOrders((prev) =>
+      prev.map((o) =>
+        o.id === orderId ? { ...o, status: newStatus } : o
+      )
+    );
+    setSelectedOrders([]);
+  };
 
-  const handleBulkDelete = (orders: Order[]) => {
-    if (window.confirm(`Are you sure you want to delete ${orders.length} orders?`)) {
-      console.log("Delete orders:", orders)
-      // Implement bulk delete logic here
-    }
-  }
+  /* ----------------------------- UI STATES ------------------------------- */
 
-  const handleExportOrders = (orders: Order[]) => {
-    console.log("Export orders:", orders)
-    // Implement export logic here
-  }
-
-  // Render loading or error states
   if (loading) {
     return (
-      <div className="p-4 flex items-center justify-center">
-        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-gray-900"></div>
-        <span className="ml-2">Loading orders...</span>
+      <div className="p-6 flex items-center justify-center">
+        <div className="animate-spin h-8 w-8 border-b-2 border-gray-900 rounded-full" />
+        <span className="ml-3">Loading orders...</span>
       </div>
-    )
+    );
   }
 
   if (error) {
     return (
-      <div className="text-red-600 p-4 bg-red-50 rounded-md">
-        Error: {error}
-        <button
-          className="ml-4 text-blue-600 underline"
-          onClick={() => window.location.reload()}
-        >
-          Retry
-        </button>
+      <div className="p-6 bg-red-50 text-red-700 rounded-md">
+        {error}
       </div>
-    )
+    );
   }
 
+  /* -------------------------------- RENDER ------------------------------- */
+
   return (
-    <div className=" mx-auto ">
-      {/* Header */}
-      <div className="mb-8">
-        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between">
-          <div className="mb-4 sm:mb-0">
-            <h1 className="text-3xl font-bold text-gray-900">Order Management</h1>
-            <p className="mt-2 text-gray-600">Manage your orders and their details</p>
-          </div>
-        </div>
+    <div className="mx-auto">
+      <div className="mb-6">
+        <h1 className="text-3xl font-bold text-gray-900">
+          Order Management
+        </h1>
+        <p className="text-gray-600 mt-1">
+          Confirmed orders are shown by default
+        </p>
       </div>
 
-      {/* Stats Cards */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
-        <div className="bg-white p-6 rounded-xl border border-gray-200 ">
-          <div className="flex items-center">
-            <div className="p-3 bg-blue-100 rounded-lg">
-              <svg className="w-6 h-6 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 3h18v18H3V3zm4 12h10m-10-4h10m-10-4h10" />
-              </svg>
-            </div>
-            <div className="ml-4">
-              <p className="text-sm font-medium text-gray-600">Total Orders</p>
-              <p className="text-2xl font-bold text-gray-900">{orders.length}</p>
-            </div>
-          </div>
-        </div>
-        <div className="bg-white p-6 rounded-xl border border-gray-200 ">
-          <div className="flex items-center">
-            <div className="p-3 bg-yellow-100 rounded-lg">
-              <svg className="w-6 h-6 text-yellow-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
-              </svg>
-            </div>
-            <div className="ml-4">
-              <p className="text-sm font-medium text-gray-600">Confirmed Orders</p>
-              <p className="text-2xl font-bold text-gray-900">{orders.filter(o => o.status === 'Confirmed').length}</p>
-            </div>
-          </div>
-        </div>
-        <div className="bg-white p-6 rounded-xl border border-gray-200 ">
-          <div className="flex items-center">
-            <div className="p-3 bg-green-100 rounded-lg">
-              <svg className="w-6 h-6 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
-              </svg>
-            </div>
-            <div className="ml-4">
-              <p className="text-sm font-medium text-gray-600">Delivered Orders</p>
-              <p className="text-2xl font-bold text-gray-900">{orders.filter(o => o.status === 'Delivered').length}</p>
-            </div>
-          </div>
-        </div>
-       
+      {/* Tabs */}
+      <div className="flex flex-wrap gap-3 mb-6">
+        {[
+          { key: "confirmed", label: "Confirmed" },
+          { key: "pending", label: "Pending" },
+          { key: "cancelled", label: "Cancelled" },
+          { key: "others", label: "Others" },
+          { key: "all", label: "All" },
+        ].map((tab) => (
+          <button
+            key={tab.key}
+            onClick={() => setActiveTab(tab.key as OrderTab)}
+            className={`px-4 py-2 rounded-md text-sm font-medium border transition ${
+              activeTab === tab.key
+                ? "bg-primary text-white border-primary"
+                : "bg-white text-gray-700 border-gray-300 hover:bg-gray-50"
+            }`}
+          >
+            {tab.label}
+            <span className="ml-2 text-xs opacity-70">
+              ({countByStatus(tab.key as OrderTab)})
+            </span>
+          </button>
+        ))}
       </div>
 
       {/* Table */}
       <EnhancedTable
         id="orders-table"
-        data={orders}
-        columns={orderColumns}
+        data={filteredOrders}
+        columns={columns}
         selection={{
           enabled: true,
-          onSelectionChange: setSelectedOrders,
           selectionKey: "id",
+          onSelectionChange: setSelectedOrders,
+        }}
+        actions={{
+          bulkActions: {
+            edit: handleEditOrder,
+          },
         }}
         search={{
           enabled: true,
-          keys: ["id", "customer", "email"],
-          placeholder: "Search orders...",
-        }}
-        filters={{
-          enabled: false, // Disable filters
+          keys: ["id", "customer"],
         }}
         pagination={{
           enabled: true,
-          pageSizeOptions: [5, 10, 25, 50],
+          pageSizeOptions: [10, 25, 50],
           defaultPageSize: 10,
         }}
         sorting={{
@@ -271,33 +319,26 @@ export function OrdersTable() {
           defaultSortColumn: "date",
           defaultSortDirection: "desc",
         }}
-        actions={{
-          bulkActions: {
-            delete: handleBulkDelete,
-            export: handleExportOrders,
-            edit: handleEditOrder,
-          },
-          rowActions: {
-            view: handleViewOrder,
-            edit: (order) => handleEditOrder([order]),
-            delete: handleDeleteOrder,
-          },
-        }}
         customization={{
-          statusColorMap: {
-            processing: "bg-blue-100 text-blue-800 border-blue-200",
-            shipped: "bg-yellow-100 text-yellow-800 border-yellow-200",
-            delivered: "bg-green-100 text-green-800 border-green-200",
-            cancelled: "bg-red-100 text-red-800 border-red-200",
-            returned: "bg-purple-100 text-purple-800 border-purple-200",
-            confirmed: "bg-teal-100 text-teal-800 border-teal-200", // Added for API status
-          },
-          rowHoverEffect: true,
-          zebraStriping: false,
           stickyHeader: true,
+          rowHoverEffect: true,
         }}
-        onRowClick={(order) => router.push(`/admin/orders/${order.id}`)}
+        onRowClick={(order) =>
+          router.push(`/admin/orders/${order.id}`)
+        }
       />
+
+      {/* Update Status Modal */}
+      {isUpdateModalOpen && editingOrder && (
+        <UpdateOrderStatusModal
+          order={editingOrder}
+          onClose={() => {
+            setIsUpdateModalOpen(false);
+            setEditingOrder(null);
+          }}
+          onSuccess={handleStatusUpdated}
+        />
+      )}
     </div>
-  )
+  );
 }

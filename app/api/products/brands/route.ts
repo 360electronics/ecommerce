@@ -58,9 +58,9 @@ export async function GET(req: Request) {
 
     const result = Object.values(grouped);
 
-    console.log(
-      `✅ Brand Products API → ${brandSlug} (${categorySlug || "all"}) → ${result.length} products`
-    );
+    // console.log(
+    //   `✅ Brand Products API → ${brandSlug} (${categorySlug || "all"}) → ${result.length} products`
+    // );
 
     return NextResponse.json({
       success: true,

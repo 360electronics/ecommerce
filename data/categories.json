@@ -131,13 +131,6 @@
         "slug": "external-storage",
         "displayOrder": "3",
         "isActive": true
-      },
-      {
-        "id": "ca526c97-f5ac-492f-8056-54a2c2495f8c",
-        "name": "USB Flash Drives",
-        "slug": "usb-flash-drives",
-        "displayOrder": "4",
-        "isActive": true
       }
     ]
   },
@@ -203,28 +196,7 @@
     "updatedAt": "2025-10-13T10:56:29.685Z",
     "attributes": [],
     "subcategories": [
-      {
-        "id": "467b117c-3517-4e54-91f2-fb7a9642a4b8",
-        "name": "Adapters",
-        "slug": "adapters",
-        "displayOrder": "4",
-        "isActive": true
-      },
-      {
-        "id": "31525014-6410-4056-8a60-4549718a7cdf",
-        "name": "Webcams",
-        "slug": "webcams",
-        "displayOrder": "0",
-        "isActive": true
-      },
-      {
-        "id": "770fcb68-f66c-4dd0-a14c-f6fa744ce7fd",
-        "name": "Microphones",
-        "slug": "microphones",
-        "displayOrder": "1",
-        "isActive": true
-      },
-      {
+       {
         "id": "b9e5f85e-ae97-40c5-aeb2-3db464abe9a5",
         "name": "Controllers",
         "slug": "controllers",
@@ -232,9 +204,37 @@
         "isActive": true
       },
       {
+        "id": "31525014-6410-4056-8a60-4549718a7cdf",
+        "name": "Webcam",
+        "slug": "webcam",
+        "displayOrder": "0",
+        "isActive": true
+      },
+      {
+        "id": "770fcb68-f66c-4dd0-a14c-f6fa744ce7fd",
+        "name": "Pendrive",
+        "slug": "pendrive",
+        "displayOrder": "1",
+        "isActive": true
+      },
+      {
         "id": "1e140140-0682-43f7-8512-67c6fb9374bd",
-        "name": "Cables",
-        "slug": "cables",
+        "name": "Smart Watch",
+        "slug": "smart-watch",
+        "displayOrder": "3",
+        "isActive": true
+      },
+      {
+        "id": "1e140140-0682-43f7-8512-67c6fb9374bd",
+        "name": "Speaker",
+        "slug": "speaker",
+        "displayOrder": "3",
+        "isActive": true
+      },
+      {
+        "id": "1e140140-0682-43f7-8512-67c6fb9374bd",
+        "name": "Extension Box",
+        "slug": "extenion-box",
         "displayOrder": "3",
         "isActive": true
       }

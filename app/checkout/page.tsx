@@ -52,6 +52,7 @@ const CheckoutPage: React.FC = () => {
   const [couponCode, setCouponCode] = useState("");
   const [selectedCity, setSelectedCity] = useState<string | null>(null);
   const [remainingTime, setRemainingTime] = useState(15 * 60); // 15 minutes in seconds
+  const [currentOrderId, setCurrentOrderId] = useState<string | null>(null);
 
   // New address form state
   const [newAddress, setNewAddress] = useState({
@@ -455,6 +456,7 @@ const CheckoutPage: React.FC = () => {
 
             router.push("/profile?tab=orders");
             clearCoupon();
+            setCurrentOrderId(null);
             await clearCheckout(user!.id);
             toast.success("Payment successful!");
           } catch (error) {
@@ -464,6 +466,39 @@ const CheckoutPage: React.FC = () => {
             setIsProcessingPayment(false);
           }
         },
+        modal: {
+          ondismiss: async () => {
+            console.warn("Razorpay modal dismissed by user");
+
+            try {
+              // 1️⃣ Cancel the order
+              await fetch("/api/orders/update-status", {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({
+                  orderId: order.id,
+                  status: "cancelled",
+                  paymentStatus: "failed",
+                }),
+              });
+
+              // 2️⃣ Clear checkout (VERY IMPORTANT)
+              await clearCheckout(user!.id);
+
+              router.replace("/");
+
+              clearCoupon();
+
+              toast.error("Payment cancelled. Order has been cancelled.");
+            } catch (err) {
+              console.error("Error handling payment dismissal", err);
+            } finally {
+              setIsProcessingPayment(false);
+
+            }
+          },
+        },
+
         prefill: {
           name: user?.firstName + " " + user?.lastName || "",
           email: user?.email || "",
@@ -498,9 +533,6 @@ const CheckoutPage: React.FC = () => {
       });
 
       razorpay.on("modal.closed", async () => {
-        console.warn("Payment window closed by user");
-        resetTimer(); // Reset timer on modal close
-
         // Mark order as cancelled
         await fetch("/api/orders/update-status", {
           method: "POST",
@@ -531,83 +563,58 @@ const CheckoutPage: React.FC = () => {
       toast.error("Please select a delivery address");
       return;
     }
+
     if (!checkoutItems.length) {
       toast.error("Your checkout is empty");
       return;
     }
 
-    setIsSubmitting(true);
-    try {
-      const order = {
-        userId: user!.id,
-        addressId: selectedAddressId,
-        totalAmount: grandTotal,
-        discountAmount: discountAmount,
-        couponCode: coupon && couponStatus === "applied" ? coupon.code : null,
-        shippingAmount,
-        deliveryMode,
-        paymentMethod,
-        status: paymentMethod === "razorpay" ? "pending" : "confirmed",
-        paymentStatus: "pending",
-        orderItems: checkoutItems.map((item) => ({
-          productId: item.productId,
-          variantId: item.variantId,
-          quantity: item.cartOfferProductId ? 1 : item.quantity, // Offer product quantity is always 1
-          unitPrice: Number(item.variant.ourPrice) || 0,
-          cartOfferProductId: item.cartOfferProductId,
-        })),
-      };
+    // 🔒 Prevent double creation
+    if (currentOrderId) {
+      toast.error("Order already created. Please complete payment.");
+      return;
+    }
 
+    setIsSubmitting(true);
+
+    try {
       const response = await fetch("/api/orders", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(order),
+        body: JSON.stringify({
+          userId: user!.id,
+          addressId: selectedAddressId,
+          totalAmount: grandTotal,
+          discountAmount,
+          couponCode: coupon && couponStatus === "applied" ? coupon.code : null,
+          shippingAmount,
+          deliveryMode,
+          paymentMethod,
+          status: "pending",
+          paymentStatus: "pending",
+          orderItems: checkoutItems.map((item) => ({
+            productId: item.productId,
+            variantId: item.variantId,
+            quantity: item.cartOfferProductId ? 1 : item.quantity,
+            unitPrice: Number(item.variant.ourPrice),
+            cartOfferProductId: item.cartOfferProductId,
+          })),
+        }),
       });
 
-      if (!response.ok) {
-        throw new Error("Failed to create order");
-      }
+      if (!response.ok) throw new Error("Failed to create order");
 
       const createdOrder = await response.json();
 
-      if (paymentMethod === "razorpay") {
-        const gatewayOrderId = await initiateRazorpayPayment({
-          id: createdOrder.id,
-          totalAmount: grandTotal,
-        });
+      // ✅ SAVE ORDER ID
+      setCurrentOrderId(createdOrder.id);
 
-        if (!gatewayOrderId) {
-          throw new Error("Failed to initiate Razorpay payment");
-        }
-
-        await fetch("/api/orders/update-order-id", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            orderId: createdOrder.id,
-            gatewayOrderId,
-          }),
-        });
-      } else {
-        if (coupon && coupon.code && couponStatus === "applied") {
-          await markCouponUsed(coupon.code);
-        }
-        await fetch("/api/orders/update-status", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            orderId: createdOrder.id,
-            status: "confirmed",
-            paymentStatus: "pending",
-          }),
-        });
-        clearCoupon();
-        await clearCheckout(user!.id);
-        toast.success("Order placed successfully!");
-        router.push("/orders");
-      }
-    } catch (error) {
-      console.error("Error placing order:", error);
+      await initiateRazorpayPayment({
+        id: createdOrder.id,
+        totalAmount: grandTotal,
+      });
+    } catch (err) {
+      console.error(err);
       toast.error("Failed to place order");
     } finally {
       setIsSubmitting(false);
@@ -616,11 +623,9 @@ const CheckoutPage: React.FC = () => {
 
   if (isLoading) {
     return (
-        <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8 py-8">
-          <p className="text-center text-gray-600 text-lg">
-            Loading checkout...
-          </p>
-        </div>
+      <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8 py-8">
+        <p className="text-center text-gray-600 text-lg">Loading checkout...</p>
+      </div>
     );
   }
 
@@ -1146,7 +1151,9 @@ const CheckoutPage: React.FC = () => {
                     <div className="bg-yellow-50 border border-yellow-200 rounded-md p-3">
                       <p className="text-sm font-medium text-yellow-800">
                         Checkout expires in{" "}
-                        <span className="font-bold">{formatTime(remainingTime)}</span>
+                        <span className="font-bold">
+                          {formatTime(remainingTime)}
+                        </span>
                       </p>
                     </div>
                   )}
@@ -1307,7 +1314,9 @@ const CheckoutPage: React.FC = () => {
                       onClick={handleCancelCheckout}
                       className="w-full bg-white cursor-pointer border border-red-500 text-red-500 py-3 rounded-md hover:bg-red-50 transition-colors flex items-center justify-center gap-2 disabled:opacity-50"
                       aria-label="Cancel checkout and return to homepage"
-                      disabled={isSubmitting || isProcessingPayment || isCancelling}
+                      disabled={
+                        isSubmitting || isProcessingPayment || isCancelling
+                      }
                     >
                       {isCancelling ? (
                         <>

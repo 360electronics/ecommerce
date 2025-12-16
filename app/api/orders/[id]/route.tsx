@@ -1,7 +1,7 @@
-import { db } from "@/db/drizzle"
-import { orders, orderItems, variants, savedAddresses } from "@/db/schema"
-import { eq } from "drizzle-orm"
-import { NextRequest, NextResponse } from "next/server"
+import { db } from "@/db/drizzle";
+import { orders, orderItems, variants, savedAddresses } from "@/db/schema";
+import { eq } from "drizzle-orm";
+import { NextRequest, NextResponse } from "next/server";
 
 type Params = Promise<{ id: string }>;
 
@@ -43,7 +43,18 @@ export async function GET(request: Request, { params }: { params: Params }) {
   }
 }
 
-export async function PATCH(request: NextRequest, { params }: { params: Params }) {
+const ALLOWED_TRANSITIONS: Record<string, string[]> = {
+  confirmed: ["shipped", "cancelled"],
+  shipped: ["delivered", "cancelled"],
+  delivered: ["returned", "cancelled"],
+  returned: ["cancelled"],
+  cancelled: [],
+};
+
+export async function PATCH(
+  request: NextRequest,
+  { params }: { params: Params }
+) {
   try {
     const { id: orderId } = await params; // ✅ Await the promise
     const body = await request.json();
@@ -53,7 +64,11 @@ export async function PATCH(request: NextRequest, { params }: { params: Params }
     const validStatuses = ["shipped", "delivered", "cancelled", "returned"];
     if (!status || !validStatuses.includes(status)) {
       return NextResponse.json(
-        { success: false, message: "Invalid status. Must be one of: shipped, delivered, cancelled, returned" },
+        {
+          success: false,
+          message:
+            "Invalid status. Must be one of: shipped, delivered, cancelled, returned",
+        },
         { status: 400 }
       );
     }
@@ -65,18 +80,19 @@ export async function PATCH(request: NextRequest, { params }: { params: Params }
       .where(eq(orders.id, orderId));
 
     if (!currentOrder) {
-      return NextResponse.json({ success: false, message: "Order not found" }, { status: 404 });
+      return NextResponse.json(
+        { success: false, message: "Order not found" },
+        { status: 404 }
+      );
     }
 
-    // Enforce ascending status transition
-    const statusOrder = ["confirmed", "shipped", "delivered", "cancelled", "returned"];
-    const currentIndex = statusOrder.indexOf(currentOrder.status);
-    const newIndex = statusOrder.indexOf(status);
-    if (currentIndex === -1 || newIndex === -1 || newIndex < currentIndex) {
+    const allowedNextStatuses = ALLOWED_TRANSITIONS[currentOrder.status];
+
+    if (!allowedNextStatuses || !allowedNextStatuses.includes(status)) {
       return NextResponse.json(
         {
           success: false,
-          message: `Cannot change status from ${currentOrder.status} to ${status}. Status must follow the order: confirmed → shipped → delivered → cancelled → returned`,
+          message: `Cannot change status from ${currentOrder.status} to ${status}`,
         },
         { status: 400 }
       );
@@ -90,7 +106,10 @@ export async function PATCH(request: NextRequest, { params }: { params: Params }
       .returning();
 
     if (!updatedOrder) {
-      return NextResponse.json({ success: false, message: "Order not found" }, { status: 404 });
+      return NextResponse.json(
+        { success: false, message: "Order not found" },
+        { status: 404 }
+      );
     }
 
     return NextResponse.json({ success: true, data: updatedOrder });
@@ -107,8 +126,10 @@ export async function PATCH(request: NextRequest, { params }: { params: Params }
   }
 }
 
-
-export async function DELETE(request: NextRequest, { params }: { params: Params }) {
+export async function DELETE(
+  request: NextRequest,
+  { params }: { params: Params }
+) {
   try {
     const { id: orderId } = await params; // ✅ Await the promise
 
@@ -116,18 +137,24 @@ export async function DELETE(request: NextRequest, { params }: { params: Params 
     const [deletedOrder] = await db
       .delete(orders)
       .where(eq(orders.id, orderId))
-      .returning()
+      .returning();
 
     if (!deletedOrder) {
-      return NextResponse.json({ success: false, message: "Order not found" }, { status: 404 })
+      return NextResponse.json(
+        { success: false, message: "Order not found" },
+        { status: 404 }
+      );
     }
 
     // Delete related orderItems
-    await db.delete(orderItems).where(eq(orderItems.orderId, orderId))
+    await db.delete(orderItems).where(eq(orderItems.orderId, orderId));
 
-    return NextResponse.json({ success: true, message: "Order deleted successfully" })
+    return NextResponse.json({
+      success: true,
+      message: "Order deleted successfully",
+    });
   } catch (error) {
-    console.error("[ORDER_DELETE_ERROR]", error)
+    console.error("[ORDER_DELETE_ERROR]", error);
     return NextResponse.json(
       {
         success: false,
@@ -135,6 +162,6 @@ export async function DELETE(request: NextRequest, { params }: { params: Params 
         error: error instanceof Error ? error.message : String(error),
       },
       { status: 500 }
-    )
+    );
   }
 }
