@@ -690,6 +690,7 @@ export function ProductsTable() {
         search={{
           enabled: true,
           keys: [
+            "productId",
             "fullName",
             "shortName",
             "variantName",

@@ -6,7 +6,7 @@ import ProductListing from "@/components/Listing/ProductListing";
 import { CompleteProduct, FlattenedProduct } from "@/types/product";
 import { fetchSearchProducts } from "@/utils/products.util";
 
-export const dynamic = "force-dynamic"; // 🚀 Prevents prerendering issues with search params
+export const dynamic = "force-dynamic"; 
 
 const safeToISOString = (value: Date | string | null | undefined) => {
   if (!value) return new Date().toISOString();

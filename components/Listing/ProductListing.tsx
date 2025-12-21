@@ -277,6 +277,8 @@ const ProductListing = ({
               break;
           }
 
+          console.log("Fiterd Products: " ,filtered)
+
           setFilteredProducts(filtered);
           setLoading(false);
           setCurrentPage(1);
@@ -328,7 +330,7 @@ const ProductListing = ({
     productsForOptions.forEach((product) => {
       if (product.color) options.colors.add(product.color);
       if (product.brand?.name) {
-        console.log("ADDING BRAND:", product.brand.name);
+        // console.log("ADDING BRAND:", product.brand.name);
         options.brands.add(product.brand.name);
       }
       if (product.storage) options.storageOptions.add(product.storage);

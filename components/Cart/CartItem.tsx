@@ -62,128 +62,127 @@ export const CartItemComponent: React.FC<{
   handleUpdateQuantity: (cartItemId: string, quantity: number) => Promise<void>;
   handleRemoveFromCart: (productId: string, variantId: string) => Promise<void>;
 }> = ({ item, isUpdating, handleUpdateQuantity, handleRemoveFromCart }) => {
+  const isLoading = isUpdating === item.id;
+
   return (
-    <div className="flex flex-col sm:flex-row gap-4 p-4 bg-white w-full border-b border-gray-200 transition-shadow">
-      {/* Image */}
-      <div className="w-full sm:w-[20%] h-auto relative">
-        {item.isOfferProduct && (
-          <span className="absolute top-2 left-2 bg-green-500 text-white text-xs px-2 py-1 rounded">
-            Offer Product
-          </span>
-        )}
-        <img
-          src={item.variant.productImages?.[0].url ?? '/images/placeholder.jpg'}
-          alt={`${item.product.shortName} (${item.variant.name})`}
-          width={150}
-          height={150}
-          className="rounded-md object-contain border p-2 w-full h-full aspect-square"
-          loading="lazy"
-        />
-      </div>
-
-      {/* Info + Controls */}
-      <div className="flex-1 w-full sm:w-[60%] flex flex-col justify-between">
-        <div>
-          <Link
-            href={item.isOfferProduct ? '#' : `/products/${item.variant.slug}`}
-            className={`text-base font-medium text-gray-900 block ${item.isOfferProduct ? 'pointer-events-none' : ''}`}
-          >
-            {item.variant.name}
-          </Link>
-          {!item.isOfferProduct && (
-            <p className="text-sm text-gray-500 mt-1">
-              {item.variant.color}
-              {item.variant.storage && `, ${item.variant.storage}`}
-            </p>
+    <div className="w-full border-b border-gray-200 bg-white px-4 py-4">
+      {/* Top Section */}
+      <div className="flex gap-4">
+        {/* Product Image */}
+        <div className="relative h-24 w-24 shrink-0 sm:h-36 sm:w-36">
+          {item.isOfferProduct && (
+            <span className="absolute left-1 top-1 z-10 rounded bg-green-500 px-2 py-0.5 text-[10px] font-medium text-white">
+              Offer
+            </span>
           )}
+
+          <img
+            src={item.variant.productImages?.[0]?.url ?? '/images/placeholder.jpg'}
+            alt={item.variant.name}
+            className="h-full w-full rounded-lg border object-contain p-2"
+            loading="lazy"
+          />
         </div>
 
-        <div className="flex flex-wrap sm:flex-nowrap items-center justify-start gap-4 mt-4">
-          {!item.isOfferProduct ? (
-            <div className="flex items-center gap-2 border rounded-full text-sm p-2">
-              Qty.
-              <button
-                onClick={() => handleUpdateQuantity(item.id, item.quantity - 1)}
-                className="p-2 rounded-full bg-gray-100 hover:bg-gray-200 disabled:opacity-50 cursor-pointer transition-colors"
-                disabled={item.quantity <= 1 || isUpdating === item.id}
-                aria-label={`Decrease quantity of ${item.product.shortName} (${item.variant.name})`}
-              >
-                <Minus size={12} />
-              </button>
-              {isUpdating === item.id ? (
-                <span className="w-4 text-center text-sm text-gray-500">{item.quantity}</span>
-              ) : (
-                <input
-                  type="text"
-                  value={item.quantity}
-                  onChange={(e) => {
-                    const value = parseInt(e.target.value);
-                    if (
-                      !Number.isNaN(value) &&
-                      value >= 1 &&
-                      value <= parseInt(item.variant.stock)
-                    ) {
-                      handleUpdateQuantity(item.id, value);
-                    }
-                  }}
-                  onBlur={(e) => {
-                    if (!e.target.value || Number.isNaN(parseInt(e.target.value))) {
-                      handleUpdateQuantity(item.id, 1);
-                    }
-                  }}
-                  className="w-8 text-center text-xs focus:outline-none"
-                  min="1"
-                  max={parseInt(item.variant.stock)}
-                  disabled={isUpdating === item.id}
-                  aria-label={`Quantity of ${item.product.shortName} (${item.variant.name})`}
-                />
-              )}
-              <button
-                onClick={() => handleUpdateQuantity(item.id, item.quantity + 1)}
-                className="p-2 rounded-full bg-gray-100 hover:bg-gray-200 disabled:opacity-50 cursor-pointer transition-colors"
-                disabled={item.quantity >= parseInt(item.variant.stock) || isUpdating === item.id}
-                aria-label={`Increase quantity of ${item.product.shortName} (${item.variant.name})`}
-              >
-                <Plus size={12} />
-              </button>
-            </div>
-          ) : (
-            <div className="text-sm text-gray-500">Qty: {item.quantity}</div>
-          )}
+        {/* Product Info */}
+        <div className="flex flex-1 flex-col justify-between">
+          <div>
+            <Link
+              href={item.isOfferProduct ? '#' : `/product/${item.variant.slug}`}
+              target='_blank'
+              className={`block text-sm font-medium text-gray-900 line-clamp-1 sm:text-base sm:line-clamp-none ${
+                item.isOfferProduct ? 'pointer-events-none' : ''
+              }`}
+            >
+              {item.variant.name}
+            </Link>
 
-          <div className="hidden sm:block w-1 h-12 border-l-2"></div>
+            {!item.isOfferProduct && (
+              <p className="mt-1 text-xs text-gray-500 sm:text-sm">
+                {item.variant.color}
+                {item.variant.storage && ` • ${item.variant.storage}`}
+              </p>
+            )}
+          </div>
 
-          <button
-            onClick={() => handleRemoveFromCart(item.productId, item.variantId)}
-            className="bg-red-200 border border-offer text-offer p-2 rounded-full hover:text-red-600 disabled:opacity-50 cursor-pointer transition-colors"
-            disabled={isUpdating === item.id}
-            aria-label={`Remove ${item.product.shortName} (${item.variant.name}) from cart`}
-          >
-            <Trash2 size={20} />
-          </button>
+          {/* Quantity + Remove */}
+          <div className="mt-3 flex items-center justify-between">
+            {/* Quantity */}
+            {!item.isOfferProduct ? (
+              <div className="flex items-center gap-3 rounded-full border px-3 py-1.5 text-sm">
+                <button
+                  onClick={() => handleUpdateQuantity(item.id, item.quantity - 1)}
+                  disabled={item.quantity <= 1 || isLoading}
+                  className="flex h-7 w-7 items-center justify-center rounded-full bg-gray-100 disabled:opacity-50"
+                >
+                  <Minus size={14} />
+                </button>
+
+                <span className="min-w-[16px] text-center font-medium">
+                  {item.quantity}
+                </span>
+
+                <button
+                  onClick={() => handleUpdateQuantity(item.id, item.quantity + 1)}
+                  disabled={
+                    item.quantity >= Number(item.variant.stock) || isLoading
+                  }
+                  className="flex h-7 w-7 items-center justify-center rounded-full bg-gray-100 disabled:opacity-50"
+                >
+                  <Plus size={14} />
+                </button>
+              </div>
+            ) : (
+              <span className="text-sm text-gray-500">
+                Qty: {item.quantity}
+              </span>
+            )}
+
+            {/* Remove */}
+            <button
+              onClick={() =>
+                handleRemoveFromCart(item.productId, item.variantId)
+              }
+              disabled={isLoading}
+              className="rounded-full p-2 bg-red-200 text-red-400 hover:bg-red-300 hover:text-red-600 disabled:opacity-50 cursor-pointer"
+              aria-label="Remove item"
+            >
+              <Trash2 size={20} />
+            </button>
+          </div>
         </div>
       </div>
 
-      {/* Price */}
-      <div className="w-full sm:w-[20%] mt-4 sm:mt-0 flex sm:block justify-between items-end">
-        <p className="text-base text-end text-gray-900 flex flex-col">
-          <span className="text-2xl sm:text-3xl font-medium nohemi-bold">
-            ₹{(parseFloat(item.variant.ourPrice) * item.quantity).toLocaleString('en-IN')}
-          </span>
-        </p>
-        {!item.isOfferProduct && item.variant.mrp && item.variant.ourPrice && (
-          <p className="flex flex-col sm:flex-row items-center justify-end gap-2 mt-2">
-            <span className="text-gray-400 line-through font-light text-xs">
-              MRP: ₹{(parseFloat(item.variant.mrp) * item.quantity).toLocaleString('en-IN')}
-            </span>
-            <span className="rounded-full bg-offer px-2 py-1 text-xs font-medium text-white">
-              {`${Math.round(
-                ((Number(item.variant.mrp) - Number(item.variant.ourPrice)) /
-                  Number(item.variant.mrp)) * 100
-              )}% Off`}
-            </span>
+      {/* Price Section */}
+      <div className="mt-3 flex justify-end">
+        <div className="text-right">
+          <p className="text-lg font-semibold sm:text-2xl">
+            ₹
+            {(Number(item.variant.ourPrice) * item.quantity).toLocaleString(
+              'en-IN'
+            )}
           </p>
-        )}
+
+          {!item.isOfferProduct && (
+            <div className="mt-1 flex items-center justify-end gap-2">
+              <span className="text-xs text-gray-400 line-through">
+                ₹
+                {(Number(item.variant.mrp) * item.quantity).toLocaleString(
+                  'en-IN'
+                )}
+              </span>
+              <span className="rounded-full bg-offer px-2 py-0.5 text-[10px] font-medium text-white">
+                {Math.round(
+                  ((Number(item.variant.mrp) -
+                    Number(item.variant.ourPrice)) /
+                    Number(item.variant.mrp)) *
+                    100
+                )}
+                % OFF
+              </span>
+            </div>
+          )}
+        </div>
       </div>
     </div>
   );

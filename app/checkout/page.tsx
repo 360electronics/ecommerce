@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useLayoutEffect } from "react";
 import { useRouter } from "next/navigation";
 import CheckoutLayout from "@/components/Layouts/CheckoutLayout";
 import toast from "react-hot-toast";
@@ -9,6 +9,8 @@ import Script from "next/script";
 import { useAuthStore } from "@/store/auth-store";
 import { useCheckoutStore } from "@/store/checkout-store";
 import { useCartStore } from "@/store/cart-store";
+import { startTransition } from "react";
+import GlobalLoader from "@/components/Reusable/GlobalLoader";
 
 interface Address {
   id: string;
@@ -68,6 +70,12 @@ const CheckoutPage: React.FC = () => {
     addressType: "home" as "home" | "work" | "other",
     isDefault: false,
   });
+
+  useLayoutEffect(() => {
+    if (!isLoading && checkoutItems.length === 0) {
+      router.replace("/");
+    }
+  }, [checkoutItems.length, isLoading, router]);
 
   // Timer effect
   useEffect(() => {
@@ -234,18 +242,13 @@ const CheckoutPage: React.FC = () => {
   };
 
   // Handle cancel checkout
-  const handleCancelCheckout = async () => {
+  const handleCancelCheckout = () => {
     setIsCancelling(true);
-    try {
-      await clearCheckout(user!.id);
-      toast.success("Checkout cancelled");
-      await router.push("/");
-    } catch (error) {
-      console.error("Error cancelling checkout:", error);
-      toast.error("Failed to cancel checkout");
-    } finally {
-      setIsCancelling(false);
-    }
+
+    startTransition(() => {
+      clearCheckout(user!.id);
+      router.replace("/");
+    });
   };
 
   // Handle apply coupon
@@ -468,10 +471,7 @@ const CheckoutPage: React.FC = () => {
         },
         modal: {
           ondismiss: async () => {
-            console.warn("Razorpay modal dismissed by user");
-
             try {
-              // 1️⃣ Cancel the order
               await fetch("/api/orders/update-status", {
                 method: "POST",
                 headers: { "Content-Type": "application/json" },
@@ -482,19 +482,19 @@ const CheckoutPage: React.FC = () => {
                 }),
               });
 
-              // 2️⃣ Clear checkout (VERY IMPORTANT)
-              await clearCheckout(user!.id);
+              setIsCancelling(true);
 
-              router.replace("/");
+              startTransition(() => {
+                clearCheckout(user!.id);
+                router.replace("/");
+              });
 
               clearCoupon();
-
               toast.error("Payment cancelled. Order has been cancelled.");
             } catch (err) {
               console.error("Error handling payment dismissal", err);
             } finally {
               setIsProcessingPayment(false);
-
             }
           },
         },
@@ -622,11 +622,15 @@ const CheckoutPage: React.FC = () => {
   };
 
   if (isLoading) {
-    return (
-      <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8 py-8">
-        <p className="text-center text-gray-600 text-lg">Loading checkout...</p>
-      </div>
-    );
+    return <GlobalLoader label="Loading…" />;
+  }
+
+  if (!isLoading && checkoutItems.length === 0) {
+    return <GlobalLoader label="Redirecting…" />;
+  }
+
+  if (isCancelling) {
+    return <GlobalLoader label="Cancelling your order…" />;
   }
 
   return (

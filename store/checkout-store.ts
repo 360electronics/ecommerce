@@ -109,7 +109,6 @@ export const useCheckoutStore = create<CheckoutState>((set, get) => ({
   clearCheckout: async (userId: string) => {
     try {
       await fetchWithRetry(() => fetch(`/api/checkout/clear?userId=${userId}`, { method: 'DELETE' }));
-      set({ checkoutItems: [], isLoading: false, lastFetched: Date.now() });
     } catch (error) {
       logError('clearCheckout', error);
       set({ error: error as AppError, isLoading: false });

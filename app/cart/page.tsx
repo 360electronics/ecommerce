@@ -414,30 +414,25 @@ const CartPage: React.FC = ({ initialCartItems }: any) => {
                   {item.cartOfferProductId && item.offerProduct && (
                     <div className="mt-4 border-t pt-4 bg-green-50 rounded-lg p-3">
                       <div className="flex items-center justify-between mb-2">
-                        <h4 className="text-sm font-semibold text-green-700">
-                          ✅ Offer Product Added:
-                        </h4>
+                        <div className="flex items-center gap-2">
+                          <span className="text-[10px] font-semibold bg-green-600 text-white px-2 py-0.5 rounded-full">
+                            OFFER
+                          </span>
+                          <h4 className="text-sm font-semibold text-green-700">
+                            Offer Product Added
+                          </h4>
+                        </div>
+
                         <button
                           onClick={() => handleRemoveOfferProduct(item.id)}
                           disabled={isUpdating === item.id}
                           className="text-red-500 hover:text-red-700 transition-colors p-1"
                           title="Remove offer product"
                         >
-                          <svg
-                            className="w-5 h-5"
-                            fill="none"
-                            stroke="currentColor"
-                            viewBox="0 0 24 24"
-                          >
-                            <path
-                              strokeLinecap="round"
-                              strokeLinejoin="round"
-                              strokeWidth={2}
-                              d="M6 18L18 6M6 6l12 12"
-                            />
-                          </svg>
+                          ✕
                         </button>
                       </div>
+
                       <div className="flex items-center gap-4">
                         <div className="relative w-16 h-16">
                           <img
@@ -446,18 +441,19 @@ const CartPage: React.FC = ({ initialCartItems }: any) => {
                               "/placeholder.png"
                             }
                             alt={item.offerProduct.productName}
-                            className="object-cover rounded-md  w-full h-full aspect-square"
+                            className="object-cover rounded-md w-full h-full"
                           />
                         </div>
+
                         <div className="flex-1">
-                          <p className="text-sm font-medium text-gray-900">
+                          <p className="text-sm font-medium text-gray-900 line-clamp-2">
                             {item.offerProduct.productName}
                           </p>
-                          <p className="text-sm text-green-600 font-semibold">
-                            +{formatCurrency(Number(item.offerProductPrice))}
-                          </p>
                           <p className="text-xs text-gray-500">
-                            Offer product (1 unit)
+                            Offer product • 1 unit
+                          </p>
+                          <p className="text-sm font-semibold text-green-600">
+                            +{formatCurrency(Number(item.offerProductPrice))}
                           </p>
                         </div>
                       </div>
@@ -469,11 +465,16 @@ const CartPage: React.FC = ({ initialCartItems }: any) => {
 
             {effectiveRange && hasRegularProduct && !hasOfferProductInCart && (
               <div className="bg-white border border-gray-200 rounded-lg p-6">
-                <h2 className="text-xl font-semibold text-gray-900 mb-4 nohemi-bold">
-                  Eligible Offer Products (
-                  {rangeDisplayNames[effectiveRange] || "Offers"} - Cart Value:{" "}
-                  {formatCurrency(cartValueForOffers)})
+                <h2 className="text-xl font-semibold text-gray-900 mb-2 nohemi-bold">
+                  Eligible Offer Products
                 </h2>
+                <p className="text-sm text-gray-600 mb-4">
+                  • Cart Value:{" "}
+                  <span className="font-medium text-green-700">
+                    {formatCurrency(cartValueForOffers)}
+                  </span>
+                </p>
+
                 {isFetchingOffers ? (
                   <p className="text-gray-600">Loading offer products...</p>
                 ) : offerProducts.length > 0 ? (
@@ -481,31 +482,49 @@ const CartPage: React.FC = ({ initialCartItems }: any) => {
                     <p className="text-sm text-gray-600 mb-4">
                       Add one offer product to your cart:
                     </p>
-                    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+                    <div className="space-y-3">
                       {offerProducts.map((product) => (
                         <div
                           key={product.id}
-                          className="relative bg-white border border-gray-200 rounded-lg p-4"
+                          className="group flex items-center gap-4 rounded-lg border border-gray-200 bg-white px-4 py-3
+                 hover:border-green-300 hover:bg-green-50/40 transition-all"
                         >
-                          <div className="relative w-full aspect-square mb-2">
+                          {/* IMAGE */}
+                          <div className="relative shrink-0">
                             <img
                               src={product.productImage || "/placeholder.png"}
                               alt={product.productName}
-                              className="object-cover rounded-md w-full h-full aspect-square"
+                              className="h-14 w-14 rounded-md object-cover border"
                             />
+                            <span className="absolute -top-1 -left-1 text-[9px] font-semibold bg-green-600 text-white px-1.5 py-0.5 rounded">
+                              OFFER
+                            </span>
                           </div>
-                          <h3 className="text-sm font-medium text-gray-900 line-clamp-2 mb-2">
-                            {product.productName}
-                          </h3>
-                          <p className="text-sm text-gray-600 mb-2">
-                            Price: {formatCurrency(Number(product.ourPrice))}
-                          </p>
+
+                          {/* INFO */}
+                          <div className="flex-1 min-w-0">
+                            <p className="text-sm font-medium text-gray-900 truncate leading-snug">
+                              {product.productName}
+                            </p>
+
+                            <div className="flex items-center gap-2 mt-0.5">
+                              <span className="text-sm font-semibold text-green-700">
+                                {formatCurrency(Number(product.ourPrice))}
+                              </span>
+                              <span className="text-xs text-gray-500">
+                                • 1 unit only
+                              </span>
+                            </div>
+                          </div>
+
+                          {/* CTA */}
                           <Button
                             onClick={() => handleAddOfferProduct(product)}
-                            className="w-full bg-primary text-white hover:bg-primary-HOVER"
                             disabled={
                               hasOfferProductInCart || !hasRegularProduct
                             }
+                            className="shrink-0 rounded-full bg-primary px-4 py-1.5 text-sm font-medium text-white
+                   hover:bg-primary-HOVER disabled:opacity-50"
                           >
                             Add
                           </Button>
