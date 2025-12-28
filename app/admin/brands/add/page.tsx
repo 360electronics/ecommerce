@@ -1,15 +1,15 @@
 // admin/brands/add/page.tsx
-'use client';
+"use client";
 
-import { useState, useRef } from 'react';
-import { useRouter } from 'next/navigation';
-import { toast } from 'react-hot-toast';
+import { useState, useRef } from "react";
+import { useRouter } from "next/navigation";
+import { showFancyToast } from "@/components/Reusable/ShowCustomToast";
 
 export default function AddBrandPage() {
   const [formData, setFormData] = useState({
-    name: '',
-    slug: '',
-    description: '',
+    name: "",
+    slug: "",
+    description: "",
     isActive: true,
   });
   const [imageFile, setImageFile] = useState<File | null>(null);
@@ -17,11 +17,16 @@ export default function AddBrandPage() {
   const fileInputRef = useRef<HTMLInputElement>(null);
   const router = useRouter();
 
-  const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
+  const handleInputChange = (
+    e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>
+  ) => {
     const { name, value } = e.target;
     setFormData((prev) => ({ ...prev, [name]: value }));
-    if (name === 'name') {
-      setFormData((prev) => ({ ...prev, slug: value.toLowerCase().replace(/\s+/g, '-') }));
+    if (name === "name") {
+      setFormData((prev) => ({
+        ...prev,
+        slug: value.toLowerCase().replace(/\s+/g, "-"),
+      }));
     }
   };
 
@@ -37,24 +42,32 @@ export default function AddBrandPage() {
     e.preventDefault();
     try {
       const form = new FormData();
-      form.append('name', formData.name);
-      form.append('slug', formData.slug);
-      form.append('description', formData.description);
-      form.append('isActive', formData.isActive.toString());
+      form.append("name", formData.name);
+      form.append("slug", formData.slug);
+      form.append("description", formData.description);
+      form.append("isActive", formData.isActive.toString());
       if (imageFile) {
-        form.append('logo', imageFile);
+        form.append("logo", imageFile);
       }
 
-      const response = await fetch('/api/brands', {
-        method: 'POST',
+      const response = await fetch("/api/brands", {
+        method: "POST",
         body: form,
       });
 
-      if (!response.ok) throw new Error('Failed to create brand');
-      toast.success('Brand created successfully');
-      router.push('/admin/brands');
+      if (!response.ok) throw new Error("Failed to create brand");
+      showFancyToast({
+        title: "Brand Created Successfully",
+        message: "Brand has been successfully created.",
+        type: "success",
+      });
+      router.push("/admin/brands");
     } catch (error) {
-      toast.error('Error creating brand');
+      showFancyToast({
+        title: "Sorry, Something Went Wrong",
+        message: "Failed to create brand. Please try again.",
+        type: "error",
+      });
       console.error(error);
     }
   };
@@ -62,7 +75,10 @@ export default function AddBrandPage() {
   return (
     <div className="container mx-auto p-6">
       <h1 className="text-2xl font-bold mb-6">Add New Brand</h1>
-      <form onSubmit={handleSubmit} className="bg-white shadow rounded-lg p-6 max-w-2xl">
+      <form
+        onSubmit={handleSubmit}
+        className="bg-white shadow rounded-lg p-6 max-w-2xl"
+      >
         <div className="mb-4">
           <label className="block text-sm font-medium mb-1">Name</label>
           <input
@@ -106,7 +122,11 @@ export default function AddBrandPage() {
           />
           {imagePreview && (
             <div className="mt-4">
-              <img src={imagePreview} alt="Preview" className="h-20 w-20 object-contain" />
+              <img
+                src={imagePreview}
+                alt="Preview"
+                className="h-20 w-20 object-contain"
+              />
             </div>
           )}
         </div>
@@ -115,13 +135,18 @@ export default function AddBrandPage() {
             <input
               type="checkbox"
               checked={formData.isActive}
-              onChange={(e) => setFormData((prev) => ({ ...prev, isActive: e.target.checked }))}
+              onChange={(e) =>
+                setFormData((prev) => ({ ...prev, isActive: e.target.checked }))
+              }
               className="mr-2"
             />
             Active
           </label>
         </div>
-        <button type="submit" className="bg-gradient-to-r from-[#ff6b00] to-[#ff9f00] hover:to-primary-hover text-white px-4 py-2 rounded">
+        <button
+          type="submit"
+          className="bg-gradient-to-r from-[#ff6b00] to-[#ff9f00] hover:to-primary-hover text-white px-4 py-2 rounded"
+        >
           Create Brand
         </button>
       </form>

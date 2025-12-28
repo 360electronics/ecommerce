@@ -9,8 +9,8 @@ import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { DndProvider, useDrag, useDrop } from "react-dnd";
 import { HTML5Backend } from "react-dnd-html5-backend";
-import { toast } from "react-hot-toast";
 import { slugify } from "@/utils/slugify";
+import { showFancyToast } from "@/components/Reusable/ShowCustomToast";
 
 // Interfaces (unchanged)
 interface Category {
@@ -904,7 +904,11 @@ export default function EditProductPage({ id }: { id: string }) {
 
   const removeVariant = (id: string) => {
     if (variants.length === 1) {
-      toast.error("At least one variant is required");
+      showFancyToast({
+        title: "At least one variant is required",
+        message: "You must have at least one variant for the product.",
+        type: "error",
+      });
       return;
     }
     setVariants((prev) => prev.filter((variant) => variant.id !== id));
@@ -1015,25 +1019,45 @@ export default function EditProductPage({ id }: { id: string }) {
     e.preventDefault();
 
     if (!id) {
-      toast.error("Invalid product ID");
+      showFancyToast({
+        title: "Sorry, Something Went Wrong",
+        message: "Invalid product ID.",
+        type: "error",
+      });
       return;
     }
 
     // Validations
     if (!product.shortName.trim()) {
-      toast.error("Short name is required");
+      showFancyToast({
+        title: "Sorry, Something Went Wrong",
+        message: "Short name is required.",
+        type: "error",
+      });
       return;
     }
     if (!product.fullName.trim()) {
-      toast.error("Full name is required");
+      showFancyToast({
+        title: "Sorry, Something Went Wrong",
+        message: "Full name is required.",
+        type: "error",
+      });
       return;
     }
     if (!product.category) {
-      toast.error("Category is required");
+      showFancyToast({
+        title: "Sorry, Something Went Wrong",
+        message: "Category is required.",
+        type: "error",
+      });
       return;
     }
     if (!product.brand) {
-      toast.error("Brand is required");
+      showFancyToast({
+        title: "Sorry, Something Went Wrong",
+        message: "Brand is required",
+        type: "error",
+      });
       return;
     }
 
@@ -1066,15 +1090,21 @@ export default function EditProductPage({ id }: { id: string }) {
     });
 
     if (validVariants.length === 0) {
-      toast.error(
-        "At least one valid variant with all required fields, attributes, and at least one image is required"
-      );
+      showFancyToast({
+        title: "Sorry, Something Went Wrong",
+        message: "At least one valid variant with all required fields, attributes, and at least one image is required",
+        type: "error",
+      });
       return;
     }
 
     const generalSection = specSections.find((s) => s.id === "general");
     if (!generalSection?.fields.some((f) => f.label.trim() && f.value.trim())) {
-      toast.error("General section requires at least one field");
+      showFancyToast({
+        title: "Sorry, Something Went Wrong",
+        message: "General section requires at least one field",
+        type: "error",
+      });
       return;
     }
 
@@ -1177,12 +1207,18 @@ export default function EditProductPage({ id }: { id: string }) {
       }
 
       router.push("/admin/products");
-      toast.success("Product updated successfully!");
+      showFancyToast({
+        title: "Product Updated Successfully",
+        message: "Product has been successfully updated.",
+        type: "success",
+      });
     } catch (error) {
       console.error("Fetch error:", error);
-      toast.error(
-        `Error: ${error instanceof Error ? error.message : "Unknown error"}`
-      );
+      showFancyToast({
+        title: "Sorry, Something Went Wrong",
+        message: `Error: ${error instanceof Error ? error.message : "Unknown error"}`,
+        type: "error",
+      });
     }
   };
 

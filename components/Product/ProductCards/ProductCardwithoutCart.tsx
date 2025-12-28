@@ -9,7 +9,6 @@ import { cn } from '@/lib/utils';
 import { useAuthStore } from '@/store/auth-store';
 import { useWishlistStore } from '@/store/wishlist-store';
 import { useProfileStore } from '@/store/profile-store';
-import toast from 'react-hot-toast';
 import { showFancyToast } from '@/components/Reusable/ShowCustomToast';
 
 interface ProductCardProps {

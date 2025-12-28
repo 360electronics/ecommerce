@@ -8,9 +8,8 @@ import {
   fetchProducts as fetchAllProducts,
   fetchNewArrivalsProducts,
 } from "@/utils/products.util";
-import Image from "next/image";
 import { cn } from "@/lib/utils";
-import toast from "react-hot-toast";
+import { showFancyToast } from "@/components/Reusable/ShowCustomToast";
 
 // Types
 interface Product {
@@ -101,7 +100,11 @@ export default function NewArrivalsPage() {
       } catch (error) {
         console.error("Error fetching data:", error);
         setError("Failed to load products. Please try again.");
-        toast.error("Failed to load products. Please try again.");
+        showFancyToast({
+          title: "Sorry, there was an error",
+          message: "Failed to load products. Please try again.",
+          type: "error",
+        });
       } finally {
         setIsFetching(false);
       }
@@ -212,10 +215,18 @@ export default function NewArrivalsPage() {
         setIsSaved(false);
         setSearchTerm("");
         setShowResults(false);
-        toast.success("Variant added to New Arrivals");
+        showFancyToast({
+          title: "Variant Added Successfully",
+          message: "Variant added to New Arrivals",
+          type: "success",
+        });
       } catch (error) {
         console.error("Error selecting variant:", error);
-        toast.error("Failed to add variant");
+        showFancyToast({
+          title: "Sorry, there was an error",
+          message: "Failed to add variant",
+          type: "error",
+        });
       }
     },
     []
@@ -237,10 +248,18 @@ export default function NewArrivalsPage() {
         prev.filter((v) => v.variantId !== variantId)
       );
       setIsSaved(false);
-      toast.success("Variant removed from New Arrivals");
+      showFancyToast({
+        title: "Variant Removed Successfully",
+        message: "Variant removed from New Arrivals",
+        type: "success",
+      });
     } catch (error) {
       console.error("Remove variant error:", error);
-      toast.error("Failed to remove variant");
+      showFancyToast({
+        title: "Sorry, there was an error",
+        message: "Failed to remove variant",
+        type: "error",
+      });
     } finally {
       setIsLoading(false);
     }
@@ -271,15 +290,23 @@ export default function NewArrivalsPage() {
       }
 
       setIsSaved(true);
-      toast.success("New Arrivals variants saved successfully");
+      showFancyToast({
+        title: "New Arrivals variants saved successfully",
+        message: "All variants have been saved",
+        type: "success",
+      });
       setTimeout(() => setIsSaved(false), 3000);
     } catch (error) {
       console.error("Error saving New Arrivals variants:", error);
-      toast.error(
-        error instanceof Error
-          ? error.message
-          : "Failed to save New Arrivals variants"
-      );
+
+      showFancyToast({
+        title: "Sorry, there was an error",
+        message:
+          error instanceof Error
+            ? error.message
+            : "Failed to save New Arrivals variants",
+        type: "error",
+      });
     } finally {
       setIsLoading(false);
     }

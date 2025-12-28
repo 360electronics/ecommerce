@@ -1,26 +1,33 @@
-'use client';
+"use client";
 
-import { useCallback, useState, useEffect } from 'react';
-import { Search, Clock, Ticket, CheckCircle, XCircle } from 'lucide-react';
-import { Input } from '@/components/ui/input';
-import { Button } from '@/components/ui/button';
-import { TicketCard } from '@/components/Admin/Tickets/TicketCard';
-import { TicketModal } from '@/components/Admin/Tickets/ActionModel';
-import toast from 'react-hot-toast';
+import { useCallback, useState, useEffect } from "react";
+import {
+  Search,
+  Clock,
+  Ticket,
+  CheckCircle,
+  XCircle,
+  MessageCircleDashed,
+} from "lucide-react";
+import { Input } from "@/components/ui/input";
+import { Button } from "@/components/ui/button";
+import { TicketCard } from "@/components/Admin/Tickets/TicketCard";
+import { TicketModal } from "@/components/Admin/Tickets/ActionModel";
+import { showFancyToast } from "@/components/Reusable/ShowCustomToast";
 
 interface Ticket {
   id: string;
   user_id: string;
   type: string;
   issueDesc: string;
-  status: 'active' | 'inactive' | 'closed';
+  status: "active" | "inactive" | "closed";
   createdAt: string;
   customer: {
     id: string;
     name: string;
     email: string;
     phoneNumber: string;
-    role: 'user' | 'admin' | 'guest';
+    role: "user" | "admin" | "guest";
   };
   addresses: Array<{
     id: string;
@@ -32,12 +39,12 @@ interface Ticket {
     state: string;
     postalCode: string;
     country: string;
-    addressType: 'home' | 'work' | 'other';
+    addressType: "home" | "work" | "other";
     isDefault: boolean;
   }>;
   replies: Array<{
     id: string;
-    sender: 'user' | 'support';
+    sender: "user" | "support";
     message: string;
     createdAt: string;
   }>;
@@ -47,8 +54,8 @@ export default function TicketsPage() {
   const [tickets, setTickets] = useState<Ticket[]>([]);
   const [selectedTicket, setSelectedTicket] = useState<Ticket | null>(null);
   const [isModalOpen, setIsModalOpen] = useState(false);
-  const [filter, setFilter] = useState<string>('all');
-  const [searchQuery, setSearchQuery] = useState('');
+  const [filter, setFilter] = useState<string>("all");
+  const [searchQuery, setSearchQuery] = useState("");
   const [isMounted, setIsMounted] = useState(false);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -57,17 +64,23 @@ export default function TicketsPage() {
     setLoading(true);
     setError(null);
     try {
-      const response = await fetch('/api/tickets', {
-        method: 'GET',
-        headers: { 'Content-Type': 'application/json' },
+      const response = await fetch("/api/tickets", {
+        method: "GET",
+        headers: { "Content-Type": "application/json" },
       });
       const data = await response.json();
-      if (!response.ok) throw new Error(data.error || 'Failed to fetch tickets');
+      if (!response.ok)
+        throw new Error(data.error || "Failed to fetch tickets");
       setTickets(data);
     } catch (err) {
-      const message = err instanceof Error ? err.message : 'Failed to fetch tickets';
+      const message =
+        err instanceof Error ? err.message : "Failed to fetch tickets";
       setError(message);
-      toast.error(message);
+      showFancyToast({
+        title: "Sorry, there was an error",
+        message: message,
+        type: "error",
+      });
     } finally {
       setLoading(false);
     }
@@ -96,29 +109,38 @@ export default function TicketsPage() {
     async (updatedTicket: Ticket) => {
       try {
         const res = await fetch(`/api/tickets?id=${updatedTicket.id}`, {
-          method: 'PATCH',
-          headers: { 'Content-Type': 'application/json' },
+          method: "PATCH",
+          headers: { "Content-Type": "application/json" },
           body: JSON.stringify({ status: updatedTicket.status }),
         });
 
         const data = await res.json();
-        if (!res.ok) throw new Error(data.error || 'Failed to update ticket');
+        if (!res.ok) throw new Error(data.error || "Failed to update ticket");
 
         await fetchTickets();
-        toast.success('Ticket updated successfully');
+        showFancyToast({
+                title: "Ticket Updated Successfully",
+                message: "The ticket has been updated successfully.",
+                type: "success",
+              });
         handleCloseModal();
       } catch (error) {
-        const message = error instanceof Error ? error.message : 'Failed to update ticket';
-        toast.error(message);
+        const message =
+          error instanceof Error ? error.message : "Failed to update ticket";
+        showFancyToast({
+                title: "Sorry, there was an error",
+                message: message,
+                type: "error",
+              });
       }
     },
-    [handleCloseModal, fetchTickets],
+    [handleCloseModal, fetchTickets]
   );
 
   const filteredTickets = tickets.filter((ticket) => {
-    const matchesFilter = filter === 'all' || ticket.status === filter;
+    const matchesFilter = filter === "all" || ticket.status === filter;
     const matchesSearch =
-      searchQuery === '' ||
+      searchQuery === "" ||
       ticket.type.toLowerCase().includes(searchQuery.toLowerCase()) ||
       ticket.id.toLowerCase().includes(searchQuery.toLowerCase()) ||
       ticket.customer.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
@@ -128,16 +150,21 @@ export default function TicketsPage() {
   });
 
   // Calculate average response time (in hours) for tickets with replies
-  const avgResponseTime = tickets.length > 0
-    ? tickets.reduce((acc, ticket) => {
-        const firstReply = ticket.replies.find(reply => reply.sender === 'support');
-        if (!firstReply) return acc;
-        const created = new Date(ticket.createdAt).getTime();
-        const replied = new Date(firstReply.createdAt).getTime();
-        const diffHours = (replied - created) / (1000 * 60 * 60);
-        return acc + diffHours;
-      }, 0) / tickets.filter(t => t.replies.some(r => r.sender === 'support')).length
-    : 0;
+  const avgResponseTime =
+    tickets.length > 0
+      ? tickets.reduce((acc, ticket) => {
+          const firstReply = ticket.replies.find(
+            (reply) => reply.sender === "support"
+          );
+          if (!firstReply) return acc;
+          const created = new Date(ticket.createdAt).getTime();
+          const replied = new Date(firstReply.createdAt).getTime();
+          const diffHours = (replied - created) / (1000 * 60 * 60);
+          return acc + diffHours;
+        }, 0) /
+        tickets.filter((t) => t.replies.some((r) => r.sender === "support"))
+          .length
+      : 0;
 
   const modalComponent =
     isMounted && selectedTicket ? (
@@ -182,8 +209,12 @@ export default function TicketsPage() {
       <div className="mb-8">
         <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between">
           <div className="mb-4 sm:mb-0">
-            <h1 className="text-3xl font-bold text-gray-900">Ticket Management</h1>
-            <p className="mt-2 text-gray-600">View and manage customer support tickets</p>
+            <h1 className="text-3xl font-bold text-gray-900">
+              Ticket Management
+            </h1>
+            <p className="mt-2 text-gray-600">
+              View and manage customer support tickets
+            </p>
           </div>
         </div>
       </div>
@@ -197,7 +228,9 @@ export default function TicketsPage() {
             </div>
             <div className="ml-4">
               <p className="text-sm font-medium text-gray-600">Total Tickets</p>
-              <p className="text-2xl font-bold text-gray-900">{tickets.length}</p>
+              <p className="text-2xl font-bold text-gray-900">
+                {tickets.length}
+              </p>
             </div>
           </div>
         </div>
@@ -207,8 +240,12 @@ export default function TicketsPage() {
               <Clock className="w-6 h-6 text-yellow-600" />
             </div>
             <div className="ml-4">
-              <p className="text-sm font-medium text-gray-600">Active Tickets</p>
-              <p className="text-2xl font-bold text-gray-900">{tickets.filter(t => t.status === 'active').length}</p>
+              <p className="text-sm font-medium text-gray-600">
+                Active Tickets
+              </p>
+              <p className="text-2xl font-bold text-gray-900">
+                {tickets.filter((t) => t.status === "active").length}
+              </p>
             </div>
           </div>
         </div>
@@ -218,8 +255,12 @@ export default function TicketsPage() {
               <CheckCircle className="w-6 h-6 text-green-600" />
             </div>
             <div className="ml-4">
-              <p className="text-sm font-medium text-gray-600">Closed Tickets</p>
-              <p className="text-2xl font-bold text-gray-900">{tickets.filter(t => t.status === 'closed').length}</p>
+              <p className="text-sm font-medium text-gray-600">
+                Closed Tickets
+              </p>
+              <p className="text-2xl font-bold text-gray-900">
+                {tickets.filter((t) => t.status === "closed").length}
+              </p>
             </div>
           </div>
         </div>
@@ -229,9 +270,13 @@ export default function TicketsPage() {
               <Clock className="w-6 h-6 text-purple-600" />
             </div>
             <div className="ml-4">
-              <p className="text-sm font-medium text-gray-600">Avg. Response Time</p>
+              <p className="text-sm font-medium text-gray-600">
+                Avg. Response Time
+              </p>
               <p className="text-2xl font-bold text-gray-900">
-                {isNaN(avgResponseTime) ? 'N/A' : `${avgResponseTime.toFixed(1)} hrs`}
+                {isNaN(avgResponseTime)
+                  ? "N/A"
+                  : `${avgResponseTime.toFixed(1)} hrs`}
               </p>
             </div>
           </div>
@@ -252,18 +297,20 @@ export default function TicketsPage() {
           />
         </div>
         <div className="flex gap-2">
-          {['all', 'active', 'inactive', 'closed'].map((status) => (
+          {["all", "active", "inactive", "closed"].map((status) => (
             <Button
               key={status}
               onClick={() => setFilter(status)}
-              variant={filter === status ? 'default' : 'outline'}
+              variant={filter === status ? "default" : "outline"}
               className={`px-4 py-2 rounded-lg text-sm font-medium capitalize transition-all duration-200 ${
                 filter === status
-                  ? 'bg-primary text-white hover:bg-primary-hover'
-                  : 'bg-white text-gray-700 border-gray-300 hover:bg-gray-50'
+                  ? "bg-primary text-white hover:bg-primary-hover"
+                  : "bg-white text-gray-700 border-gray-300 hover:bg-gray-50"
               }`}
             >
-              {status === 'all' ? 'All' : status.charAt(0).toUpperCase() + status.slice(1)}
+              {status === "all"
+                ? "All"
+                : status.charAt(0).toUpperCase() + status.slice(1)}
             </Button>
           ))}
         </div>

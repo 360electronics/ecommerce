@@ -4,7 +4,6 @@ import React, { useEffect, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import Breadcrumbs from "@/components/Reusable/BreadScrumb";
-import toast from "react-hot-toast";
 import { CartItemComponent } from "@/components/Cart/CartItem";
 import Image from "next/image";
 import { Button } from "@/components/ui/button";
@@ -12,6 +11,7 @@ import { useAuthStore } from "@/store/auth-store";
 import { useCheckoutStore } from "@/store/checkout-store";
 import { useCartStore } from "@/store/cart-store";
 import { CartItem } from "@/store/cart-store";
+import { showFancyToast } from "@/components/Reusable/ShowCustomToast";
 
 const CartPage: React.FC = ({ initialCartItems }: any) => {
   const {
@@ -181,7 +181,11 @@ const CartPage: React.FC = ({ initialCartItems }: any) => {
         setEffectiveRange(selectedRange);
       } catch (error) {
         console.error("Error fetching offer products:", error);
-        toast.error("Failed to load offer products");
+        showFancyToast({
+          title: "Sorry, Something Went Wrong",
+          message: "Failed to load offer products. Please try again.",
+          type: "error",
+        });
         setOfferProducts([]);
         setEffectiveRange(null);
       } finally {
@@ -194,23 +198,41 @@ const CartPage: React.FC = ({ initialCartItems }: any) => {
 
   const handleAddOfferProduct = async (offerProduct: any) => {
     if (!isLoggedIn || !user?.id) {
-      toast.error("Please log in to add offer products");
+      showFancyToast({
+        title: "Access Denied",
+        message: "Please log in to add offer products to your cart.",
+        type: "error",
+      });
       return;
     }
 
     if (!hasRegularProduct) {
-      toast.error("Add a regular product to your cart first");
+      showFancyToast({
+        title: "Add Regular Product First",
+        message:
+          "Please add a regular product to your cart before adding an offer product.",
+        type: "error",
+      });
       return;
     }
 
     if (hasOfferProductInCart) {
-      toast.error("Only one offer product can be added to the cart");
+      showFancyToast({
+        title: "Offer Product Already Added",
+        message: "Only one offer product can be added to the cart.",
+        type: "error",
+      });
       return;
     }
 
     const regularItem = cartItems.find((item) => !item.cartOfferProductId);
     if (!regularItem) {
-      toast.error("No regular product found in cart");
+      showFancyToast({
+        title: "No Regular Product Found",
+        message:
+          "Please add a regular product to your cart before adding an offer product.",
+        type: "error",
+      });
       return;
     }
 
@@ -220,16 +242,28 @@ const CartPage: React.FC = ({ initialCartItems }: any) => {
         offerProduct.id,
         offerProduct.ourPrice
       );
-      toast.success(`${offerProduct.productName} added to cart!`);
+      showFancyToast({
+        title: "Offer Product Added",
+        message: `${offerProduct.productName} added to cart!`,
+        type: "success",
+      });
     } catch (error) {
       console.error("Error adding offer product:", error);
-      toast.error("Failed to add offer product");
+      showFancyToast({
+        title: "Sorry, Something Went Wrong",
+        message: `Failed to add offer product. Please try again.`,
+        type: "error",
+      });
     }
   };
 
   const handleRemoveOfferProduct = async (cartItemId: string) => {
     if (!isLoggedIn || !user?.id) {
-      toast.error("Please log in to remove offer products");
+      showFancyToast({
+        title: "Access Denied",
+        message: `Please log in to remove offer products.`,
+        type: "error",
+      });
       return;
     }
 
@@ -251,10 +285,18 @@ const CartPage: React.FC = ({ initialCartItems }: any) => {
       }
 
       await useCartStore.getState().fetchCart();
-      toast.success("Offer product removed from cart");
+      showFancyToast({
+        title: "Offer Product Removed",
+        message: "Offer product removed from cart.",
+        type: "success",
+      });
     } catch (error) {
       console.error("Error removing offer product:", error);
-      toast.error("Failed to remove offer product");
+      showFancyToast({
+        title: "Sorry, Something Went Wrong",
+        message: `Failed to remove offer product. Please try again.`,
+        type: "error",
+      });
     } finally {
       setIsUpdating(null);
     }
@@ -262,40 +304,70 @@ const CartPage: React.FC = ({ initialCartItems }: any) => {
 
   const handleApplyCoupon = async () => {
     if (!couponCode) {
-      toast.error("Please enter a coupon code");
+      showFancyToast({
+        title: "Sorry, Something Went Wrong",
+        message: `Please enter a coupon code.`,
+        type: "error",
+      });
       return;
     }
     await applyCoupon(couponCode);
     const { couponStatus: status, coupon } = useCartStore.getState();
     if (status === "applied" && coupon) {
-      toast.success(
-        `Coupon ${coupon.code} applied (${
+      showFancyToast({
+        title: "Coupon Applied Successfully",
+        message: `Coupon ${coupon.code} applied (${
           coupon.type === "amount"
             ? formatCurrency(coupon.value)
             : `${coupon.value}%`
-        })`
-      );
+        })`,
+        type: "success",
+      });
     } else if (status === "invalid") {
-      toast.error("Invalid coupon code");
+      showFancyToast({
+        title: "Sorry, Something Went Wrong",
+        message: `Invalid coupon code.`,
+        type: "error",
+      });
     } else if (status === "invalid_amount") {
-      toast.error("Coupon has an invalid discount value");
+      showFancyToast({
+        title: "Sorry, Something Went Wrong",
+        message: `Coupon has an invalid discount value.`,
+        type: "error",
+      });
     } else if (status === "expired") {
-      toast.error("Coupon has expired");
+      showFancyToast({
+        title: "Sorry, Something Went Wrong",
+        message: `Coupon has expired.`,
+        type: "error",
+      });
     } else if (status === "used") {
-      toast.error("Coupon has already been used");
+      showFancyToast({
+        title: "Sorry, Something Went Wrong",
+        message: `Coupon has already been used.`,
+        type: "error",
+      });
     }
     setCouponCode("");
   };
 
   const handleCheckout = async () => {
     if (!isLoggedIn || !user?.id) {
-      toast.error("Please log in to proceed to checkout");
+      showFancyToast({
+        title: "Sorry, Something Went Wrong",
+        message: `Please log in to proceed to checkout.`,
+        type: "error",
+      });
       router.push("/signin");
       return;
     }
 
     if (cartItems.length === 0) {
-      toast.error("Your cart is empty");
+      showFancyToast({
+        title: "Sorry, Something Went Wrong",
+        message: `Your cart is empty. Please add items to proceed to checkout.`,
+        type: "error",
+      });
       return;
     }
 
@@ -321,7 +393,11 @@ const CartPage: React.FC = ({ initialCartItems }: any) => {
         });
       }
 
-      toast.success("Items added to checkout");
+      showFancyToast({
+        title: "Items Added to Checkout",
+        message: `Items added to checkout successfully.`,
+        type: "success",
+      });
       router.push(
         coupon && couponStatus === "applied" && coupon.value != null
           ? `/checkout?coupon=${coupon.code}&discountType=${coupon.type}&discountValue=${coupon.value}`
@@ -330,7 +406,11 @@ const CartPage: React.FC = ({ initialCartItems }: any) => {
       await clearCart();
     } catch (error) {
       console.error("Error during checkout:", error);
-      toast.error("Failed to proceed to checkout. Please try again.");
+      showFancyToast({
+        title: "Failed to Proceed to Checkout",
+        message: `Please try again.`,
+        type: "error",
+      });
     }
   };
 
@@ -338,10 +418,18 @@ const CartPage: React.FC = ({ initialCartItems }: any) => {
     setIsUpdating(variantId);
     try {
       await removeFromCart(productId, variantId);
-      toast.success("Item removed from cart");
+      showFancyToast({
+        title: "Item Removed from Cart",
+        message: `Item removed successfully.`,
+        type: "success",
+      });
     } catch (error) {
       console.error("Error removing from cart:", error);
-      toast.error("Failed to remove item from cart");
+      showFancyToast({
+        title: "Sorry, Something Went Wrong",
+        message: `Failed to remove item from cart. Please try again.`,
+        type: "error",
+      });
     } finally {
       setIsUpdating(null);
     }
@@ -351,10 +439,18 @@ const CartPage: React.FC = ({ initialCartItems }: any) => {
     setIsUpdating(cartItemId);
     try {
       await updateQuantity(cartItemId, quantity);
-      toast.success("Quantity updated");
+      showFancyToast({
+        title: "Quantity Updated Successfully",
+        message: `Quantity updated successfully.`,
+        type: "success",
+      });
     } catch (error) {
       console.error("Error updating quantity:", error);
-      toast.error("Failed to update quantity");
+      showFancyToast({
+        title: "Sorry, Something Went Wrong",
+        message: `Failed to update quantity. Please try again.`,
+        type: "error",
+      });
     } finally {
       setIsUpdating(null);
     }

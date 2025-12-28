@@ -2,11 +2,10 @@
 
 import { useState, useCallback, useEffect, Suspense } from "react";
 import { useRouter } from "next/navigation";
-import Image from "next/image";
-import { toast } from "react-hot-toast";
 import Link from "next/link";
 import { cn } from "@/lib/utils";
 import { useSearchParams } from "next/navigation";
+import { showFancyToast } from "@/components/Reusable/ShowCustomToast";
 
 // Types (aligned with banners schema)
 interface ImageUrls {
@@ -83,7 +82,11 @@ function SignupForm({ referralCode = "", callbackUrl = "/" }) {
       console.log(activeRegisterBanner);
     } catch (error) {
       console.error("Error fetching banners:", error);
-      toast.error("Failed to load banner.");
+      showFancyToast({
+        title: "Unable to Load Banner",
+        message: "Failed to load banner. Please try again.",
+        type: "error",
+      });
     } finally {
       setIsBannerLoading(false);
     }
@@ -134,7 +137,11 @@ function SignupForm({ referralCode = "", callbackUrl = "/" }) {
     const validationError = validateForm(formData);
     if (validationError) {
       setError(validationError);
-      toast.error(validationError);
+      showFancyToast({
+        title: "Validation Failed",
+        message: validationError,
+        type: "error",
+      });
       return;
     }
 
@@ -153,13 +160,25 @@ function SignupForm({ referralCode = "", callbackUrl = "/" }) {
         throw new Error(data.error || "Signup failed");
       }
 
-      toast.success("Signup successful! OTP sent to your email/phone.");
-      router.push(`/verify-otp?userId=${data.userId}&type=email&callbackUrl=${encodeURIComponent(callbackUrl)}`);
+      showFancyToast({
+        title: "Signup Successful",
+        message: "Signup successful! OTP sent to your email/phone.",
+        type: "success",
+      });
+      router.push(
+        `/verify-otp?userId=${
+          data.userId
+        }&type=email&callbackUrl=${encodeURIComponent(callbackUrl)}`
+      );
     } catch (err: unknown) {
       const errorMessage =
         err instanceof Error ? err.message : "An unexpected error occurred";
       setError(errorMessage);
-      toast.error(errorMessage);
+       showFancyToast({
+        title: "Sorry, Something Went Wrong",
+        message: errorMessage,
+        type: "error",
+      });
     } finally {
       setLoading(false);
     }
@@ -450,7 +469,12 @@ export default function SignupPage() {
     const searchParams = useSearchParams();
     const referralCodeFromUrl = searchParams.get("ref") || "";
     const callbackUrl = searchParams.get("callbackUrl") || "/";
-    return <SignupForm referralCode={referralCodeFromUrl} callbackUrl={callbackUrl} />;
+    return (
+      <SignupForm
+        referralCode={referralCodeFromUrl}
+        callbackUrl={callbackUrl}
+      />
+    );
   }
 
   return (

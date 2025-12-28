@@ -2,14 +2,13 @@
 
 import { useState, useEffect, useCallback, useRef, Suspense } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
-import Image from "next/image";
-import { toast } from "react-hot-toast";
 import Link from "next/link";
 import { cn } from "@/lib/utils";
 import { useAuthStore } from "@/store/auth-store";
 import { useCartStore } from "@/store/cart-store";
 import { useCheckoutStore } from "@/store/checkout-store";
 import { useWishlistStore } from "@/store/wishlist-store";
+import { showFancyToast } from "@/components/Reusable/ShowCustomToast";
 
 interface ImageUrls {
   default: string;
@@ -68,10 +67,14 @@ function VerifyOTPContent() {
       (searchParams.get("type") as "email" | "phone") || "email";
     const callbackUrlParam = searchParams.get("callbackUrl") || "/";
 
-    console.log('Raw callbackUrlParam:', callbackUrlParam); // Debug log
+    console.log("Raw callbackUrlParam:", callbackUrlParam); // Debug log
 
     if (!userIdParam) {
-      toast.error("Invalid request: Missing user ID");
+      showFancyToast({
+        title: "Invalid Request",
+        message: "Missing user ID",
+        type: "error",
+      });
     }
 
     setUserId(userIdParam);
@@ -114,7 +117,11 @@ function VerifyOTPContent() {
       setBanner(activeRegisterBanner || null);
     } catch (error) {
       console.error("Error fetching banners:", error);
-      toast.error("Failed to load banner.");
+      showFancyToast({
+        title: "Unable to Load Banner",
+        message: "Failed to load banner. Please try again.",
+        type: "error",
+      });
     } finally {
       setIsBannerLoading(false);
     }
@@ -179,13 +186,21 @@ function VerifyOTPContent() {
     const validationError = validateOTP();
     if (validationError) {
       setError(validationError);
-      toast.error(validationError);
+      showFancyToast({
+        title: "Sorry, Something Went Wrong",
+        message: validationError,
+        type: "error",
+      });
       return;
     }
 
     if (!userId) {
       setError("Invalid request: Missing user ID");
-      toast.error("Invalid request");
+      showFancyToast({
+        title: "Invalid Request",
+        message: "Missing user ID",
+        type: "error",
+      });
       return;
     }
 
@@ -205,12 +220,16 @@ function VerifyOTPContent() {
         throw new Error(data.error || "Failed to verify OTP");
       }
 
-      toast.success("OTP verified successfully!");
+      showFancyToast({
+        title: "OTP Verified Successfully",
+        message: "Your OTP has been verified successfully.",
+        type: "success",
+      });
 
       // Update auth state
       setAuth(true, data.user);
 
-            // Navigate with hard redirect to ensure middleware recognizes auth
+      // Navigate with hard redirect to ensure middleware recognizes auth
       // Prioritize callbackUrl if present (works for both users and admins)
       let targetUrl: string;
       if (callbackUrl && callbackUrl !== "/") {
@@ -245,13 +264,15 @@ function VerifyOTPContent() {
           }
         });
       }
-
-
     } catch (err: unknown) {
       const errorMessage =
         err instanceof Error ? err.message : "Failed to verify OTP";
       setError(errorMessage);
-      toast.error(errorMessage);
+      showFancyToast({
+        title: "Sorry, Something Went Wrong",
+        message: errorMessage,
+        type: "error",
+      });
     } finally {
       setLoading(false);
     }
@@ -261,7 +282,11 @@ function VerifyOTPContent() {
   const handleResend = async () => {
     if (!userId) {
       setError("Invalid request: Missing user ID");
-      toast.error("Invalid request");
+      showFancyToast({
+        title: "Invalid Request",
+        message: "Missing user ID",
+        type: "error",
+      });
       return;
     }
 
@@ -282,12 +307,20 @@ function VerifyOTPContent() {
       }
 
       setCountdown(30);
-      toast.success("OTP resent successfully!");
+      showFancyToast({
+        title: "OTP Resent Successfully",
+        message: "Your OTP has been resent successfully.",
+        type: "success",
+      });
     } catch (err: unknown) {
       const errorMessage =
         err instanceof Error ? err.message : "Failed to resend OTP";
       setError(errorMessage);
-      toast.error(errorMessage);
+      showFancyToast({
+        title: "Sorry, Something Went Wrong",
+        message: errorMessage,
+        type: "error",
+      });
     } finally {
       setResendLoading(false);
     }

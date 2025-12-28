@@ -8,7 +8,7 @@ import {
   type ColumnDefinition,
 } from "@/components/Layouts/TableLayout";
 import { fetchProducts } from "@/utils/products.util";
-import toast, { Toaster } from "react-hot-toast";
+import { showFancyToast } from "@/components/Reusable/ShowCustomToast";
 
 // Core Entity Types (unchanged)
 export type Category = {
@@ -527,10 +527,18 @@ export function ProductsTable() {
           prev.filter((r) => r.productId !== row.productId)
         );
         setProducts((prev) => prev.filter((p) => p.id !== row.productId));
-        toast.success(`${row.fullName} deleted successfully.`);
+        showFancyToast({
+          title: "Item Deleted Successfully",
+          message: `${row.fullName} deleted successfully.`,
+          type: "success",
+        });
       } catch (error) {
         console.error("Failed to delete product:", error);
-        toast.error("Failed to delete product.");
+        showFancyToast({
+          title: "Sorry, Something Went Wrong",
+          message: `Failed to delete ${row.fullName}. Please try again.`,
+          type: "error",
+        });
       }
     }
   };
@@ -545,17 +553,29 @@ export function ProductsTable() {
           prev.filter((r) => !productIds.includes(r.productId))
         );
         setProducts((prev) => prev.filter((p) => !productIds.includes(p.id)));
-        toast.success(`${productIds.length} products deleted successfully.`);
+        showFancyToast({
+          title: "Items Deleted Successfully",
+          message: `${productIds.length} products deleted successfully.`,
+          type: "success",
+        });
       } catch (error) {
         console.error("Failed to bulk delete products:", error);
-        toast.error("Failed to delete products.");
+        showFancyToast({
+          title: "Sorry, Something Went Wrong",
+          message: `Failed to delete products. Please try again.`,
+          type: "error",
+        });
       }
     }
   };
 
   const handleExportProducts = (rows: TableRow[]) => {
     const productIds = [...new Set(rows.map((row) => row.productId))];
-    toast.success(`Exporting ${productIds.length} products...`);
+    showFancyToast({
+      title: "Export Initiated",
+      message: `Exporting ${productIds.length} products...`,
+      type: "success",
+    });
     // Implement CSV export logic
   };
 
@@ -572,7 +592,11 @@ export function ProductsTable() {
       } catch (err) {
         console.error("Error loading products:", err);
         setError("Failed to load products. Please try again.");
-        toast.error("Error loading products.");
+        showFancyToast({
+          title: "Sorry, Something Went Wrong",
+          message: `Failed to load products. Please try again.`,
+          type: "error",
+        });
       } finally {
         setLoading(false);
       }
@@ -604,7 +628,6 @@ export function ProductsTable() {
 
   return (
     <div className=" mx-auto ">
-      <Toaster position="top-right" />
       {/* Header */}
       <div className="mb-8">
         <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between">

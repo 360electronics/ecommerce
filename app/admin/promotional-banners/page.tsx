@@ -1,14 +1,31 @@
-'use client';
+"use client";
 
-import React, { useState, useEffect, ChangeEvent, FormEvent, DragEvent } from 'react';
-import { PlusCircle, Calendar, Upload, X, AlertCircle, Film, Check } from 'lucide-react';
-import Image from 'next/image';
-import { EnhancedTable, type ColumnDefinition } from '@/components/Layouts/TableLayout';
-import { useRouter } from 'next/navigation';
-import { toast } from 'react-hot-toast';
-import { Input } from '@/components/ui/input';
-import { Button } from '@/components/ui/button';
-import { cn } from '@/lib/utils';
+import React, {
+  useState,
+  useEffect,
+  ChangeEvent,
+  FormEvent,
+  DragEvent,
+} from "react";
+import {
+  PlusCircle,
+  Calendar,
+  Upload,
+  X,
+  AlertCircle,
+  Film,
+  Check,
+} from "lucide-react";
+import Image from "next/image";
+import {
+  EnhancedTable,
+  type ColumnDefinition,
+} from "@/components/Layouts/TableLayout";
+import { useRouter } from "next/navigation";
+import { Input } from "@/components/ui/input";
+import { Button } from "@/components/ui/button";
+import { cn } from "@/lib/utils";
+import { showFancyToast } from "@/components/Reusable/ShowCustomToast";
 
 interface Banner {
   id: string;
@@ -27,16 +44,16 @@ interface Banner {
 }
 
 type BannerType =
-  | 'hero-main'
-  | 'hero-secondary'
-  | 'customise-pc'
-  | 'promotional'
-  | 'cta'
-  | 'register'
-  | 'all'
-  | 'new-arrivals'
-  | 'featured-products'
-  | 'gamers-zone';
+  | "hero-main"
+  | "hero-secondary"
+  | "customise-pc"
+  | "promotional"
+  | "cta"
+  | "register"
+  | "all"
+  | "new-arrivals"
+  | "featured-products"
+  | "gamers-zone";
 
 interface BannerTypeConfig {
   color: string;
@@ -69,14 +86,14 @@ interface FormData {
 }
 
 const bannerTypeConfig: Record<BannerType, BannerTypeConfig> = {
-  'hero-main': {
-    color: 'bg-purple-100 text-purple-800',
-    label: 'Hero Main',
-    description: 'Main hero banner for the homepage',
+  "hero-main": {
+    color: "bg-purple-100 text-purple-800",
+    label: "Hero Main",
+    description: "Main hero banner for the homepage",
     recommendedSizes: {
-      default: '1200x400px',
-      sm: '480x200px',
-      lg: '1920x600px',
+      default: "1200x400px",
+      sm: "480x200px",
+      lg: "1920x600px",
     },
     dimensions: {
       default: { width: 1200, height: 400 },
@@ -85,14 +102,14 @@ const bannerTypeConfig: Record<BannerType, BannerTypeConfig> = {
     },
     supportsVideo: false,
   },
-  'hero-secondary': {
-    color: 'bg-violet-100 text-violet-800',
-    label: 'Hero Secondary',
-    description: 'Secondary hero banner (supports images and videos)',
+  "hero-secondary": {
+    color: "bg-violet-100 text-violet-800",
+    label: "Hero Secondary",
+    description: "Secondary hero banner (supports images and videos)",
     recommendedSizes: {
-      default: '1200x400px or video',
-      sm: '640x200px or video',
-      lg: '1920x600px or video',
+      default: "1200x400px or video",
+      sm: "640x200px or video",
+      lg: "1920x600px or video",
     },
     dimensions: {
       default: { width: 1200, height: 400 },
@@ -101,14 +118,14 @@ const bannerTypeConfig: Record<BannerType, BannerTypeConfig> = {
     },
     supportsVideo: true,
   },
-  'customise-pc': {
-    color: 'bg-teal-100 text-teal-800',
-    label: 'Customise PC',
-    description: 'Banner for PC customization section',
+  "customise-pc": {
+    color: "bg-teal-100 text-teal-800",
+    label: "Customise PC",
+    description: "Banner for PC customization section",
     recommendedSizes: {
-      default: '1200x400px',
-      sm: '640x200px',
-      lg: '1920x600px',
+      default: "1200x400px",
+      sm: "640x200px",
+      lg: "1920x600px",
     },
     dimensions: {
       default: { width: 1200, height: 400 },
@@ -118,13 +135,13 @@ const bannerTypeConfig: Record<BannerType, BannerTypeConfig> = {
     supportsVideo: false,
   },
   cta: {
-    color: 'bg-pink-100 text-pink-800',
-    label: 'CTA',
-    description: 'Call to action banner for promotions',
+    color: "bg-pink-100 text-pink-800",
+    label: "CTA",
+    description: "Call to action banner for promotions",
     recommendedSizes: {
-      default: '1200x200px',
-      sm: '640x200px',
-      lg: '1920x600px',
+      default: "1200x200px",
+      sm: "640x200px",
+      lg: "1920x600px",
     },
     dimensions: {
       default: { width: 1200, height: 200 },
@@ -134,13 +151,13 @@ const bannerTypeConfig: Record<BannerType, BannerTypeConfig> = {
     supportsVideo: false,
   },
   promotional: {
-    color: 'bg-cyan-100 text-cyan-800',
-    label: 'Promotional',
-    description: 'Banner for promotional in product pages',
+    color: "bg-cyan-100 text-cyan-800",
+    label: "Promotional",
+    description: "Banner for promotional in product pages",
     recommendedSizes: {
-      default: '240x200px',
-      sm: '240x200px',
-      lg: '640x600px',
+      default: "240x200px",
+      sm: "240x200px",
+      lg: "640x600px",
     },
     dimensions: {
       default: { width: 240, height: 200 },
@@ -150,13 +167,13 @@ const bannerTypeConfig: Record<BannerType, BannerTypeConfig> = {
     supportsVideo: false,
   },
   all: {
-    color: 'bg-red-100 text-red-800',
-    label: 'All Categories',
-    description: 'Banner for all product categories',
+    color: "bg-red-100 text-red-800",
+    label: "All Categories",
+    description: "Banner for all product categories",
     recommendedSizes: {
-      default: '1200x400px',
-      sm: '640x200px',
-      lg: '1920x600px',
+      default: "1200x400px",
+      sm: "640x200px",
+      lg: "1920x600px",
     },
     dimensions: {
       default: { width: 1200, height: 400 },
@@ -166,13 +183,13 @@ const bannerTypeConfig: Record<BannerType, BannerTypeConfig> = {
     supportsVideo: false,
   },
   register: {
-    color: 'bg-red-100 text-red-800',
-    label: 'Register',
-    description: 'Banner for user registration prompts',
+    color: "bg-red-100 text-red-800",
+    label: "Register",
+    description: "Banner for user registration prompts",
     recommendedSizes: {
-      default: '640x200px',
-      sm: '640x200px',
-      lg: '640x600px',
+      default: "640x200px",
+      sm: "640x200px",
+      lg: "640x600px",
     },
     dimensions: {
       default: { width: 640, height: 200 },
@@ -181,15 +198,15 @@ const bannerTypeConfig: Record<BannerType, BannerTypeConfig> = {
     },
     supportsVideo: false,
   },
- 
-  'new-arrivals': {
-    color: 'bg-green-100 text-green-800',
-    label: 'New Arrivals',
-    description: 'Showcase newly added products',
+
+  "new-arrivals": {
+    color: "bg-green-100 text-green-800",
+    label: "New Arrivals",
+    description: "Showcase newly added products",
     recommendedSizes: {
-      default: '1200x400px',
-      sm: '640x200px',
-      lg: '1920x600px',
+      default: "1200x400px",
+      sm: "640x200px",
+      lg: "1920x600px",
     },
     dimensions: {
       default: { width: 1200, height: 400 },
@@ -198,14 +215,14 @@ const bannerTypeConfig: Record<BannerType, BannerTypeConfig> = {
     },
     supportsVideo: false,
   },
-  'featured-products': {
-    color: 'bg-blue-100 text-blue-800',
-    label: 'Featured Products',
-    description: 'Highlight curated product selections',
+  "featured-products": {
+    color: "bg-blue-100 text-blue-800",
+    label: "Featured Products",
+    description: "Highlight curated product selections",
     recommendedSizes: {
-      default: '800x300px',
-      sm: '480x180px',
-      lg: '1200x450px',
+      default: "800x300px",
+      sm: "480x180px",
+      lg: "1200x450px",
     },
     dimensions: {
       default: { width: 800, height: 300 },
@@ -214,14 +231,14 @@ const bannerTypeConfig: Record<BannerType, BannerTypeConfig> = {
     },
     supportsVideo: false,
   },
-  'gamers-zone': {
-    color: 'bg-yellow-100 text-yellow-800',
-    label: 'Gamers Zone',
-    description: 'Banner for gaming products section',
+  "gamers-zone": {
+    color: "bg-yellow-100 text-yellow-800",
+    label: "Gamers Zone",
+    description: "Banner for gaming products section",
     recommendedSizes: {
-      default: '800x300px',
-      sm: '480x180px',
-      lg: '1200x450px',
+      default: "800x300px",
+      sm: "480x180px",
+      lg: "1200x450px",
     },
     dimensions: {
       default: { width: 800, height: 300 },
@@ -233,8 +250,12 @@ const bannerTypeConfig: Record<BannerType, BannerTypeConfig> = {
 };
 
 const formatDate = (dateString: string): string => {
-  if (!dateString) return 'N/A';
-  return new Date(dateString).toLocaleDateString('en-US', { year: 'numeric', month: 'short', day: 'numeric' });
+  if (!dateString) return "N/A";
+  return new Date(dateString).toLocaleDateString("en-US", {
+    year: "numeric",
+    month: "short",
+    day: "numeric",
+  });
 };
 
 const PromotionalBannersPage: React.FC = () => {
@@ -246,12 +267,12 @@ const PromotionalBannersPage: React.FC = () => {
   const [isFetching, setIsFetching] = useState<boolean>(true);
   const [error, setError] = useState<string | null>(null);
   const [formData, setFormData] = useState<FormData>({
-    title: '',
-    type: 'hero-main',
+    title: "",
+    type: "hero-main",
     images: { default: null, sm: null, lg: null },
     active: true,
-    startDate: '',
-    endDate: '',
+    startDate: "",
+    endDate: "",
   });
   const [imagePreviews, setImagePreviews] = useState<{
     default: string | null;
@@ -282,64 +303,91 @@ const PromotionalBannersPage: React.FC = () => {
     setIsFetching(true);
     setError(null);
     try {
-      const response = await fetch('/api/banner');
-      if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
+      const response = await fetch("/api/banner");
+      if (!response.ok)
+        throw new Error(`HTTP error! status: ${response.status}`);
       const { data } = await response.json();
       const transformedBanners: Banner[] = Array.isArray(data)
         ? data.map((item: any) => ({
-          id: item.id,
-          title: item.title,
-          imageUrls: {
-            default: item.imageUrls.default,
-            sm: item.imageUrls.sm,
-            lg: item.imageUrls.lg,
-          },
-          type: item.type,
-          createdAt: item.createdAt,
-          updatedAt: item.updatedAt,
-          active: item.status === 'active',
-          startDate: item.start_date || '',
-          endDate: item.end_date || '',
-        }))
+            id: item.id,
+            title: item.title,
+            imageUrls: {
+              default: item.imageUrls.default,
+              sm: item.imageUrls.sm,
+              lg: item.imageUrls.lg,
+            },
+            type: item.type,
+            createdAt: item.createdAt,
+            updatedAt: item.updatedAt,
+            active: item.status === "active",
+            startDate: item.start_date || "",
+            endDate: item.end_date || "",
+          }))
         : [];
       setBanners(transformedBanners);
     } catch (error) {
-      setError(error instanceof Error ? error.message : 'Failed to load banners');
-      toast.error(error instanceof Error ? error.message : 'Failed to load banners');
+      setError(
+        error instanceof Error ? error.message : "Failed to load banners"
+      );
+      showFancyToast({
+        title: "Sorry, Something Went Wrong",
+        message:
+          error instanceof Error ? error.message : "Failed to load banners",
+        type: "error",
+      });
     } finally {
       setIsFetching(false);
     }
   };
 
   const isVideoFile = (file: File): boolean => {
-    const videoTypes = ['video/mp4', 'video/webm', 'video/ogg', 'video/quicktime', 'video/x-msvideo'];
+    const videoTypes = [
+      "video/mp4",
+      "video/webm",
+      "video/ogg",
+      "video/quicktime",
+      "video/x-msvideo",
+    ];
     return videoTypes.includes(file.type);
   };
 
   const isVideoUrl = (url: string | undefined): boolean => {
     if (!url) return false;
-    const videoExtensions = ['.mp4', '.webm', '.ogg', '.mov', '.avi'];
+    const videoExtensions = [".mp4", ".webm", ".ogg", ".mov", ".avi"];
     return videoExtensions.some((ext) => url.toLowerCase().endsWith(ext));
   };
 
-  const validateFile = async (file: File, variant: 'default' | 'sm' | 'lg'): Promise<boolean> => {
+  const validateFile = async (
+    file: File,
+    variant: "default" | "sm" | "lg"
+  ): Promise<boolean> => {
     const { type } = formData;
     const isVideo = isVideoFile(file);
-    const validImageTypes = ['image/jpeg', 'image/png', 'image/webp'];
-    const validVideoTypes = ['video/mp4', 'video/webm', 'video/ogg', 'video/quicktime', 'video/x-msvideo'];
+    const validImageTypes = ["image/jpeg", "image/png", "image/webp"];
+    const validVideoTypes = [
+      "video/mp4",
+      "video/webm",
+      "video/ogg",
+      "video/quicktime",
+      "video/x-msvideo",
+    ];
 
-    if (type === 'hero-secondary' && bannerTypeConfig[type].supportsVideo) {
-      if (!validImageTypes.includes(file.type) && !validVideoTypes.includes(file.type)) {
+    if (type === "hero-secondary" && bannerTypeConfig[type].supportsVideo) {
+      if (
+        !validImageTypes.includes(file.type) &&
+        !validVideoTypes.includes(file.type)
+      ) {
         setImageErrors((prev) => ({
           ...prev,
-          [variant]: 'Please upload a JPEG, PNG, WebP image or MP4, WebM, OGG, MOV, AVI video',
+          [variant]:
+            "Please upload a JPEG, PNG, WebP image or MP4, WebM, OGG, MOV, AVI video",
         }));
         return false;
       }
     } else if (!validImageTypes.includes(file.type)) {
       setImageErrors((prev) => ({
         ...prev,
-        [variant]: 'Please upload a JPEG, PNG, or WebP image',
+        [variant]: "Please upload a JPEG, PNG, or WebP image",
       }));
       return false;
     }
@@ -364,7 +412,10 @@ const PromotionalBannersPage: React.FC = () => {
           }
         };
         img.onerror = () => {
-          setImageErrors((prev) => ({ ...prev, [variant]: 'Failed to load image for validation' }));
+          setImageErrors((prev) => ({
+            ...prev,
+            [variant]: "Failed to load image for validation",
+          }));
           URL.revokeObjectURL(img.src);
           resolve(false);
         };
@@ -383,26 +434,31 @@ const PromotionalBannersPage: React.FC = () => {
     }
   };
 
-  const handleChange = async (e: ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
+  const handleChange = async (
+    e: ChangeEvent<HTMLInputElement | HTMLSelectElement>
+  ) => {
     const { name, value, type, files, checked } = e.target as HTMLInputElement;
-    if (type === 'file' && files?.[0]) {
+    if (type === "file" && files?.[0]) {
       const file = files[0];
-      const variant = name as 'default' | 'sm' | 'lg';
+      const variant = name as "default" | "sm" | "lg";
       const isValid = await validateFile(file, variant);
       if (isValid) {
         setFormData((prev) => ({
           ...prev,
           images: { ...prev.images, [variant]: file },
         }));
-        setImagePreviews((prev) => ({ ...prev, [variant]: URL.createObjectURL(file) }));
+        setImagePreviews((prev) => ({
+          ...prev,
+          [variant]: URL.createObjectURL(file),
+        }));
       }
     } else {
       setFormData((prev) => ({
         ...prev,
-        [name]: type === 'checkbox' ? checked : value,
+        [name]: type === "checkbox" ? checked : value,
       }));
-      if (name === 'type') {
-        for (const variant of ['default', 'sm', 'lg'] as const) {
+      if (name === "type") {
+        for (const variant of ["default", "sm", "lg"] as const) {
           if (formData.images[variant]) {
             validateFile(formData.images[variant]!, variant);
           }
@@ -411,16 +467,22 @@ const PromotionalBannersPage: React.FC = () => {
     }
   };
 
-  const handleDragOver = (e: DragEvent<HTMLDivElement>, variant: 'default' | 'sm' | 'lg') => {
+  const handleDragOver = (
+    e: DragEvent<HTMLDivElement>,
+    variant: "default" | "sm" | "lg"
+  ) => {
     e.preventDefault();
     setIsDragging((prev) => ({ ...prev, [variant]: true }));
   };
 
-  const handleDragLeave = (variant: 'default' | 'sm' | 'lg') => {
+  const handleDragLeave = (variant: "default" | "sm" | "lg") => {
     setIsDragging((prev) => ({ ...prev, [variant]: false }));
   };
 
-  const handleDrop = async (e: DragEvent<HTMLDivElement>, variant: 'default' | 'sm' | 'lg') => {
+  const handleDrop = async (
+    e: DragEvent<HTMLDivElement>,
+    variant: "default" | "sm" | "lg"
+  ) => {
     e.preventDefault();
     setIsDragging((prev) => ({ ...prev, [variant]: false }));
     const file = e.dataTransfer.files[0];
@@ -431,11 +493,14 @@ const PromotionalBannersPage: React.FC = () => {
         ...prev,
         images: { ...prev.images, [variant]: file },
       }));
-      setImagePreviews((prev) => ({ ...prev, [variant]: URL.createObjectURL(file) }));
+      setImagePreviews((prev) => ({
+        ...prev,
+        [variant]: URL.createObjectURL(file),
+      }));
     }
   };
 
-  const handleRemoveImage = (variant: 'default' | 'sm' | 'lg') => {
+  const handleRemoveImage = (variant: "default" | "sm" | "lg") => {
     setFormData((prev) => ({
       ...prev,
       images: { ...prev.images, [variant]: null },
@@ -447,35 +512,47 @@ const PromotionalBannersPage: React.FC = () => {
   const handleSubmit = async (e: FormEvent) => {
     e.preventDefault();
     if (!formData.title.trim() || !formData.type || !formData.images.default) {
-      toast.error('Please provide a title, type, and default image/video');
+      showFancyToast({
+        title: "Sorry, Something Went Wrong",
+        message: "Please provide a title, type, and default image/video",
+        type: "error",
+      });
       return;
     }
     if (Object.values(imageErrors).some((error) => error)) {
-      toast.error('Please fix file errors');
+      showFancyToast({
+        title: "Sorry, Something Went Wrong",
+        message: "Please fix file errors before submitting.",
+        type: "error",
+      });
       return;
     }
 
     setIsLoading(true);
     try {
       const apiFormData = new FormData();
-      apiFormData.append('title', formData.title.trim());
-      apiFormData.append('type', formData.type);
-      apiFormData.append('status', formData.active ? 'active' : 'inactive');
-      if (formData.startDate) apiFormData.append('start_date', formData.startDate);
-      if (formData.endDate) apiFormData.append('end_date', formData.endDate);
-      apiFormData.append('image', formData.images.default);
-      if (formData.images.sm) apiFormData.append('imageSm', formData.images.sm);
-      if (formData.images.lg) apiFormData.append('imageLg', formData.images.lg);
+      apiFormData.append("title", formData.title.trim());
+      apiFormData.append("type", formData.type);
+      apiFormData.append("status", formData.active ? "active" : "inactive");
+      if (formData.startDate)
+        apiFormData.append("start_date", formData.startDate);
+      if (formData.endDate) apiFormData.append("end_date", formData.endDate);
+      apiFormData.append("image", formData.images.default);
+      if (formData.images.sm) apiFormData.append("imageSm", formData.images.sm);
+      if (formData.images.lg) apiFormData.append("imageLg", formData.images.lg);
 
-      const response = await fetch('/api/banner', { method: 'POST', body: apiFormData });
+      const response = await fetch("/api/banner", {
+        method: "POST",
+        body: apiFormData,
+      });
       if (!response.ok) {
         const errorData = await response.json();
-        throw new Error(errorData.message || 'Failed to create banner');
+        throw new Error(errorData.message || "Failed to create banner");
       }
 
       const { bannerId, imageUrls } = await response.json();
       if (!imageUrls.default) {
-        throw new Error('Invalid default file URL returned from server');
+        throw new Error("Invalid default file URL returned from server");
       }
 
       const currentDate = new Date().toISOString();
@@ -494,18 +571,27 @@ const PromotionalBannersPage: React.FC = () => {
       setBanners((prev) => [...prev, newBanner]);
       setIsAddModalOpen(false);
       setFormData({
-        title: '',
-        type: 'hero-main',
+        title: "",
+        type: "hero-main",
         images: { default: null, sm: null, lg: null },
         active: true,
-        startDate: '',
-        endDate: '',
+        startDate: "",
+        endDate: "",
       });
       setImagePreviews({ default: null, sm: null, lg: null });
       setImageErrors({ default: null, sm: null, lg: null });
-      toast.success('Banner created successfully');
+      showFancyToast({
+        title: "Banner Created Successfully",
+        message: "Banner has been successfully created.",
+        type: "success",
+      });
     } catch (error) {
-      toast.error(error instanceof Error ? error.message : 'Failed to create banner');
+      showFancyToast({
+        title: "Sorry, Something Went Wrong",
+        message:
+          error instanceof Error ? error.message : "Failed to create banner",
+        type: "error",
+      });
     } finally {
       setIsLoading(false);
     }
@@ -518,17 +604,26 @@ const PromotionalBannersPage: React.FC = () => {
   const deleteBanner = async (banner: Banner) => {
     setIsLoading(true);
     try {
-      const response = await fetch('/api/banner', {
-        method: 'DELETE',
-        headers: { 'Content-Type': 'application/json' },
+      const response = await fetch("/api/banner", {
+        method: "DELETE",
+        headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ ids: [banner.id] }),
       });
-      if (!response.ok) throw new Error('Failed to delete banner');
+      if (!response.ok) throw new Error("Failed to delete banner");
       setBanners((prev) => prev.filter((b) => b.id !== banner.id));
       setSelectedBanners((prev) => prev.filter((b) => b.id !== banner.id));
-      toast.success('Banner deleted successfully');
+
+      showFancyToast({
+        title: "Banner Deleted Successfully",
+        message: "Banner has been successfully deleted.",
+        type: "success",
+      });
     } catch (error) {
-      toast.error('Failed to delete banner');
+      showFancyToast({
+        title: "Sorry, Something Went Wrong",
+        message: "Failed to delete banner. Please try again.",
+        type: "error",
+      });
     } finally {
       setIsLoading(false);
     }
@@ -537,17 +632,27 @@ const PromotionalBannersPage: React.FC = () => {
   const handleBulkDelete = async (selectedItems: Banner[]) => {
     try {
       const selectedIds = selectedItems.map((item) => item.id);
-      const response = await fetch('/api/banner', {
-        method: 'DELETE',
-        headers: { 'Content-Type': 'application/json' },
+      const response = await fetch("/api/banner", {
+        method: "DELETE",
+        headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ ids: selectedIds }),
       });
-      if (!response.ok) throw new Error('Failed to delete banners');
-      setBanners((prev) => prev.filter((banner) => !selectedIds.includes(banner.id)));
+      if (!response.ok) throw new Error("Failed to delete banners");
+      setBanners((prev) =>
+        prev.filter((banner) => !selectedIds.includes(banner.id))
+      );
       setSelectedBanners([]);
-      toast.success(`${selectedItems.length} banners deleted successfully`);
+      showFancyToast({
+        title: `${selectedItems.length} banners deleted successfully`,
+        message: "Banner has been successfully deleted.",
+        type: "success",
+      });
     } catch (error) {
-      toast.error('Failed to delete banners');
+      showFancyToast({
+        title: `Sorry, Something Went Wrong`,
+        message: "Failed to delete banners. Please try again.",
+        type: "error",
+      });
     }
   };
 
@@ -557,17 +662,23 @@ const PromotionalBannersPage: React.FC = () => {
     setBanners((prev) =>
       prev.map((b) => (b.id === id ? { ...b, active: !b.active } : b))
     );
-    toast.success(`Banner status updated to ${banner.active ? 'inactive' : 'active'}`);
+    showFancyToast({
+      title: `Banner status updated to ${
+        banner.active ? "inactive" : "active"
+      }`,
+      message: "Banner has been successfully deleted.",
+      type: "success",
+    });
   };
 
   const bannerColumns: ColumnDefinition<Banner>[] = [
     {
-      key: 'imageUrls',
-      header: 'Banner',
-      width: '150px',
-      align: 'left',
+      key: "imageUrls",
+      header: "Banner",
+      width: "150px",
+      align: "left",
       renderCell: (value, banner) => {
-        const { default: defaultUrl, sm, lg } = value as Banner['imageUrls'];
+        const { default: defaultUrl, sm, lg } = value as Banner["imageUrls"];
         const isVideo = isVideoUrl(defaultUrl);
 
         return (
@@ -604,27 +715,27 @@ const PromotionalBannersPage: React.FC = () => {
       },
     },
     {
-      key: 'title',
-      header: 'Title',
+      key: "title",
+      header: "Title",
       sortable: true,
-      width: '25%',
-      align: 'left',
+      width: "25%",
+      align: "left",
       renderCell: (value) => (
         <div className="text-sm font-semibold text-gray-900">{value}</div>
       ),
     },
     {
-      key: 'type',
-      header: 'Category',
+      key: "type",
+      header: "Category",
       sortable: true,
-      width: '20%',
-      align: 'left',
+      width: "20%",
+      align: "left",
       renderCell: (value) => {
         const type = value as BannerType;
         return (
           <span
             className={cn(
-              'px-3 py-1 text-xs font-medium rounded-full',
+              "px-3 py-1 text-xs font-medium rounded-full",
               bannerTypeConfig[type].color
             )}
           >
@@ -634,20 +745,22 @@ const PromotionalBannersPage: React.FC = () => {
       },
     },
     {
-      key: 'createdAt',
-      header: 'Created',
+      key: "createdAt",
+      header: "Created",
       sortable: true,
-      width: '15%',
-      align: 'center',
+      width: "15%",
+      align: "center",
       renderCell: (value) => (
-        <span className="text-sm text-gray-600">{formatDate(value as string)}</span>
+        <span className="text-sm text-gray-600">
+          {formatDate(value as string)}
+        </span>
       ),
     },
     {
-      key: 'startDate',
-      header: 'Campaign Period',
-      width: '15%',
-      align: 'left',
+      key: "startDate",
+      header: "Campaign Period",
+      width: "15%",
+      align: "left",
       renderCell: (value, banner) =>
         banner.startDate && banner.endDate ? (
           <div className="flex items-center text-sm text-gray-600">
@@ -661,44 +774,52 @@ const PromotionalBannersPage: React.FC = () => {
         ),
     },
     {
-      key: 'active',
-      header: 'Status',
+      key: "active",
+      header: "Status",
       sortable: true,
-      width: '10%',
-      align: 'left',
+      width: "10%",
+      align: "left",
       renderCell: (value, banner) => {
         const isActive = value === true;
         return (
           <button
             onClick={() => handleToggleActive(banner.id)}
             className={cn(
-              'px-3 py-1 text-xs font-medium rounded-full flex items-center justify-center',
-              isActive ? 'bg-green-100 text-green-800' : 'bg-yellow-100 text-yellow-800'
+              "px-3 py-1 text-xs font-medium rounded-full flex items-center justify-center",
+              isActive
+                ? "bg-green-100 text-green-800"
+                : "bg-yellow-100 text-yellow-800"
             )}
-            aria-label={`Toggle status to ${isActive ? 'inactive' : 'active'}`}
+            aria-label={`Toggle status to ${isActive ? "inactive" : "active"}`}
           >
             <span
-              className={`w-2 h-2 rounded-full mr-1.5 ${isActive ? 'bg-green-500' : 'bg-yellow-500'}`}
+              className={`w-2 h-2 rounded-full mr-1.5 ${
+                isActive ? "bg-green-500" : "bg-yellow-500"
+              }`}
             ></span>
-            {isActive ? 'Active' : 'Scheduled'}
+            {isActive ? "Active" : "Scheduled"}
           </button>
         );
       },
     },
   ];
 
-  const bannerCounts = banners.reduce(
-    (acc, banner) => {
-      acc[banner.type] = (acc[banner.type] || 0) + 1;
-      return acc;
-    },
-    {} as Record<BannerType, number>
-  );
+  const bannerCounts = banners.reduce((acc, banner) => {
+    acc[banner.type] = (acc[banner.type] || 0) + 1;
+    return acc;
+  }, {} as Record<BannerType, number>);
 
   const addBannerFormContent = (
-    <form onSubmit={handleSubmit} aria-labelledby="add-banner-title" className="space-y-6">
+    <form
+      onSubmit={handleSubmit}
+      aria-labelledby="add-banner-title"
+      className="space-y-6"
+    >
       <div>
-        <label htmlFor="title" className="block text-sm font-medium text-gray-700 mb-1">
+        <label
+          htmlFor="title"
+          className="block text-sm font-medium text-gray-700 mb-1"
+        >
           Title
         </label>
         <Input
@@ -714,7 +835,10 @@ const PromotionalBannersPage: React.FC = () => {
         />
       </div>
       <div>
-        <label htmlFor="type" className="block text-sm font-medium text-gray-700 mb-1">
+        <label
+          htmlFor="type"
+          className="block text-sm font-medium text-gray-700 mb-1"
+        >
           Category
         </label>
         <select
@@ -739,7 +863,10 @@ const PromotionalBannersPage: React.FC = () => {
       </div>
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
         <div>
-          <label htmlFor="startDate" className="block text-sm font-medium text-gray-700 mb-1">
+          <label
+            htmlFor="startDate"
+            className="block text-sm font-medium text-gray-700 mb-1"
+          >
             Start Date
           </label>
           <Input
@@ -752,7 +879,10 @@ const PromotionalBannersPage: React.FC = () => {
           />
         </div>
         <div>
-          <label htmlFor="endDate" className="block text-sm font-medium text-gray-700 mb-1">
+          <label
+            htmlFor="endDate"
+            className="block text-sm font-medium text-gray-700 mb-1"
+          >
             End Date
           </label>
           <Input
@@ -765,19 +895,25 @@ const PromotionalBannersPage: React.FC = () => {
           />
         </div>
       </div>
-      {(['default', 'sm', 'lg'] as const).map((variant) => (
+      {(["default", "sm", "lg"] as const).map((variant) => (
         <div key={variant} className="space-y-2">
           <label
             htmlFor={`image-${variant}`}
             className="block text-sm font-medium text-gray-700"
           >
-            {variant === 'default' ? 'Default Banner' : `${variant.toUpperCase()} Banner`}
-            {variant !== 'default' && <span className="text-gray-400"> (Optional)</span>}
+            {variant === "default"
+              ? "Default Banner"
+              : `${variant.toUpperCase()} Banner`}
+            {variant !== "default" && (
+              <span className="text-gray-400"> (Optional)</span>
+            )}
           </label>
           <div
             className={cn(
-              'border-2 border-dashed rounded-xl p-6 text-center transition-colors',
-              isDragging[variant] ? 'border-blue-500 bg-blue-50' : 'border-gray-300 bg-gray-50'
+              "border-2 border-dashed rounded-xl p-6 text-center transition-colors",
+              isDragging[variant]
+                ? "border-blue-500 bg-blue-50"
+                : "border-gray-300 bg-gray-50"
             )}
             onDragOver={(e) => handleDragOver(e, variant)}
             onDragLeave={() => handleDragLeave(variant)}
@@ -790,11 +926,11 @@ const PromotionalBannersPage: React.FC = () => {
               onChange={handleChange}
               className="hidden"
               accept={
-                formData.type === 'hero-secondary'
-                  ? 'image/jpeg,image/png,image/webp,video/mp4,video/webm,video/ogg,video/quicktime,video/x-msvideo'
-                  : 'image/jpeg,image/png,image/webp'
+                formData.type === "hero-secondary"
+                  ? "image/jpeg,image/png,image/webp,video/mp4,video/webm,video/ogg,video/quicktime,video/x-msvideo"
+                  : "image/jpeg,image/png,image/webp"
               }
-              aria-required={variant === 'default'}
+              aria-required={variant === "default"}
             />
             {imagePreviews[variant] ? (
               <div className="relative w-full h-48">
@@ -823,7 +959,8 @@ const PromotionalBannersPage: React.FC = () => {
                   <X className="h-4 w-4" />
                 </Button>
                 <p className="text-xs text-gray-500 mt-2">
-                  Optimized for {bannerTypeConfig[formData.type].recommendedSizes[variant]}
+                  Optimized for{" "}
+                  {bannerTypeConfig[formData.type].recommendedSizes[variant]}
                 </p>
               </div>
             ) : (
@@ -833,15 +970,22 @@ const PromotionalBannersPage: React.FC = () => {
               >
                 <Upload className="h-8 w-8 text-gray-400 mb-2" />
                 <p className="text-sm font-medium text-gray-600">
-                  Drag and drop an {formData.type === 'hero-secondary' ? 'image or video' : 'image'} here, or click to select
+                  Drag and drop an{" "}
+                  {formData.type === "hero-secondary"
+                    ? "image or video"
+                    : "image"}{" "}
+                  here, or click to select
                 </p>
                 <p className="text-xs text-gray-400 mt-1">
-                  Recommended: {bannerTypeConfig[formData.type].recommendedSizes[variant]}
+                  Recommended:{" "}
+                  {bannerTypeConfig[formData.type].recommendedSizes[variant]}
                 </p>
               </label>
             )}
             {imageErrors[variant] && (
-              <p className="text-sm text-red-600 mt-2">{imageErrors[variant]}</p>
+              <p className="text-sm text-red-600 mt-2">
+                {imageErrors[variant]}
+              </p>
             )}
           </div>
         </div>
@@ -856,7 +1000,10 @@ const PromotionalBannersPage: React.FC = () => {
           className="h-4 w-4 text-blue-600 rounded focus:ring-blue-500"
           aria-checked={formData.active}
         />
-        <label htmlFor="active" className="ml-2 text-sm font-medium text-gray-700">
+        <label
+          htmlFor="active"
+          className="ml-2 text-sm font-medium text-gray-700"
+        >
           Active
         </label>
       </div>
@@ -875,7 +1022,9 @@ const PromotionalBannersPage: React.FC = () => {
         </Button>
         <Button
           type="submit"
-          disabled={isLoading || Object.values(imageErrors).some((error) => error)}
+          disabled={
+            isLoading || Object.values(imageErrors).some((error) => error)
+          }
           className="bg-gradient-to-r from-[#ff6b00] to-[#ff9f00] hover:to-primary-hover text-white rounded-lg"
           aria-label="Submit new banner"
         >
@@ -885,7 +1034,7 @@ const PromotionalBannersPage: React.FC = () => {
               Adding...
             </span>
           ) : (
-            'Add Banner'
+            "Add Banner"
           )}
         </Button>
       </div>
@@ -930,8 +1079,12 @@ const PromotionalBannersPage: React.FC = () => {
       <div className="mb-8">
         <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between">
           <div className="mb-4 sm:mb-0">
-            <h1 className="text-3xl font-bold text-gray-900">Banner Management</h1>
-            <p className="mt-2 text-gray-600">Create and manage promotional banners</p>
+            <h1 className="text-3xl font-bold text-gray-900">
+              Banner Management
+            </h1>
+            <p className="mt-2 text-gray-600">
+              Create and manage promotional banners
+            </p>
           </div>
           <Button
             onClick={handleAddBanner}
@@ -953,7 +1106,9 @@ const PromotionalBannersPage: React.FC = () => {
             </div>
             <div className="ml-4">
               <p className="text-sm font-medium text-gray-600">Total Banners</p>
-              <p className="text-2xl font-bold text-gray-900">{banners.length}</p>
+              <p className="text-2xl font-bold text-gray-900">
+                {banners.length}
+              </p>
             </div>
           </div>
         </div>
@@ -963,8 +1118,12 @@ const PromotionalBannersPage: React.FC = () => {
               <Check className="w-6 h-6 text-green-600" />
             </div>
             <div className="ml-4">
-              <p className="text-sm font-medium text-gray-600">Active Banners</p>
-              <p className="text-2xl font-bold text-gray-900">{banners.filter((b) => b.active).length}</p>
+              <p className="text-sm font-medium text-gray-600">
+                Active Banners
+              </p>
+              <p className="text-2xl font-bold text-gray-900">
+                {banners.filter((b) => b.active).length}
+              </p>
             </div>
           </div>
         </div>
@@ -974,8 +1133,12 @@ const PromotionalBannersPage: React.FC = () => {
               <Calendar className="w-6 h-6 text-yellow-600" />
             </div>
             <div className="ml-4">
-              <p className="text-sm font-medium text-gray-600">Scheduled Banners</p>
-              <p className="text-2xl font-bold text-gray-900">{banners.filter((b) => !b.active).length}</p>
+              <p className="text-sm font-medium text-gray-600">
+                Scheduled Banners
+              </p>
+              <p className="text-2xl font-bold text-gray-900">
+                {banners.filter((b) => !b.active).length}
+              </p>
             </div>
           </div>
         </div>
@@ -991,18 +1154,21 @@ const PromotionalBannersPage: React.FC = () => {
             <div className="flex items-center justify-between w-[15dvw]">
               <span
                 className={cn(
-                  'px-3 py-1 text-xs font-medium rounded-full',
+                  "px-3 py-1 text-xs font-medium rounded-full",
                   config.color
                 )}
               >
                 {config.label}
               </span>
               <span className="text-sm text-gray-500">
-                {banners.filter((b) => b.type === type && b.active).length} Active
+                {banners.filter((b) => b.type === type && b.active).length}{" "}
+                Active
               </span>
             </div>
             <div className="mt-4">
-              <p className="text-2xl font-bold text-gray-900">{bannerCounts[type as BannerType] || 0}</p>
+              <p className="text-2xl font-bold text-gray-900">
+                {bannerCounts[type as BannerType] || 0}
+              </p>
               <p className="text-sm text-gray-600 mt-1">{config.description}</p>
             </div>
           </div>
@@ -1014,7 +1180,10 @@ const PromotionalBannersPage: React.FC = () => {
         <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 h-dvh  p-4">
           <div className="bg-white p-8 rounded-xl border border-gray-200 w-full max-w-2xl  h-[90dvh] scrollbar-hide overflow-y-auto">
             <div className="flex justify-between items-center mb-6">
-              <h2 id="add-banner-title" className="text-xl font-bold text-gray-900">
+              <h2
+                id="add-banner-title"
+                className="text-xl font-bold text-gray-900"
+              >
                 Add New Banner
               </h2>
               <Button
@@ -1037,7 +1206,7 @@ const PromotionalBannersPage: React.FC = () => {
       )}
 
       {/* Enhanced Table */}
-      <div >
+      <div>
         <EnhancedTable
           id="banners-table"
           data={banners}
@@ -1045,12 +1214,12 @@ const PromotionalBannersPage: React.FC = () => {
           selection={{
             enabled: true,
             onSelectionChange: setSelectedBanners,
-            selectionKey: 'id',
+            selectionKey: "id",
           }}
           search={{
             enabled: true,
-            keys: ['title', 'type'],
-            placeholder: 'Search banners by title or category...',
+            keys: ["title", "type"],
+            placeholder: "Search banners by title or category...",
           }}
           filters={{ enabled: true }}
           pagination={{
@@ -1060,21 +1229,21 @@ const PromotionalBannersPage: React.FC = () => {
           }}
           sorting={{
             enabled: true,
-            defaultSortColumn: 'createdAt',
-            defaultSortDirection: 'desc',
+            defaultSortColumn: "createdAt",
+            defaultSortDirection: "desc",
           }}
           actions={{
             onAdd: handleAddBanner,
-            addButtonText: 'Add Banner',
+            addButtonText: "Add Banner",
             bulkActions: { delete: handleBulkDelete },
             rowActions: { delete: deleteBanner },
           }}
           customization={{
             zebraStriping: false,
             stickyHeader: true,
-            rowClassName: 'hover:bg-gray-50 transition-colors duration-150',
-            cellClassName: 'py-4',
-            headerClassName: 'bg-gray-50 text-gray-900 font-semibold',
+            rowClassName: "hover:bg-gray-50 transition-colors duration-150",
+            cellClassName: "py-4",
+            headerClassName: "bg-gray-50 text-gray-900 font-semibold",
           }}
           onRowClick={(banner) => router.push(`/banner/${banner.id}`)}
         />

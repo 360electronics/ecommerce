@@ -10,8 +10,8 @@ import { useAuthStore } from "@/store/auth-store";
 import { useWishlistStore } from "@/store/wishlist-store";
 import { useProfileStore } from "@/store/profile-store";
 import { useCartStore } from "@/store/cart-store";
-import toast from "react-hot-toast";
 import { refetchCart } from "@/app/provider";
+import { showFancyToast } from "@/components/Reusable/ShowCustomToast";
 
 interface ProductCardProps {
   image?: string; // Primary image URL (first from productImages)
@@ -70,14 +70,22 @@ const ProductCardwithCart: React.FC<ProductCardProps> = ({
       e.stopPropagation();
 
       if (!isLoggedIn) {
-        toast.error("Please login to manage wishlist.");
+        showFancyToast({
+          title: "Access Required",
+          message: `Please login to manage your wishlist.`,
+          type: "error",
+        });
         router.push("/signin");
         return;
       }
 
       if (!productId || !variantId || productId === "" || variantId === "") {
         console.error("Invalid product or variant:", { productId, variantId });
-        toast.error("Invalid product or variant.");
+        showFancyToast({
+          title: "Sorry, Something Went Wrong",
+          message: `Invalid product or variant. Please try again.`,
+          type: "error",
+        });
         return;
       }
 
@@ -92,9 +100,15 @@ const ProductCardwithCart: React.FC<ProductCardProps> = ({
             );
 
         if (success) {
-          toast.success(
-            isInWishlistStatus ? "Removed from wishlist!" : "Added to wishlist!"
-          );
+          showFancyToast({
+            title: isInWishlistStatus
+              ? "Removed from wishlist!"
+              : "Added to wishlist!",
+            message: `Product has been ${
+              isInWishlistStatus ? "removed from" : "added to"
+            } your wishlist.`,
+            type: "success",
+          });
         }
       } catch (error) {
         console.error("[WISHLIST_ERROR]", { productId, variantId, error });
@@ -120,14 +134,22 @@ const ProductCardwithCart: React.FC<ProductCardProps> = ({
       e.stopPropagation();
 
       if (!isLoggedIn) {
-        toast.error("Please login to add to cart.");
+        showFancyToast({
+          title: "Access Required",
+          message: `Please login to add to cart.`,
+          type: "error",
+        });
         router.push("/signin");
         return;
       }
 
       if (!productId || !variantId || productId === "" || variantId === "") {
         console.error("Invalid product or variant:", { productId, variantId });
-        toast.error("Invalid product or variant.");
+        showFancyToast({
+          title: "Sorry, Something Went Wrong",
+          message: "Invalid product or variant. Please try again.",
+          type: "error",
+        });
         return;
       }
 
@@ -135,10 +157,18 @@ const ProductCardwithCart: React.FC<ProductCardProps> = ({
       try {
         await addToCart(productId, variantId, 1);
         refetchCart();
-        toast.success("Added to cart!");
+        showFancyToast({
+          title: "Added to Cart Successfully",
+          message: "Product has been added to your cart.",
+          type: "success",
+        });
       } catch (error) {
         console.error("[CART_ERROR]", { productId, variantId, error });
-        toast.error("Failed to add to cart.");
+        showFancyToast({
+          title: "Failed to Add to Cart",
+          message: "Failed to add product to cart.",
+          type: "error",
+        });
       } finally {
         setIsAdding(false);
       }

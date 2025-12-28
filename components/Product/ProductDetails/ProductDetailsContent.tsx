@@ -1,23 +1,36 @@
-'use client';
-import { Heart, Minus, Plus, Share2, Truck, Shield, Package, Phone, MapPin } from 'lucide-react';
-import { cn } from '@/lib/utils';
-import { useRouter, usePathname } from 'next/navigation';
-import { useEffect, useMemo, useState, useCallback, useRef, JSX } from 'react';
-import toast, { Toaster } from 'react-hot-toast';
-import { addToWishlist, removeFromWishlist } from '@/utils/wishlist.utils';
-import { useWishlistStore } from '@/store/wishlist-store';
-import { useProductStore } from '@/store/product-store';
-import { useCartStore } from '@/store/cart-store';
-import { useAuthStore } from '@/store/auth-store';
-import { ProductVariant, FlattenedProduct } from '@/types/product';
-import { refetchCart, refetchWishlist } from '@/app/provider';
+"use client";
+import {
+  Heart,
+  Minus,
+  Plus,
+  Share2,
+  Truck,
+  Shield,
+  Package,
+  Phone,
+  MapPin,
+} from "lucide-react";
+import { cn } from "@/lib/utils";
+import { useRouter, usePathname } from "next/navigation";
+import { useEffect, useMemo, useState, useCallback, useRef, JSX } from "react";
+import { addToWishlist, removeFromWishlist } from "@/utils/wishlist.utils";
+import { useWishlistStore } from "@/store/wishlist-store";
+import { useProductStore } from "@/store/product-store";
+import { useCartStore } from "@/store/cart-store";
+import { useAuthStore } from "@/store/auth-store";
+import { ProductVariant, FlattenedProduct } from "@/types/product";
+import { refetchCart, refetchWishlist } from "@/app/provider";
+import { showFancyToast } from "@/components/Reusable/ShowCustomToast";
 
 interface ProductDetailsContentProps {
   className?: string;
   activeVariant: ProductVariant;
 }
 
-export default function ProductDetailsContent({ className, activeVariant }: ProductDetailsContentProps) {
+export default function ProductDetailsContent({
+  className,
+  activeVariant,
+}: ProductDetailsContentProps) {
   const {
     product,
     selectedAttributes,
@@ -35,17 +48,13 @@ export default function ProductDetailsContent({ className, activeVariant }: Prod
   const [isAddingToCart, setIsAddingToCart] = useState(false);
   const [isAddingToWishlist, setIsAddingToWishlist] = useState(false);
   const [isNavigating, setIsNavigating] = useState(false);
-  const [pinCode, setPinCode] = useState('');
+  const [pinCode, setPinCode] = useState("");
   const [deliveryEstimate, setDeliveryEstimate] = useState<string | null>(null);
   const [pinCodeError, setPinCodeError] = useState<string | null>(null);
   const [isCheckingPin, setIsCheckingPin] = useState(false);
   const [district, setDistrict] = useState<string | null>(null);
   const inputRef = useRef<HTMLInputElement>(null); // Add ref for input focus
   const userId = user?.id;
-
-
-
-
 
   // Debounce function to limit rapid API calls
   const debounce = (func: (...args: any[]) => void, wait: number) => {
@@ -57,14 +66,25 @@ export default function ProductDetailsContent({ className, activeVariant }: Prod
   };
 
   const renderRating = useCallback((): JSX.Element | null => {
-    if (typeof product?.averageRating !== 'number' || isNaN(product?.averageRating) || product?.averageRating <= 3 || product?.averageRating > 5) return null;
+    if (
+      typeof product?.averageRating !== "number" ||
+      isNaN(product?.averageRating) ||
+      product?.averageRating <= 3 ||
+      product?.averageRating > 5
+    )
+      return null;
 
     const stars = Array(5)
       .fill(0)
       .map((_, index) => (
         <span
           key={index}
-          className={cn('text-base sm:text-lg', index < Math.floor(Number(product?.averageRating)) ? 'text-yellow-500' : 'text-gray-300')}
+          className={cn(
+            "text-base sm:text-lg",
+            index < Math.floor(Number(product?.averageRating))
+              ? "text-yellow-500"
+              : "text-gray-300"
+          )}
         >
           ★
         </span>
@@ -72,7 +92,9 @@ export default function ProductDetailsContent({ className, activeVariant }: Prod
 
     return (
       <div className="flex items-center">
-        <span className="mr-1 font-medium text-[10px] sm:text-sm">{Number(product?.averageRating).toFixed(1)}</span>
+        <span className="mr-1 font-medium text-[10px] sm:text-sm">
+          {Number(product?.averageRating).toFixed(1)}
+        </span>
         <div className="flex">{stars}</div>
       </div>
     );
@@ -90,7 +112,9 @@ export default function ProductDetailsContent({ className, activeVariant }: Prod
     setPinCodeError(null);
 
     try {
-      const response = await fetch(`https://api.postalpincode.in/pincode/${pinCode}`);
+      const response = await fetch(
+        `https://api.postalpincode.in/pincode/${pinCode}`
+      );
       const data = await response.json();
 
       if (
@@ -135,45 +159,84 @@ export default function ProductDetailsContent({ className, activeVariant }: Prod
     }
   };
 
-
   // Calculate discount
   const discount = useMemo(
     () =>
       activeVariant.mrp && activeVariant.mrp > activeVariant.ourPrice
-        ? Math.round(((activeVariant.mrp - activeVariant.ourPrice) / activeVariant.mrp) * 100)
+        ? Math.round(
+            ((activeVariant.mrp - activeVariant.ourPrice) / activeVariant.mrp) *
+              100
+          )
         : 0,
     [activeVariant.mrp, activeVariant.ourPrice]
   );
 
   // Handle share functionality
   const handleShare = useCallback(() => {
-    if (typeof window === 'undefined' || !product) {
-      toast.error('Sharing is not available');
+    if (typeof window === "undefined" || !product) {
+      showFancyToast({
+        title: "Sharing Unavailable",
+        message: "Sharing is not available at the moment.",
+        type: "error",
+      });
       return;
     }
 
     const shareData = {
       title: product.name,
-      text: `Check out ${product.name} - ₹${activeVariant.ourPrice.toLocaleString()}${discount > 0 ? ` (${discount}% OFF)` : ''
-        }`,
+      text: `Check out ${
+        product.name
+      } - ₹${activeVariant.ourPrice.toLocaleString()}${
+        discount > 0 ? ` (${discount}% OFF)` : ""
+      }`,
       url: window.location.href,
     };
 
     if (navigator.share) {
       navigator
         .share(shareData)
-        .then(() => toast.success('Shared successfully!'))
+        .then(() =>
+          showFancyToast({
+            title: "Success",
+            message: "Shared successfully!",
+            type: "success",
+          })
+        )
         .catch(() => {
           navigator.clipboard
             .writeText(shareData.url)
-            .then(() => toast.success('Link copied to clipboard!'))
-            .catch(() => toast.error('Failed to share product'));
+            .then(() =>
+              showFancyToast({
+                title: "Success",
+                message: "Link copied to clipboard!",
+                type: "success",
+              })
+            )
+            .catch(() =>
+              showFancyToast({
+                title: "Error",
+                message: "Failed to share product",
+                type: "error",
+              })
+            );
         });
     } else {
       navigator.clipboard
         .writeText(shareData.url)
-        .then(() => toast.success('Link copied to clipboard!'))
-        .catch(() => toast.error('Failed to copy link'));
+        .then(() =>
+          showFancyToast({
+            title: "Success",
+            message: "Link copied to clipboard!",
+            type: "success",
+          })
+        )
+        .catch(() =>
+          showFancyToast({
+            title: "Error",
+            message: "Failed to copy link",
+            type: "error",
+          })
+        );
     }
   }, [product, activeVariant.ourPrice, discount]);
 
@@ -242,12 +305,11 @@ export default function ProductDetailsContent({ className, activeVariant }: Prod
     return v.trim();
   };
 
-
   // Compute attribute keys and options
   const attributeKeys = useMemo(() => {
     if (!product?.productParent?.variants) return [];
 
-    const allowedAttributes = ['processor', 'graphics', 'ram', 'storage'];
+    const allowedAttributes = ["processor", "graphics", "ram", "storage"];
     const keys = new Set<string>();
     const valueCounts = new Map<string, Set<string>>();
 
@@ -273,27 +335,33 @@ export default function ProductDetailsContent({ className, activeVariant }: Prod
       const options = Array.from(
         new Set(
           product.productParent?.variants
-            ?.map((variant) => normalizeValue(String(variant.attributes[key] ?? '')))
+            ?.map((variant) =>
+              normalizeValue(String(variant.attributes[key] ?? ""))
+            )
             .filter((value): value is string => !!value) ?? []
         )
       ).map((value) => ({
         value,
         label: value, // already normalized
-        variantIds: product.productParent?.variants
-          ?.filter((v) => normalizeValue(String(v.attributes[key] ?? '')) === value)
-          .map((v) => v.id) ?? [],
+        variantIds:
+          product.productParent?.variants
+            ?.filter(
+              (v) => normalizeValue(String(v.attributes[key] ?? "")) === value
+            )
+            .map((v) => v.id) ?? [],
       }));
       acc[key] = options;
       return acc;
     }, {} as Record<string, Array<{ value: string; label: string; variantIds: string[] }>>);
   }, [attributeKeys, product?.productParent?.variants]);
 
-
   const findValidVariant = useCallback(
     (key: string, value: string | number | boolean) => {
       const normalizedValue = normalizeValue(String(value));
-      return product?.productParent?.variants?.find((variant) =>
-        normalizeValue(String(variant.attributes[key] ?? '')) === normalizedValue
+      return product?.productParent?.variants?.find(
+        (variant) =>
+          normalizeValue(String(variant.attributes[key] ?? "")) ===
+          normalizedValue
       );
     },
     [product?.productParent?.variants]
@@ -302,13 +370,16 @@ export default function ProductDetailsContent({ className, activeVariant }: Prod
   const isValidAttributeCombination = useCallback(
     (key: string, value: string | number | boolean) => {
       const normalizedValue = normalizeValue(String(value));
-      return product?.productParent?.variants?.some((variant) =>
-        normalizeValue(String(variant.attributes[key] ?? '')) === normalizedValue
-      ) ?? false;
+      return (
+        product?.productParent?.variants?.some(
+          (variant) =>
+            normalizeValue(String(variant.attributes[key] ?? "")) ===
+            normalizedValue
+        ) ?? false
+      );
     },
     [product?.productParent?.variants]
   );
-
 
   const handleAttributeSelection = useCallback(
     (key: string, value: string | number | boolean) => {
@@ -316,11 +387,15 @@ export default function ProductDetailsContent({ className, activeVariant }: Prod
       if (!validVariant) return;
 
       // Store normalized values for display
-      const newAttributes: Record<string, string> = { [key]: normalizeValue(String(value)) };
+      const newAttributes: Record<string, string> = {
+        [key]: normalizeValue(String(value)),
+      };
 
       attributeKeys.forEach((k) => {
         if (k !== key) {
-          newAttributes[k] = normalizeValue(String(validVariant.attributes[k] ?? selectedAttributes[k] ?? ''));
+          newAttributes[k] = normalizeValue(
+            String(validVariant.attributes[k] ?? selectedAttributes[k] ?? "")
+          );
         }
       });
 
@@ -331,8 +406,8 @@ export default function ProductDetailsContent({ className, activeVariant }: Prod
         router.push(`/product/${validVariant.slug}`, { scroll: false });
         // Fetch the full FlattenedProduct for the selected variant before updating the store
         fetch(`/api/products/${validVariant.slug}`)
-          .then(res => {
-            if (!res.ok) throw new Error('Failed to fetch variant');
+          .then((res) => {
+            if (!res.ok) throw new Error("Failed to fetch variant");
             return res.json();
           })
           .then((newProduct: FlattenedProduct) => {
@@ -343,19 +418,27 @@ export default function ProductDetailsContent({ className, activeVariant }: Prod
           });
       }
     },
-    [attributeKeys, findValidVariant, setSelectedAttributes, selectedAttributes, activeVariant.id, router, setProduct]
+    [
+      attributeKeys,
+      findValidVariant,
+      setSelectedAttributes,
+      selectedAttributes,
+      activeVariant.id,
+      router,
+      setProduct,
+    ]
   );
 
-
   const handleVariantNavigation = useCallback(() => {
-    if (!activeVariant || activeVariant.id === product?.id || isNavigating) return;
+    if (!activeVariant || activeVariant.id === product?.id || isNavigating)
+      return;
 
     setIsNavigating(true);
 
     router.push(`/product/${activeVariant.slug}`, { scroll: true });
     fetch(`/api/products/${activeVariant.slug}`)
-      .then(res => {
-        if (!res.ok) throw new Error('Failed to fetch variant');
+      .then((res) => {
+        if (!res.ok) throw new Error("Failed to fetch variant");
         return res.json();
       })
       .then((newProduct: FlattenedProduct) => {
@@ -367,7 +450,6 @@ export default function ProductDetailsContent({ className, activeVariant }: Prod
         setIsNavigating(false);
       });
   }, [activeVariant, product?.id, router, isNavigating, setProduct]);
-
 
   // Non-varying attributes
   const nonVaryingAttributes = useMemo(() => {
@@ -382,7 +464,9 @@ export default function ProductDetailsContent({ className, activeVariant }: Prod
       .filter((key) => !attributeKeys.includes(key))
       .map((key) => {
         const values = new Set(
-          product.productParent?.variants.map((v) => String(v.attributes[key])).filter((v): v is string => !!v)
+          product.productParent?.variants
+            .map((v) => String(v.attributes[key]))
+            .filter((v): v is string => !!v)
         );
         if (values.size === 1) {
           return { key, value: values.values().next().value };
@@ -393,7 +477,10 @@ export default function ProductDetailsContent({ className, activeVariant }: Prod
   }, [attributeKeys, product?.productParent?.variants]);
 
   // Check wishlist status
-  const isInWishlistStatus = product && activeVariant ? isInWishlist(product.productId, activeVariant.id) : false;
+  const isInWishlistStatus =
+    product && activeVariant
+      ? isInWishlist(product.productId, activeVariant.id)
+      : false;
 
   // Handle wishlist click
   const handleWishlistClick = async (e: React.MouseEvent) => {
@@ -401,7 +488,11 @@ export default function ProductDetailsContent({ className, activeVariant }: Prod
     e.stopPropagation();
 
     if (!userId) {
-      toast.error('Please login to manage wishlist.');
+      showFancyToast({
+        title: "Authentication Required",
+        message: "Please login to manage your wishlist.",
+        type: "error",
+      });
       router.push(`/signin?callbackUrl=${encodeURIComponent(pathname)}`);
       return;
     }
@@ -417,13 +508,33 @@ export default function ProductDetailsContent({ className, activeVariant }: Prod
       refetchWishlist();
 
       if (result.success) {
-        toast.success(isInWishlistStatus ? 'Removed from wishlist!' : 'Added to wishlist!');
+        showFancyToast({
+          title: isInWishlistStatus
+            ? "Removed from Wishlist"
+            : "Added to Wishlist",
+          message: isInWishlistStatus
+            ? "Successfully removed from your wishlist."
+            : "Successfully added to your wishlist.",
+          type: "success",
+        });
         fetchWishlist();
       } else {
-        toast.error(result.message || `Failed to ${isInWishlistStatus ? 'remove from' : 'add to'} wishlist`);
+        showFancyToast({
+          title: "Sorry, there was an error",
+          message:
+            result.message ||
+            `Failed to ${
+              isInWishlistStatus ? "remove from" : "add to"
+            } wishlist`,
+          type: "error",
+        });
       }
     } catch (error) {
-      toast.error('Network error. Please try again.');
+      showFancyToast({
+        title: "Sorry, there was an error",
+        message: "Network error. Please try again.",
+        type: "error",
+      });
     } finally {
       setIsAddingToWishlist(false);
     }
@@ -435,18 +546,30 @@ export default function ProductDetailsContent({ className, activeVariant }: Prod
     e.stopPropagation();
 
     if (!userId) {
-      toast.error('Please login to add to cart.');
+      showFancyToast({
+        title: "Authentication Required",
+        message: "Please login to add items to your cart.",
+        type: "error",
+      });
       router.push(`/signin?callbackUrl=${encodeURIComponent(pathname)}`);
       return;
     }
 
     if (!activeVariant || !product) {
-      toast.error('Selected variant is not available');
+      showFancyToast({
+        title: "Variant Unavailable",
+        message: "Selected variant is not available",
+        type: "error",
+      });
       return;
     }
 
     if (activeVariant.stock < quantity && !activeVariant.isBackorderable) {
-      toast.error(`Only ${activeVariant.stock} items available in stock`);
+      showFancyToast({
+        title: "Insufficient Stock",
+        message: `Only ${activeVariant.stock} items available in stock`,
+        type: "error",
+      });
       return;
     }
 
@@ -454,9 +577,17 @@ export default function ProductDetailsContent({ className, activeVariant }: Prod
     try {
       await addToCart(activeVariant.productId, activeVariant.id, quantity);
       refetchCart();
-      toast.success(`${product.name} added to cart!`);
+      showFancyToast({
+        title: "Added to Cart",
+        message: `${product.name} added to cart successfully.`,
+        type: "success",
+      });
     } catch (error) {
-      toast.error('Network error. Please try again.');
+      showFancyToast({
+        title: "Error",
+        message: "Network error. Please try again.",
+        type: "error",
+      });
     } finally {
       setIsAddingToCart(false);
     }
@@ -468,18 +599,30 @@ export default function ProductDetailsContent({ className, activeVariant }: Prod
     e.stopPropagation();
 
     if (!userId) {
-      toast.error('Please login to proceed with purchase.');
+      showFancyToast({
+        title: "Authentication Required",
+        message: "Please login to proceed with purchase.",
+        type: "error",
+      });
       router.push(`/signin?callbackUrl=${encodeURIComponent(pathname)}`);
       return;
     }
 
     if (!activeVariant || !product) {
-      toast.error('Selected variant is not available');
+      showFancyToast({
+        title: "Variant Unavailable",
+        message: "Selected variant is not available",
+        type: "error",
+      });
       return;
     }
 
     if (activeVariant.stock < quantity && !activeVariant.isBackorderable) {
-      toast.error(`Only ${activeVariant.stock} items available in stock`);
+      showFancyToast({
+        title: "Insufficient Stock",
+        message: `Only ${activeVariant.stock} items available in stock`,
+        type: "error",
+      });
       return;
     }
 
@@ -487,12 +630,20 @@ export default function ProductDetailsContent({ className, activeVariant }: Prod
     try {
       const success = await handleBuyNow(userId);
       if (success) {
-        await router.push('/checkout');
+        await router.push("/checkout");
       } else {
-        toast.error('Failed to proceed to checkout');
+        showFancyToast({
+          title: "Checkout Error",
+          message: "Failed to proceed to checkout",
+          type: "error",
+        });
       }
     } catch (error) {
-      toast.error('Network error. Please try again.');
+      showFancyToast({
+        title: "Sorry, there was an error",
+        message: "Network error. Please try again.",
+        type: "error",
+      });
     } finally {
       setIsAddingToCart(false);
     }
@@ -502,27 +653,39 @@ export default function ProductDetailsContent({ className, activeVariant }: Prod
   useEffect(() => {
     if (!product?.productParent?.variants) return;
 
-    const currentVariant = product.productParent.variants.find((v) => v.id === product.id);
+    const currentVariant = product.productParent.variants.find(
+      (v) => v.id === product.id
+    );
     if (!currentVariant) return;
 
     const isValidSelection =
       Object.keys(selectedAttributes).length > 0 &&
       product.productParent.variants.some((v) =>
-        Object.entries(selectedAttributes).every(([key, value]) => String(v.attributes[key]) === String(value))
+        Object.entries(selectedAttributes).every(
+          ([key, value]) => String(v.attributes[key]) === String(value)
+        )
       );
 
     if (!isValidSelection) {
       const newAttributes = attributeKeys.reduce((acc, key) => {
-        acc[key] = normalizeValue(String(currentVariant.attributes[key] || ''));
+        acc[key] = normalizeValue(String(currentVariant.attributes[key] || ""));
         return acc;
       }, {} as Record<string, string | number | boolean>);
       setSelectedAttributes(newAttributes);
     }
-  }, [product?.productParent?.variants, attributeKeys, setSelectedAttributes, selectedAttributes, product?.id]);
-
+  }, [
+    product?.productParent?.variants,
+    attributeKeys,
+    setSelectedAttributes,
+    selectedAttributes,
+    product?.id,
+  ]);
 
   const increaseQuantity = () => {
-    if (quantity < 10 && (activeVariant.stock >= quantity + 1 || activeVariant.isBackorderable)) {
+    if (
+      quantity < 10 &&
+      (activeVariant.stock >= quantity + 1 || activeVariant.isBackorderable)
+    ) {
       setQuantity(quantity + 1);
     }
   };
@@ -535,17 +698,21 @@ export default function ProductDetailsContent({ className, activeVariant }: Prod
 
   const formatAttributeLabel = (key: string) => {
     return key
-      .replace(/([A-Z])/g, ' $1')
+      .replace(/([A-Z])/g, " $1")
       .replace(/^./, (str) => str.toUpperCase())
-      .replace(/_/g, ' ')
+      .replace(/_/g, " ")
       .trim();
   };
 
   // Render loading state
-  if (!product || !product.productParent || product.productParent.variants.length === 0) {
+  if (
+    !product ||
+    !product.productParent ||
+    product.productParent.variants.length === 0
+  ) {
     return (
-      <div className={cn('p-6 bg-white rounded-xl shadow-lg', className)}>
-        <Toaster />
+      <div className={cn("p-6 bg-white rounded-xl shadow-lg", className)}>
+
         <div className="flex items-center justify-end mb-4">
           <button
             onClick={handleShare}
@@ -555,7 +722,9 @@ export default function ProductDetailsContent({ className, activeVariant }: Prod
             <span>Share</span>
           </button>
         </div>
-        <h1 className="text-2xl font-bold text-gray-900 mb-4">Loading product...</h1>
+        <h1 className="text-2xl font-bold text-gray-900 mb-4">
+          Loading product...
+        </h1>
         <p className="text-gray-500">Product details are not available.</p>
       </div>
     );
@@ -585,7 +754,8 @@ export default function ProductDetailsContent({ className, activeVariant }: Prod
       <span className="text-sm text-gray-500">Inclusive of all taxes</span>
       {activeVariant.stock > (activeVariant.lowStockThreshold ?? 0) ? (
         <span className="text-green-600 text-sm font-medium flex items-center gap-1">
-          <Package className="w-4 h-4" /> In stock, {activeVariant.stock} units left
+          <Package className="w-4 h-4" /> In stock, {activeVariant.stock} units
+          left
         </span>
       ) : activeVariant.isBackorderable ? (
         <span className="text-yellow-600 text-sm font-medium flex items-center gap-1">
@@ -598,9 +768,6 @@ export default function ProductDetailsContent({ className, activeVariant }: Prod
       )}
     </div>
   );
-
-
-
 
   const QuantityAndWishlist = () => (
     <div className="flex items-center gap-4 flex-wrap">
@@ -619,7 +786,11 @@ export default function ProductDetailsContent({ className, activeVariant }: Prod
           onClick={increaseQuantity}
           className="p-1 rounded-full hover:bg-gray-100 disabled:opacity-50 transition-colors cursor-pointer"
           aria-label="Increase quantity"
-          disabled={(quantity >= 10) || (activeVariant.stock < quantity + 1 && !activeVariant.isBackorderable)}
+          disabled={
+            quantity >= 10 ||
+            (activeVariant.stock < quantity + 1 &&
+              !activeVariant.isBackorderable)
+          }
         >
           <Plus className="h-4 w-4" />
         </button>
@@ -627,17 +798,21 @@ export default function ProductDetailsContent({ className, activeVariant }: Prod
       <button
         onClick={handleWishlistClick}
         className={cn(
-          'p-2 rounded-full transition-colors border cursor-pointer',
-          isInWishlistStatus ? 'text-red-500 border-red-500 bg-red-50' : 'text-gray-500 border-gray-300 bg-white',
-          'hover:bg-gray-100 disabled:opacity-50'
+          "p-2 rounded-full transition-colors border cursor-pointer",
+          isInWishlistStatus
+            ? "text-red-500 border-red-500 bg-red-50"
+            : "text-gray-500 border-gray-300 bg-white",
+          "hover:bg-gray-100 disabled:opacity-50"
         )}
         disabled={isAddingToWishlist}
-        aria-label={isInWishlistStatus ? 'Remove from wishlist' : 'Add to wishlist'}
+        aria-label={
+          isInWishlistStatus ? "Remove from wishlist" : "Add to wishlist"
+        }
       >
         <Heart
           size={20}
-          fill={isInWishlistStatus ? 'red' : 'none'}
-          className={isInWishlistStatus ? 'text-red-500' : 'text-gray-500'}
+          fill={isInWishlistStatus ? "red" : "none"}
+          className={isInWishlistStatus ? "text-red-500" : "text-gray-500"}
         />
       </button>
     </div>
@@ -653,7 +828,7 @@ export default function ProductDetailsContent({ className, activeVariant }: Prod
       !activeVariant?.isBackorderable;
 
     // Coming Soon
-    if (status === 'coming_soon') {
+    if (status === "coming_soon") {
       return (
         <div className="bg-yellow-50 border-t border-yellow-200 p-4 md:p-4">
           <div className="text-center w-full">
@@ -667,7 +842,7 @@ export default function ProductDetailsContent({ className, activeVariant }: Prod
     }
 
     // Inactive or Discontinued
-    if (status === 'inactive' || status === 'discontinued') {
+    if (status === "inactive" || status === "discontinued") {
       return (
         <div className="bg-gray-50 border-t border-gray-200 p-4 md:p-4">
           <div className="text-center w-full">
@@ -688,24 +863,24 @@ export default function ProductDetailsContent({ className, activeVariant }: Prod
           <button
             onClick={handleCartClick}
             className={cn(
-              'flex-1 flex items-center justify-center gap-2 py-3 px-6 rounded-full border border-gray-300 hover:bg-gray-50 text-sm font-semibold transition-colors',
+              "flex-1 flex items-center justify-center gap-2 py-3 px-6 rounded-full border border-gray-300 hover:bg-gray-50 text-sm font-semibold transition-colors",
               isAddingToCart || isOutOfStock
-                ? 'opacity-50 cursor-not-allowed'
-                : 'cursor-pointer'
+                ? "opacity-50 cursor-not-allowed"
+                : "cursor-pointer"
             )}
             disabled={isAddingToCart || isOutOfStock}
           >
-            {isAddingToCart ? 'Adding...' : 'Add to Cart'}
+            {isAddingToCart ? "Adding..." : "Add to Cart"}
           </button>
 
           {/* Buy Now */}
           <button
             onClick={handleBuyNowClick}
             className={cn(
-              'flex-1 flex items-center justify-center gap-2 py-3 px-6 rounded-full bg-primary hover:bg-primary-hover text-white text-sm font-semibold transition-colors',
+              "flex-1 flex items-center justify-center gap-2 py-3 px-6 rounded-full bg-primary hover:bg-primary-hover text-white text-sm font-semibold transition-colors",
               isAddingToCart || isOutOfStock
-                ? 'opacity-50 cursor-not-allowed'
-                : 'cursor-pointer'
+                ? "opacity-50 cursor-not-allowed"
+                : "cursor-pointer"
             )}
             disabled={isAddingToCart || isOutOfStock}
           >
@@ -716,10 +891,9 @@ export default function ProductDetailsContent({ className, activeVariant }: Prod
     );
   };
 
-
   return (
-    <div className={cn('p-2 md:p-6 w-full  mx-auto', className)}>
-      <Toaster />
+    <div className={cn("p-2 md:p-6 w-full  mx-auto", className)}>
+
       <div className="flex items-center justify-end mb-4 w-full">
         <button
           onClick={handleShare}
@@ -730,9 +904,11 @@ export default function ProductDetailsContent({ className, activeVariant }: Prod
         </button>
       </div>
 
-      <h1 className="text-xl md:text-2xl font-semibold text-gray-900 mb-4">{product.name}</h1>
+      <h1 className="text-xl md:text-2xl font-semibold text-gray-900 mb-4">
+        {product.name}
+      </h1>
 
-      <div className=' pb-4'>
+      <div className=" pb-4">
         {/* Rating */}
         {renderRating()}
       </div>
@@ -745,8 +921,8 @@ export default function ProductDetailsContent({ className, activeVariant }: Prod
         <div className="flex items-center gap-2">
           <input
             ref={inputRef}
-            inputMode='numeric'
-            pattern='[0-9]*'
+            inputMode="numeric"
+            pattern="[0-9]*"
             value={pinCode}
             onChange={(e) => setPinCode(e.target.value.replace(/\D/g, ""))}
             placeholder="Enter PIN code"
@@ -763,17 +939,21 @@ export default function ProductDetailsContent({ className, activeVariant }: Prod
         </div>
 
         {/* Results */}
-        {pinCodeError && <p className="text-red-500 text-sm mt-2">{pinCodeError}</p>}
+        {pinCodeError && (
+          <p className="text-red-500 text-sm mt-2">{pinCodeError}</p>
+        )}
         {district && (
           <p className="text-sm text-gray-700 mt-2">
-            Delivery available to <span className="font-medium">{district}</span>
+            Delivery available to{" "}
+            <span className="font-medium">{district}</span>
           </p>
         )}
         {deliveryEstimate && (
-          <p className="text-sm text-green-600 font-medium mt-1">{deliveryEstimate}</p>
+          <p className="text-sm text-green-600 font-medium mt-1">
+            {deliveryEstimate}
+          </p>
         )}
       </div>
-
 
       <div className="my-6 space-y-4">
         {attributeKeys.map((key) => {
@@ -782,22 +962,30 @@ export default function ProductDetailsContent({ className, activeVariant }: Prod
 
           return (
             <div key={key} className="space-y-2">
-              <h3 className="text-sm font-semibold text-gray-900">{formatAttributeLabel(key)}</h3>
+              <h3 className="text-sm font-semibold text-gray-900">
+                {formatAttributeLabel(key)}
+              </h3>
               <div className="flex gap-2 flex-wrap">
                 {options.map((option) => {
-                  const isSelected = String(selectedAttributes[key]) === option.value;
-                  const isValid = isValidAttributeCombination(key, option.value);
+                  const isSelected =
+                    String(selectedAttributes[key]) === option.value;
+                  const isValid = isValidAttributeCombination(
+                    key,
+                    option.value
+                  );
 
                   return (
                     <button
                       key={option.value}
-                      onClick={() => handleAttributeSelection(key, option.value)}
+                      onClick={() =>
+                        handleAttributeSelection(key, option.value)
+                      }
                       className={cn(
-                        'px-4 py-2 rounded-full text-sm border transition-colors',
+                        "px-4 py-2 rounded-full text-sm border transition-colors",
                         isSelected
-                          ? 'bg-primary text-white border-primary'
-                          : 'bg-white text-gray-900 border-gray-300 hover:bg-primary-hover',
-                        !isValid && 'opacity-50 cursor-not-allowed'
+                          ? "bg-primary text-white border-primary"
+                          : "bg-white text-gray-900 border-gray-300 hover:bg-primary-hover",
+                        !isValid && "opacity-50 cursor-not-allowed"
                       )}
                       disabled={!isValid}
                       aria-label={option.label}
@@ -822,12 +1010,19 @@ export default function ProductDetailsContent({ className, activeVariant }: Prod
         {nonVaryingAttributes.length > 0 && (
           <div className="bg-white rounded-lg p-6 mb-6 border border-gray-100">
             <h2 className="text-lg font-semibold text-gray-900 mb-4 flex items-center gap-2">
-              <Package className="w-5 h-5 text-gray-600" /> Product Specifications
+              <Package className="w-5 h-5 text-gray-600" /> Product
+              Specifications
             </h2>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               {nonVaryingAttributes.map((item) => (
-                <p key={item.key} className="text-sm text-gray-600 flex items-start gap-3">
-                  <span className="font-medium">{formatAttributeLabel(item.key)}:</span> {item.value}
+                <p
+                  key={item.key}
+                  className="text-sm text-gray-600 flex items-start gap-3"
+                >
+                  <span className="font-medium">
+                    {formatAttributeLabel(item.key)}:
+                  </span>{" "}
+                  {item.value}
                 </p>
               ))}
             </div>

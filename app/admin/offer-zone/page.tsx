@@ -8,9 +8,8 @@ import {
   fetchProducts as fetchAllProducts,
   fetchOfferZoneProducts,
 } from "@/utils/products.util";
-import Image from "next/image";
 import { cn } from "@/lib/utils";
-import toast from "react-hot-toast";
+import { showFancyToast } from "@/components/Reusable/ShowCustomToast";
 
 // Types
 interface Product {
@@ -93,7 +92,11 @@ export default function OfferZonePage() {
       } catch (error) {
         console.error("Error fetching data:", error);
         setError("Failed to load products. Please try again.");
-        toast.error("Failed to load products. Please try again.");
+        showFancyToast({
+          title: "Sorry, there was an error",
+          message: "Failed to load products. Please try again.",
+          type: "error",
+        });
       } finally {
         setIsFetching(false);
       }
@@ -204,10 +207,18 @@ export default function OfferZonePage() {
         setIsSaved(false);
         setSearchTerm("");
         setShowResults(false);
-        toast.success("Variant added to Offer Zone");
+        showFancyToast({
+          title: "Variant Added Successfully",
+          message: "Variant added to Offer Zone",
+          type: "success",
+        });
       } catch (error) {
         console.error("Error selecting variant:", error);
-        toast.error("Failed to add variant");
+        showFancyToast({
+          title: "Sorry, there was an error",
+          message: "Failed to add variant",
+          type: "error",
+        });
       }
     },
     []
@@ -229,10 +240,18 @@ export default function OfferZonePage() {
         prev.filter((v) => v.variantId !== variantId)
       );
       setIsSaved(false);
-      toast.success("Variant removed from Offer Zone");
+      showFancyToast({
+        title: "Variant Removed Successfully",
+        message: "Variant removed from Offer Zone",
+        type: "success",
+      });
     } catch (error) {
       console.error("Remove variant error:", error);
-      toast.error("Failed to remove variant");
+      showFancyToast({
+        title: "Sorry, there was an error",
+        message: "Failed to remove variant",
+        type: "error",
+      });
     } finally {
       setIsLoading(false);
     }
@@ -263,15 +282,21 @@ export default function OfferZonePage() {
       }
 
       setIsSaved(true);
-      toast.success("Offer Zone variants saved successfully");
+
+      showFancyToast({
+        title: "Offer Zone Variants Saved Successfully",
+        message: "Offer Zone variants saved successfully",
+        type: "success",
+      });
       setTimeout(() => setIsSaved(false), 3000);
     } catch (error) {
       console.error("Error saving featured variants:", error);
-      toast.error(
-        error instanceof Error
-          ? error.message
-          : "Failed to save featured variants"
-      );
+
+      showFancyToast({
+        title: "Sorry, there was an error",
+        message: "Failed to save featured variants",
+        type: "error",
+      });
     } finally {
       setIsLoading(false);
     }

@@ -2,10 +2,9 @@
 
 import { useEffect, useState, useCallback, Suspense } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
-import Image from "next/image";
-import { toast } from "react-hot-toast";
 import Link from "next/link";
 import { cn } from "@/lib/utils";
+import { showFancyToast } from "@/components/Reusable/ShowCustomToast";
 
 // Types (aligned with banners schema)
 interface ImageUrls {
@@ -45,10 +44,10 @@ function LoginContent() {
     try {
       setIsBannerLoading(true);
       const response = await fetch("/api/banner", {
-        cache: "no-store", 
+        cache: "no-store",
         headers: {
-          'x-super-secure-key': `${process.env.API_SECRET_KEY}`
-        }
+          "x-super-secure-key": `${process.env.API_SECRET_KEY}`,
+        },
       });
 
       if (!response.ok) {
@@ -76,7 +75,11 @@ function LoginContent() {
       setBanner(activeRegisterBanner || null);
     } catch (error) {
       console.error("Error fetching banners:", error);
-      toast.error("Failed to load banner. Please try again.");
+      showFancyToast({
+        title: "Unable to Load Banner",
+        message: "Failed to load banner. Please try again.",
+        type: "error",
+      });
     } finally {
       setIsBannerLoading(false);
     }
@@ -120,13 +123,26 @@ function LoginContent() {
       if (!response.ok) {
         throw new Error(data.error || "Login failed");
       }
-
-      toast.success("OTP sent successfully!");
-      router.push(`/verify-otp?userId=${data.userId}&type=${type}&callbackUrl=${encodeURIComponent(callbackUrl)}`);
+      showFancyToast({
+        title: "OTP Sent",
+        message:
+          "An OTP has been sent to your " + type + ". Please check and verify.",
+        type: "success",
+      });
+      router.push(
+        `/verify-otp?userId=${
+          data.userId
+        }&type=${type}&callbackUrl=${encodeURIComponent(callbackUrl)}`
+      );
     } catch (err: unknown) {
-      const errorMessage = err instanceof Error ? err.message : "An unexpected error occurred";
+      const errorMessage =
+        err instanceof Error ? err.message : "An unexpected error occurred";
       setError(errorMessage);
-      toast.error(errorMessage);
+      showFancyToast({
+        title: "Login Failed",
+        message: errorMessage,
+        type: "error",
+      });
     } finally {
       setLoading(false);
     }
@@ -268,7 +284,8 @@ function LoginContent() {
             and{" "}
             <Link href="/privacy" className="text-primary hover:underline">
               Privacy Policy
-            </Link>.
+            </Link>
+            .
           </div>
         </div>
       </div>

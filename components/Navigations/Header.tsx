@@ -584,9 +584,9 @@ const Header = ({ isCategory = true }: HeaderProps) => {
                         </h4>
                         <div className="space-y-2">
                           {selectedMobileCategory.subCategories.map(
-                            (subCat) => (
+                            (subCat, idx) => (
                               <motion.div
-                                key={subCat.id}
+                                key={idx}
                                 whileHover={{ scale: 1.02 }}
                                 whileTap={{ scale: 0.98 }}
                                 transition={{ duration: 0.2 }}

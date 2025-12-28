@@ -3,7 +3,6 @@
 import React, { useState, useEffect, useLayoutEffect } from "react";
 import { useRouter } from "next/navigation";
 import CheckoutLayout from "@/components/Layouts/CheckoutLayout";
-import toast from "react-hot-toast";
 import { Plus, Check, Truck, CreditCard, Loader2 } from "lucide-react";
 import Script from "next/script";
 import { useAuthStore } from "@/store/auth-store";
@@ -11,6 +10,7 @@ import { useCheckoutStore } from "@/store/checkout-store";
 import { useCartStore } from "@/store/cart-store";
 import { startTransition } from "react";
 import GlobalLoader from "@/components/Reusable/GlobalLoader";
+import { showFancyToast } from "@/components/Reusable/ShowCustomToast";
 
 interface Address {
   id: string;
@@ -98,7 +98,11 @@ const CheckoutPage: React.FC = () => {
   const handleTimeout = async () => {
     try {
       await clearCheckout(user!.id);
-      toast.error("Checkout session expired. Please start over.");
+      showFancyToast({
+        title: "Session Expired",
+        message: "Your checkout session has expired due to inactivity.",
+        type: "error",
+      });
       router.push("/");
     } catch (error) {
       console.error("Error clearing checkout on timeout:", error);
@@ -130,7 +134,11 @@ const CheckoutPage: React.FC = () => {
           );
         } catch (error) {
           console.error("Error fetching addresses:", error);
-          toast.error("Failed to fetch addresses");
+          showFancyToast({
+            title: "Something went wrong",
+            message: "Failed to fetch addresses: " + error,
+            type: "error",
+          });
         }
       };
       fetchAddresses();
@@ -159,12 +167,20 @@ const CheckoutPage: React.FC = () => {
               setSelectedCity(city);
             } else {
               setSelectedCity(null);
-              toast.error("Invalid postal code or city not found");
+              showFancyToast({
+                title: "Invalid Postal Code",
+                message: "Invalid postal code or city not found",
+                type: "error",
+              });
             }
           } catch (error) {
             console.error("Error fetching city from pincode:", error);
             setSelectedCity(null);
-            toast.error("Failed to verify postal code");
+            showFancyToast({
+              title: "Sorry, there was an error",
+              message: "Failed to verify postal code: " + error,
+              type: "error",
+            });
           }
         } else {
           setSelectedCity(null);
@@ -199,7 +215,11 @@ const CheckoutPage: React.FC = () => {
       !newAddress.state ||
       !newAddress.postalCode
     ) {
-      toast.error("Please fill all required fields");
+      showFancyToast({
+        title: "Sorry, there was an error",
+        message: "Please fill all required fields",
+        type: "error",
+      });
       return;
     }
 
@@ -234,10 +254,18 @@ const CheckoutPage: React.FC = () => {
         addressType: "home",
         isDefault: false,
       });
-      toast.success("Address added successfully");
+      showFancyToast({
+        title: "Address added successfully",
+        message: "Your address has been added.",
+        type: "success",
+      });
     } catch (error: any) {
       console.error("Error adding address:", error);
-      toast.error(error.message || "Failed to save address");
+      showFancyToast({
+        title: "Sorry, there was an error",
+        message: "Failed to save address: " + error,
+        type: "error",
+      });
     }
   };
 
@@ -254,27 +282,49 @@ const CheckoutPage: React.FC = () => {
   // Handle apply coupon
   const handleApplyCoupon = async () => {
     if (!couponCode) {
-      toast.error("Please enter a coupon code");
+      showFancyToast({
+        title: "Invalid Input",
+        message: "Please enter a coupon code",
+        type: "error",
+      });
       return;
     }
     await applyCoupon(couponCode);
     const { couponStatus: status, coupon } = useCartStore.getState();
     if (status === "applied" && coupon) {
-      toast.success(
-        `Coupon ${coupon.code} applied (${
+      showFancyToast({
+        title: "Coupon applied successfully",
+        message: `Coupon ${coupon.code} applied (${
           coupon.type === "amount"
             ? formatCurrency(coupon.value)
             : `${coupon.value}%`
-        })`
-      );
+        })`,
+        type: "success",
+      });
     } else if (status === "invalid") {
-      toast.error("Invalid coupon code");
+      showFancyToast({
+        title: "Sorry, there was an error",
+        message: "Invalid coupon code",
+        type: "error",
+      });
     } else if (status === "invalid_amount") {
-      toast.error("Coupon has an invalid discount value");
+      showFancyToast({
+        title: "Sorry, there was an error",
+        message: "Coupon has an invalid discount value",
+        type: "error",
+      });
     } else if (status === "expired") {
-      toast.error("Coupon has expired");
+      showFancyToast({
+        title: "Sorry, there was an error",
+        message: "Coupon has expired",
+        type: "error",
+      });
     } else if (status === "used") {
-      toast.error("Coupon has already been used");
+      showFancyToast({
+        title: "Sorry, there was an error",
+        message: "Coupon has already been used",
+        type: "error",
+      });
     }
     setCouponCode("");
   };
@@ -461,10 +511,18 @@ const CheckoutPage: React.FC = () => {
             clearCoupon();
             setCurrentOrderId(null);
             await clearCheckout(user!.id);
-            toast.success("Payment successful!");
+            showFancyToast({
+              title: "Payment successful",
+              message: "Your payment has been processed successfully.",
+              type: "success",
+            });
           } catch (error) {
             console.error("Payment verification error:", error);
-            toast.error("Payment verification failed");
+            showFancyToast({
+              title: "Sorry, there was an error",
+              message: "Payment verification failed. Please contact support.",
+              type: "error",
+            });
           } finally {
             setIsProcessingPayment(false);
           }
@@ -490,7 +548,11 @@ const CheckoutPage: React.FC = () => {
               });
 
               clearCoupon();
-              toast.error("Payment cancelled. Order has been cancelled.");
+              showFancyToast({
+                title: "Sorry, there was an error",
+                message: "Payment cancelled. Order has been cancelled.",
+                type: "error",
+              });
             } catch (err) {
               console.error("Error handling payment dismissal", err);
             } finally {
@@ -519,7 +581,11 @@ const CheckoutPage: React.FC = () => {
 
       razorpay.on("payment.failed", async (response: any) => {
         console.error("Payment failed:", response.error);
-        toast.error("Payment failed. Please try again.");
+        showFancyToast({
+          title: "Sorry, there was an error",
+          message: "Payment failed. Please try again.",
+          type: "error",
+        });
         await fetch("/api/orders/update-status", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
@@ -544,14 +610,22 @@ const CheckoutPage: React.FC = () => {
           }),
         });
 
-        toast.error("Payment cancelled by user");
+        showFancyToast({
+        title: "Sorry, there was an error",
+        message: "Payment cancelled by user",
+        type: "error",
+      });
         setIsProcessingPayment(false);
       });
 
       return gatewayOrderId;
     } catch (error: any) {
       console.error("Error initiating Razorpay payment:", error);
-      toast.error(error.message || "Failed to initiate payment");
+      showFancyToast({
+        title: "Sorry, there was an error",
+        message: "Failed to initiate payment: " + error.message,
+        type: "error",
+      });
       setIsProcessingPayment(false);
       return null;
     }
@@ -560,18 +634,30 @@ const CheckoutPage: React.FC = () => {
   // Handle order confirmation
   const handleConfirmOrder = async () => {
     if (!selectedAddressId) {
-      toast.error("Please select a delivery address");
+      showFancyToast({
+        title: "No Address Selected",
+        message: "Please select a delivery address",
+        type: "error",
+      });
       return;
     }
 
     if (!checkoutItems.length) {
-      toast.error("Your checkout is empty");
+      showFancyToast({
+        title: "Checkout Empty",
+        message: "Your checkout is empty",
+        type: "error",
+      });
       return;
     }
 
     // 🔒 Prevent double creation
     if (currentOrderId) {
-      toast.error("Order already created. Please complete payment.");
+      showFancyToast({
+        title: "Order Already Created",
+        message: "Please complete payment.",
+        type: "error",
+      });
       return;
     }
 
@@ -615,7 +701,11 @@ const CheckoutPage: React.FC = () => {
       });
     } catch (err) {
       console.error(err);
-      toast.error("Failed to place order");
+      showFancyToast({
+        title: "Sorry, there was an error",
+        message: "Failed to create order: " + err,
+        type: "error",
+      });
     } finally {
       setIsSubmitting(false);
     }

@@ -1,14 +1,19 @@
-'use client';
+"use client";
 
-import { useState, useEffect, ChangeEvent, DragEvent } from 'react';
-import { Package, Plus, Minus, X, Upload } from 'lucide-react';
-import { Input } from '@/components/ui/input';
-import { Button } from '@/components/ui/button';
-import { Label } from '@/components/ui/label';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import Image from 'next/image';
-import toast from 'react-hot-toast';
-import { cn } from '@/lib/utils';
+import { useState, useEffect, ChangeEvent, DragEvent } from "react";
+import { Package, Plus, Minus, X, Upload } from "lucide-react";
+import { Input } from "@/components/ui/input";
+import { Button } from "@/components/ui/button";
+import { Label } from "@/components/ui/label";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import { cn } from "@/lib/utils";
+import { showFancyToast } from "@/components/Reusable/ShowCustomToast";
 
 type CartOfferProduct = {
   id: string;
@@ -22,45 +27,45 @@ type CartOfferProduct = {
 type CategorizedProducts = Record<string, CartOfferProduct[]>;
 
 const range: Record<string, string> = {
-  100: 'Above ₹100',
-  500: 'Above ₹500',
-  1000: 'Above ₹1,000',
-  5000: 'Above ₹5,000',
-  10000: 'Above ₹10,000',
-  30000: 'Above ₹30,000',
-  50000: 'Above ₹50,000',
-  
+  100: "Above ₹100",
+  500: "Above ₹500",
+  1000: "Above ₹1,000",
+  5000: "Above ₹5,000",
+  10000: "Above ₹10,000",
+  30000: "Above ₹30,000",
+  50000: "Above ₹50,000",
 };
 
 const CATEGORIES: Record<string, string> = {
-  100: 'Above ₹100',
-  500: 'Above ₹500',
-  1000: 'Above ₹1,000',
-  5000: 'Above ₹5,000',
-  10000: 'Above ₹10,000',
-  30000: 'Above ₹30,000',
-  50000: 'Above ₹50,000',
+  100: "Above ₹100",
+  500: "Above ₹500",
+  1000: "Above ₹1,000",
+  5000: "Above ₹5,000",
+  10000: "Above ₹10,000",
+  30000: "Above ₹30,000",
+  50000: "Above ₹50,000",
 };
 
 export default function CartOfferProductsPage() {
-  const [categorizedProducts, setCategorizedProducts] = useState<CategorizedProducts>({
-    100: [],
-    500: [],
-    1000: [],
-    5000: [],
-    10000: [],
-    30000: [],
-    50000: [],
-  });
+  const [categorizedProducts, setCategorizedProducts] =
+    useState<CategorizedProducts>({
+      100: [],
+      500: [],
+      1000: [],
+      5000: [],
+      10000: [],
+      30000: [],
+      50000: [],
+    });
   const [activeCategory, setActiveCategory] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [isAddFormOpen, setIsAddFormOpen] = useState(false);
   const [formData, setFormData] = useState({
-    productName: '',
-    range: '',
-    ourPrice: '',
-    quantity: '1',
+    productName: "",
+    range: "",
+    ourPrice: "",
+    quantity: "1",
     productImage: null as File | null,
   });
   const [imagePreview, setImagePreview] = useState<string | null>(null);
@@ -72,10 +77,18 @@ export default function CartOfferProductsPage() {
     const fetchCartOfferProducts = async () => {
       setLoading(true);
       try {
-        const response = await fetch('/api/cart/range-offers');
-        if (!response.ok) throw new Error('Failed to fetch');
+        const response = await fetch("/api/cart/range-offers");
+        if (!response.ok) throw new Error("Failed to fetch");
         const products: CartOfferProduct[] = await response.json();
-        const categorized: CategorizedProducts = { 100: [], 500: [],1000: [], 5000: [], 10000: [], 30000: [], 50000: [] };
+        const categorized: CategorizedProducts = {
+          100: [],
+          500: [],
+          1000: [],
+          5000: [],
+          10000: [],
+          30000: [],
+          50000: [],
+        };
         products.forEach((product) => {
           categorized[product.range].push({
             ...product,
@@ -84,9 +97,13 @@ export default function CartOfferProductsPage() {
         });
         setCategorizedProducts(categorized);
       } catch (err) {
-        setError('Failed to fetch cart offer products');
+        setError("Failed to fetch cart offer products");
         console.error(err);
-        toast.error('Failed to fetch cart offer products');
+        showFancyToast({
+          title: "Sorry, there was an error",
+          message: "Failed to fetch cart offer products",
+          type: "error",
+        });
       } finally {
         setLoading(false);
       }
@@ -103,7 +120,7 @@ export default function CartOfferProductsPage() {
         const isValid = img.width >= 300 && img.height >= 300;
         URL.revokeObjectURL(img.src);
         if (!isValid) {
-          setImageError('Image must be at least 300x300px');
+          setImageError("Image must be at least 300x300px");
           resolve(false);
         } else {
           setImageError(null);
@@ -111,7 +128,7 @@ export default function CartOfferProductsPage() {
         }
       };
       img.onerror = () => {
-        setImageError('Failed to load image for validation');
+        setImageError("Failed to load image for validation");
         URL.revokeObjectURL(img.src);
         resolve(false);
       };
@@ -122,9 +139,9 @@ export default function CartOfferProductsPage() {
   const handleImageChange = async (e: ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files ? e.target.files[0] : null;
     if (file) {
-      const validImageTypes = ['image/jpeg', 'image/png', 'image/webp'];
+      const validImageTypes = ["image/jpeg", "image/png", "image/webp"];
       if (!validImageTypes.includes(file.type)) {
-        setImageError('Please upload a JPEG, PNG, or WebP image');
+        setImageError("Please upload a JPEG, PNG, or WebP image");
         return;
       }
       const isValid = await validateImage(file);
@@ -154,9 +171,9 @@ export default function CartOfferProductsPage() {
     setIsDragging(false);
     const file = e.dataTransfer.files[0];
     if (file) {
-      const validImageTypes = ['image/jpeg', 'image/png', 'image/webp'];
+      const validImageTypes = ["image/jpeg", "image/png", "image/webp"];
       if (!validImageTypes.includes(file.type)) {
-        setImageError('Please upload a JPEG, PNG, or WebP image');
+        setImageError("Please upload a JPEG, PNG, or WebP image");
         return;
       }
       const isValid = await validateImage(file);
@@ -181,18 +198,27 @@ export default function CartOfferProductsPage() {
     setLoading(true);
     try {
       const response = await fetch(`/api/cart/range-offers/${productId}`, {
-        method: 'DELETE',
+        method: "DELETE",
       });
-      if (!response.ok) throw new Error('Failed to delete');
+      if (!response.ok) throw new Error("Failed to delete");
       setCategorizedProducts((prev) => ({
         ...prev,
-        [activeCategory]: prev[activeCategory].filter((p) => p.id !== productId),
+        [activeCategory]: prev[activeCategory].filter(
+          (p) => p.id !== productId
+        ),
       }));
-      toast.success('Product removed!');
+      showFancyToast({
+        title: "Product Removed",
+        message: "Product removed successfully!",
+        type: "success",
+      });
     } catch (err) {
       console.error(err);
-      setError('Failed to remove product');
-      toast.error('Failed to remove product');
+      showFancyToast({
+        title: "Sorry, Item Could Not Be Removed",
+        message: "Failed to remove product",
+        type: "error",
+      });
     } finally {
       setLoading(false);
     }
@@ -200,33 +226,46 @@ export default function CartOfferProductsPage() {
 
   const handleFormSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!formData.productName || !formData.range || !formData.ourPrice || !formData.productImage) {
-      toast.error('Please fill all required fields');
+    if (
+      !formData.productName ||
+      !formData.range ||
+      !formData.ourPrice ||
+      !formData.productImage
+    ) {
+      showFancyToast({
+        title: "Sorry, there was an error",
+        message: "Please fill all required fields",
+        type: "error",
+      });
       return;
     }
     if (imageError) {
-      toast.error('Please fix image errors');
+      showFancyToast({
+        title: "Sorry, there was an error",
+        message: "Please fix image errors",
+        type: "error",
+      });
       return;
     }
     setLoading(true);
     setError(null);
     try {
       const form = new FormData();
-      form.append('productName', formData.productName);
-      form.append('range', formData.range);
-      form.append('ourPrice', formData.ourPrice);
-      form.append('quantity', formData.quantity);
+      form.append("productName", formData.productName);
+      form.append("range", formData.range);
+      form.append("ourPrice", formData.ourPrice);
+      form.append("quantity", formData.quantity);
       if (formData.productImage) {
-        form.append('productImage', formData.productImage);
+        form.append("productImage", formData.productImage);
       }
 
-      const response = await fetch('/api/cart/range-offers', {
-        method: 'POST',
+      const response = await fetch("/api/cart/range-offers", {
+        method: "POST",
         body: form,
       });
 
       if (!response.ok) {
-        throw new Error('Failed to create cart offer product');
+        throw new Error("Failed to create cart offer product");
       }
 
       const newProduct: CartOfferProduct = await response.json();
@@ -238,12 +277,16 @@ export default function CartOfferProductsPage() {
         ],
       }));
 
-      toast.success('Cart offer product added!');
+      showFancyToast({
+        title: "Product Added to Cart Successfully",
+        message: "Cart offer product added successfully!",
+        type: "success",
+      });
       setFormData({
-        productName: '',
-        range: '',
-        ourPrice: '',
-        quantity: '1',
+        productName: "",
+        range: "",
+        ourPrice: "",
+        quantity: "1",
         productImage: null,
       });
       setImagePreview(null);
@@ -251,8 +294,12 @@ export default function CartOfferProductsPage() {
       setIsAddFormOpen(false);
     } catch (err) {
       console.error(err);
-      setError('Failed to add cart offer product');
-      toast.error('Failed to add cart offer product');
+      setError("Failed to add cart offer product");
+      showFancyToast({
+        title: "Sorry, there was an error",
+        message: "Failed to add cart offer product",
+        type: "error",
+      });
     } finally {
       setLoading(false);
     }
@@ -262,10 +309,10 @@ export default function CartOfferProductsPage() {
     setIsAddFormOpen(!isAddFormOpen);
     if (isAddFormOpen) {
       setFormData({
-        productName: '',
-        range: '',
-        ourPrice: '',
-        quantity: '1',
+        productName: "",
+        range: "",
+        ourPrice: "",
+        quantity: "1",
         productImage: null,
       });
       setImagePreview(null);
@@ -279,7 +326,14 @@ export default function CartOfferProductsPage() {
       {loading && (
         <div className="mb-6 rounded-2xl bg-blue-50 p-4 text-blue-800 flex items-center">
           <svg className="animate-spin h-5 w-5 mr-2" viewBox="0 0 24 24">
-            <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+            <circle
+              className="opacity-25"
+              cx="12"
+              cy="12"
+              r="10"
+              stroke="currentColor"
+              strokeWidth="4"
+            />
             <path
               className="opacity-75"
               fill="currentColor"
@@ -290,22 +344,34 @@ export default function CartOfferProductsPage() {
         </div>
       )}
       {error && (
-        <div className="mb-6 rounded-2xl bg-red-50 p-4 text-red-800">{error}</div>
+        <div className="mb-6 rounded-2xl bg-red-50 p-4 text-red-800">
+          {error}
+        </div>
       )}
 
       {/* Header and Add Button */}
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between mb-8">
         <div className="mb-4 sm:mb-0">
-          <h1 className="text-3xl font-bold text-gray-900">Cart Offer Products</h1>
-          <p className="mt-2 text-gray-600">Manage products for cart-based offers</p>
+          <h1 className="text-3xl font-bold text-gray-900">
+            Cart Offer Products
+          </h1>
+          <p className="mt-2 text-gray-600">
+            Manage products for cart-based offers
+          </p>
         </div>
         <Button
           onClick={toggleAddForm}
           className="bg-gradient-to-r from-[#ff6b00] to-[#ff9f00] hover:to-primary-hover text-white rounded-lg flex items-center gap-2 px-6"
-          aria-label={isAddFormOpen ? 'Hide add product form' : 'Add new product'}
+          aria-label={
+            isAddFormOpen ? "Hide add product form" : "Add new product"
+          }
         >
-          {isAddFormOpen ? <Minus className="h-5 w-5" /> : <Plus className="h-5 w-5" />}
-          {isAddFormOpen ? 'Hide Form' : 'Add New Product'}
+          {isAddFormOpen ? (
+            <Minus className="h-5 w-5" />
+          ) : (
+            <Plus className="h-5 w-5" />
+          )}
+          {isAddFormOpen ? "Hide Form" : "Add New Product"}
         </Button>
       </div>
 
@@ -314,7 +380,9 @@ export default function CartOfferProductsPage() {
         <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
           <div className="bg-white p-8 rounded-2xl border border-gray-200 w-full max-w-3xl max-h-[90dvh] overflow-y-auto scrollbar-hide">
             <div className="flex justify-between items-center mb-6">
-              <h2 className="text-xl font-bold text-gray-900">Add New Cart Offer Product</h2>
+              <h2 className="text-xl font-bold text-gray-900">
+                Add New Cart Offer Product
+              </h2>
               <Button
                 variant="ghost"
                 size="sm"
@@ -325,15 +393,23 @@ export default function CartOfferProductsPage() {
                 <X className="h-5 w-5" />
               </Button>
             </div>
-            <form onSubmit={handleFormSubmit} className="grid gap-6 md:grid-cols-2">
+            <form
+              onSubmit={handleFormSubmit}
+              className="grid gap-6 md:grid-cols-2"
+            >
               <div className="md:col-span-2">
-                <Label htmlFor="productName" className="text-sm font-medium text-gray-700">
+                <Label
+                  htmlFor="productName"
+                  className="text-sm font-medium text-gray-700"
+                >
                   Product Name
                 </Label>
                 <Input
                   id="productName"
                   value={formData.productName}
-                  onChange={(e) => setFormData({ ...formData, productName: e.target.value })}
+                  onChange={(e) =>
+                    setFormData({ ...formData, productName: e.target.value })
+                  }
                   placeholder="Enter product name"
                   required
                   className="mt-1 rounded-lg border-gray-300 focus:ring-2 focus:ring-primary text-base"
@@ -341,12 +417,17 @@ export default function CartOfferProductsPage() {
                 />
               </div>
               <div>
-                <Label htmlFor="range" className="text-sm font-medium text-gray-700">
+                <Label
+                  htmlFor="range"
+                  className="text-sm font-medium text-gray-700"
+                >
                   Range
                 </Label>
                 <Select
                   value={formData.range}
-                  onValueChange={(value) => setFormData({ ...formData, range: value })}
+                  onValueChange={(value) =>
+                    setFormData({ ...formData, range: value })
+                  }
                 >
                   <SelectTrigger className="mt-1 rounded-lg border-gray-300 focus:ring-2 focus:ring-primary text-base">
                     <SelectValue placeholder="Select range" />
@@ -361,7 +442,10 @@ export default function CartOfferProductsPage() {
                 </Select>
               </div>
               <div>
-                <Label htmlFor="ourPrice" className="text-sm font-medium text-gray-700">
+                <Label
+                  htmlFor="ourPrice"
+                  className="text-sm font-medium text-gray-700"
+                >
                   Price (₹)
                 </Label>
                 <Input
@@ -369,7 +453,9 @@ export default function CartOfferProductsPage() {
                   type="number"
                   step="0.01"
                   value={formData.ourPrice}
-                  onChange={(e) => setFormData({ ...formData, ourPrice: e.target.value })}
+                  onChange={(e) =>
+                    setFormData({ ...formData, ourPrice: e.target.value })
+                  }
                   placeholder="Enter price"
                   required
                   className="mt-1 rounded-lg border-gray-300 focus:ring-2 focus:ring-primary text-base"
@@ -377,14 +463,19 @@ export default function CartOfferProductsPage() {
                 />
               </div>
               <div>
-                <Label htmlFor="quantity" className="text-sm font-medium text-gray-700">
+                <Label
+                  htmlFor="quantity"
+                  className="text-sm font-medium text-gray-700"
+                >
                   Quantity
                 </Label>
                 <Input
                   id="quantity"
                   type="number"
                   value={formData.quantity}
-                  onChange={(e) => setFormData({ ...formData, quantity: e.target.value })}
+                  onChange={(e) =>
+                    setFormData({ ...formData, quantity: e.target.value })
+                  }
                   placeholder="Enter quantity"
                   min="1"
                   required
@@ -393,13 +484,18 @@ export default function CartOfferProductsPage() {
                 />
               </div>
               <div>
-                <Label htmlFor="productImage" className="text-sm font-medium text-gray-700">
+                <Label
+                  htmlFor="productImage"
+                  className="text-sm font-medium text-gray-700"
+                >
                   Product Image
                 </Label>
                 <div
                   className={cn(
-                    'mt-1 border-2 border-dashed rounded-xl p-6 text-center transition-colors',
-                    isDragging ? 'border-primary bg-primary-light' : 'border-gray-300 bg-gray-50'
+                    "mt-1 border-2 border-dashed rounded-xl p-6 text-center transition-colors",
+                    isDragging
+                      ? "border-primary bg-primary-light"
+                      : "border-gray-300 bg-gray-50"
                   )}
                   onDragOver={handleDragOver}
                   onDragLeave={handleDragLeave}
@@ -434,7 +530,9 @@ export default function CartOfferProductsPage() {
                       >
                         <X className="h-4 w-4" />
                       </Button>
-                      <p className="text-xs text-gray-500 mt-2">Optimized for 300x300px</p>
+                      <p className="text-xs text-gray-500 mt-2">
+                        Optimized for 300x300px
+                      </p>
                     </div>
                   ) : (
                     <label
@@ -442,11 +540,17 @@ export default function CartOfferProductsPage() {
                       className="cursor-pointer flex flex-col items-center justify-center"
                     >
                       <Upload className="h-8 w-8 text-gray-400 mb-2" />
-                      <p className="text-sm font-medium text-gray-600">Drag and drop an image here, or click to select</p>
-                      <p className="text-xs text-gray-400 mt-1">Recommended: 300x300px</p>
+                      <p className="text-sm font-medium text-gray-600">
+                        Drag and drop an image here, or click to select
+                      </p>
+                      <p className="text-xs text-gray-400 mt-1">
+                        Recommended: 300x300px
+                      </p>
                     </label>
                   )}
-                  {imageError && <p className="text-sm text-red-600 mt-2">{imageError}</p>}
+                  {imageError && (
+                    <p className="text-sm text-red-600 mt-2">{imageError}</p>
+                  )}
                 </div>
               </div>
               <div className="md:col-span-2 flex justify-end gap-4">
@@ -475,13 +579,19 @@ export default function CartOfferProductsPage() {
       )}
 
       {/* Category Navigation */}
-      <div className="mb-8 bg-white rounded-2xl border border-gray-200 p-4" role="tablist" aria-label="Category navigation">
+      <div
+        className="mb-8 bg-white rounded-2xl border border-gray-200 p-4"
+        role="tablist"
+        aria-label="Category navigation"
+      >
         <div className="flex gap-2 overflow-x-auto scrollbar-hide max-w-full">
           <Button
-            variant={activeCategory === null ? 'default' : 'ghost'}
+            variant={activeCategory === null ? "default" : "ghost"}
             className={cn(
-              'px-4 py-2 text-sm font-medium rounded-full flex items-center gap-2',
-              activeCategory === null ? 'bg-primary text-white hover:bg-primary-hover' : 'text-gray-600 hover:bg-primary-light'
+              "px-4 py-2 text-sm font-medium rounded-full flex items-center gap-2",
+              activeCategory === null
+                ? "bg-primary text-white hover:bg-primary-hover"
+                : "text-gray-600 hover:bg-primary-light"
             )}
             onClick={() => setActiveCategory(null)}
             aria-selected={activeCategory === null}
@@ -493,12 +603,16 @@ export default function CartOfferProductsPage() {
           {Object.entries(range).map(([apiKey, displayName]) => (
             <Button
               key={apiKey}
-              variant={activeCategory === apiKey ? 'default' : 'ghost'}
+              variant={activeCategory === apiKey ? "default" : "ghost"}
               className={cn(
-                'px-4 py-2 text-sm font-medium rounded-full flex items-center gap-2',
-                activeCategory === apiKey ? 'bg-primary text-white hover:bg-primary-hover' : 'text-gray-600 hover:bg-primary-light'
+                "px-4 py-2 text-sm font-medium rounded-full flex items-center gap-2",
+                activeCategory === apiKey
+                  ? "bg-primary text-white hover:bg-primary-hover"
+                  : "text-gray-600 hover:bg-primary-light"
               )}
-              onClick={() => setActiveCategory(activeCategory === apiKey ? null : apiKey)}
+              onClick={() =>
+                setActiveCategory(activeCategory === apiKey ? null : apiKey)
+              }
               aria-selected={activeCategory === apiKey}
               role="tab"
             >
@@ -515,7 +629,8 @@ export default function CartOfferProductsPage() {
           <div className="flex items-center gap-2 mb-6">
             <Package className="h-5 w-5 text-gray-500" />
             <h2 className="text-xl font-bold text-gray-900">
-              {CATEGORIES[activeCategory]} ({categorizedProducts[activeCategory].length})
+              {CATEGORIES[activeCategory]} (
+              {categorizedProducts[activeCategory].length})
             </h2>
           </div>
           {categorizedProducts[activeCategory].length > 0 ? (
@@ -524,7 +639,7 @@ export default function CartOfferProductsPage() {
                 <div
                   key={product.id}
                   className={cn(
-                    'group relative bg-white rounded-2xl border border-gray-200 hover:border-primary hover:scale-[1.02] transition-all duration-300',
+                    "group relative bg-white rounded-2xl border border-gray-200 hover:border-primary hover:scale-[1.02] transition-all duration-300"
                   )}
                 >
                   <button
@@ -536,10 +651,14 @@ export default function CartOfferProductsPage() {
                   </button>
                   <div className="relative w-full aspect-[4/3] bg-gradient-to-br from-gray-100 to-gray-200 rounded-t-2xl overflow-hidden">
                     <img
-                      src={product.productImage ?? '/placeholder.png'}
+                      src={product.productImage ?? "/placeholder.png"}
                       alt={product.productName}
                       className="object-cover w-full h-full group-hover:scale-105 group-hover:bg-black/10 transition-all duration-300"
-                      sizes={index % 5 === 0 ? '(max-width: 768px) 100vw, 50vw' : '(max-width: 768px) 100vw, (max-width: 1024px) 50vw, 25vw'}
+                      sizes={
+                        index % 5 === 0
+                          ? "(max-width: 768px) 100vw, 50vw"
+                          : "(max-width: 768px) 100vw, (max-width: 1024px) 50vw, 25vw"
+                      }
                     />
                     <div className="absolute top-2 left-2 flex items-center gap-1 px-2 py-1 bg-primary-light text-primary text-xs font-medium rounded-full">
                       <Package className="h-3 w-3" />
@@ -547,13 +666,17 @@ export default function CartOfferProductsPage() {
                     </div>
                   </div>
                   <div className="p-4">
-                    <h3 className="text-xl font-semibold text-gray-900 line-clamp-2">{product.productName}</h3>
+                    <h3 className="text-xl font-semibold text-gray-900 line-clamp-2">
+                      {product.productName}
+                    </h3>
                     <div className="mt-2 flex items-center gap-2">
                       <span className="text-lg font-bold text-gray-900">
                         ₹{Number(product.ourPrice).toLocaleString()}
                       </span>
                     </div>
-                    <p className="mt-1 text-sm text-gray-600">Quantity: {product.quantity}</p>
+                    <p className="mt-1 text-sm text-gray-600">
+                      Quantity: {product.quantity}
+                    </p>
                   </div>
                 </div>
               ))}
@@ -561,7 +684,8 @@ export default function CartOfferProductsPage() {
           ) : (
             <div className="rounded-2xl border border-dashed border-gray-300 bg-gray-50 p-8 text-center min-h-[240px] flex items-center justify-center">
               <p className="text-gray-500">
-                No products in {CATEGORIES[activeCategory]}. Click &ldquo;Add New Product&ldquo; to add one.
+                No products in {CATEGORIES[activeCategory]}. Click &ldquo;Add
+                New Product&ldquo; to add one.
               </p>
             </div>
           )}
@@ -596,53 +720,67 @@ export default function CartOfferProductsPage() {
                 </div>
                 {categorizedProducts[apiKey]?.length > 0 ? (
                   <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6 auto-rows-[320px]">
-                    {categorizedProducts[apiKey].slice(0, 4).map((product, index) => (
-                      <div
-                        key={product.id}
-                        className={cn(
-                          'group relative bg-white rounded-2xl border border-gray-200 hover:border-primary hover:scale-[1.02] transition-all duration-300',
-                         
-                        )}
-                      >
-                        <div className="relative w-full aspect-[4/3] bg-gradient-to-br from-gray-100 to-gray-200 rounded-t-2xl overflow-hidden">
-                          <img
-                            src={product.productImage ?? '/placeholder.png'}
-                            alt={product.productName}
-                            className="object-cover w-full h-full group-hover:scale-105 group-hover:bg-black/10 transition-all duration-300"
-                            sizes={index % 5 === 0 ? '(max-width: 768px) 100vw, 50vw' : '(max-width: 768px) 100vw, (max-width: 1024px) 50vw, 25vw'}
-                          />
-                          <div className="absolute top-2 left-2 flex items-center gap-1 px-2 py-1 bg-primary-light text-primary text-xs font-medium rounded-full">
-                            <Package className="h-3 w-3" />
-                            {CATEGORIES[product.range]}
+                    {categorizedProducts[apiKey]
+                      .slice(0, 4)
+                      .map((product, index) => (
+                        <div
+                          key={product.id}
+                          className={cn(
+                            "group relative bg-white rounded-2xl border border-gray-200 hover:border-primary hover:scale-[1.02] transition-all duration-300"
+                          )}
+                        >
+                          <div className="relative w-full aspect-[4/3] bg-gradient-to-br from-gray-100 to-gray-200 rounded-t-2xl overflow-hidden">
+                            <img
+                              src={product.productImage ?? "/placeholder.png"}
+                              alt={product.productName}
+                              className="object-cover w-full h-full group-hover:scale-105 group-hover:bg-black/10 transition-all duration-300"
+                              sizes={
+                                index % 5 === 0
+                                  ? "(max-width: 768px) 100vw, 50vw"
+                                  : "(max-width: 768px) 100vw, (max-width: 1024px) 50vw, 25vw"
+                              }
+                            />
+                            <div className="absolute top-2 left-2 flex items-center gap-1 px-2 py-1 bg-primary-light text-primary text-xs font-medium rounded-full">
+                              <Package className="h-3 w-3" />
+                              {CATEGORIES[product.range]}
+                            </div>
+                          </div>
+                          <div className="p-4">
+                            <h3 className="text-xl font-semibold text-gray-900 line-clamp-2">
+                              {product.productName}
+                            </h3>
+                            <div className="mt-2 flex items-center gap-2">
+                              <span className="text-lg font-bold text-gray-900">
+                                ₹{Number(product.ourPrice).toLocaleString()}
+                              </span>
+                            </div>
+                            <p className="mt-1 text-sm text-gray-600">
+                              Quantity: {product.quantity}
+                            </p>
                           </div>
                         </div>
-                        <div className="p-4">
-                          <h3 className="text-xl font-semibold text-gray-900 line-clamp-2">{product.productName}</h3>
-                          <div className="mt-2 flex items-center gap-2">
-                            <span className="text-lg font-bold text-gray-900">
-                              ₹{Number(product.ourPrice).toLocaleString()}
-                            </span>
-                          </div>
-                          <p className="mt-1 text-sm text-gray-600">Quantity: {product.quantity}</p>
-                        </div>
-                      </div>
-                    ))}
+                      ))}
                     {categorizedProducts[apiKey].length > 4 && (
                       <div className="flex items-center justify-center">
                         <Button
                           variant="outline"
                           onClick={() => setActiveCategory(apiKey)}
                           className="h-full min-h-[320px] w-full border-dashed rounded-2xl text-primary border-primary hover:bg-primary-light"
-                          aria-label={`View ${categorizedProducts[apiKey].length - 4} more products in ${displayName}`}
+                          aria-label={`View ${
+                            categorizedProducts[apiKey].length - 4
+                          } more products in ${displayName}`}
                         >
-                          +{categorizedProducts[apiKey].length - 4} more products
+                          +{categorizedProducts[apiKey].length - 4} more
+                          products
                         </Button>
                       </div>
                     )}
                   </div>
                 ) : (
                   <div className="rounded-2xl border border-dashed border-gray-300 bg-gray-50 p-8 text-center min-h-[240px] flex items-center justify-center">
-                    <p className="text-gray-500">No products in {displayName}.</p>
+                    <p className="text-gray-500">
+                      No products in {displayName}.
+                    </p>
                   </div>
                 )}
               </div>

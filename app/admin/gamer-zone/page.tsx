@@ -5,9 +5,8 @@ import { Search, Save, Check, X, AlertCircle, Gamepad2 } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { fetchProducts, fetchGamersZoneProducts } from "@/utils/products.util";
-import Image from "next/image";
 import { cn } from "@/lib/utils";
-import toast from "react-hot-toast";
+import { showFancyToast } from "@/components/Reusable/ShowCustomToast";
 
 // Types
 interface Product {
@@ -145,7 +144,11 @@ export default function GamerZonePage() {
         if (!signal.aborted) {
           console.error("[FETCH_GAMERS_ZONE_ERROR]", err);
           setError("Failed to load data. Please try again.");
-          toast.error("Failed to load data. Please try again.");
+          showFancyToast({
+            title: "Sorry, there was an error",
+            message: "Failed to load data. Please try again.",
+            type: "error",
+          });
         }
       } finally {
         if (!signal.aborted) setIsFetching(false);
@@ -259,12 +262,19 @@ export default function GamerZonePage() {
         setSearchTerm("");
         setShowSearchResults(false);
         setIsSaved(false);
-        toast.success(
-          `Variant added to ${CATEGORIES[activeCategory]} in Gamer Zone`
-        );
+
+        showFancyToast({
+          title: "Variant Added Successfully",
+          message: `Variant added to ${CATEGORIES[activeCategory]} in Gamer Zone`,
+          type: "success",
+        });
       } catch (error) {
         console.error("[SELECT_GAMER_ZONE_VARIANT_ERROR]", error);
-        toast.error("Failed to add variant");
+        showFancyToast({
+          title: "Sorry, there was an error",
+          message: "Failed to add variant",
+          type: "error",
+        });
       }
     },
     [activeCategory]
@@ -295,12 +305,19 @@ export default function GamerZonePage() {
           ),
         }));
         setIsSaved(false);
-        toast.success(
-          `Variant removed from ${CATEGORIES[activeCategory]} in Gamer Zone`
-        );
+
+        showFancyToast({
+          title: "Variant Removed Successfully",
+          message: `Variant removed from ${CATEGORIES[activeCategory]} in Gamer Zone`,
+          type: "success",
+        });
       } catch (error: any) {
         console.error("[DELETE_GAMER_ZONE_VARIANT_ERROR]", error);
-        toast.error(error.message || "Failed to remove variant");
+        showFancyToast({
+          title: "Sorry, there was an error",
+          message: "Failed to remove variant",
+          type: "error",
+        });
       } finally {
         setIsLoading(false);
       }
@@ -342,12 +359,20 @@ export default function GamerZonePage() {
       }
 
       setIsSaved(true);
-      toast.success("Gamer Zone variants saved successfully");
+      showFancyToast({
+        title: "Gamer Zone variants saved successfully",
+        message: "All variants have been saved",
+        type: "success",
+      });
       setTimeout(() => setIsSaved(false), 3000);
     } catch (error: any) {
       console.error("[SAVE_GAMERS_ZONE_ERROR]", error);
       setError(error.message || "Failed to save changes");
-      toast.error(error.message || "Failed to save Gamer Zone variants");
+      showFancyToast({
+        title: "Sorry, there was an error",
+        message: error.message || "Failed to save changes",
+        type: "error",
+      });
       setTimeout(() => setError(null), 5000);
     } finally {
       setIsLoading(false);

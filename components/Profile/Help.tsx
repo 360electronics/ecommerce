@@ -1,28 +1,33 @@
-'use client';
+"use client";
 
-import { useState, useCallback, useEffect } from 'react';
-import { IoArrowForwardCircleSharp as RightArrow } from 'react-icons/io5';
-import { FaCheckCircle, FaTimesCircle, FaPlus, FaSpinner } from 'react-icons/fa';
-import { BiSend } from 'react-icons/bi';
-import { MdAttachFile, MdRefresh } from 'react-icons/md';
-import { Button } from '@/components/ui/button';
-import { format } from 'date-fns';
-import toast from 'react-hot-toast';
-import { useAuthStore } from '@/store/auth-store';
-import { useProfileStore } from '@/store/profile-store';
+import { useState, useCallback, useEffect } from "react";
+import { IoArrowForwardCircleSharp as RightArrow } from "react-icons/io5";
+import {
+  FaCheckCircle,
+  FaTimesCircle,
+  FaPlus,
+  FaSpinner,
+} from "react-icons/fa";
+import { BiSend } from "react-icons/bi";
+import { MdAttachFile, MdRefresh } from "react-icons/md";
+import { Button } from "@/components/ui/button";
+import { format } from "date-fns";
+import { useAuthStore } from "@/store/auth-store";
+import { useProfileStore } from "@/store/profile-store";
+import { showFancyToast } from "../Reusable/ShowCustomToast";
 
 interface Ticket {
   id: string;
   type: string;
   issueDesc: string;
-  status: 'active' | 'inactive' | 'resolved';
+  status: "active" | "inactive" | "resolved";
   createdAt: string;
   replies: Reply[];
 }
 
 interface Reply {
   id: string;
-  sender: 'user' | 'support';
+  sender: "user" | "support";
   message: string;
   createdAt: string;
 }
@@ -30,24 +35,24 @@ interface Reply {
 export default function Help() {
   const { user } = useAuthStore();
   const { tickets, isRefetching, refetch } = useProfileStore();
-  const [issueType, setIssueType] = useState('');
-  const [description, setDescription] = useState('');
+  const [issueType, setIssueType] = useState("");
+  const [description, setDescription] = useState("");
   const [selectedTicket, setSelectedTicket] = useState<Ticket | null>(null);
-  const [newReply, setNewReply] = useState('');
+  const [newReply, setNewReply] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isModalOpen, setIsModalOpen] = useState(false);
-  const [filterStatus, setFilterStatus] = useState<string>('all');
+  const [filterStatus, setFilterStatus] = useState<string>("all");
   const [error, setError] = useState<string | null>(null);
 
   // Handle modal close on Escape key
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
-      if (e.key === 'Escape' && isModalOpen) {
+      if (e.key === "Escape" && isModalOpen) {
         setIsModalOpen(false);
       }
     };
-    window.addEventListener('keydown', handleKeyDown);
-    return () => window.removeEventListener('keydown', handleKeyDown);
+    window.addEventListener("keydown", handleKeyDown);
+    return () => window.removeEventListener("keydown", handleKeyDown);
   }, [isModalOpen]);
 
   // Handle ticket submission
@@ -55,17 +60,21 @@ export default function Help() {
     async (e: React.FormEvent) => {
       e.preventDefault();
       if (!user?.id) {
-        setError('Please sign in to submit a ticket.');
-        toast.error('Please sign in to submit a ticket.');
+        setError("Please sign in to submit a ticket.");
+        showFancyToast({
+          title: "Authentication Required",
+          message: "Please sign in to submit a ticket.",
+          type: "error",
+        });
         return;
       }
       setIsSubmitting(true);
       setError(null);
 
       try {
-        const res = await fetch('/api/tickets', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
+        const res = await fetch("/api/tickets", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
           body: JSON.stringify({
             user_id: user.id,
             type: issueType,
@@ -74,17 +83,26 @@ export default function Help() {
         });
 
         const data = await res.json();
-        if (!res.ok) throw new Error(data.error || 'Failed to submit ticket');
+        if (!res.ok) throw new Error(data.error || "Failed to submit ticket");
 
-        toast.success('Your ticket has been submitted successfully.');
-        setIssueType('');
-        setDescription('');
+        showFancyToast({
+          title: "Ticket Submitted Successfully",
+          message: "Your ticket has been submitted successfully.",
+          type: "success",
+        });
+        setIssueType("");
+        setDescription("");
         setIsModalOpen(false);
-        refetch('tickets', user.id, true);
+        refetch("tickets", user.id, true);
       } catch (error) {
-        const message = error instanceof Error ? error.message : 'Failed to submit ticket';
+        const message =
+          error instanceof Error ? error.message : "Failed to submit ticket";
         setError(message);
-        toast.error(message);
+        showFancyToast({
+          title: "Sorry, there was an error",
+          message: message,
+          type: "error",
+        });
       } finally {
         setIsSubmitting(false);
       }
@@ -102,31 +120,44 @@ export default function Help() {
       setError(null);
 
       try {
-        const res = await fetch('/api/tickets/reply', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
+        const res = await fetch("/api/tickets/reply", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
           body: JSON.stringify({
             ticket_id: selectedTicket.id,
-            sender: 'user',
+            sender: "user",
             message: newReply,
           }),
         });
 
         const data = await res.json();
-        if (!res.ok) throw new Error(data.error || 'Failed to submit reply');
+        if (!res.ok) throw new Error(data.error || "Failed to submit reply");
 
-        setNewReply('');
+        setNewReply("");
 
         if (!user?.id) {
-          toast.error("User not authenticated.");
+          showFancyToast({
+            title: "Authentication Required",
+            message: "User not authenticated.",
+            type: "error",
+          });
           return;
         }
-        refetch('tickets', user?.id, true);
-        toast.success('Reply submitted successfully.');
+        refetch("tickets", user?.id, true);
+        showFancyToast({
+          title: "Reply Submitted Successfully",
+          message: "Your reply has been submitted successfully.",
+          type: "success",
+        });
       } catch (error) {
-        const message = error instanceof Error ? error.message : 'Failed to submit reply';
+        const message =
+          error instanceof Error ? error.message : "Failed to submit reply";
         setError(message);
-        toast.error(message);
+        showFancyToast({
+          title: "Sorry, there was an error",
+          message: message,
+          type: "error",
+        });
       } finally {
         setIsSubmitting(false);
       }
@@ -137,18 +168,18 @@ export default function Help() {
   // Format date
   const formatDate = (dateString: string) => {
     try {
-      return format(new Date(dateString), 'PPP');
+      return format(new Date(dateString), "PPP");
     } catch {
-      return 'Invalid date';
+      return "Invalid date";
     }
   };
 
   // Format time
   const formatTime = (dateString: string) => {
     try {
-      return format(new Date(dateString), 'p');
+      return format(new Date(dateString), "p");
     } catch {
-      return 'Invalid time';
+      return "Invalid time";
     }
   };
 
@@ -159,26 +190,31 @@ export default function Help() {
   }, []);
 
   // Filter tickets based on status
-  const filteredTickets = filterStatus === 'all' ? tickets : tickets.filter((ticket: { status: string }) => ticket.status === filterStatus);
+  const filteredTickets =
+    filterStatus === "all"
+      ? tickets
+      : tickets.filter(
+          (ticket: { status: string }) => ticket.status === filterStatus
+        );
 
   // Get status badge
   const getStatusBadge = (status: string) => {
     switch (status) {
-      case 'active':
+      case "active":
         return (
           <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800">
             <FaCheckCircle className="mr-1" />
             Active
           </span>
         );
-      case 'inactive':
+      case "inactive":
         return (
           <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-red-100 text-red-800">
             <FaTimesCircle className="mr-1" />
             Inactive
           </span>
         );
-      case 'resolved':
+      case "resolved":
         return (
           <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-800">
             <FaCheckCircle className="mr-1" />
@@ -193,11 +229,11 @@ export default function Help() {
   // Map ticket types to readable labels
   const getTicketTypeLabel = (type: string) => {
     const typeMap: { [key: string]: string } = {
-      feature: 'Shipping & Delivery',
-      account: 'Order Related',
-      payment: 'Payment Problem',
-      bug: 'Technical Issue',
-      other: 'Other',
+      feature: "Shipping & Delivery",
+      account: "Order Related",
+      payment: "Payment Problem",
+      bug: "Technical Issue",
+      other: "Other",
     };
     return typeMap[type] || type;
   };
@@ -215,9 +251,14 @@ export default function Help() {
         <div className="flex flex-col md:flex-row justify-between items-start md:items-center mb-6 gap-4">
           <div>
             <h1 className="text-2xl font-bold text-gray-900 nohemi-bold">
-              Support <span className="text-primary border-b-3 border-primary">Tickets</span>
+              Support{" "}
+              <span className="text-primary border-b-3 border-primary">
+                Tickets
+              </span>
             </h1>
-            <p className="text-gray-500 text-sm mt-1">Submit and track your support requests</p>
+            <p className="text-gray-500 text-sm mt-1">
+              Submit and track your support requests
+            </p>
           </div>
 
           <div className="flex flex-col sm:flex-row gap-2 w-full md:w-auto">
@@ -243,7 +284,7 @@ export default function Help() {
               <FaPlus size={16} /> New Ticket
             </Button>
             <Button
-              onClick={() => user?.id && refetch('tickets', user.id, true)}
+              onClick={() => user?.id && refetch("tickets", user.id, true)}
               variant="outline"
               className="flex items-center justify-center gap-2 px-4 py-2 border border-gray-300 rounded-md hover:bg-gray-50 transition w-full sm:w-auto"
               disabled={isRefetching}
@@ -264,13 +305,15 @@ export default function Help() {
           <div className="lg:col-span-1">
             <div className="bg-white rounded-lg border border-slate-200 overflow-hidden">
               <div className="p-4 border-b border-gray-200 bg-gray-50">
-                <h2 className="text-lg font-medium text-gray-900">Your Tickets</h2>
+                <h2 className="text-lg font-medium text-gray-900">
+                  Your Tickets
+                </h2>
               </div>
 
-            {filteredTickets.length === 0 ? (
+              {filteredTickets.length === 0 ? (
                 <div className="p-6 text-center text-gray-500">
-                  {filterStatus === 'all'
-                    ? 'No tickets found. Create a new ticket to get started.'
+                  {filterStatus === "all"
+                    ? "No tickets found. Create a new ticket to get started."
                     : `No ${filterStatus} tickets found.`}
                 </div>
               ) : (
@@ -280,23 +323,37 @@ export default function Help() {
                       <button
                         key={ticket.id}
                         onClick={() => handleTicketSelect(ticket)}
-                        className={`w-full p-4 text-left cursor-pointer hover:bg-gray-50 transition ${selectedTicket?.id === ticket.id ? 'bg-primary-light border-l-4 border-primary' : ''
-                          }`}
-                        aria-label={`Select ticket: ${getTicketTypeLabel(ticket.type)}`}
+                        className={`w-full p-4 text-left cursor-pointer hover:bg-gray-50 transition ${
+                          selectedTicket?.id === ticket.id
+                            ? "bg-primary-light border-l-4 border-primary"
+                            : ""
+                        }`}
+                        aria-label={`Select ticket: ${getTicketTypeLabel(
+                          ticket.type
+                        )}`}
                       >
                         <div className="flex items-start justify-between">
                           <div className="flex-1 min-w-0">
                             <h3 className="text-md font-semibold text-gray-900 capitalize truncate">
                               {getTicketTypeLabel(ticket.type)}
                             </h3>
-                            <p className="text-sm text-gray-600 mt-1 line-clamp-2">{ticket.issueDesc}</p>
+                            <p className="text-sm text-gray-600 mt-1 line-clamp-2">
+                              {ticket.issueDesc}
+                            </p>
                             <div className="flex items-center mt-2 text-xs text-gray-500">
                               <span>{formatDate(ticket.createdAt)}</span>
                               <span className="mx-2">•</span>
-                              <span>{ticket.replies.length} {ticket.replies.length === 1 ? 'reply' : 'replies'}</span>
+                              <span>
+                                {ticket.replies.length}{" "}
+                                {ticket.replies.length === 1
+                                  ? "reply"
+                                  : "replies"}
+                              </span>
                             </div>
                           </div>
-                          <div className="ml-4">{getStatusBadge(ticket.status)}</div>
+                          <div className="ml-4">
+                            {getStatusBadge(ticket.status)}
+                          </div>
                         </div>
                       </button>
                     ))}
@@ -312,15 +369,20 @@ export default function Help() {
               <div className="bg-white rounded-lg border border-slate-200 h-full flex flex-col">
                 <div className="p-4 border-b border-gray-200 bg-gray-50 flex justify-between items-center">
                   <div>
-                    <h2 className="text-lg font-medium text-gray-900">{getTicketTypeLabel(selectedTicket.type)}</h2>
+                    <h2 className="text-lg font-medium text-gray-900">
+                      {getTicketTypeLabel(selectedTicket.type)}
+                    </h2>
                     <p className="text-sm text-gray-500">
-                      {formatDate(selectedTicket.createdAt)} • {getStatusBadge(selectedTicket.status)}
+                      {formatDate(selectedTicket.createdAt)} •{" "}
+                      {getStatusBadge(selectedTicket.status)}
                     </p>
                   </div>
                 </div>
 
                 <div className="p-4 bg-gray-50 border-b border-gray-200">
-                  <h3 className="text-sm font-medium text-gray-700 mb-2">Description</h3>
+                  <h3 className="text-sm font-medium text-gray-700 mb-2">
+                    Description
+                  </h3>
                   <p className="text-gray-700 text-sm whitespace-pre-wrap bg-white p-3 rounded-md">
                     {selectedTicket.issueDesc}
                   </p>
@@ -337,17 +399,30 @@ export default function Help() {
                       {selectedTicket.replies.map((reply) => (
                         <div
                           key={reply.id}
-                          className={`flex ${reply.sender === 'user' ? 'justify-end' : 'justify-start'}`}
+                          className={`flex ${
+                            reply.sender === "user"
+                              ? "justify-end"
+                              : "justify-start"
+                          }`}
                         >
                           <div
-                            className={`max-w-[80%] p-3 rounded-lg ${reply.sender === 'user'
-                                ? 'bg-blue-600 text-white rounded-tr-none'
-                                : 'bg-white text-gray-800 rounded-tl-none'
-                              }`}
+                            className={`max-w-[80%] p-3 rounded-lg ${
+                              reply.sender === "user"
+                                ? "bg-blue-600 text-white rounded-tr-none"
+                                : "bg-white text-gray-800 rounded-tl-none"
+                            }`}
                           >
-                            <p className="whitespace-pre-wrap">{reply.message}</p>
+                            <p className="whitespace-pre-wrap">
+                              {reply.message}
+                            </p>
                             <div className="flex justify-end mt-1">
-                              <span className={`text-xs ${reply.sender === 'user' ? 'text-blue-200' : 'text-gray-500'}`}>
+                              <span
+                                className={`text-xs ${
+                                  reply.sender === "user"
+                                    ? "text-blue-200"
+                                    : "text-gray-500"
+                                }`}
+                              >
                                 {formatTime(reply.createdAt)}
                               </span>
                             </div>
@@ -359,8 +434,11 @@ export default function Help() {
                 </div>
 
                 {/* Reply Input */}
-                {selectedTicket.status === 'active' ? (
-                  <form onSubmit={handleReplySubmit} className="p-4 border-t border-gray-200 bg-white">
+                {selectedTicket.status === "active" ? (
+                  <form
+                    onSubmit={handleReplySubmit}
+                    className="p-4 border-t border-gray-200 bg-white"
+                  >
                     <div className="flex gap-2">
                       <input
                         type="text"
@@ -387,14 +465,19 @@ export default function Help() {
                         disabled={!newReply.trim() || isSubmitting}
                         aria-label="Send reply"
                       >
-                        {isSubmitting ? <FaSpinner className="animate-spin" size={16} /> : <BiSend size={18} />}
+                        {isSubmitting ? (
+                          <FaSpinner className="animate-spin" size={16} />
+                        ) : (
+                          <BiSend size={18} />
+                        )}
                         <span className="hidden sm:inline">Send</span>
                       </Button>
                     </div>
                   </form>
                 ) : (
                   <div className="p-4 border-t border-gray-200 bg-gray-50 text-center text-gray-500">
-                    This ticket is {selectedTicket.status}. Replies are disabled.
+                    This ticket is {selectedTicket.status}. Replies are
+                    disabled.
                   </div>
                 )}
               </div>
@@ -416,8 +499,13 @@ export default function Help() {
                     />
                   </svg>
                 </div>
-                <h2 className="text-lg font-medium text-gray-900 mb-2">No Ticket Selected</h2>
-                <p className="mb-4">Select a ticket from the list or create a new one to get started.</p>
+                <h2 className="text-lg font-medium text-gray-900 mb-2">
+                  No Ticket Selected
+                </h2>
+                <p className="mb-4">
+                  Select a ticket from the list or create a new one to get
+                  started.
+                </p>
                 <Button
                   onClick={() => setIsModalOpen(true)}
                   className="flex items-center gap-2 px-4 py-2 bg-gradient-to-r from-[#ff6b00] to-[#ff9f00] hover:to-primary-hover rounded-lg text-white transition"
@@ -446,7 +534,10 @@ export default function Help() {
 
               <form onSubmit={handleSubmit} className="space-y-4">
                 <div>
-                  <label className="block mb-1 text-base font-medium text-gray-700" htmlFor="issue-type">
+                  <label
+                    className="block mb-1 text-base font-medium text-gray-700"
+                    htmlFor="issue-type"
+                  >
                     Issue Type
                   </label>
                   <select
@@ -470,7 +561,10 @@ export default function Help() {
                 </div>
 
                 <div>
-                  <label className="block mb-1 text-base font-medium text-gray-700" htmlFor="description">
+                  <label
+                    className="block mb-1 text-base font-medium text-gray-700"
+                    htmlFor="description"
+                  >
                     Description
                   </label>
                   <textarea
@@ -504,7 +598,8 @@ export default function Help() {
                   >
                     {isSubmitting ? (
                       <>
-                        <FaSpinner className="animate-spin" size={16} /> Submitting...
+                        <FaSpinner className="animate-spin" size={16} />{" "}
+                        Submitting...
                       </>
                     ) : (
                       <>

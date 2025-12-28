@@ -14,8 +14,8 @@ import {
 } from "lucide-react";
 import { useAuthStore } from "@/store/auth-store";
 import { useProfileStore } from "@/store/profile-store";
-import toast from "react-hot-toast";
 import OTPInput from "./OTPInput";
+import { showFancyToast } from "../Reusable/ShowCustomToast";
 
 interface Address {
   id: string;
@@ -77,7 +77,11 @@ export default function ProfileInfo() {
 
     if (!firstName?.trim() || !email?.trim()) {
       setError("First name and email are required.");
-      toast.error("First name and email are required.");
+      showFancyToast({
+        title: "Sorry, there was an error",
+        message: "First name and email are required.",
+        type: "error",
+      });
       return;
     }
 
@@ -96,13 +100,21 @@ export default function ProfileInfo() {
 
       setAuth(true, data.user);
       setSuccess("Profile updated successfully");
-      toast.success("Profile updated successfully");
+      showFancyToast({
+        title: "Profile Updated Successfully",
+        message: "Your profile has been updated successfully.",
+        type: "success",
+      });
       refetch("profile", user?.id || "", true);
       setIsProfileModalOpen(false);
     } catch (err) {
       const message = err instanceof Error ? err.message : "An error occurred";
       setError(message);
-      toast.error(message);
+      showFancyToast({
+        title: "Sorry, there was an error",
+        message: message,
+        type: "error",
+      });
     } finally {
       setIsSaving(false);
     }
@@ -130,7 +142,11 @@ export default function ProfileInfo() {
         .map((field) => field.replace(/([A-Z])/g, " $1"))
         .join(", ")}`;
       setError(errorMessage);
-      toast.error(errorMessage);
+      showFancyToast({
+        title: "Sorry, there was an error",
+        message: errorMessage,
+        type: "error",
+      });
       return;
     }
 
@@ -156,7 +172,11 @@ export default function ProfileInfo() {
         );
 
       setSuccess(`Address ${isEditing ? "updated" : "added"} successfully`);
-      toast.success(`Address ${isEditing ? "updated" : "added"} successfully`);
+      showFancyToast({
+        title: "Address Updated Successfully",
+        message: `Address ${isEditing ? "updated" : "added"} successfully`,
+        type: "success",
+      });
       refetch("profile", user?.id || "", true);
       setNewAddress({
         fullName: "",
@@ -178,7 +198,11 @@ export default function ProfileInfo() {
           ? err.message
           : `Error ${isEditing ? "updating" : "adding"} address`;
       setError(message);
-      toast.error(message);
+      showFancyToast({
+        title: "Sorry, there was an error",
+        message: message,
+        type: "error",
+      });
     } finally {
       setVerificationLoading(false);
     }
@@ -209,7 +233,11 @@ export default function ProfileInfo() {
 
   const handleUpgradeAccount = async () => {
     if (!firstName?.trim() || !lastName?.trim() || !email?.trim()) {
-      toast.error("Please fill in your name and email to upgrade your account");
+      showFancyToast({
+        title: "Sorry, there was an error",
+        message: "Please fill in your name and email to upgrade your account",
+        type: "error",
+      });
       return;
     }
 
@@ -239,10 +267,18 @@ export default function ProfileInfo() {
         phoneVerified: data.user.phoneVerified,
       });
 
-      toast.success("Account upgraded successfully!");
+      showFancyToast({
+        title: "Account Upgraded Successfully",
+        message: "Your account has been upgraded successfully.",
+        type: "success",
+      });
       setIsProfileModalOpen(false);
     } catch (err) {
-      toast.error(err instanceof Error ? err.message : "Upgrade failed");
+      showFancyToast({
+        title: "Sorry, there was an error",
+        message: err instanceof Error ? err.message : "Upgrade failed",
+        type: "error",
+      });
     } finally {
       setIsSaving(false);
     }
@@ -264,11 +300,11 @@ export default function ProfileInfo() {
       if (!response.ok)
         throw new Error(data.error || "Failed to send verification");
 
-      toast.success(
-        `OTP Verification ${
-          type === "email" ? "email" : "SMS"
-        } sent successfully!`
-      );
+      showFancyToast({
+        title: "Verification OTP Sent Successfully",
+        message: `OTP sent to ${type === "email" ? "your email" : "your phone"} successfully!`,
+        type: "success",
+      });
 
       setOtpType(type);
       setOtp("");
@@ -276,7 +312,11 @@ export default function ProfileInfo() {
       setOtpModalOpen(true);
     } catch (err) {
       const message = err instanceof Error ? err.message : "An error occurred";
-      toast.error(message);
+      showFancyToast({
+        title: "Sorry, there was an error",
+        message: message,
+        type: "error",
+      });
     } finally {
       setVerificationLoading(false);
     }
@@ -284,7 +324,11 @@ export default function ProfileInfo() {
 
   const handleVerifyOtp = async () => {
     if (!otp || otp.length < 4 || !otpType || !user?.id) {
-      toast.error("Enter a valid OTP");
+      showFancyToast({
+        title: "Sorry, there was an error",
+        message: "Enter a valid OTP",
+        type: "error",
+      });
       return;
     }
 
@@ -313,13 +357,18 @@ export default function ProfileInfo() {
         phoneVerified: data.user.phoneVerified,
         role: data.user.role,
       });
-
-      toast.success("Verification successful");
+      showFancyToast({
+        title: "Verification Successful",
+        message: "Your account has been verified successfully.",
+        type: "success",
+      });
       setOtpModalOpen(false);
     } catch (err) {
-      toast.error(
-        err instanceof Error ? err.message : "OTP verification failed"
-      );
+      showFancyToast({
+        title: "Sorry, there was an error",
+        message: err instanceof Error ? err.message : "OTP verification failed",
+        type: "error",
+      });
     } finally {
       setOtpLoading(false);
     }
