@@ -745,6 +745,13 @@
         "slug": "amd-platform",
         "displayOrder": "0",
         "isActive": true
+      },
+      {
+        "id": "f8481aa5-5e7e-4f35-a9f7-2622b40b732f",
+        "name": "Intel Platform",
+        "slug": "intel-platform",
+        "displayOrder": "0",
+        "isActive": true
       }
     ]
   },

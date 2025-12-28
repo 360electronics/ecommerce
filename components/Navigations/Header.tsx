@@ -89,7 +89,6 @@ export const categoryFeatures: Record<string, { [feature: string]: string[] }> =
         "RTX 3050",
         "RTX 4050",
         "RTX 5050",
-        "RTX 3060",
         "RTX 4060",
         "RTX 5060",
       ],
