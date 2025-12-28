@@ -210,6 +210,23 @@ function VerifyOTPContent() {
       // Update auth state
       setAuth(true, data.user);
 
+            // Navigate with hard redirect to ensure middleware recognizes auth
+      // Prioritize callbackUrl if present (works for both users and admins)
+      let targetUrl: string;
+      if (callbackUrl && callbackUrl !== "/") {
+        targetUrl = callbackUrl;
+      } else if (data.user.role === "admin") {
+        targetUrl = "/admin/dashboard";
+      } else {
+        targetUrl = "/";
+      }
+
+      // console.log('callbackUrl after decode:', callbackUrl); // Debug log
+      // console.log('user role:', data.user.role); // Debug log
+      // console.log('targetUrl:', targetUrl); // Debug log
+
+      router.replace(targetUrl);
+
       // Fetch critical store data
       if (data.user.id) {
         const results = await Promise.allSettled([
@@ -229,22 +246,7 @@ function VerifyOTPContent() {
         });
       }
 
-      // Navigate with hard redirect to ensure middleware recognizes auth
-      // Prioritize callbackUrl if present (works for both users and admins)
-      let targetUrl: string;
-      if (callbackUrl && callbackUrl !== "/") {
-        targetUrl = callbackUrl;
-      } else if (data.user.role === "admin") {
-        targetUrl = "/admin/dashboard";
-      } else {
-        targetUrl = "/";
-      }
 
-      console.log('callbackUrl after decode:', callbackUrl); // Debug log
-      console.log('user role:', data.user.role); // Debug log
-      console.log('targetUrl:', targetUrl); // Debug log
-
-      window.location.href = targetUrl;
     } catch (err: unknown) {
       const errorMessage =
         err instanceof Error ? err.message : "Failed to verify OTP";
