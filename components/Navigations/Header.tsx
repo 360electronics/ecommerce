@@ -359,6 +359,8 @@ const Header = ({ isCategory = true }: HeaderProps) => {
     setHasFetched(true);
   }, []);
 
+  
+
   useEffect(() => {
     const handleScroll = () => {
       setIsScrolled(window.scrollY > 10);
@@ -476,7 +478,7 @@ const Header = ({ isCategory = true }: HeaderProps) => {
           <div className="hidden lg:flex items-center flex-grow">
             <LocationPicker />
             <div className="flex-grow mx-4">
-              <SearchBar onSearch={handleSearch} />
+              <SearchBar onSearch={handleSearch}  />
             </div>
           </div>
 

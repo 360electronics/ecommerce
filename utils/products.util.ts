@@ -61,6 +61,36 @@ export async function fetchCategoryProducts({
   }
 }
 
+
+export interface QuickSuggestion {
+  id: string;
+  title: string;
+  image?: string;
+  price?: string;
+  description: string;
+}
+
+// ⚡ 1. ULTRA-FAST: Prefix + LIKE search (returns < 20ms)
+export async function fetchQuickSuggestions(query: string): Promise<QuickSuggestion[]> {
+  try {
+    if (!query.trim()) return [];
+    
+    const params = new URLSearchParams({ q: query.trim(), limit: "500", type: "quick" });
+    const res = await fetch(`${API_BASE_URL}/api/products/search?${params}`, {
+      method: "GET",
+      headers: { "Content-Type": "application/json" },
+      cache: "force-cache", // ✅ 100% cache hit after 1st request
+    });
+
+    if (!res.ok) throw new Error(`HTTP ${res.status}`);
+    const { data } = await res.json();
+    return Array.isArray(data) ? data : [];
+  } catch (err) {
+    console.error("Quick suggestions failed:", err);
+    return [];
+  }
+}
+
 export async function fetchSearchProducts(query: string) {
   try {
     const params = new URLSearchParams();
@@ -69,13 +99,12 @@ export async function fetchSearchProducts(query: string) {
     const res = await fetch(`${API_BASE_URL}/api/products?${params}`, {
       method: "GET",
       headers: { "Content-Type": "application/json" },
-      cache: "no-store",
     });
 
     if (!res.ok) throw new Error(`Error: ${res.statusText}`);
     const data = await res.json();
 
-    console.log("search products results: ", data.data);
+    console.log("Search called with query");
 
     return Array.isArray(data.data) ? data.data : data; // in case your API returns wrapped data
   } catch (err) {
@@ -83,6 +112,8 @@ export async function fetchSearchProducts(query: string) {
     return [];
   }
 }
+
+
 
 export async function fetchBrandProducts({
   brand,

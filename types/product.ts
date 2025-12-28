@@ -244,11 +244,6 @@ export type CompleteProduct = {
   isComingSoon: boolean;
 };
 
-export interface RatingDistribution {
-  value: number;
-  count: number;
-}
-
 
 
 export interface FlattenedProduct {
@@ -283,3 +278,9 @@ export interface FlattenedProduct {
   productParent?: CompleteProduct;
 
 }
+
+export interface RatingDistribution {
+  value: number;
+  count: number;
+}
+
