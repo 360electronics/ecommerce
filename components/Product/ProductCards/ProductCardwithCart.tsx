@@ -248,7 +248,7 @@ const ProductCardwithCart: React.FC<ProductCardProps> = ({
             <Heart
               size={18}
               fill={isInWishlistStatus ? "red" : "none"}
-              className={cn(
+              className={cn( " cursor-pointer",
                 isInWishlistStatus ? "text-red-500" : "text-gray-500"
               )}
             />
@@ -259,7 +259,7 @@ const ProductCardwithCart: React.FC<ProductCardProps> = ({
         <button
           onClick={handleCartClick}
           className={cn(
-            "absolute right-2 bottom-0 z-10 p-2 rounded-full transition-colors bg-primary text-white hover:bg-primary-hover cursor-pointer",
+            "absolute right-2 bottom-0 z-10 p-2 rounded-full cursor-pointer transition-colors bg-primary text-white hover:bg-primary-hover cursor-pointer",
             (isAdding || isLoading) && "opacity-50 cursor-not-allowed"
           )}
           disabled={isAdding || isLoading}

@@ -166,7 +166,7 @@ const ProductCardwithoutCart: React.FC<ProductCardProps> = ({
             <Heart
               size={14}
               fill={isInWishlistStatus ? 'red' : 'none'}
-              className={cn(isInWishlistStatus ? 'text-red-500' : 'text-gray-500')}
+              className={cn(" cursor-pointer", isInWishlistStatus ? 'text-red-500' : 'text-gray-500')}
             />
           </button>
         )}

@@ -75,11 +75,11 @@ export async function fetchQuickSuggestions(query: string): Promise<QuickSuggest
   try {
     if (!query.trim()) return [];
     
-    const params = new URLSearchParams({ q: query.trim(), limit: "500", type: "quick" });
+    const params = new URLSearchParams({ q: query.trim(), limit: "50", type: "quick" });
     const res = await fetch(`${API_BASE_URL}/api/products/search?${params}`, {
       method: "GET",
       headers: { "Content-Type": "application/json" },
-      cache: "force-cache", // ✅ 100% cache hit after 1st request
+      cache: "force-cache", 
     });
 
     if (!res.ok) throw new Error(`HTTP ${res.status}`);

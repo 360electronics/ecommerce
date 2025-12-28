@@ -920,9 +920,9 @@ const Header = ({ isCategory = true }: HeaderProps) => {
                         onMouseLeave={handleMouseLeaveAllCategories}
                         className="max-w-[90%] mx-auto bg-white rounded-lg shadow-xl p-8 mt-2 grid grid-cols-4 gap-8 overflow-y-auto max-h-[70vh]"
                       >
-                        {allCategories.map((category) => (
+                        {allCategories.map((category, idx) => (
                           <motion.div
-                            key={category.id}
+                            key={idx}
                             whileHover={{ y: -3 }}
                             transition={{ duration: 0.2 }}
                             className="flex flex-col justify-between border border-gray-100 rounded-xl hover:shadow-md hover:border-primary/20 transition-all duration-200"
@@ -943,9 +943,9 @@ const Header = ({ isCategory = true }: HeaderProps) => {
                                 <ul className="space-y-1">
                                   {category.subCategories
                                     .slice(0, 5)
-                                    .map((subCat) => (
+                                    .map((subCat, idx) => (
                                       <motion.li
-                                        key={subCat.id}
+                                        key={idx}
                                         whileHover={{ x: 4 }}
                                         transition={{ duration: 0.2 }}
                                       >
@@ -1037,13 +1037,13 @@ const Header = ({ isCategory = true }: HeaderProps) => {
                 >
                   {categories
                     .filter((category) => category.name === hoveredCategory)
-                    .map((category) => {
+                    .map((category, idx) => {
                       const filterableAttributes = category.attributes.filter(
                         (a) => a.isFilterable
                       );
 
                       return (
-                        <React.Fragment key={category.id}>
+                        <React.Fragment key={idx}>
                           {/* LEFT — Subcategories */}
                           <div className="flex flex-col min-h-[50dvh] max-h-[50dvh] overflow-y-auto pr-4">
                             <div className="flex items-center gap-2 mb-5 sticky top-0 bg-white pb-2 border-b border-gray-100 z-10">
@@ -1055,9 +1055,9 @@ const Header = ({ isCategory = true }: HeaderProps) => {
 
                             {category.subCategories.length > 0 ? (
                               <ul className="grid grid-cols-2 gap-x-4 gap-y-2">
-                                {category.subCategories.map((subCat) => (
+                                {category.subCategories.map((subCat, idx) => (
                                   <motion.li
-                                    key={subCat.id}
+                                    key={idx}
                                     whileHover={{ x: 4 }}
                                     transition={{ duration: 0.2 }}
                                   >

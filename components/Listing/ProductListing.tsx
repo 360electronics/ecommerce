@@ -585,7 +585,7 @@ const ProductListing = ({
   }, [filteredProducts, currentPage, loading, error, sortOption, searchParams]);
 
   return (
-    <div className="mx-auto" role="main">
+    <div className="mx-auto pb-20" role="main">
       <div className="flex flex-col md:flex-row gap-6">
         {!loading && filteredProducts.length > 0 && (
           <aside

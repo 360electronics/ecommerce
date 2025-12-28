@@ -32,7 +32,7 @@ interface SearchModalProps {
   handleSearchItemClick: (search: string) => void; // Fixed: matches what SearchBar passes
 }
 
-const DEBOUNCE_DELAY = 150;
+const DEBOUNCE_DELAY = 250;
 
 const SearchModal: React.FC<SearchModalProps> = ({
   searchQuery,
