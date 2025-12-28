@@ -1,9 +1,9 @@
-'use client'
+"use client";
 
-import { useState, useEffect } from 'react'
-import { usePathname } from 'next/navigation'
-import Image from 'next/image'
-import Link from 'next/link'
+import { useState, useEffect } from "react";
+import { usePathname, useRouter } from "next/navigation";
+import Image from "next/image";
+import Link from "next/link";
 import {
   LayoutGrid,
   Users,
@@ -21,95 +21,126 @@ import {
   ShoppingCart,
   Tag,
   StoreIcon,
-} from 'lucide-react'
-import Breadcrumbs from '@/components/Reusable/BreadScrumb'
+} from "lucide-react";
+import Breadcrumbs from "@/components/Reusable/BreadScrumb";
+import { useAuthStore } from "@/store/auth-store";
 
 interface AdminLayoutProps {
-  children: React.ReactNode
+  children: React.ReactNode;
 }
 
 export default function Layout({ children }: AdminLayoutProps) {
-  const [sidebarOpen, setSidebarOpen] = useState(false)
-  const pathname = usePathname()
+  const [sidebarOpen, setSidebarOpen] = useState(false);
+  const pathname = usePathname();
+  const { setAuth } = useAuthStore();
+
+  const router = useRouter();
 
   // Handle sidebar visibility based on screen size
   useEffect(() => {
     const handleResize = () => {
       if (window.innerWidth >= 1024) {
-        setSidebarOpen(true)
+        setSidebarOpen(true);
       } else {
-        setSidebarOpen(false)
+        setSidebarOpen(false);
       }
-    }
+    };
 
-    handleResize()
-    window.addEventListener('resize', handleResize)
-    return () => window.removeEventListener('resize', handleResize)
-  }, [])
+    handleResize();
+    window.addEventListener("resize", handleResize);
+    return () => window.removeEventListener("resize", handleResize);
+  }, []);
 
   // Close sidebar on mobile when navigating
   useEffect(() => {
     if (window.innerWidth < 1024) {
-      setSidebarOpen(false)
+      setSidebarOpen(false);
     }
-  }, [pathname])
+  }, [pathname]);
 
   // Generate breadcrumbs dynamically
   const generateBreadcrumbs = () => {
-    if (!pathname) return []
-    const segments = pathname.split('/').filter(Boolean)
+    if (!pathname) return [];
+    const segments = pathname.split("/").filter(Boolean);
     return segments.map((segment, index) => ({
-      name: segment.charAt(0).toUpperCase() + segment.slice(1).replace(/-/g, ' '),
-      path: `/${segments.slice(0, index + 1).join('/')}`,
+      name:
+        segment.charAt(0).toUpperCase() + segment.slice(1).replace(/-/g, " "),
+      path: `/${segments.slice(0, index + 1).join("/")}`,
       icon: Home,
-    }))
-  }
+    }));
+  };
 
-  const breadcrumbs = generateBreadcrumbs()
+  const breadcrumbs = generateBreadcrumbs();
 
   // Navigation items with appropriate icons
   const navItems = [
-    { name: 'Dashboard', path: '/admin/dashboard', icon: LayoutGrid },
-    { name: 'Brands', path: '/admin/brands', icon: Tag },
-    { name: 'Categories', path: '/admin/categories', icon: Package },
-    { name: 'Products', path: '/admin/products', icon: Package },
-    { name: 'Users', path: '/admin/users', icon: Users },
-    { name: 'Orders', path: '/admin/orders', icon: ShoppingBag },
-    { name: 'Tickets', path: '/admin/tickets', icon: Ticket },
-    { name: 'Offer Zone', path: '/admin/offer-zone', icon: Heart },
-    { name: 'New Arrival', path: '/admin/new-arrivals', icon: Briefcase },
-    { name: 'Gamer Zone', path: '/admin/gamer-zone', icon: Gamepad2 },
-    { name: 'Cart Value Offers', path: '/admin/cart-offer-products', icon: ShoppingCart },
-    { name: 'Promotional Banners', path: '/admin/promotional-banners', icon: ImageIcon },
-    { name: 'Stores', path: '/admin/stores', icon: StoreIcon },
-  ]
+    { name: "Dashboard", path: "/admin/dashboard", icon: LayoutGrid },
+    { name: "Brands", path: "/admin/brands", icon: Tag },
+    { name: "Categories", path: "/admin/categories", icon: Package },
+    { name: "Products", path: "/admin/products", icon: Package },
+    { name: "Users", path: "/admin/users", icon: Users },
+    { name: "Orders", path: "/admin/orders", icon: ShoppingBag },
+    { name: "Tickets", path: "/admin/tickets", icon: Ticket },
+    { name: "Offer Zone", path: "/admin/offer-zone", icon: Heart },
+    { name: "New Arrival", path: "/admin/new-arrivals", icon: Briefcase },
+    { name: "Gamer Zone", path: "/admin/gamer-zone", icon: Gamepad2 },
+    {
+      name: "Cart Value Offers",
+      path: "/admin/cart-offer-products",
+      icon: ShoppingCart,
+    },
+    {
+      name: "Promotional Banners",
+      path: "/admin/promotional-banners",
+      icon: ImageIcon,
+    },
+    { name: "Stores", path: "/admin/stores", icon: StoreIcon },
+  ];
+
+  const handleLogout = async () => {
+    try {
+      await fetch("/api/auth/signout", {
+        method: "POST",
+        credentials: "include",
+      });
+      localStorage.removeItem("authToken");
+      // localStorage.removeItem("userRole");
+      document.cookie =
+        "authToken=; expires=Thu, 01 Jan 1970 00:00:00 GMT; path=/";
+      // document.cookie = "userRole=; expires=Thu, 01 Jan 1970 00:00:00 GMT; path=/";
+      setAuth(false, null);
+      router.push("/signin");
+    } catch (error) {
+      console.error("Error signing out:", error);
+    }
+  };
 
   // Backdrop component for mobile
   const Backdrop = () => (
     <div
       className={`fixed inset-0 bg-black/50 z-40 lg:hidden transition-opacity duration-300 ${
-        sidebarOpen ? 'opacity-100' : 'opacity-0 pointer-events-none'
+        sidebarOpen ? "opacity-100" : "opacity-0 pointer-events-none"
       }`}
       onClick={() => setSidebarOpen(false)}
       aria-hidden="true"
     />
-  )
+  );
 
   return (
-    <div className="flex min-h-screen bg-gray-50/90">
+    <div className="flex max-h-screen overflow-y-auto bg-gray-50/90">
       {/* Mobile Backdrop */}
       <Backdrop />
 
       {/* Sidebar */}
       <aside
         className={`fixed inset-y-0 left-0 z-50 w-72 bg-white transition-transform duration-300 ease-in-out ${
-          sidebarOpen ? 'translate-x-0' : '-translate-x-full'
+          sidebarOpen ? "translate-x-0" : "-translate-x-full"
         } lg:static lg:w-64 lg:translate-x-0 -lg lg:-none`}
       >
         <div className="flex h-full flex-col border-r border-gray-200">
           {/* Logo and Close Button */}
           <div className="flex items-center justify-between px-4 py-4">
-            <Link href={'/'} className="flex-1 text-center">
+            <Link href={"/"} className="flex-1 text-center">
               <img
                 src="/logo/logo.png"
                 alt="Computer Garage Logo"
@@ -129,30 +160,32 @@ export default function Layout({ children }: AdminLayoutProps) {
 
           {/* Navigation */}
           <div className="flex-1 overflow-y-auto px-4 py-2 scrollbar-hide">
-            <h2 className="mb-4 text-lg font-semibold text-gray-900">Main Menu</h2>
+            <h2 className="mb-4 text-lg font-semibold text-gray-900">
+              Main Menu
+            </h2>
             <nav className="space-y-2">
               {navItems.map((item) => {
-                const isActive = pathname?.startsWith(item.path) || false
+                const isActive = pathname?.startsWith(item.path) || false;
                 return (
                   <Link
                     key={item.name}
                     href={item.path}
                     className={`flex items-center rounded-md px-3 py-2 text-sm font-medium transition-colors ${
                       isActive
-                        ? 'bg-primary-light text-primary'
-                        : 'text-gray-600 hover:bg-gray-100 hover:text-gray-900'
+                        ? "bg-primary-light text-primary"
+                        : "text-gray-600 hover:bg-gray-100 hover:text-gray-900"
                     } focus:outline-none focus:ring-2 focus:ring-primary`}
-                    aria-current={isActive ? 'page' : undefined}
+                    aria-current={isActive ? "page" : undefined}
                   >
                     <item.icon
                       className={`mr-3 h-5 w-5 ${
-                        isActive ? 'text-primary' : 'text-gray-500'
+                        isActive ? "text-primary" : "text-gray-500"
                       }`}
                       aria-hidden="true"
                     />
                     <span>{item.name}</span>
                   </Link>
-                )
+                );
               })}
             </nav>
           </div>
@@ -161,7 +194,7 @@ export default function Layout({ children }: AdminLayoutProps) {
           <div className="p-4">
             <button
               className="flex w-full items-center justify-center rounded-md border border-gray-300 px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-primary"
-              onClick={() => alert('Logout functionality not implemented')}
+              onClick={() => handleLogout()}
             >
               <LogOut className="mr-2 h-4 w-4" aria-hidden="true" />
               Logout
@@ -187,7 +220,6 @@ export default function Layout({ children }: AdminLayoutProps) {
                 <Breadcrumbs breadcrumbs={breadcrumbs} />
               </div>
             </div>
-            
           </div>
         </header>
 
@@ -197,5 +229,5 @@ export default function Layout({ children }: AdminLayoutProps) {
         </main>
       </div>
     </div>
-  )
+  );
 }

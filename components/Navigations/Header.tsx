@@ -36,7 +36,6 @@ import categoryData from "@/data/categories.json";
 
 import { motion, AnimatePresence } from "framer-motion";
 
-
 interface HeaderProps {
   isCategory?: boolean;
 }
@@ -73,24 +72,26 @@ export const categoryFeatures: Record<string, { [feature: string]: string[] }> =
   {
     // 🧰 Laptops
     Laptops: {
-      brand: ["HP", "DELL", "ASUS", "LENOVO", "ACER", "MSI"],
+      brand: ["HP", "DELL", "ASUS", "LENOVO", "ACER", "MSI", "GIGABYTE"],
       Processor: [
         "Intel Core i3",
         "Intel Core i5",
         "Intel Core i7",
+        "Core Ultra 5",
+        "Core Ultra 7",
+        "Core Ultra 9",
+        "AMD Ryzen 3",
         "AMD Ryzen 5",
         "AMD Ryzen 7",
-        "Apple M3",
       ],
       Graphics: [
-        "RTX 4050",
-        "RTX 4060",
+        "RTX 2050",
         "RTX 3050",
+        "RTX 4050",
+        "RTX 5050",
         "RTX 3060",
-        "Integrated Graphics",
-        "AMD Radeon Graphics",
-        "13650HX",
-        "14650HX",
+        "RTX 4060",
+        "RTX 5060",
       ],
       Ram: ["8 GB", "16 GB", "32 GB"],
       Storage: ["512 GB SSD", "1 TB SSD", "2 TB SSD"],
@@ -106,7 +107,6 @@ export const categoryFeatures: Record<string, { [feature: string]: string[] }> =
     // ⚙️ Processors
     Processors: {
       Cpu: [
-        "AMD Athlon",
         "AMD Ryzen 3",
         "AMD Ryzen 5",
         "AMD Ryzen 7",
@@ -121,12 +121,10 @@ export const categoryFeatures: Record<string, { [feature: string]: string[] }> =
       ],
       Series: [
         "AMD 3000 Series",
-        "AMD 4000 Series",
         "AMD 5000 Series",
         "AMD 7000 Series",
         "AMD 8000 Series",
         "AMD 9000 Series",
-        "Intel 10th Gen",
         "Intel 11th Gen",
         "Intel 12th Gen",
         "Intel 13th Gen",
@@ -138,16 +136,13 @@ export const categoryFeatures: Record<string, { [feature: string]: string[] }> =
     "Graphics Card": {
       brand: ["Asrock", "ASUS", "Galax", "GIGABYTE", "Inno3D", "MSI"],
       Series: [
-        "GT 1000 Series",
-        "GT 700 Series",
         "RTX 3000 Series",
         "RTX 4000 Series",
         "RTX 5000 Series",
-        "RX 500 Series",
         "RX 7000 Series",
         "RX 9000 Series",
       ],
-      "Memory Type": ["GDDR3", "GDDR5", "GDDR6",  "GDDR7"],
+      "Memory Type": ["GDDR3", "GDDR5", "GDDR6", "GDDR7"],
       Chipset: ["AMD Radeon", "NVIDIA GeForce"],
     },
 
@@ -155,49 +150,31 @@ export const categoryFeatures: Record<string, { [feature: string]: string[] }> =
     Monitors: {
       Brand: ["LG", "Samsung", "ACER", "ASUS", "MSI", "BenQ"],
       "Screen Size": [
-        "15.6 Inches",
-        "16 Inches",
-        "18.5 Inches",
         "19 Inches",
-        "20 Inches",
-        "21.5 Inches",
         "22 Inches",
-        "23 Inches",
         "24 Inches",
-        "24.5 Inches",
-        "25 Inches",
         "27 Inches",
-        "28 Inches",
-        "29 Inches",
-        "30 Inches",
-        "31.5 Inches",
         "32 Inches",
         "34 Inches",
-        "35 Inches",
-        "38 Inches",
-        "39 Inches",
-        "43 Inches",
-        "49 Inches",
-        "52 Inches",
       ],
-      Display: [
-        "HD 1280x720",
-        "HD+ 1600x900",
-        "FHD 1920x1080",
-        "FHD Ultra Wide 2560x1080",
-        "QHD 2560x1440",
-        "QHD Ultra Wide 3440x1440",
-        "WQHD 3440x1440",
-        "WQHD 3840x1600",
-        "UHD 2560x1600",
-        "4K UHD 3840x2160",
-        "5K QHD 5120x2880",
-      ],
+      Display: ["HD 1280x720", "QHD 2560x1440", "UHD 2560x1600"],
     },
     // 🧬 Motherboard
     Motherboard: {
       brand: ["ASUS", "GIGABYTE", "MSI", "Asrock"],
-      Chipset: ["Z790", "B760", "B550", "X870"],
+      Chipset: [
+        "A520",
+        "B450",
+        "B550",
+        "B650",
+        "X870",
+        "X670",
+        "Z790",
+        "B760",
+        "H610",
+        "Z890",
+      ],
+      platform: ["AMD", "INTEL"],
     },
 
     // 🎧 Peripherals
@@ -209,7 +186,7 @@ export const categoryFeatures: Record<string, { [feature: string]: string[] }> =
 
     // 🖨️ Printer
     Printer: {
-      brand: ["HP", "EPSON", "CANON", "BROTHER", "Dell"],
+      brand: ["HP", "EPSON", "CANON", "BROTHER",],
     },
 
     // // ❄️ CPU Cooler
@@ -286,7 +263,7 @@ export const categoryFeatures: Record<string, { [feature: string]: string[] }> =
         "Logitech",
         "Dawg",
         "RAPOO",
-        "RAZER"
+        "RAZER",
       ],
     },
   };
@@ -358,8 +335,6 @@ const Header = ({ isCategory = true }: HeaderProps) => {
       Headset: 12,
       Peripherals: 13,
     };
-
-    
 
     const sortedAllCategories = [...baseCategories].sort((a, b) => {
       const aOrder = orderMap[a.name] ?? 99;

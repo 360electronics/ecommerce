@@ -22,6 +22,8 @@ type CartOfferProduct = {
 type CategorizedProducts = Record<string, CartOfferProduct[]>;
 
 const range: Record<string, string> = {
+  100: 'Above ₹100',
+  500: 'Above ₹500',
   1000: 'Above ₹1,000',
   5000: 'Above ₹5,000',
   10000: 'Above ₹10,000',
@@ -31,6 +33,8 @@ const range: Record<string, string> = {
 };
 
 const CATEGORIES: Record<string, string> = {
+  100: 'Above ₹100',
+  500: 'Above ₹500',
   1000: 'Above ₹1,000',
   5000: 'Above ₹5,000',
   10000: 'Above ₹10,000',
@@ -40,6 +44,8 @@ const CATEGORIES: Record<string, string> = {
 
 export default function CartOfferProductsPage() {
   const [categorizedProducts, setCategorizedProducts] = useState<CategorizedProducts>({
+    100: [],
+    500: [],
     1000: [],
     5000: [],
     10000: [],
@@ -69,7 +75,7 @@ export default function CartOfferProductsPage() {
         const response = await fetch('/api/cart/range-offers');
         if (!response.ok) throw new Error('Failed to fetch');
         const products: CartOfferProduct[] = await response.json();
-        const categorized: CategorizedProducts = { 1000: [], 5000: [], 10000: [], 30000: [], 50000: [] };
+        const categorized: CategorizedProducts = { 100: [], 500: [],1000: [], 5000: [], 10000: [], 30000: [], 50000: [] };
         products.forEach((product) => {
           categorized[product.range].push({
             ...product,

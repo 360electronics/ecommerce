@@ -277,7 +277,7 @@ const ProductListing = ({
               break;
           }
 
-          console.log("Fiterd Products: " ,filtered)
+          // console.log("Fiterd Products: " ,filtered)
 
           setFilteredProducts(filtered);
           setLoading(false);

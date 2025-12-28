@@ -40,7 +40,7 @@ interface FilterValues {
 
 const filterConfig = [
   { id: "price", title: "Price", type: "range", step: 10, enabled: true },
-  { id: "category", title: "Categories", type: "checkbox", enabled: true },
+  { id: "category", title: "Categories", type: "checkbox", enabled: false },
   { id: "rating", title: "Rating", type: "checkbox", enabled: true },
   { id: "color", title: "Color", type: "checkbox", enabled: true },
   { id: "storage", title: "Storage", type: "checkbox", enabled: true },
@@ -67,6 +67,42 @@ const DynamicFilter: React.FC<FilterProps> = ({
     if (max <= 0) return 1000;
     if (max <= 1000) return Math.ceil(max / 100) * 100;
     return Math.ceil(max / 1000) * 1000;
+  };
+
+  const getCapacityValue = (val: string): number => {
+    const cleaned = val.replace(/\s+/g, "").toLowerCase();
+    const match = cleaned.match(/^(\d+(?:\.\d+)?)([kmgt]b?)$/);
+    if (!match) return 0;
+    const num = parseFloat(match[1]);
+    const unit = match[2];
+    if (unit.startsWith("k")) return num * 1024;
+    if (unit.startsWith("m")) return num * 1024 ** 2;
+    if (unit.startsWith("g")) return num * 1024 ** 3;
+    if (unit.startsWith("t")) return num * 1024 ** 4;
+    return num;
+  };
+
+  const formatLabel = (val: string, attrKey?: string) => {
+    const capacityKeys = ["ram", "storage", "rom", "memory"];
+    if (attrKey && capacityKeys.some((k) => attrKey.toLowerCase().includes(k))) {
+      const cleaned = val.replace(/[\u200E\u200F\u00A0]/g, "").trim();
+      const match = cleaned.match(/^(\d+(?:\.\d+)?)\s*([kmgt]b?)$/i);
+      if (match) {
+        const num = match[1];
+        let unit = match[2].toUpperCase();
+        if (unit === "G" || unit === "GB") unit = "GB";
+        if (unit === "T" || unit === "TB") unit = "TB";
+        if (unit === "M" || unit === "MB") unit = "MB";
+        if (unit === "K" || unit === "KB") unit = "KB";
+        return `${num} ${unit}`;
+      }
+    }
+    return val
+      .replace(/[\u200E\u200F\u00A0]/g, "")
+      .replace(/\s+/g, " ")
+      .trim()
+      .toLowerCase()
+      .replace(/\b[a-z]/g, (c) => c.toUpperCase());
   };
 
   const generateOptions = (
@@ -109,17 +145,81 @@ const DynamicFilter: React.FC<FilterProps> = ({
 
     const sections: FilterSection[] = [];
 
+    // --- PRICE SECTION --- //
+    sections.push({
+      id: "price",
+      title: "Price",
+      type: "range",
+      min: 0,
+      max: roundMaxPrice(filterOptions.priceRange.max),
+      currentMin: 0,
+      currentMax: roundMaxPrice(filterOptions.priceRange.max),
+      step: 10,
+    });
+
+    // --- CATEGORY SECTION --- //
+    const catOptions = generateOptions(products, "category");
+    if (catOptions.length > 0) {
+      sections.push({
+        id: "category",
+        title: "Categories",
+        type: "checkbox",
+        options: catOptions,
+      });
+    }
+
+    // --- RATING SECTION --- //
+    const ratingOptions = generateRatingOptions(products);
+    if (ratingOptions.length > 0) {
+      sections.push({
+        id: "rating",
+        title: "Rating",
+        type: "checkbox",
+        options: ratingOptions,
+      });
+    }
+
+    // --- COLOR SECTION --- //
+    if (filterOptions.colors && filterOptions.colors.length > 0) {
+      const uniqueColors = Array.from(new Set(filterOptions.colors)).sort();
+      sections.push({
+        id: "color",
+        title: "Color",
+        type: "checkbox",
+        options: uniqueColors.map((color) => ({
+          id: color,
+          label: formatLabel(color, "color"),
+          checked: false,
+        })),
+      });
+    }
+
+    // --- STORAGE SECTION --- //
+    if (filterOptions.storageOptions && filterOptions.storageOptions.length > 0) {
+      let uniqueStorage = Array.from(new Set(filterOptions.storageOptions));
+      uniqueStorage = uniqueStorage.sort((a, b) => getCapacityValue(a) - getCapacityValue(b));
+      sections.push({
+        id: "storage",
+        title: "Storage",
+        type: "checkbox",
+        options: uniqueStorage.map((storage) => ({
+          id: storage,
+          label: formatLabel(storage, "storage"),
+          checked: false,
+        })),
+      });
+    }
+
     // --- BRAND SECTION --- //
     if (filterOptions.brands && filterOptions.brands.length > 0) {
-      const uniqueBrands = Array.from(new Set(filterOptions.brands));
-
+      const uniqueBrands = Array.from(new Set(filterOptions.brands)).sort();
       sections.push({
         id: "brand",
         title: "Brands",
         type: "checkbox",
         options: uniqueBrands.map((brand) => ({
           id: brand,
-          label: brand,
+          label: formatLabel(brand, "brand"),
           checked: false,
         })),
       });
@@ -161,14 +261,11 @@ const DynamicFilter: React.FC<FilterProps> = ({
       );
 
       if (validValues.length > 0) {
-        // 🔹 Format label for display (pretty title case)
-        const formatLabel = (val: string) =>
-          val
-            .replace(/[\u200E\u200F\u00A0]/g, "")
-            .replace(/\s+/g, " ")
-            .trim()
-            .toLowerCase()
-            .replace(/\b\w/g, (c) => c.toUpperCase());
+        let sortedValues = validValues.sort();
+        const lowerKey = attrKey.toLowerCase();
+        if (["ram", "storage", "rom", "memory"].includes(lowerKey)) {
+          sortedValues = validValues.sort((a, b) => getCapacityValue(a) - getCapacityValue(b));
+        }
 
         sections.push({
           id: attrKey,
@@ -176,9 +273,9 @@ const DynamicFilter: React.FC<FilterProps> = ({
             attrKey.charAt(0).toUpperCase() +
             attrKey.slice(1).replace(/([A-Z])/g, " $1"),
           type: "checkbox",
-          options: validValues.map((value) => ({
+          options: sortedValues.map((value) => ({
             id: value.trim(),
-            label: formatLabel(value),
+            label: formatLabel(value, attrKey),
             checked: false,
           })),
         });
