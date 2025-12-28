@@ -594,7 +594,7 @@ const ProductListing = ({
           >
             <DynamicFilter
               products={filteredProducts}
-              category={category}
+              // category={category}
               onFilterChange={handleFilterChange}
               filterOptions={filterOptions}
             />

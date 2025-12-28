@@ -40,7 +40,7 @@ interface FilterValues {
 
 const filterConfig = [
   { id: "price", title: "Price", type: "range", step: 10, enabled: true },
-  { id: "category", title: "Categories", type: "checkbox", enabled: false },
+  // { id: "category", title: "Categories", type: "checkbox", enabled: false },
   { id: "rating", title: "Rating", type: "checkbox", enabled: true },
   { id: "color", title: "Color", type: "checkbox", enabled: true },
   { id: "storage", title: "Storage", type: "checkbox", enabled: true },
@@ -48,7 +48,7 @@ const filterConfig = [
 ] as const;
 
 const DynamicFilter: React.FC<FilterProps> = ({
-  category,
+  // category,
   products,
   onFilterChange,
   filterOptions,
@@ -158,15 +158,15 @@ const DynamicFilter: React.FC<FilterProps> = ({
     });
 
     // --- CATEGORY SECTION --- //
-    const catOptions = generateOptions(products, "category");
-    if (catOptions.length > 0) {
-      sections.push({
-        id: "category",
-        title: "Categories",
-        type: "checkbox",
-        options: catOptions,
-      });
-    }
+    // const catOptions = generateOptions(products, "category");
+    // if (catOptions.length > 0) {
+    //   sections.push({
+    //     id: "category",
+    //     title: "Categories",
+    //     type: "checkbox",
+    //     options: catOptions,
+    //   });
+    // }
 
     // --- RATING SECTION --- //
     const ratingOptions = generateRatingOptions(products);
@@ -503,7 +503,7 @@ const DynamicFilter: React.FC<FilterProps> = ({
       "maxPrice",
       "color",
       "brand",
-      "category",
+      // "category",
       "rating",
       "inStock",
       "storage",
