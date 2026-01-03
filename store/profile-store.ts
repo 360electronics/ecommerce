@@ -19,14 +19,7 @@ interface Address {
   addressType: "home" | "work" | "other";
 }
 
-interface Coupon {
-  createdAt(createdAt: any): unknown;
-  id: string;
-  code: string;
-  isUsed: boolean;
-  expiryDate: string;
-  discount: number;
-}
+
 
 interface Order {
   paymentStatus(paymentStatus: any): unknown;
@@ -45,12 +38,27 @@ interface Order {
 }
 
 interface Referral {
-  couponGenerated: any;
   id: string;
-  referredUserId: string;
   status: "pending" | "completed";
   createdAt: string;
+  couponGenerated: boolean;
+  referredUser: {
+    id: string;
+    name: string;
+    email: string;
+    createdAt: string;
+  };
 }
+
+interface Coupon {
+  id: string;
+  code: string;
+  amount: number;      // parsed to number
+  isUsed: boolean;
+  expiryDate: string;
+  createdAt: string;
+}
+
 
 interface Ticket {
   id: string;
@@ -253,61 +261,57 @@ const fetchTickets = async (userId: string, signal?: AbortSignal) => {
 
 const fetchReferralsData = async (userId: string, signal?: AbortSignal) => {
   try {
-    const [referralLink, referrals, coupons] = await Promise.all([
+    const [referralLinkRes, referralsRes, couponsRes] = await Promise.all([
       fetchWithRetry<{ referralLink: string }>(() =>
         fetch(`/api/referrals/link?userId=${userId}`, {
           credentials: "include",
           signal,
-          headers: {
-            "x-super-secure-key": `${process.env.API_SECRET_KEY}`,
-          },
         })
       ),
-      fetchWithRetry<Referral[]>(() =>
+      fetchWithRetry<{ referrals: Referral[] }>(() =>
         fetch(`/api/referrals?userId=${userId}`, {
           credentials: "include",
           signal,
-          headers: {
-            "x-super-secure-key": `${process.env.API_SECRET_KEY}`,
-          },
         })
       ),
       fetchWithRetry<Coupon[]>(() =>
         fetch(`/api/coupons?userId=${userId}`, {
           credentials: "include",
           signal,
-          headers: {
-            "x-super-secure-key": `${process.env.API_SECRET_KEY}`,
-          },
         })
       ),
     ]);
 
-    const parsed = {
-      referralLink: referralLink.referralLink || "",
-      referrals: Array.isArray(referrals) ? referrals : [],
-      coupons: Array.isArray(coupons) ? coupons : [],
-    };
-    const completedReferrals = parsed.referrals.filter(
+    const coupons = (Array.isArray(couponsRes) ? couponsRes : []).map(
+      (c) => ({
+        ...c,
+        amount: Number(c.amount), // 🔥 normalize
+      })
+    );
+
+    const referrals = referralsRes?.referrals || [];
+
+    const completedReferrals = referrals.filter(
       (r) => r.status === "completed"
     ).length;
-    const availableCoupons = parsed.coupons.filter(
+
+    const availableCoupons = coupons.filter(
       (c) => !c.isUsed && new Date(c.expiryDate) > new Date()
     ).length;
 
     return {
-      referralLink: parsed.referralLink,
-      referrals: parsed.referrals,
-      coupons: parsed.coupons,
+      referralLink: referralLinkRes.referralLink || "",
+      referrals,
+      coupons,
       stats: {
-        totalReferrals: parsed.referrals.length,
+        totalReferrals: referrals.length,
         completedReferrals,
-        totalCoupons: parsed.coupons.length,
+        totalCoupons: coupons.length,
         availableCoupons,
       },
     };
   } catch (error: any) {
-    if (error.status === 401 || error.message.includes("Unauthorized")) {
+    if (error.status === 401) {
       return {
         referralLink: "",
         referrals: [],
@@ -323,6 +327,7 @@ const fetchReferralsData = async (userId: string, signal?: AbortSignal) => {
     throw error;
   }
 };
+
 
 export const useProfileStore = create<ProfileState>((set, get) => ({
   ...INITIAL_STATE,

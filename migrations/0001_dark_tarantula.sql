@@ -1,1 +1,1 @@
-ALTER TABLE "saved_addresses" ADD COLUMN "gst" varchar(100);
+--ALTER TABLE "saved_addresses" ADD COLUMN "gst" varchar(100);

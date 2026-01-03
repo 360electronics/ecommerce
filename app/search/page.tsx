@@ -1,87 +1,53 @@
 "use client";
 
-import React, { useState, useEffect, Suspense } from "react";
+import React, { Suspense, useEffect, useRef, useState } from "react";
 import { useSearchParams } from "next/navigation";
 import ProductListing from "@/components/Listing/ProductListing";
-import { CompleteProduct, FlattenedProduct } from "@/types/product";
-import { fetchSearchProducts } from "@/utils/products.util";
 
-export const dynamic = "force-dynamic"; 
+/* ---------------- TYPES ---------------- */
+interface FlattenedProduct {
+  id: string;
+  productId: string;
+  name: string;
+  slug: string;
+  mrp: string;
+  ourPrice: string;
+  totalStocks: string;
+  averageRating: string;
+  brand: { id: string; name: string } | null;
+  category: string;
+  subcategory?: string;
+  productImages: { url: string; alt?: string }[];
+  attributes: Record<string, any>;
+  tags: string[];
+  status: "active" | "inactive" | "coming_soon" | "discontinued";
+  createdAt: string;
+  updatedAt: string;
+}
 
-const safeToISOString = (value: Date | string | null | undefined) => {
-  if (!value) return new Date().toISOString();
-  const d = value instanceof Date ? value : new Date(value);
-  return isNaN(d.getTime()) ? new Date().toISOString() : d.toISOString();
-};
+interface FilterOptions {
+  brands: string[];
+  colors: string[];
+  storageOptions: string[];
+  attributes: Record<string, string[]>;
+  priceRange: { min: number; max: number };
+}
 
-const flattenProductVariants = (
-  products: CompleteProduct[]
-): FlattenedProduct[] => {
-  const flattened: FlattenedProduct[] = [];
-
-  products.forEach((product) => {
-    if (Array.isArray(product.variants) && product.variants.length > 0) {
-      product.variants.forEach((variant) => {
-        flattened.push({
-          ...variant,
-          id: variant.id,
-          productId: product.id,
-          category: product.category?.slug || "",
-          subcategory: product.subcategory?.slug || "",
-          brand: product.brand,
-          status: product.status,
-          averageRating: product.averageRating?.toString() || "0",
-          tags: Array.isArray(product.tags)
-            ? product.tags
-            : typeof product.tags === "string"
-            ? (product.tags as string)
-                .split(",")
-                .map((tag: string) => tag.trim())
-            : [],
-          totalStocks: variant.stock?.toString() || "0",
-          createdAt: safeToISOString(variant.createdAt),
-          updatedAt: safeToISOString(variant.updatedAt),
-          color: variant.attributes?.color as string | undefined,
-          storage: variant.attributes?.storage as string | undefined,
-          description: product.description || "",
-          productParent: product,
-          material: variant.attributes?.material as string | undefined,
-          mrp: variant.mrp?.toString() || "0",
-          ourPrice: variant.ourPrice?.toString() || "0",
-        } as unknown as FlattenedProduct);
-      });
-    } else {
-      flattened.push({
-        ...product,
-        id: product.id,
-        productId: product.id,
-        name: product.shortName || "Unnamed Product",
-        mrp: product.defaultVariant?.mrp?.toString() || "0",
-        ourPrice: product.defaultVariant?.ourPrice?.toString() || "0",
-        stock: product.totalStocks?.toString() || "0",
-        slug: product.slug || "",
-        sku: product.defaultVariant?.sku || "",
-        tags: Array.isArray(product.tags)
-          ? product.tags
-          : typeof product.tags === "string"
-          ? (product.tags as string).split(",").map((tag: string) => tag.trim())
-          : [],
-        createdAt: safeToISOString(product.createdAt),
-        updatedAt: safeToISOString(product.updatedAt),
-        category: product.category?.slug || "",
-        subcategory: product.subcategory?.slug || "",
-        brand: product.brand,
-        status: product.status,
-        averageRating: product.averageRating?.toString() || "0",
-        totalStocks: product.totalStocks?.toString() || "0",
-        description: product.description || "",
-      } as unknown as FlattenedProduct);
-    }
+/* ---------------- API ---------------- */
+async function fetchSearchProducts(
+  params: URLSearchParams,
+  signal?: AbortSignal
+) {
+  const res = await fetch(`/api/search/products?${params.toString()}`, {
+    cache: "no-store",
+    signal,
   });
 
-  return flattened;
-};
+  if (!res.ok) throw new Error("Search failed");
+  return res.json();
+}
 
+/* ---------------- LOADER ---------------- */
 const SearchLoading = () => (
   <div className="mx-auto">
     <div className="flex flex-col md:flex-row gap-8">
@@ -119,76 +85,116 @@ const SearchLoading = () => (
   </div>
 );
 
-function SearchContent({
-  query,
-}: {
-  query: string;
-}) {
+/* ---------------- CORE ---------------- */
+function SearchContent({ query }: { query: string }) {
+  const searchParams = useSearchParams();
+  const page = Number(searchParams.get("page") || 1);
+
   const [products, setProducts] = useState<FlattenedProduct[]>([]);
-  const [loading, setLoading] = useState(true);
+  const [filterOptions, setFilterOptions] = useState<FilterOptions | null>(
+    null
+  );
+  const [totalCount, setTotalCount] = useState(0);
+  const [pageSize, setPageSize] = useState(24);
+  const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
+  const abortRef = useRef<AbortController | null>(null);
+
   useEffect(() => {
-    let mounted = true;
+    if (!query.trim()) return;
 
-    async function load() {
-      if (!query.trim()) {
-        setProducts([]);
-        setLoading(false);
-        return;
-      }
+    abortRef.current?.abort();
+    const controller = new AbortController();
+    abortRef.current = controller;
 
-      try {
-        setLoading(true);
-        const data: CompleteProduct[] = await fetchSearchProducts(query);
-        if (!mounted) return;
-        setProducts(flattenProductVariants(data));
-        setError(null);
-      } catch (err) {
-        console.error(err);
-        setError("Failed to load search results");
-      } finally {
-        if (mounted) setLoading(false);
-      }
-    }
+    setLoading(true);
+    setError(null);
 
-    load();
-    return () => {
-      mounted = false;
-    };
-  }, [query]);
+    // 🔑 use FULL search params (filters + page + query)
+    const params = new URLSearchParams(searchParams.toString());
 
-  if (loading) return <SearchLoading />;
+    fetchSearchProducts(params, controller.signal)
+      .then((res) => {
+        const mapped = res.data.map((row: any) => ({
+          id: row.id,
+          productId: row.id,
+          variantId: row.variant_id,
 
-  if (error)
-    return (
-      <div className="flex justify-center items-center min-h-[300px] text-red-500">
-        {error}
-      </div>
-    );
+          name: row.short_name,
+          slug: row.slug,
+          mrp: String(row.mrp),
+          ourPrice: String(row.our_price),
+          totalStocks: String(row.stock),
+          averageRating: String(row.average_rating),
 
-  if (products.length === 0)
-    return (
-      <div className="text-center py-20">
-        <div className="text-5xl mb-4">🔍</div>
-        <h3 className="text-xl font-medium mb-2">No results found</h3>
-        <p className="text-gray-600">
-          Try searching with a different keyword.
-        </p>
-      </div>
-    );
+          brand: row.brand_id
+            ? { id: row.brand_id, name: row.brand_name }
+            : null,
+
+          category: row.category_name ?? "",
+          subcategory: row.subcategory_name ?? "",
+          attributes: row.attributes ?? {},
+
+          productImages: row.image
+            ? [{ url: row.image, alt: row.short_name }]
+            : [],
+
+          tags: [],
+          status: "active",
+          createdAt: new Date().toISOString(),
+          updatedAt: new Date().toISOString(),
+        }));
+
+        setProducts(mapped);
+        setTotalCount(res.totalCount ?? 0);
+        setPageSize(res.pageSize ?? 24);
+        setFilterOptions(res.filterOptions ?? null);
+      })
+      .catch((err) => {
+        if (err.name !== "AbortError") {
+          console.error(err);
+          setError("Failed to load search results");
+        }
+      })
+      .finally(() => setLoading(false));
+
+    return () => controller.abort();
+  }, [searchParams]); // 🔥 THIS is the key
 
   return (
-    <div className="mx-auto pt-6">
-      <ProductListing searchQuery={query} initialProducts={products} />
-    </div>
+    <>
+      {/* ✅ Loader overlay */}
+      {loading && <SearchLoading />}
+
+      {/* ✅ Error */}
+      {error && <div className="text-red-500 text-center py-10">{error}</div>}
+
+      {/* ✅ True empty state */}
+      {!loading && totalCount === 0 && products.length === 0 && (
+        <div className="text-center py-20">
+          <h3 className="text-xl">No results found</h3>
+        </div>
+      )}
+
+      {/* ✅ Results */}
+      {products.length > 0 && (
+        <ProductListing
+          products={products}
+          totalCount={totalCount}
+          pageSize={pageSize}
+          currentPage={page}
+          filterOptions={filterOptions}
+        />
+      )}
+    </>
   );
 }
 
-// ✅ The critical change:
+/* ---------------- WRAPPER ---------------- */
 function SearchPageInner() {
-  const searchParams = useSearchParams();
-  const query = searchParams.get("q") || "";
+  const params = useSearchParams();
+  const query = params.get("q") || "";
   return <SearchContent query={query} />;
 }
 

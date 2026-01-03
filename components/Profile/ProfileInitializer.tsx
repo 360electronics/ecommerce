@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useMemo } from 'react';
+import { useEffect, useState } from 'react';
 import { useAuthStore } from '@/store/auth-store';
 import { useProfileStore } from '@/store/profile-store';
 import { useWishlistStore } from '@/store/wishlist-store';
@@ -10,21 +10,41 @@ export const useProfileInitializer = () => {
   const { fetchAll } = useProfileStore();
   const { fetchWishlist } = useWishlistStore();
 
+  const [ready, setReady] = useState(false);
+
   useEffect(() => {
-    if (authLoading || !isLoggedIn || !user?.id) {
+    // ⏳ Still resolving auth
+    if (authLoading) {
       return;
     }
 
+    // 🔓 Auth resolved, user NOT logged in
+    if (!isLoggedIn || !user?.id) {
+      setReady(true);
+      return;
+    }
+
+    // ✅ Auth resolved & logged in → fetch data
     const abortController = new AbortController();
 
-    // Fetch all profile data and wishlist
-    fetchAll(user.id);
-    fetchWishlist(true);
+    Promise.all([
+      fetchAll(user.id, false, abortController.signal),
+      fetchWishlist(true),
+    ])
+      .catch(() => {
+        // swallow errors – handled in stores
+      })
+      .finally(() => {
+        setReady(true);
+      });
 
     return () => {
       abortController.abort();
     };
   }, [authLoading, isLoggedIn, user?.id, fetchAll, fetchWishlist]);
 
-  return null; // This hook doesn't return anything
+  return {
+    ready,
+    isAuthenticated: Boolean(isLoggedIn && user?.id),
+  };
 };

@@ -20,6 +20,8 @@ export async function GET(request: Request): Promise<NextResponse> {
       .from(coupons)
       .where(eq(coupons.userId, userId));
 
+    console.log(couponList);
+
     return NextResponse.json(couponList);
   } catch (error) {
     console.error("Error fetching coupons:", error);

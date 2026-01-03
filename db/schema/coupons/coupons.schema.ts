@@ -10,9 +10,11 @@ export const specialCoupons = pgTable("special_coupons", {
   amount: numeric("amount"),
   percentage: numeric("percentage"),
   limit: numeric("limit").notNull(),
+  minOrderAmount: numeric("min_order_amount").default("0"),
   expiryDate: timestamp("expiry_date").notNull(),
   createdAt: timestamp("created_at").defaultNow().notNull(),
 });
+
 
 export const specialCouponUsage = pgTable("special_coupon_usage", {
   id: uuid("id").primaryKey().default(sql`gen_random_uuid()`),

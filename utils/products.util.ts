@@ -75,11 +75,11 @@ export async function fetchQuickSuggestions(query: string): Promise<QuickSuggest
   try {
     if (!query.trim()) return [];
     
-    const params = new URLSearchParams({ q: query.trim(), limit: "50", type: "quick" });
+    const params = new URLSearchParams({ q: query.trim(), limit: "10", type: "quick" });
     const res = await fetch(`${API_BASE_URL}/api/products/search?${params}`, {
       method: "GET",
       headers: { "Content-Type": "application/json" },
-      cache: "force-cache", 
+      cache: "no-store", 
     });
 
     if (!res.ok) throw new Error(`HTTP ${res.status}`);
@@ -113,6 +113,29 @@ export async function fetchSearchProducts(query: string) {
   }
 }
 
+export async function fetchSearchProducts2(
+  query: string,
+  page = 1,
+  signal?: AbortSignal
+) {
+  const res = await fetch(
+    `${API_BASE_URL}/api/search/products?q=${encodeURIComponent(query)}&page=${page}`,
+    {
+      method: "GET",
+      signal,
+      cache: "no-store",
+    }
+  );
+
+  if (!res.ok) {
+    throw new Error("Search request failed");
+  }
+
+  const data = await res.json();
+  console.log("Search results:", data);
+
+  return data;
+}
 
 
 export async function fetchBrandProducts({

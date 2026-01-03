@@ -85,28 +85,28 @@ const UserButton = () => {
                   </div>
                 )}
                 <button
-                  className="w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 transition"
+                  className="w-full text-left px-4 cursor-pointer py-2 text-sm text-gray-700 hover:bg-gray-100 transition"
                   onClick={() => handleNavigation("/profile/info")}
                   role="menuitem"
                 >
                   Profile
                 </button>
                 <button
-                  className="w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 transition"
+                  className="w-full text-left px-4 cursor-pointer py-2 text-sm text-gray-700 hover:bg-gray-100 transition"
                   onClick={() => handleNavigation("/profile/wishlist")}
                   role="menuitem"
                 >
                   Wishlist
                 </button>
                 <button
-                  className="w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 transition"
+                  className="w-full text-left px-4 cursor-pointer py-2 text-sm text-gray-700 hover:bg-gray-100 transition"
                   onClick={() => handleNavigation("/profile/orders")}
                   role="menuitem"
                 >
                   My Orders
                 </button>
                 <button
-                  className="w-full text-left px-4 py-2 text-sm text-red-600 hover:bg-red-50 transition"
+                  className="w-full text-left px-4 cursor-pointer py-2 text-sm text-red-600 hover:bg-red-50 transition"
                   onClick={handleLogout}
                   role="menuitem"
                 >

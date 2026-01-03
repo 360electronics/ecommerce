@@ -15,32 +15,49 @@ export async function GET(request: Request): Promise<NextResponse> {
       );
     }
 
-    // Find the user's referral code
-    const userReferral = await db
-      .select({ referralCode: referrals.referralCode })
-      .from(referrals)
-      .where(eq(referrals.userId, userId))
-      .limit(1);
-
-    if (userReferral.length === 0) {
-      return NextResponse.json([], { status: 200 }); // No referrals yet
-    }
-
-    // Find all referrals where this user is the referrer
+    // Fetch all referrals where this user is the referrer
     const referralList = await db
       .select({
-        id: referrals.id,
-        referredEmail: users.email,
-        signupDate: users.createdAt,
-        status: referrals.status, // Assumes status field exists (see below)
-        couponGenerated: coupons.id, // Assumes coupons table (see below)
+        referralId: referrals.id,
+        status: referrals.status,
+        referralCreatedAt: referrals.createdAt,
+
+        // 👇 Referred user data
+        userId: users.id,
+        email: users.email,
+        name: users.firstName,
+        userCreatedAt: users.createdAt,
+
+        // 👇 Coupon info
+        couponId: coupons.id,
       })
       .from(referrals)
+      // JOIN referred user
       .innerJoin(users, eq(referrals.userId, users.id))
+      // Coupon may or may not exist
       .leftJoin(coupons, eq(coupons.referralId, referrals.id))
+      // Only referrals created by this user
       .where(eq(referrals.referrerId, userId));
 
-    return NextResponse.json(referralList);
+    // Normalize response for frontend
+    const normalized = referralList.map((r) => ({
+      id: r.referralId,
+      status: r.status,
+      createdAt: r.referralCreatedAt,
+
+      referredUser: {
+        id: r.userId,
+        email: r.email,
+        name: r.name,
+        createdAt: r.userCreatedAt,
+      },
+
+      couponGenerated: Boolean(r.couponId),
+    }));
+
+    console.log(normalized)
+
+    return NextResponse.json({ referrals: normalized }, { status: 200 });
   } catch (error) {
     console.error("Error fetching referrals:", error);
     return NextResponse.json(

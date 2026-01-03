@@ -36,6 +36,13 @@
       "when": 1759478007573,
       "tag": "0004_serious_morlocks",
       "breakpoints": true
+    },
+    {
+      "idx": 5,
+      "version": "7",
+      "when": 1767037730684,
+      "tag": "0005_friendly_mac_gargan",
+      "breakpoints": true
     }
   ]
 }

@@ -6,7 +6,7 @@ import SearchBar from "./Header/Search/SearchBar";
 import WishlistButton from "./Header/WishlistButton";
 import UserButton from "./Header/UserButton";
 import CartButton from "./Header/CartButton";
-import { useRouter } from "next/navigation";
+import { usePathname, useRouter } from "next/navigation";
 import Link from "next/link";
 import {
   Menu,
@@ -185,7 +185,7 @@ export const categoryFeatures: Record<string, { [feature: string]: string[] }> =
 
     // 🖨️ Printer
     Printer: {
-      brand: ["HP", "EPSON", "CANON", "BROTHER",],
+      brand: ["HP", "EPSON", "CANON", "BROTHER"],
     },
 
     // // ❄️ CPU Cooler
@@ -307,6 +307,7 @@ const Header = ({ isCategory = true }: HeaderProps) => {
   const [expandedFeatures, setExpandedFeatures] = useState<
     Record<string, boolean>
   >({});
+  const pathname = usePathname();
 
   useEffect(() => {
     // Step 1: render categories immediately
@@ -359,7 +360,13 @@ const Header = ({ isCategory = true }: HeaderProps) => {
     setHasFetched(true);
   }, []);
 
-  
+  useEffect(() => {
+    // Close all dropdowns when route changes
+    setHoveredCategory(null);
+    setHoveredAllCategories(false);
+    setExpandedFeatures({});
+    setExpandedFeature(null);
+  }, [pathname]);
 
   useEffect(() => {
     const handleScroll = () => {
@@ -478,7 +485,7 @@ const Header = ({ isCategory = true }: HeaderProps) => {
           <div className="hidden lg:flex items-center flex-grow">
             <LocationPicker />
             <div className="flex-grow mx-4">
-              <SearchBar onSearch={handleSearch}  />
+              <SearchBar />
             </div>
           </div>
 
@@ -509,7 +516,7 @@ const Header = ({ isCategory = true }: HeaderProps) => {
 
         {!isMenuOpen && !isSearchOpen && (
           <div className="lg:hidden w-full bg-white py-2 border-t border-gray-200">
-            <SearchBar onSearch={handleSearch} />
+            <SearchBar />
             <div className="mt-2">
               <LocationPicker isMobile={true} />
             </div>

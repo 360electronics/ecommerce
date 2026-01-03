@@ -440,7 +440,7 @@ function VerifyOTPContent() {
               type="submit"
               disabled={loading}
               className={cn(
-                "w-full py-3 px-4 rounded-md font-medium text-white",
+                "w-full py-3 px-4 cursor-pointer rounded-md font-medium text-white",
                 "bg-gradient-to-r from-[#ff6b00] to-[#ff9f00] hover:to-primary-hover ",
                 "transition duration-300",
                 loading && "bg-primary cursor-not-allowed"
@@ -478,7 +478,7 @@ function VerifyOTPContent() {
               onClick={handleResend}
               disabled={resendLoading || countdown > 0}
               className={cn(
-                "w-full py-3 px-4 rounded-md font-medium",
+                "w-full py-3 px-4 rounded-md font-medium cursor-pointer",
                 "bg-gray-200 hover:bg-gray-300 focus:outline-none focus:ring-2 focus:ring-gray-500",
                 "transition duration-300",
                 (resendLoading || countdown > 0) &&

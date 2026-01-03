@@ -26,6 +26,16 @@ interface Address {
   isDefault: boolean;
 }
 
+export type CouponStatus =
+  | "none" // default
+  | "loading" // validating coupon
+  | "applied" // valid & applied
+  | "invalid" // code not found
+  | "expired" // expired coupon
+  | "used" // already used by user
+  | "limit_reached" // global usage limit exhausted
+  | "invalid_amount"; // min cart value not met
+
 const CheckoutPage: React.FC = () => {
   const { isLoggedIn, isLoading, user } = useAuthStore();
   const { checkoutItems, fetchCheckoutItems, clearCheckout } =
@@ -77,6 +87,16 @@ const CheckoutPage: React.FC = () => {
     }
   }, [checkoutItems.length, isLoading, router]);
 
+  const hasClearedCheckoutRef = React.useRef(false);
+
+  const safeClearCheckout = async () => {
+    if (hasClearedCheckoutRef.current) return;
+    hasClearedCheckoutRef.current = true;
+
+    clearCoupon();
+    await clearCheckout(user!.id);
+  };
+
   // Timer effect
   useEffect(() => {
     if (remainingTime > 0 && checkoutItems.length > 0) {
@@ -97,7 +117,7 @@ const CheckoutPage: React.FC = () => {
 
   const handleTimeout = async () => {
     try {
-      await clearCheckout(user!.id);
+      await safeClearCheckout();
       showFancyToast({
         title: "Session Expired",
         message: "Your checkout session has expired due to inactivity.",
@@ -279,9 +299,9 @@ const CheckoutPage: React.FC = () => {
     });
   };
 
-  // Handle apply coupon
+  // Handle apply coupon (FIXED)
   const handleApplyCoupon = async () => {
-    if (!couponCode) {
+    if (!couponCode.trim()) {
       showFancyToast({
         title: "Invalid Input",
         message: "Please enter a coupon code",
@@ -289,43 +309,67 @@ const CheckoutPage: React.FC = () => {
       });
       return;
     }
-    await applyCoupon(couponCode);
+
+    // ✅ IMPORTANT: pass checkoutItems
+    await applyCoupon(couponCode, checkoutItems);
+
     const { couponStatus: status, coupon } = useCartStore.getState();
-    if (status === "applied" && coupon) {
-      showFancyToast({
-        title: "Coupon applied successfully",
-        message: `Coupon ${coupon.code} applied (${
-          coupon.type === "amount"
-            ? formatCurrency(coupon.value)
-            : `${coupon.value}%`
-        })`,
-        type: "success",
-      });
-    } else if (status === "invalid") {
-      showFancyToast({
-        title: "Sorry, there was an error",
-        message: "Invalid coupon code",
-        type: "error",
-      });
-    } else if (status === "invalid_amount") {
-      showFancyToast({
-        title: "Sorry, there was an error",
-        message: "Coupon has an invalid discount value",
-        type: "error",
-      });
-    } else if (status === "expired") {
-      showFancyToast({
-        title: "Sorry, there was an error",
-        message: "Coupon has expired",
-        type: "error",
-      });
-    } else if (status === "used") {
-      showFancyToast({
-        title: "Sorry, there was an error",
-        message: "Coupon has already been used",
-        type: "error",
-      });
+
+    switch (status) {
+      case "applied":
+        if (coupon) {
+          showFancyToast({
+            title: "Coupon applied successfully",
+            message:
+              coupon.type === "amount"
+                ? `You saved ${formatCurrency(coupon.value)}`
+                : `You saved ${coupon.value}%`,
+            type: "success",
+          });
+        }
+        break;
+
+      case "invalid":
+        showFancyToast({
+          title: "Invalid Coupon",
+          message: "Please check the coupon code and try again.",
+          type: "error",
+        });
+        break;
+
+      case "invalid_amount":
+        showFancyToast({
+          title: "Minimum Order Not Met",
+          message: "Your cart value is too low to use this coupon.",
+          type: "error",
+        });
+        break;
+
+      case "expired":
+        showFancyToast({
+          title: "Coupon Expired",
+          message: "This coupon is no longer valid.",
+          type: "error",
+        });
+        break;
+
+      case "used":
+        showFancyToast({
+          title: "Coupon Already Used",
+          message: "You have already used this coupon.",
+          type: "error",
+        });
+        break;
+
+      case "limit_reached":
+        showFancyToast({
+          title: "Coupon Exhausted",
+          message: "This coupon has reached its usage limit.",
+          type: "error",
+        });
+        break;
     }
+
     setCouponCode("");
   };
 
@@ -510,7 +554,7 @@ const CheckoutPage: React.FC = () => {
             router.push("/profile?tab=orders");
             clearCoupon();
             setCurrentOrderId(null);
-            await clearCheckout(user!.id);
+            await safeClearCheckout();
             showFancyToast({
               title: "Payment successful",
               message: "Your payment has been processed successfully.",
@@ -611,10 +655,10 @@ const CheckoutPage: React.FC = () => {
         });
 
         showFancyToast({
-        title: "Sorry, there was an error",
-        message: "Payment cancelled by user",
-        type: "error",
-      });
+          title: "Sorry, there was an error",
+          message: "Payment cancelled by user",
+          type: "error",
+        });
         setIsProcessingPayment(false);
       });
 
@@ -1281,7 +1325,7 @@ const CheckoutPage: React.FC = () => {
                         ) : (
                           <button
                             onClick={handleApplyCoupon}
-                            className="bg-primary text-white px-4 py-2 rounded-md hover:bg-primary-HOVER transition-colors text-sm font-medium"
+                            className="bg-primary cursor-pointer text-white px-4 py-2 rounded-md hover:bg-primary-HOVER transition-colors text-sm font-medium"
                           >
                             Apply
                           </button>

@@ -2,10 +2,49 @@
 
 import React, { useState, useEffect, useMemo, useRef } from "react";
 import { ChevronDown, ChevronUp, X } from "lucide-react";
-import { useSearchParams } from "next/navigation";
+import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { Range } from "react-range";
 import { motion, AnimatePresence } from "framer-motion";
-import { FlattenedProduct } from "@/types/product";
+
+interface FlattenedProduct {
+  /** Variant-level */
+  id: string; // variant_id
+  sku?: string;
+  attributes: Record<string, any>;
+
+  /** Product-level */
+  productId: string;
+  name: string;
+  slug: string;
+  description?: string;
+
+  /** Pricing & stock */
+  mrp: string;
+  ourPrice: string;
+  totalStocks: string;
+  averageRating: string;
+
+  /** Relations */
+  brand: {
+    id: string;
+    name: string;
+  } | null;
+
+  category: string;
+  subcategory?: string;
+
+  /** Media */
+  productImages: {
+    url: string;
+    alt?: string;
+  }[];
+
+  /** Metadata */
+  tags: string[];
+  status: "active" | "inactive" | "coming_soon" | "discontinued";
+  createdAt: string;
+  updatedAt: string;
+}
 
 interface FilterSection {
   id: string;
@@ -62,6 +101,8 @@ const DynamicFilter: React.FC<FilterProps> = ({
   }>({});
   const searchParams = useSearchParams();
   const isInitialized = useRef(false);
+  const router = useRouter();
+  const pathname = usePathname();
 
   const roundMaxPrice = (max: number): number => {
     if (max <= 0) return 1000;
@@ -84,7 +125,10 @@ const DynamicFilter: React.FC<FilterProps> = ({
 
   const formatLabel = (val: string, attrKey?: string) => {
     const capacityKeys = ["ram", "storage", "rom", "memory"];
-    if (attrKey && capacityKeys.some((k) => attrKey.toLowerCase().includes(k))) {
+    if (
+      attrKey &&
+      capacityKeys.some((k) => attrKey.toLowerCase().includes(k))
+    ) {
       const cleaned = val.replace(/[\u200E\u200F\u00A0]/g, "").trim();
       const match = cleaned.match(/^(\d+(?:\.\d+)?)\s*([kmgt]b?)$/i);
       if (match) {
@@ -195,9 +239,14 @@ const DynamicFilter: React.FC<FilterProps> = ({
     }
 
     // --- STORAGE SECTION --- //
-    if (filterOptions.storageOptions && filterOptions.storageOptions.length > 0) {
+    if (
+      filterOptions.storageOptions &&
+      filterOptions.storageOptions.length > 0
+    ) {
       let uniqueStorage = Array.from(new Set(filterOptions.storageOptions));
-      uniqueStorage = uniqueStorage.sort((a, b) => getCapacityValue(a) - getCapacityValue(b));
+      uniqueStorage = uniqueStorage.sort(
+        (a, b) => getCapacityValue(a) - getCapacityValue(b)
+      );
       sections.push({
         id: "storage",
         title: "Storage",
@@ -264,7 +313,9 @@ const DynamicFilter: React.FC<FilterProps> = ({
         let sortedValues = validValues.sort();
         const lowerKey = attrKey.toLowerCase();
         if (["ram", "storage", "rom", "memory"].includes(lowerKey)) {
-          sortedValues = validValues.sort((a, b) => getCapacityValue(a) - getCapacityValue(b));
+          sortedValues = validValues.sort(
+            (a, b) => getCapacityValue(a) - getCapacityValue(b)
+          );
         }
 
         sections.push({
@@ -492,82 +543,34 @@ const DynamicFilter: React.FC<FilterProps> = ({
 
   const applyFilters = (sections: FilterSection[], excludeOOS: boolean) => {
     const filters = getFilterValues(sections, excludeOOS);
-    updateUrlParams(filters);
-    onFilterChange(filters);
+    onFilterChange(filters); 
   };
 
-  const updateUrlParams = (filters: FilterValues) => {
-    const params = new URLSearchParams(searchParams.toString());
-    const possibleFilterKeys = [
-      "minPrice",
-      "maxPrice",
-      "color",
-      "brand",
-      // "category",
-      "rating",
-      "inStock",
-      "storage",
-      ...Object.keys(filterOptions.attributes),
-    ];
-    possibleFilterKeys.forEach((key) => params.delete(key));
-
-    Object.entries(filters).forEach(([key, value]) => {
-      if (
-        key === "ourPrice" &&
-        typeof value === "object" &&
-        "min" in value &&
-        "max" in value
-      ) {
-        params.set("minPrice", value.min.toString());
-        params.set("maxPrice", value.max.toString());
-      } else if (Array.isArray(value)) {
-        value.forEach((val) => params.append(key, val));
-      } else if (typeof value === "boolean") {
-        params.set(key, value.toString());
-      }
-    });
-
-    const url = new URL(window.location.href);
-    url.search = params.toString();
-    window.history.pushState({}, "", url.toString());
-  };
-
-  const clearFilters = () => {
-    const resetSections = filterSections.map((section) => {
+ const clearFilters = () => {
+  setFilterSections((prev) =>
+    prev.map((section) => {
       if (section.type === "checkbox" && section.options) {
         return {
           ...section,
-          options: section.options.map((option) => ({
-            ...option,
-            checked: false,
-          })),
+          options: section.options.map((o) => ({ ...o, checked: false })),
         };
       }
       if (section.type === "range") {
         return {
           ...section,
-          currentMin: 0,
-          currentMax: section.max ?? 1000,
+          currentMin: section.min ?? 0,
+          currentMax: section.max ?? section.max,
         };
       }
       return section;
-    });
+    })
+  );
 
-    setFilterSections(resetSections);
-    setExcludeOutOfStock(false);
-    setVisibleOptions((prev) => {
-      const newVisible = { ...prev };
-      resetSections.forEach((section) => {
-        newVisible[section.id] = 5;
-      });
-      return newVisible;
-    });
+  setExcludeOutOfStock(false);
 
-    const url = new URL(window.location.href);
-    url.search = "";
-    window.history.pushState({}, "", url.toString());
-    applyFilters(resetSections, false);
-  };
+  onFilterChange({}); // 🔥 THAT’S IT
+};
+
 
   const getAppliedFilterCount = () => {
     let count = 0;

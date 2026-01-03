@@ -1,95 +1,123 @@
 "use client";
 
-import React, { useState, useEffect, Suspense } from "react";
+import React, { useEffect, useState, Suspense } from "react";
 import { useParams, useSearchParams } from "next/navigation";
 import ProductListing from "@/components/Listing/ProductListing";
-import { CompleteProduct, FlattenedProduct } from "@/types/product";
-import { fetchCategoryProducts } from "@/utils/products.util";
 
-// ✅ Utility to safely handle date serialization
-const safeToISOString = (
-  dateValue: Date | string | undefined | null
-): string => {
-  if (!dateValue) return new Date().toISOString();
-  if (dateValue instanceof Date) return dateValue.toISOString();
-  const parsedDate = new Date(dateValue);
-  return isNaN(parsedDate.getTime())
-    ? new Date().toISOString()
-    : parsedDate.toISOString();
+/* ---------------- TYPES ---------------- */
+interface FlattenedProduct {
+  id: string;              // PRODUCT ID
+  variantId?: string;       // VARIANT ID
+
+  sku?: string;
+  attributes: Record<string, any>;
+
+  productId: string;
+  name: string;
+  slug: string;
+  description?: string;
+
+  mrp: string;
+  ourPrice: string;
+  totalStocks: string;
+  averageRating: string;
+
+  brand: {
+    id: string;
+    name: string;
+  } | null;
+
+  category: string;
+  subcategory?: string;
+
+  productImages: {
+    url: string;
+    alt?: string;
+  }[];
+
+  tags: string[];
+  status: "active" | "inactive" | "coming_soon" | "discontinued";
+  createdAt: string;
+  updatedAt: string;
+}
+
+
+/* ---------------- SAFE DEFAULT FILTER OPTIONS ---------------- */
+
+const EMPTY_FILTER_OPTIONS = {
+  brands: [],
+  colors: [],
+  storageOptions: [],
+  attributes: {},
+  priceRange: {
+    min: 0,
+    max: 0,
+  },
 };
 
-// ✅ Flatten variants for fast rendering
-const flattenProductVariants = (
-  products: CompleteProduct[]
-): FlattenedProduct[] => {
-  const flattened: FlattenedProduct[] = [];
+/* ---------------- API ---------------- */
+async function fetchCategoryProductsApi(
+  params: URLSearchParams,
+  signal: AbortSignal
+) {
+  const res = await fetch(
+    `/api/products/category?${params.toString()}`,
+    { cache: "no-store", signal }
+  );
 
-  products.forEach((product) => {
-    // console.log(product.subcategory?.slug === 'ASUS MOTHERBOARD')
-    if (Array.isArray(product.variants) && product.variants.length > 0) {
-      product.variants.forEach((variant) => {
-        flattened.push({
-          ...variant,
-          id: variant.id,
-          productId: product.id,
-          category: product.category?.slug || "",
-          subcategory: product.subcategory?.slug || "",
-          brand: product.brand,
-          status: product.status,
-          averageRating: product.averageRating?.toString() || "0",
-          tags: Array.isArray(product.tags)
-            ? product.tags
-            : typeof product.tags === "string"
-            ? (product.tags as string)
-                .split(",")
-                .map((tag: string) => tag.trim())
-            : [],
-          totalStocks: variant.stock?.toString() || "0",
-          createdAt: safeToISOString(variant.createdAt),
-          updatedAt: safeToISOString(variant.updatedAt),
-          color: variant.attributes?.color as string | undefined,
-          storage: variant.attributes?.storage as string | undefined,
-          description: product.description || "",
-          productParent: product,
-          material: variant.attributes?.material as string | undefined,
-          mrp: variant.mrp?.toString() || "0",
-          ourPrice: variant.ourPrice?.toString() || "0",
-        } as unknown as FlattenedProduct);
-      });
-    } else {
-      flattened.push({
-        ...product,
-        id: product.id,
-        productId: product.id,
-        name: product.shortName || "Unnamed Product",
-        mrp: product.defaultVariant?.mrp?.toString() || "0",
-        ourPrice: product.defaultVariant?.ourPrice?.toString() || "0",
-        stock: product.totalStocks?.toString() || "0",
-        slug: product.slug || "",
-        sku: product.defaultVariant?.sku || "",
-        tags: Array.isArray(product.tags)
-          ? product.tags
-          : typeof product.tags === "string"
-          ? (product.tags as string).split(",").map((tag: string) => tag.trim())
-          : [],
-        createdAt: safeToISOString(product.createdAt),
-        updatedAt: safeToISOString(product.updatedAt),
-        category: product.category?.slug || "",
-        subcategory: product.subcategory?.slug || "",
-        brand: product.brand,
-        status: product.status,
-        averageRating: product.averageRating?.toString() || "0",
-        totalStocks: product.totalStocks?.toString() || "0",
-        description: product.description || "",
-      } as unknown as FlattenedProduct);
-    }
-  });
+  if (!res.ok) throw new Error("Failed to load category products");
+  return res.json();
+}
 
-  return flattened;
-};
+/* ---------------- MAPPER ---------------- */
 
-// ✅ Loading Skeleton
-const CategoryPageLoading = () => (
+function mapRowToFlattened(row: any): FlattenedProduct {
+  const now = new Date().toISOString();
+
+  return {
+    id: row.id,                     // ✅ PRODUCT ID (stable)
+    productId: row.id,
+    variantId: row.variant_id,      // ✅ VARIANT ID (explicit)
+
+    sku: row.sku,
+    attributes: row.attributes ?? {},
+
+    name: row.short_name,
+    slug: row.slug,
+    description: row.description ?? "",
+
+    mrp: String(row.mrp ?? "0"),
+    ourPrice: String(row.our_price ?? "0"),
+    totalStocks: String(row.stock ?? "0"),
+    averageRating: String(row.average_rating ?? "0"),
+
+    brand: row.brand_id
+      ? { id: row.brand_id, name: row.brand_name }
+      : null,
+
+    category: row.category ?? "",
+    subcategory: row.subcategory ?? "",
+
+    productImages: row.image
+      ? [{ url: row.image, alt: row.short_name }]
+      : [],
+
+    tags: [],
+    status: "active",
+
+    createdAt: row.created_at
+      ? new Date(row.created_at).toISOString()
+      : now,
+    updatedAt: row.updated_at
+      ? new Date(row.updated_at).toISOString()
+      : now,
+  };
+}
+
+
+/* ---------------- LOADER ---------------- */
+
+const CategoryLoading = () => (
   <div className="mx-auto">
     <div className="flex flex-col md:flex-row gap-8">
       <div className="hidden md:block w-full md:w-1/4 bg-white p-4 rounded-lg border animate-pulse">
@@ -126,97 +154,94 @@ const CategoryPageLoading = () => (
   </div>
 );
 
-function CategoryContent({
-  initialProducts,
-  loading,
-  error,
-  category,
-}: {
-  initialProducts: FlattenedProduct[];
-  loading: boolean;
-  error: string | null;
-  category: string;
-}) {
-  if (loading) return <CategoryPageLoading />;
+/* ---------------- CONTENT ---------------- */
 
-  if (error) {
-    return (
-      <div className="mx-auto pt-4 pb-10 flex items-center justify-center min-h-[400px]">
-        <div className="text-center">
-          <h3 className="text-xl font-medium text-red-600 mb-2">{error}</h3>
-          <button
-            onClick={() => window.location.reload()}
-            className="px-4 py-2 bg-blue-500 text-white rounded hover:bg-blue-600"
-          >
-            Retry
-          </button>
-        </div>
-      </div>
-    );
-  }
+function CategoryContent({
+  category,
+  subcategory,
+}: {
+  category: string;
+  subcategory?: string;
+}) {
+  const searchParams = useSearchParams();
+  const page = Number(searchParams.get("page") || 1);
+
+  const [products, setProducts] = useState<FlattenedProduct[]>([]);
+  const [filterOptions, setFilterOptions] = useState(EMPTY_FILTER_OPTIONS);
+  const [totalCount, setTotalCount] = useState(0);
+  const [loading, setLoading] = useState(false);
+
+  useEffect(() => {
+    const controller = new AbortController();
+
+    async function load() {
+      try {
+        setLoading(true);
+
+        // 🔑 USE FULL URL PARAMS
+        const params = new URLSearchParams(searchParams.toString());
+
+        // ensure category & subcategory always exist
+        params.set("category", category);
+        if (subcategory) params.set("subcategory", subcategory);
+
+        const res = await fetchCategoryProductsApi(
+          params,
+          controller.signal
+        );
+
+        if (controller.signal.aborted) return;
+
+        setProducts(res.data.map(mapRowToFlattened));
+        setTotalCount(res.totalCount ?? 0);
+        setFilterOptions(res.filterOptions ?? EMPTY_FILTER_OPTIONS);
+      } catch (err) {
+        if (!controller.signal.aborted) {
+          console.error("Category fetch error:", err);
+        }
+      } finally {
+        if (!controller.signal.aborted) {
+          setLoading(false);
+        }
+      }
+    }
+
+    load();
+    return () => controller.abort();
+  }, [searchParams, category, subcategory]); // 🔥 KEY CHANGE
 
   return (
-    <div className="mx-auto pt-4 pb-10">
-      <ProductListing category={category} initialProducts={initialProducts} />
-    </div>
+    <>
+      {/* loader overlay */}
+      {loading && <CategoryLoading />}
+
+      <ProductListing
+        products={products}
+        totalCount={totalCount}
+        pageSize={24}
+        currentPage={page}
+        filterOptions={filterOptions}
+        category={category}
+      />
+    </>
   );
 }
+
+
+
+
+/* ---------------- PAGE ---------------- */
 
 export default function CategoryPage() {
   const params = useParams();
   const searchParams = useSearchParams();
-  const category = (params.category as string) || "";
+
+  const category = params.category as string;
   const subcategory = searchParams.get("subcategory") || undefined;
 
-  const [initialProducts, setInitialProducts] = useState<FlattenedProduct[]>(
-    []
-  );
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
-
-  useEffect(() => {
-    let isMounted = true;
-
-    const loadProducts = async () => {
-      try {
-        setLoading(true);
-        const productData: CompleteProduct[] = await fetchCategoryProducts({
-          category,
-          subcategory,
-        });
-
-        // ✅ Flatten asynchronously to prevent blocking render
-        const flattened = await Promise.resolve(
-          flattenProductVariants(productData)
-        );
-
-        if (isMounted) {
-          setInitialProducts(flattened);
-          setError(null);
-        }
-      } catch (err) {
-        console.error("Error fetching products:", err);
-        if (isMounted) setError("Failed to load products");
-      } finally {
-        if (isMounted) setLoading(false);
-      }
-    };
-
-    loadProducts();
-
-    return () => {
-      isMounted = false;
-    };
-  }, [category, subcategory]);
-
   return (
-    <Suspense fallback={<CategoryPageLoading />}>
-      <CategoryContent
-        initialProducts={initialProducts}
-        loading={loading}
-        error={error}
-        category={category}
-      />
+    <Suspense fallback={<CategoryLoading />}>
+      <CategoryContent category={category} subcategory={subcategory} />
     </Suspense>
   );
 }
