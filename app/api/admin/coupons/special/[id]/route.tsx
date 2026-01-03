@@ -3,9 +3,11 @@ import { db } from "@/db/drizzle";
 import { specialCoupons } from "@/db/schema";
 import { eq } from "drizzle-orm";
 
+type params = Promise<{id: string}>
+
 export async function PATCH(
   req: Request,
-  { params }: { params: { id: string } }
+  { params }: { params: params }
 ) {
   const updates = await req.json();
 
