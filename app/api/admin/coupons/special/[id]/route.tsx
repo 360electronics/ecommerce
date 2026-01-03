@@ -11,10 +11,12 @@ export async function PATCH(
 ) {
   const updates = await req.json();
 
+  const {id} = await params;
+
   const [updated] = await db
     .update(specialCoupons)
     .set(updates)
-    .where(eq(specialCoupons.id, params.id))
+    .where(eq(specialCoupons.id, id))
     .returning();
 
   return NextResponse.json({ updated });
@@ -22,11 +24,13 @@ export async function PATCH(
 
 export async function DELETE(
   _: Request,
-  { params }: { params: { id: string } }
+  { params }: { params: params }
 ) {
+
+  const {id} = await params;
   await db
     .delete(specialCoupons)
-    .where(eq(specialCoupons.id, params.id));
+    .where(eq(specialCoupons.id, id));
 
   return NextResponse.json({ success: true });
 }
