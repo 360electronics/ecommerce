@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useEffect, useRef, useState } from "react";
+import React, { Suspense, useEffect, useRef, useState } from "react";
 import { useSearchParams } from "next/navigation";
 import ProductListing from "@/components/Listing/ProductListing";
 
@@ -51,7 +51,7 @@ const OfferZoneLoading = () => (
   </div>
 );
 
-export default function OfferZoneContent() {
+function OfferZoneContent() {
   const searchParams = useSearchParams();
   const page = Number(searchParams.get("page") || 1);
 
@@ -112,5 +112,13 @@ export default function OfferZoneContent() {
       currentPage={page}
       filterOptions={filterOptions}
     />
+  );
+}
+
+export default function OfferZonePage() {
+  return (
+    <Suspense fallback={<OfferZoneLoading />}>
+      <OfferZoneContent />
+    </Suspense>
   );
 }
