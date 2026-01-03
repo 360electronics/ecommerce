@@ -302,54 +302,54 @@ const CartPage: React.FC = ({ initialCartItems }: any) => {
     }
   };
 
-  const handleApplyCoupon = async () => {
-    if (!couponCode) {
-      showFancyToast({
-        title: "Sorry, Something Went Wrong",
-        message: `Please enter a coupon code.`,
-        type: "error",
-      });
-      return;
-    }
-    await applyCoupon(couponCode);
-    const { couponStatus: status, coupon } = useCartStore.getState();
-    if (status === "applied" && coupon) {
-      showFancyToast({
-        title: "Coupon Applied Successfully",
-        message: `Coupon ${coupon.code} applied (${
-          coupon.type === "amount"
-            ? formatCurrency(coupon.value)
-            : `${coupon.value}%`
-        })`,
-        type: "success",
-      });
-    } else if (status === "invalid") {
-      showFancyToast({
-        title: "Sorry, Something Went Wrong",
-        message: `Invalid coupon code.`,
-        type: "error",
-      });
-    } else if (status === "invalid_amount") {
-      showFancyToast({
-        title: "Sorry, Something Went Wrong",
-        message: `Coupon has an invalid discount value.`,
-        type: "error",
-      });
-    } else if (status === "expired") {
-      showFancyToast({
-        title: "Sorry, Something Went Wrong",
-        message: `Coupon has expired.`,
-        type: "error",
-      });
-    } else if (status === "used") {
-      showFancyToast({
-        title: "Sorry, Something Went Wrong",
-        message: `Coupon has already been used.`,
-        type: "error",
-      });
-    }
-    setCouponCode("");
-  };
+  // const handleApplyCoupon = async () => {
+  //   if (!couponCode) {
+  //     showFancyToast({
+  //       title: "Sorry, Something Went Wrong",
+  //       message: `Please enter a coupon code.`,
+  //       type: "error",
+  //     });
+  //     return;
+  //   }
+  //   await applyCoupon(couponCode);
+  //   const { couponStatus: status, coupon } = useCartStore.getState();
+  //   if (status === "applied" && coupon) {
+  //     showFancyToast({
+  //       title: "Coupon Applied Successfully",
+  //       message: `Coupon ${coupon.code} applied (${
+  //         coupon.type === "amount"
+  //           ? formatCurrency(coupon.value)
+  //           : `${coupon.value}%`
+  //       })`,
+  //       type: "success",
+  //     });
+  //   } else if (status === "invalid") {
+  //     showFancyToast({
+  //       title: "Sorry, Something Went Wrong",
+  //       message: `Invalid coupon code.`,
+  //       type: "error",
+  //     });
+  //   } else if (status === "invalid_amount") {
+  //     showFancyToast({
+  //       title: "Sorry, Something Went Wrong",
+  //       message: `Coupon has an invalid discount value.`,
+  //       type: "error",
+  //     });
+  //   } else if (status === "expired") {
+  //     showFancyToast({
+  //       title: "Sorry, Something Went Wrong",
+  //       message: `Coupon has expired.`,
+  //       type: "error",
+  //     });
+  //   } else if (status === "used") {
+  //     showFancyToast({
+  //       title: "Sorry, Something Went Wrong",
+  //       message: `Coupon has already been used.`,
+  //       type: "error",
+  //     });
+  //   }
+  //   setCouponCode("");
+  // };
 
   const handleCheckout = async () => {
     if (!isLoggedIn || !user?.id) {
