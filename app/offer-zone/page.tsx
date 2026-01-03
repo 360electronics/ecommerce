@@ -1,172 +1,116 @@
 "use client";
 
-import React, { useState, useEffect, Suspense } from "react";
-import UserLayout from "@/components/Layouts/UserLayout";
+import React, { useEffect, useRef, useState } from "react";
+import { useSearchParams } from "next/navigation";
 import ProductListing from "@/components/Listing/ProductListing";
-import { CompleteProduct, FlattenedProduct } from "@/types/product";
-import { fetchOfferZoneProducts } from "@/utils/products.util";
 
-/* -------------------------- Helper: Safe Date Conversion -------------------------- */
-const safeToISOString = (dateValue: Date | string | undefined | null): string => {
-  if (!dateValue) return new Date().toISOString();
-  if (dateValue instanceof Date) return dateValue.toISOString();
-  const parsed = new Date(dateValue);
-  return isNaN(parsed.getTime()) ? new Date().toISOString() : parsed.toISOString();
-};
-
-/* -------------------------- Flatten Function -------------------------- */
-const flattenOfferZoneProducts = (offerItems: any[]): FlattenedProduct[] => {
-  return offerItems.map((item) => {
-    const { product, variant } = item;
-    return {
-      id: variant?.id || product?.id,
-      productId: product?.id,
-      name:
-        variant?.name ||
-        product?.shortName ||
-        product?.fullName ||
-        "Unnamed Product",
-      slug: variant?.slug || product?.slug || "",
-      sku: variant?.sku || "",
-      mrp: variant?.mrp?.toString() || "0",
-      ourPrice: variant?.ourPrice?.toString() || "0",
-      stock: variant?.stock?.toString() || "0",
-      category: product?.category?.slug || "",
-      subcategory: product?.subcategory?.slug || "",
-      brand: product?.brand || "",
-      averageRating: product?.averageRating?.toString() || "0",
-      totalStocks: variant?.stock?.toString() || "0",
-      description: product?.description || "",
-      createdAt: safeToISOString(variant?.createdAt || product?.createdAt),
-      updatedAt: safeToISOString(variant?.updatedAt || product?.updatedAt),
-      color: variant?.attributes?.color,
-      storage: variant?.attributes?.Storage,
-      material: variant?.attributes?.material,
-      productParent: product,
-      productImages: variant?.productImages || product?.productImages || [],
-      tags: Array.isArray(product?.tags)
-        ? product.tags
-        : typeof product?.tags === "string"
-        ? product.tags.split(",").map((t: string) => t.trim())
-        : [],
-    } as FlattenedProduct;
+async function fetchOfferZone(params: URLSearchParams, signal?: AbortSignal) {
+  const res = await fetch(`/api/offer-zone?${params.toString()}`, {
+    cache: "no-store",
+    signal,
   });
-};
 
-/* -------------------------- Loading Skeleton -------------------------- */
+  if (!res.ok) throw new Error("Offer zone failed");
+  return res.json();
+}
+
 const OfferZoneLoading = () => (
-  <UserLayout>
-    <div className="mx-auto ">
-      <div className="flex flex-col md:flex-row gap-8">
-        {/* Left: Filter Sidebar Skeleton (25%) */}
-        <div className="w-full md:w-1/4 bg-white p-4 rounded-lg border animate-pulse">
-          <div className="h-6 bg-gray-200 rounded mb-4 w-1/2"></div>
-          {[...Array(5)].map((_, i) => (
-            <div key={i} className="mb-4">
-              <div className="h-4 bg-gray-200 rounded w-2/3 mb-2"></div>
+  <div className="mx-auto">
+    <div className="flex flex-col md:flex-row gap-8">
+      <div className="hidden md:block w-full md:w-1/4 bg-white p-4 rounded-lg border animate-pulse">
+        <div className="h-6 bg-gray-200 rounded mb-4 w-1/2"></div>
+        {[...Array(5)].map((_, i) => (
+          <div key={i} className="mb-4">
+            <div className="h-4 bg-gray-200 rounded w-2/3 mb-2"></div>
+            <div className="h-4 bg-gray-200 rounded w-1/2"></div>
+          </div>
+        ))}
+        <div className="h-10 bg-gray-200 rounded mt-6"></div>
+      </div>
+      <div className="block md:hidden w-full bg-white p-4 rounded-lg border animate-pulse">
+        <div className="flex gap-2 justify-between items-center">
+          <div className="h-8 bg-gray-200 rounded w-1/2"></div>
+          <div className="h-8 bg-gray-200 rounded w-1/2"></div>
+        </div>
+      </div>
+      <div className="w-full md:w-3/4">
+        <div className="grid grid-cols-2 sm:grid-cols-2 lg:grid-cols-3 gap-2 md:gap-6">
+          {[...Array(8)].map((_, i) => (
+            <div
+              key={i}
+              className="bg-white p-4 rounded-lg animate-pulse border"
+            >
+              <div className="w-full h-36 md:h-48 bg-gray-200 rounded mb-4"></div>
+              <div className="h-5 bg-gray-200 rounded w-2/3 mb-2"></div>
               <div className="h-4 bg-gray-200 rounded w-1/2"></div>
             </div>
           ))}
-          <div className="h-10 bg-gray-200 rounded mt-6"></div>
-        </div>
-
-        {/* Right: Product Grid Skeleton (75%) */}
-        <div className="w-full md:w-3/4">
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3  gap-6">
-            {[...Array(8)].map((_, i) => (
-              <div
-                key={i}
-                className="bg-white p-4 rounded-lg  animate-pulse border"
-              >
-                <div className="w-full h-48 bg-gray-200 rounded mb-4"></div>
-                <div className="h-5 bg-gray-200 rounded w-2/3 mb-2"></div>
-                <div className="h-4 bg-gray-200 rounded w-1/2"></div>
-              </div>
-            ))}
-          </div>
         </div>
       </div>
     </div>
-  </UserLayout>
+  </div>
 );
 
-/* -------------------------- Page Content -------------------------- */
-function OfferZoneContent({
-  initialProducts,
-  loading,
-  error,
-}: {
-  initialProducts: FlattenedProduct[];
-  loading: boolean;
-  error: string | null;
-}) {
-  if (loading) return <OfferZoneLoading />;
+export default function OfferZoneContent() {
+  const searchParams = useSearchParams();
+  const page = Number(searchParams.get("page") || 1);
 
-  if (error) {
-    return (
-      <UserLayout>
-        <div className="mx-auto pt-10 flex items-center justify-center min-h-[400px]">
-          <div className="text-center">
-            <h3 className="text-xl font-medium text-red-600 mb-3">{error}</h3>
-            <button
-              onClick={() => window.location.reload()}
-              className="px-4 py-2 bg-blue-500 text-white rounded hover:bg-blue-600"
-            >
-              Retry
-            </button>
-          </div>
-        </div>
-      </UserLayout>
-    );
-  }
+  const [products, setProducts] = useState<any[]>([]);
+  const [filterOptions, setFilterOptions] = useState<any>(null);
+  const [totalCount, setTotalCount] = useState(0);
+  const [pageSize, setPageSize] = useState(12);
+  const [loading, setLoading] = useState(false);
 
-  return (
-    <UserLayout>
-      <div className="mx-auto pt-4 pb-10">
-        <h1 className="text-2xl font-semibold mb-6 text-center">
-          🎉 Offer Zone — Exclusive Deals & Discounts
-        </h1>
-        <ProductListing
-          searchQuery=""
-          initialProducts={initialProducts}
-          category="offer-zone"
-        />
-      </div>
-    </UserLayout>
-  );
-}
-
-/* -------------------------- Offer Zone Page -------------------------- */
-export default function OfferZonePage() {
-  const [initialProducts, setInitialProducts] = useState<FlattenedProduct[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
+  const abortRef = useRef<AbortController | null>(null);
 
   useEffect(() => {
-    const loadOffers = async () => {
-      try {
-        setLoading(true);
-        const offerZoneData = await fetchOfferZoneProducts();
-        const flattened = flattenOfferZoneProducts(offerZoneData);
-        setInitialProducts(flattened);
-      } catch (err) {
-        console.error("Error fetching offer zone products:", err);
-        setError("Failed to load offer zone products");
-      } finally {
-        setLoading(false);
-      }
-    };
+    abortRef.current?.abort();
+    const controller = new AbortController();
+    abortRef.current = controller;
 
-    loadOffers();
-  }, []);
+    setLoading(true);
+
+    const params = new URLSearchParams(searchParams.toString());
+
+    fetchOfferZone(params, controller.signal)
+      .then((res) => {
+        const mapped = res.data.map((row: any) => ({
+          id: row.variant_id,
+          productId: row.product_id,
+          variantId: row.variant_id,
+          name: row.short_name,
+          slug: row.slug,
+          mrp: String(row.mrp),
+          ourPrice: String(row.our_price),
+          totalStocks: String(row.stock),
+          averageRating: String(row.average_rating),
+          brand: row.brand_id
+            ? { id: row.brand_id, name: row.brand_name }
+            : null,
+          productImages: row.image ? [{ url: row.image }] : [],
+          status: "active",
+        }));
+
+        setProducts(mapped);
+        setTotalCount(res.totalCount);
+        setPageSize(res.pageSize);
+        setFilterOptions(res.filterOptions);
+      })
+      .finally(() => setLoading(false));
+
+    return () => controller.abort();
+  }, [searchParams]);
+
+  if (loading) return <OfferZoneLoading />;
 
   return (
-    <Suspense fallback={<OfferZoneLoading />}>
-      <OfferZoneContent
-        initialProducts={initialProducts}
-        loading={loading}
-        error={error}
-      />
-    </Suspense>
+    <ProductListing
+      category="offer-zone"
+      products={products}
+      totalCount={totalCount}
+      pageSize={pageSize}
+      currentPage={page}
+      filterOptions={filterOptions}
+    />
   );
 }
