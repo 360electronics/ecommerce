@@ -40,8 +40,12 @@ type CheckoutUIState = "loading" | "cancelling" | "redirecting" | "ready";
 
 const CheckoutPage: React.FC = () => {
   const { isLoggedIn, isLoading, user } = useAuthStore();
-  const { checkoutItems, fetchCheckoutItems, clearCheckout } =
-    useCheckoutStore();
+  const {
+    checkoutItems,
+    checkoutSessionId,
+    fetchCheckoutItems,
+    clearCheckout,
+  } = useCheckoutStore();
   const {
     coupon,
     couponStatus,
@@ -697,6 +701,16 @@ const CheckoutPage: React.FC = () => {
       });
       return;
     }
+    console.log(checkoutSessionId);
+
+    if (!checkoutSessionId) {
+      showFancyToast({
+        title: "Checkout Error",
+        message: "Checkout session missing. Please retry.",
+        type: "error",
+      });
+      return;
+    }
 
     if (!checkoutItems.length) {
       showFancyToast({
@@ -726,6 +740,7 @@ const CheckoutPage: React.FC = () => {
         body: JSON.stringify({
           userId: user!.id,
           addressId: selectedAddressId,
+          checkoutSessionId,
           totalAmount: grandTotal,
           discountAmount,
           couponCode: coupon && couponStatus === "applied" ? coupon.code : null,

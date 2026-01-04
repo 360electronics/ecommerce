@@ -18,6 +18,9 @@ interface ErrorResponse {
 
 export async function POST(req: Request) {
   try {
+    const body = await req.json();
+    console.log("CREATE ORDER BODY:", body);
+
     const {
       userId,
       checkoutSessionId,
@@ -30,7 +33,7 @@ export async function POST(req: Request) {
       paymentMethod,
       paymentStatus,
       status,
-    } = await req.json();
+    } = body;
 
     if (!userId || !checkoutSessionId || !addressId) {
       return NextResponse.json(
@@ -76,10 +79,7 @@ export async function POST(req: Request) {
       .where(eq(checkout.checkoutSessionId, checkoutSessionId));
 
     if (items.length === 0) {
-      return NextResponse.json(
-        { error: "Checkout is empty" },
-        { status: 400 }
-      );
+      return NextResponse.json({ error: "Checkout is empty" }, { status: 400 });
     }
 
     /* 4️⃣ Create order */

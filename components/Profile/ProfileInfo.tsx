@@ -400,7 +400,7 @@ export default function ProfileInfo() {
     (user.phoneNumber && !user.phoneVerified);
 
   return (
-    <div className="mx-auto px-4 sm:px-6 lg:px-8 py-12">
+    <div className="mx-auto  lg:px-8 py-2 md:py-12">
       <h1 className="text-2xl font-bold text-gray-900 mb-8 nohemi-bold">
         Your{" "}
         <span className="text-primary border-b-3 border-primary">Profile</span>
@@ -501,14 +501,14 @@ export default function ProfileInfo() {
         </div>
       )}
 
-      <div className="bg-white border border-gray-200 rounded-lg p-6 mb-8">
-        <div className="flex justify-between items-center mb-4">
+      <div className="bg-white border border-gray-200 rounded-lg p-4 md:p-6 mb-8">
+        <div className="flex flex-col md:flex-row gap-2 justify-between md:items-center mb-4">
           <h2 className="text-xl font-semibold text-gray-900">
             Personal Details
           </h2>
           <button
             onClick={() => setIsProfileModalOpen(true)}
-            className="flex items-center justify-center gap-1 hover:underline cursor-pointer font-medium text-sm transition-colors"
+            className="flex md:items-center md:justify-center gap-1 hover:underline cursor-pointer font-medium text-sm transition-colors"
             aria-label="Manage profile"
           >
             <UserRoundPen className="text-primary" size={20} /> Manage Profile
@@ -566,13 +566,13 @@ export default function ProfileInfo() {
       </div>
 
       <div className="bg-white border border-gray-200 rounded-lg p-6">
-        <div className="flex justify-between items-center mb-4">
+        <div className="flex flex-col md:flex-row gap-2 justify-between md:items-center mb-4">
           <h2 className="text-xl font-semibold text-gray-900">
             Saved Addresses
           </h2>
           <button
             onClick={() => setIsAddressModalOpen(true)}
-            className="flex items-center justify-center gap-1 hover:underline font-medium text-sm transition-colors"
+            className="flex md:items-center md:justify-center gap-1 hover:underline font-medium text-sm transition-colors"
             aria-label="Manage addresses"
           >
             <Pencil size={20} className="text-primary" /> Manage Addresses

@@ -3,46 +3,67 @@ import { db } from "@/db/drizzle";
 import { orders, orderItems, products, variants } from "@/db/schema";
 import { eq, desc } from "drizzle-orm";
 
+/* ---------------------------------------------
+   RESPONSE TYPES (IMPORTANT)
+--------------------------------------------- */
+
+type OrderItemResponse = {
+  id: string;
+  orderId: string;
+  productId: string;
+  variantId: string;
+  quantity: number;
+  unitPrice: string;
+  cartOfferProductId: string | null;
+  product: Omit<
+    typeof products.$inferSelect,
+    "specifications"
+  > | null;
+  variant: typeof variants.$inferSelect | null;
+};
+
+type OrderResponse = {
+  id: string;
+  userId: string;
+  addressId: string;
+  gatewayOrderId: string | null;
+  paymentId: string | null;
+  status: typeof orders.$inferSelect["status"];
+  paymentStatus: typeof orders.$inferSelect["paymentStatus"];
+  paymentMethod: typeof orders.$inferSelect["paymentMethod"];
+  totalAmount: string;
+  shippingAmount: string;
+  deliveryMode: typeof orders.$inferSelect["deliveryMode"];
+  orderNotes: string | null;
+  trackingNumber: string | null;
+  createdAt: Date;
+  updatedAt: Date;
+  deliveredAt: Date | null;
+  couponCode: string | null;
+  discountAmount: string;
+  couponId: string | null;
+  items: OrderItemResponse[];
+};
+
+/* ---------------------------------------------
+   GET ORDERS
+--------------------------------------------- */
+
 export async function GET(req: NextRequest) {
   try {
-    // Extract userId from query params
-    const url = new URL(req.url);
-    const userId = url.searchParams.get("userId");
+    const userId = req.nextUrl.searchParams.get("userId");
 
-    // Validate userId presence
     if (!userId) {
-      return NextResponse.json({ error: "User ID is required" }, { status: 400 });
+      return NextResponse.json(
+        { error: "User ID is required" },
+        { status: 400 }
+      );
     }
 
-    // Fetch orders with order items, products, and variants
-    const userOrders = await db
+    const rows = await db
       .select({
-        order: {
-          id: orders.id,
-          userId: orders.userId,
-          addressId: orders.addressId,
-          gatewayOrderId: orders.gatewayOrderId,
-          paymentId: orders.paymentId,
-          status: orders.status,
-          paymentStatus: orders.paymentStatus,
-          paymentMethod: orders.paymentMethod,
-          totalAmount: orders.totalAmount,
-          shippingAmount: orders.shippingAmount,
-          deliveryMode: orders.deliveryMode,
-          orderNotes: orders.orderNotes,
-          trackingNumber: orders.trackingNumber,
-          createdAt: orders.createdAt,
-          updatedAt: orders.updatedAt,
-          deliveredAt: orders.deliveredAt,
-        },
-        orderItem: {
-          id: orderItems.id,
-          orderId: orderItems.orderId,
-          productId: orderItems.productId,
-          variantId: orderItems.variantId,
-          quantity: orderItems.quantity,
-          unitPrice: orderItems.unitPrice,
-        },
+        order: orders,
+        item: orderItems,
         product: products,
         variant: variants,
       })
@@ -53,84 +74,71 @@ export async function GET(req: NextRequest) {
       .where(eq(orders.userId, userId))
       .orderBy(desc(orders.createdAt));
 
-    if (userOrders.length === 0) {
-      console.log("No orders found for user:", userId);
-      return NextResponse.json([], { status: 200 }); // Return empty array instead of 404
+    if (rows.length === 0) {
+      return NextResponse.json([], { status: 200 });
     }
 
-    // Group order items and their products/variants by order
-    const formattedOrders = userOrders.reduce(
-      (acc, { order, orderItem, product, variant }) => {
-        const existingOrder = acc.find((o) => o.id === order.id);
-        const item = orderItem
-          ? {
-              id: orderItem.id,
-              orderId: orderItem.orderId,
-              productId: orderItem.productId,
-              variantId: orderItem.variantId,
-              quantity: orderItem.quantity,
-              unitPrice: orderItem.unitPrice,
-              product: product
-                ? products
-                : null,
-              variant: variant
-                ? variants
-                : null,
-            }
-          : null;
+    const orderMap = new Map<string, OrderResponse>();
 
-        if (existingOrder) {
-          if (item) {
-            existingOrder.items.push({
-              ...item,
-              product: product
-                ? (product as Omit<typeof products.$inferSelect, "specifications">)
-                : null,
-              variant: variant
-                ? (variant as typeof variants.$inferSelect)
-                : null,
-              cartOfferProductId: null
-            });
-          }
-        } else {
-          acc.push({
-            ...order,
-            items: item
-              ? [
-                  {
-                    ...item,
-                    cartOfferProductId: null,
-                    product: product
-                      ? (product as Omit<typeof products.$inferSelect, "specifications">)
-                      : null,
-                    variant: variant
-                      ? (variant as typeof variants.$inferSelect)
-                      : null,
-                  },
-                ]
-              : [],
-            couponCode: null,
-            discountAmount: "",
-            couponId: null,
-          });
-        }
-        return acc;
-      },
-      [] as Array<
-        typeof orders.$inferSelect & {
-          items: Array<
-            typeof orderItems.$inferSelect & {
-              product: Omit<typeof products.$inferSelect, "specifications"> | null;
-              variant: typeof variants.$inferSelect | null;
-            }
-          >;
-        }
-      >
+    for (const row of rows) {
+      const { order, item, product, variant } = row;
+
+      if (!orderMap.has(order.id)) {
+        orderMap.set(order.id, {
+          id: order.id,
+          userId: order.userId,
+          addressId: order.addressId,
+          gatewayOrderId: order.gatewayOrderId,
+          paymentId: order.paymentId,
+          status: order.status,
+          paymentStatus: order.paymentStatus,
+          paymentMethod: order.paymentMethod,
+          totalAmount: order.totalAmount,
+          shippingAmount: order.shippingAmount,
+          deliveryMode: order.deliveryMode,
+          orderNotes: order.orderNotes,
+          trackingNumber: order.trackingNumber,
+          createdAt: order.createdAt,
+          updatedAt: order.updatedAt,
+          deliveredAt: order.deliveredAt,
+          couponCode: order.couponCode ?? null,
+          discountAmount: order.discountAmount ?? "0.00",
+          couponId: order.couponId ?? null,
+          items: [],
+        });
+      }
+
+      if (item) {
+        orderMap.get(order.id)!.items.push({
+          id: item.id,
+          orderId: item.orderId,
+          productId: item.productId,
+          variantId: item.variantId,
+          quantity: item.quantity,
+          unitPrice: item.unitPrice,
+          cartOfferProductId: null,
+          product: product
+            ? (product as Omit<
+                typeof products.$inferSelect,
+                "specifications"
+              >)
+            : null,
+          variant: variant
+            ? (variant as typeof variants.$inferSelect)
+            : null,
+        });
+      }
+    }
+
+    return NextResponse.json(
+      Array.from(orderMap.values()),
+      { status: 200 }
     );
-
-    return NextResponse.json(formattedOrders, { status: 200 });
   } catch (error) {
     console.error("Error fetching orders:", error);
-    return NextResponse.json({ error: "Failed to fetch orders" }, { status: 500 });
+    return NextResponse.json(
+      { error: "Failed to fetch orders" },
+      { status: 500 }
+    );
   }
 }
