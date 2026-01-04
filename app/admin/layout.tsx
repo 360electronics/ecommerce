@@ -21,9 +21,11 @@ import {
   ShoppingCart,
   Tag,
   StoreIcon,
+  TicketPercent,
 } from "lucide-react";
 import Breadcrumbs from "@/components/Reusable/BreadScrumb";
 import { useAuthStore } from "@/store/auth-store";
+import { BiSolidCoupon } from "react-icons/bi";
 
 interface AdminLayoutProps {
   children: React.ReactNode;
@@ -81,6 +83,7 @@ export default function Layout({ children }: AdminLayoutProps) {
     { name: "Users", path: "/admin/users", icon: Users },
     { name: "Orders", path: "/admin/orders", icon: ShoppingBag },
     { name: "Tickets", path: "/admin/tickets", icon: Ticket },
+    { name: "Coupons", path: "/admin/coupons", icon: TicketPercent },
     { name: "Offer Zone", path: "/admin/offer-zone", icon: Heart },
     { name: "New Arrival", path: "/admin/new-arrivals", icon: Briefcase },
     { name: "Gamer Zone", path: "/admin/gamer-zone", icon: Gamepad2 },

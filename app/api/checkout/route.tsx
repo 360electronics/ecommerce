@@ -1,9 +1,17 @@
 import { db } from "@/db/drizzle";
-import { cart_offer_products, checkout, products, variants } from "@/db/schema";
+import {
+  checkout,
+  checkoutSessions,
+  cart_offer_products,
+  products,
+  variants,
+} from "@/db/schema";
 import { eq, and } from "drizzle-orm";
 import { NextRequest, NextResponse } from "next/server";
-import { after } from "next/server";
 
+/* ----------------------------------------------------
+   GET /api/checkout?userId=...
+---------------------------------------------------- */
 export async function GET(request: NextRequest) {
   try {
     const { searchParams } = new URL(request.url);
@@ -16,7 +24,7 @@ export async function GET(request: NextRequest) {
       );
     }
 
-    const checkouts = await db
+    const items = await db
       .select({
         id: checkout.id,
         userId: checkout.userId,
@@ -45,42 +53,9 @@ export async function GET(request: NextRequest) {
       )
       .where(eq(checkout.userId, userId));
 
-    const sanitizedItems = checkouts
-      .filter((item) => item.product !== null)
-      .map((item) => ({
-        ...item,
-        quantity:
-          Number.isNaN(Number(item.quantity)) || item.quantity <= 0
-            ? 1
-            : Number(item.quantity),
-        totalPrice: Number(item.totalPrice) || 0,
-        variant: {
-          ...item.variant,
-          mrp: String(item.variant.mrp),
-          ourPrice: String(item.variant.ourPrice),
-          stock: String(item.variant.stock),
-        },
-        product: item.product
-          ? {
-              ...item.product,
-              totalStocks: String(item.product.totalStocks ?? ""),
-              averageRating: String(item.product.averageRating ?? ""),
-              ratingCount: String(item.product.ratingCount ?? ""),
-            }
-          : undefined,
-        offerProduct:
-          item.offerProduct && item.offerProduct.id
-            ? {
-                ...item.offerProduct,
-                ourPrice: String(item.offerProduct.ourPrice),
-              }
-            : undefined,
-        offerProductPrice: item.offerProduct && item.offerProduct.ourPrice,
-      }));
-
-    return NextResponse.json(sanitizedItems, { status: 200 });
+    return NextResponse.json(items, { status: 200 });
   } catch (error) {
-    console.error("Error fetching checkouts:", error);
+    console.error("Error fetching checkout:", error);
     return NextResponse.json(
       { error: "Internal server error" },
       { status: 500 }
@@ -88,30 +63,23 @@ export async function GET(request: NextRequest) {
   }
 }
 
+/* ----------------------------------------------------
+   POST /api/checkout
+---------------------------------------------------- */
 export async function POST(request: NextRequest) {
   try {
-    let body: any = null;
-
-    // ✅ SAFE JSON PARSE
-    try {
-      body = await request.json();
-    } catch {
-      return NextResponse.json(
-        { error: "Invalid or empty request body" },
-        { status: 400 }
-      );
-    }
+    const body = await request.json();
 
     const {
       userId,
       productId,
       variantId,
-      cartOfferProductId,
-      totalPrice,
       quantity,
-      offerProductPrice,
+      totalPrice,
+      cartOfferProductId,
     } = body ?? {};
 
+    // ✅ HARD VALIDATION
     if (!userId || !productId || !variantId || !quantity || !totalPrice) {
       return NextResponse.json(
         { error: "Missing required fields" },
@@ -119,34 +87,43 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    const [newCheckout] = await db
+    // 1️⃣ Get active checkout session
+    const [session] = await db
+      .select()
+      .from(checkoutSessions)
+      .where(
+        and(
+          eq(checkoutSessions.userId, userId),
+          eq(checkoutSessions.status, "active")
+        )
+      )
+      .limit(1);
+
+    if (!session) {
+      return NextResponse.json(
+        { error: "No active checkout session" },
+        { status: 400 }
+      );
+    }
+
+    // 2️⃣ Insert checkout item (✅ userId INCLUDED)
+    const [created] = await db
       .insert(checkout)
       .values({
-        userId,
+        userId,                     // 🔥 THIS FIXES YOUR ERROR
+        checkoutSessionId: session.id,
         productId,
         variantId,
-        cartOfferProductId,
-        totalPrice,
         quantity,
+        totalPrice,
+        cartOfferProductId,
       })
+      .onConflictDoNothing() // prevent duplicates per session
       .returning();
 
-    // Schedule deletion after 1 hour
-    after(async () => {
-      const oneHour = 60 * 60 * 1000;
-      setTimeout(async () => {
-        await db
-          .delete(checkout)
-          .where(
-            and(eq(checkout.id, newCheckout.id), eq(checkout.userId, userId))
-          );
-        console.log(`Cleaned up checkout item ${newCheckout.id}`);
-      }, oneHour);
-    });
-
-    return NextResponse.json(newCheckout, { status: 201 });
+    return NextResponse.json(created ?? null, { status: 201 });
   } catch (error) {
-    console.error("Error creating checkout:", error);
+    console.error("Error creating checkout item:", error);
     return NextResponse.json(
       { error: "Internal server error" },
       { status: 500 }
@@ -154,6 +131,9 @@ export async function POST(request: NextRequest) {
   }
 }
 
+/* ----------------------------------------------------
+   DELETE /api/checkout?id=...&userId=...
+---------------------------------------------------- */
 export async function DELETE(request: NextRequest) {
   try {
     const { searchParams } = new URL(request.url);
@@ -167,24 +147,16 @@ export async function DELETE(request: NextRequest) {
       );
     }
 
-    const [deletedCheckout] = await db
+    await db
       .delete(checkout)
-      .where(and(eq(checkout.id, id), eq(checkout.userId, userId)))
-      .returning();
-
-    if (!deletedCheckout) {
-      return NextResponse.json(
-        { error: "Checkout not found" },
-        { status: 404 }
-      );
-    }
+      .where(and(eq(checkout.id, id), eq(checkout.userId, userId)));
 
     return NextResponse.json(
-      { message: "Checkout deleted successfully" },
+      { message: "Checkout item removed" },
       { status: 200 }
     );
   } catch (error) {
-    console.error("Error deleting checkout:", error);
+    console.error("Error deleting checkout item:", error);
     return NextResponse.json(
       { error: "Internal server error" },
       { status: 500 }

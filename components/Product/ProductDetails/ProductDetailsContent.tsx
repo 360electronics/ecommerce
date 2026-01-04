@@ -595,59 +595,95 @@ export default function ProductDetailsContent({
 
   // Handle buy now click
   const handleBuyNowClick = async (e: React.MouseEvent) => {
-    e.preventDefault();
-    e.stopPropagation();
+  e.preventDefault();
+  e.stopPropagation();
 
-    if (!userId) {
-      showFancyToast({
-        title: "Authentication Required",
-        message: "Please login to proceed with purchase.",
-        type: "error",
-      });
-      router.push(`/signin?callbackUrl=${encodeURIComponent(pathname)}`);
-      return;
+  if (!userId) {
+    showFancyToast({
+      title: "Login Required",
+      message: "Please login to continue",
+      type: "error",
+    });
+    router.push(`/signin?callbackUrl=${encodeURIComponent(pathname)}`);
+    return;
+  }
+
+  if (!activeVariant) {
+    showFancyToast({
+      title: "Variant unavailable",
+      message: "Please select a valid variant",
+      type: "error",
+    });
+    return;
+  }
+
+  if (activeVariant.stock < quantity && !activeVariant.isBackorderable) {
+    showFancyToast({
+      title: "Out of stock",
+      message: `Only ${activeVariant.stock} items available`,
+      type: "error",
+    });
+    return;
+  }
+
+  setIsAddingToCart(true);
+
+  try {
+    /* ---------------------------------------------
+       1️⃣ ENSURE CHECKOUT SESSION
+    --------------------------------------------- */
+    const sessionRes = await fetch("/api/checkout/session", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ userId }),
+    });
+
+    if (!sessionRes.ok) {
+      throw new Error("Failed to create checkout session");
     }
 
-    if (!activeVariant || !product) {
-      showFancyToast({
-        title: "Variant Unavailable",
-        message: "Selected variant is not available",
-        type: "error",
-      });
-      return;
+    /* ---------------------------------------------
+       2️⃣ CLEAR EXISTING CHECKOUT ITEMS
+    --------------------------------------------- */
+    await fetch(`/api/checkout/clear?userId=${userId}`, {
+      method: "DELETE",
+    });
+
+    /* ---------------------------------------------
+       3️⃣ INSERT SINGLE CHECKOUT ITEM
+    --------------------------------------------- */
+    const checkoutRes = await fetch("/api/checkout", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        userId,
+        productId: activeVariant.productId,
+        variantId: activeVariant.id,
+        quantity,
+        totalPrice: Number(activeVariant.ourPrice) * quantity,
+      }),
+    });
+
+    if (!checkoutRes.ok) {
+      throw new Error("Failed to add item to checkout");
     }
 
-    if (activeVariant.stock < quantity && !activeVariant.isBackorderable) {
-      showFancyToast({
-        title: "Insufficient Stock",
-        message: `Only ${activeVariant.stock} items available in stock`,
-        type: "error",
-      });
-      return;
-    }
+    /* ---------------------------------------------
+       4️⃣ GO TO CHECKOUT
+    --------------------------------------------- */
+    router.push("/checkout");
+  } catch (err) {
+    console.error(err);
+    showFancyToast({
+      title: "Checkout failed",
+      message: "Unable to proceed. Please try again.",
+      type: "error",
+    });
+  } finally {
+    setIsAddingToCart(false);
+  }
+};
 
-    setIsAddingToCart(true);
-    try {
-      const success = await handleBuyNow(userId);
-      if (success) {
-        await router.push("/checkout");
-      } else {
-        showFancyToast({
-          title: "Checkout Error",
-          message: "Failed to proceed to checkout",
-          type: "error",
-        });
-      }
-    } catch (error) {
-      showFancyToast({
-        title: "Sorry, there was an error",
-        message: "Network error. Please try again.",
-        type: "error",
-      });
-    } finally {
-      setIsAddingToCart(false);
-    }
-  };
 
   // Handle attribute selection effect
   useEffect(() => {

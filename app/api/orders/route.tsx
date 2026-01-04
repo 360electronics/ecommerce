@@ -1,12 +1,14 @@
 import { db } from "@/db/drizzle";
 import {
+  checkout,
+  checkoutSessions,
   orderItems,
   orders,
   savedAddresses,
   users,
   variants,
 } from "@/db/schema";
-import { eq } from "drizzle-orm";
+import { and, eq } from "drizzle-orm";
 import { NextResponse } from "next/server";
 
 interface ErrorResponse {
@@ -14,10 +16,11 @@ interface ErrorResponse {
   error: string;
 }
 
-export async function POST(request: Request) {
+export async function POST(req: Request) {
   try {
     const {
       userId,
+      checkoutSessionId,
       addressId,
       totalAmount,
       discountAmount,
@@ -25,15 +28,66 @@ export async function POST(request: Request) {
       shippingAmount,
       deliveryMode,
       paymentMethod,
-      status,
       paymentStatus,
-      orderItems: items,
-    } = await request.json();
+      status,
+    } = await req.json();
 
-    const [newOrder] = await db
+    if (!userId || !checkoutSessionId || !addressId) {
+      return NextResponse.json(
+        { error: "Missing required fields" },
+        { status: 400 }
+      );
+    }
+
+    /* 1️⃣ If order already exists → return it (IDEMPOTENT) */
+    const existing = await db
+      .select()
+      .from(orders)
+      .where(eq(orders.checkoutSessionId, checkoutSessionId))
+      .limit(1);
+
+    if (existing[0]) {
+      return NextResponse.json(existing[0], { status: 200 });
+    }
+
+    /* 2️⃣ Lock checkout session */
+    const locked = await db
+      .update(checkoutSessions)
+      .set({ lockedAt: new Date(), status: "converted" })
+      .where(
+        and(
+          eq(checkoutSessions.id, checkoutSessionId),
+          eq(checkoutSessions.userId, userId),
+          eq(checkoutSessions.status, "active")
+        )
+      );
+
+    if (!locked.rowCount) {
+      return NextResponse.json(
+        { error: "Checkout already converted or expired" },
+        { status: 409 }
+      );
+    }
+
+    /* 3️⃣ Load checkout items */
+    const items = await db
+      .select()
+      .from(checkout)
+      .where(eq(checkout.checkoutSessionId, checkoutSessionId));
+
+    if (items.length === 0) {
+      return NextResponse.json(
+        { error: "Checkout is empty" },
+        { status: 400 }
+      );
+    }
+
+    /* 4️⃣ Create order */
+    const [order] = await db
       .insert(orders)
       .values({
         userId,
+        checkoutSessionId,
         addressId,
         totalAmount,
         discountAmount,
@@ -41,28 +95,26 @@ export async function POST(request: Request) {
         shippingAmount,
         deliveryMode,
         paymentMethod,
-        status,
         paymentStatus,
-        createdAt: new Date(),
-        updatedAt: new Date(),
+        status,
       })
       .returning();
 
-    console.log("New Order:", newOrder);
-
+    /* 5️⃣ Insert order items */
     await db.insert(orderItems).values(
-      items.map((item: any) => ({
-        orderId: newOrder.id,
+      items.map((item) => ({
+        orderId: order.id,
         productId: item.productId,
         variantId: item.variantId,
-        quantity: item.quantity,
-        unitPrice: item.unitPrice,
+        quantity: item.cartOfferProductId ? 1 : item.quantity,
+        unitPrice: item.totalPrice,
+        cartOfferProductId: item.cartOfferProductId,
       }))
     );
 
-    return NextResponse.json(newOrder, { status: 200 });
+    return NextResponse.json(order, { status: 201 });
   } catch (error) {
-    console.error("Error creating order:", error);
+    console.error("Order creation failed:", error);
     return NextResponse.json(
       { error: "Failed to create order" },
       { status: 500 }

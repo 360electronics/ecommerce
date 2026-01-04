@@ -43,6 +43,20 @@
       "when": 1767037730684,
       "tag": "0005_friendly_mac_gargan",
       "breakpoints": true
+    },
+    {
+      "idx": 6,
+      "version": "7",
+      "when": 1767523302677,
+      "tag": "0006_premium_alice",
+      "breakpoints": true
+    },
+    {
+      "idx": 7,
+      "version": "7",
+      "when": 1767523718504,
+      "tag": "0007_optimal_risque",
+      "breakpoints": true
     }
   ]
 }

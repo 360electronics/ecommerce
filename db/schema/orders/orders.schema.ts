@@ -1,25 +1,47 @@
-import { pgTable, uuid, timestamp, varchar, numeric, integer, index } from "drizzle-orm/pg-core";
+import {
+  pgTable,
+  uuid,
+  timestamp,
+  varchar,
+  numeric,
+  integer,
+  index,
+} from "drizzle-orm/pg-core";
 import { sql } from "drizzle-orm";
 import { savedAddresses, users } from "../user/users.schema";
 import { products, variants } from "../products/products.schema";
 import { cart_offer_products } from "../cart/cart.schema";
+import { checkoutSessions } from "../checkout/checkout.schema";
 
 export const orders = pgTable(
   "orders",
   {
-    id: uuid("id").primaryKey().default(sql`gen_random_uuid()`),
+    id: uuid("id")
+      .primaryKey()
+      .default(sql`gen_random_uuid()`),
     userId: uuid("user_id")
       .notNull()
       .references(() => users.id, { onDelete: "cascade" }),
     addressId: uuid("address_id")
       .notNull()
       .references(() => savedAddresses.id, { onDelete: "restrict" }),
+    checkoutSessionId: uuid("checkout_session_id")
+      .notNull()
+      .references(() => checkoutSessions.id, { onDelete: "cascade" }),
     couponId: uuid("coupon_id"),
     couponCode: varchar("coupon_code", { length: 50 }),
     gatewayOrderId: varchar("gateway_order_id", { length: 255 }),
     paymentId: varchar("payment_id", { length: 255 }),
     status: varchar("status", {
-      enum: ["pending", "confirmed", "shipped", "delivered", "cancelled", "returned", "failed"],
+      enum: [
+        "pending",
+        "confirmed",
+        "shipped",
+        "delivered",
+        "cancelled",
+        "returned",
+        "failed",
+      ],
     })
       .default("pending")
       .notNull(),
@@ -45,8 +67,12 @@ export const orders = pgTable(
       .default("standard"),
     orderNotes: varchar("order_notes", { length: 1000 }),
     trackingNumber: varchar("tracking_number", { length: 255 }),
-    createdAt: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
-    updatedAt: timestamp("updated_at", { withTimezone: true }).defaultNow().notNull(),
+    createdAt: timestamp("created_at", { withTimezone: true })
+      .defaultNow()
+      .notNull(),
+    updatedAt: timestamp("updated_at", { withTimezone: true })
+      .defaultNow()
+      .notNull(),
     deliveredAt: timestamp("delivered_at", { withTimezone: true }),
   },
   (table) => [
@@ -62,7 +88,9 @@ export const orders = pgTable(
 export const orderItems = pgTable(
   "order_items",
   {
-    id: uuid("id").primaryKey().default(sql`gen_random_uuid()`),
+    id: uuid("id")
+      .primaryKey()
+      .default(sql`gen_random_uuid()`),
     orderId: uuid("order_id")
       .notNull()
       .references(() => orders.id, { onDelete: "cascade" }),
@@ -72,7 +100,9 @@ export const orderItems = pgTable(
     variantId: uuid("variant_id")
       .notNull()
       .references(() => variants.id, { onDelete: "restrict" }),
-    cartOfferProductId: uuid("cart_offer_product_id").references(() => cart_offer_products.id),
+    cartOfferProductId: uuid("cart_offer_product_id").references(
+      () => cart_offer_products.id
+    ),
     quantity: integer("quantity").notNull(),
     unitPrice: numeric("unit_price", { precision: 10, scale: 2 }).notNull(),
   },

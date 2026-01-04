@@ -5,12 +5,10 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import Breadcrumbs from "@/components/Reusable/BreadScrumb";
 import { CartItemComponent } from "@/components/Cart/CartItem";
-import Image from "next/image";
 import { Button } from "@/components/ui/button";
 import { useAuthStore } from "@/store/auth-store";
 import { useCheckoutStore } from "@/store/checkout-store";
 import { useCartStore } from "@/store/cart-store";
-import { CartItem } from "@/store/cart-store";
 import { showFancyToast } from "@/components/Reusable/ShowCustomToast";
 
 const CartPage: React.FC = ({ initialCartItems }: any) => {
@@ -21,20 +19,14 @@ const CartPage: React.FC = ({ initialCartItems }: any) => {
     updateQuantity,
     removeFromCart,
     clearCart,
-    applyCoupon,
-    removeCoupon,
     addOfferProductToCart,
-    getCartSubtotal,
-    getCartTotal,
-    getItemCount,
-    getSavings,
     initializeCart, // New action to initialize cart
   } = useCartStore();
   const { isLoggedIn, user } = useAuthStore();
   const router = useRouter();
   const [isUpdating, setIsUpdating] = useState<string | null>(null);
   const [couponCode, setCouponCode] = useState("");
-  const { addToCheckout } = useCheckoutStore();
+  const { syncCheckout } = useCheckoutStore.getState();
   const [offerProducts, setOfferProducts] = useState<any[]>([]);
   const [isFetchingOffers, setIsFetchingOffers] = useState(false);
   const [effectiveRange, setEffectiveRange] = useState<string | null>(null);
@@ -302,113 +294,45 @@ const CartPage: React.FC = ({ initialCartItems }: any) => {
     }
   };
 
-  // const handleApplyCoupon = async () => {
-  //   if (!couponCode) {
-  //     showFancyToast({
-  //       title: "Sorry, Something Went Wrong",
-  //       message: `Please enter a coupon code.`,
-  //       type: "error",
-  //     });
-  //     return;
-  //   }
-  //   await applyCoupon(couponCode);
-  //   const { couponStatus: status, coupon } = useCartStore.getState();
-  //   if (status === "applied" && coupon) {
-  //     showFancyToast({
-  //       title: "Coupon Applied Successfully",
-  //       message: `Coupon ${coupon.code} applied (${
-  //         coupon.type === "amount"
-  //           ? formatCurrency(coupon.value)
-  //           : `${coupon.value}%`
-  //       })`,
-  //       type: "success",
-  //     });
-  //   } else if (status === "invalid") {
-  //     showFancyToast({
-  //       title: "Sorry, Something Went Wrong",
-  //       message: `Invalid coupon code.`,
-  //       type: "error",
-  //     });
-  //   } else if (status === "invalid_amount") {
-  //     showFancyToast({
-  //       title: "Sorry, Something Went Wrong",
-  //       message: `Coupon has an invalid discount value.`,
-  //       type: "error",
-  //     });
-  //   } else if (status === "expired") {
-  //     showFancyToast({
-  //       title: "Sorry, Something Went Wrong",
-  //       message: `Coupon has expired.`,
-  //       type: "error",
-  //     });
-  //   } else if (status === "used") {
-  //     showFancyToast({
-  //       title: "Sorry, Something Went Wrong",
-  //       message: `Coupon has already been used.`,
-  //       type: "error",
-  //     });
-  //   }
-  //   setCouponCode("");
-  // };
-
   const handleCheckout = async () => {
     if (!isLoggedIn || !user?.id) {
-      showFancyToast({
-        title: "Sorry, Something Went Wrong",
-        message: `Please log in to proceed to checkout.`,
-        type: "error",
-      });
       router.push("/signin");
       return;
     }
 
-    if (cartItems.length === 0) {
+    if (!cartItems.length) {
       showFancyToast({
-        title: "Sorry, Something Went Wrong",
-        message: `Your cart is empty. Please add items to proceed to checkout.`,
+        title: "Cart Empty",
+        message: "Please add items to cart",
         type: "error",
       });
       return;
     }
 
     try {
-      for (const item of cartItems) {
+      const checkoutItemsPayload = cartItems.map((item) => {
         const itemPrice = Number(item.variant.ourPrice) || 0;
         const offerPrice = item.cartOfferProductId
           ? Number(item.offerProductPrice) || 0
           : 0;
-        const totalPrice = item.cartOfferProductId
-          ? itemPrice * item.quantity + offerPrice
-          : itemPrice * item.quantity;
-        if (isNaN(totalPrice)) {
-          throw new Error(`Invalid price for item ${item.productId}`);
-        }
-        await addToCheckout({
-          userId: user.id,
+
+        return {
           productId: item.productId,
           variantId: item.variantId,
-          totalPrice,
-          quantity: item.quantity,
+          quantity: item.cartOfferProductId ? 1 : item.quantity,
+          totalPrice: itemPrice * item.quantity + offerPrice,
           cartOfferProductId: item.cartOfferProductId,
-        });
-      }
-
-      showFancyToast({
-        title: "Items Added to Checkout",
-        message: `Items added to checkout successfully.`,
-        type: "success",
+        };
       });
-      router.push(
-        coupon && couponStatus === "applied" && coupon.value != null
-          ? `/checkout?coupon=${coupon.code}&discountType=${coupon.type}&discountValue=${coupon.value}`
-          : "/checkout"
-      );
+
+      await syncCheckout(user.id, checkoutItemsPayload);
+
+      router.push("/checkout");
       await clearCart();
-    } catch (error) {
-      console.error("Error during checkout:", error);
+    } catch (err) {
       showFancyToast({
-        title: "Failed to Proceed to Checkout",
-        message: `Please try again.`,
+        title: "Checkout Failed",
+        message: "Please try again",
         type: "error",
       });
     }
@@ -643,61 +567,6 @@ const CartPage: React.FC = ({ initialCartItems }: any) => {
                 Order Summary
               </h2>
               <div className="space-y-4">
-                {/* <div>
-                    <label htmlFor="coupon" className="block text-sm font-medium text-gray-700 mb-1">
-                      Coupon Code
-                    </label>
-                    <div className="flex gap-2">
-                      <input
-                        id="coupon"
-                        type="text"
-                        value={couponCode}
-                        onChange={(e) => setCouponCode(e.target.value)}
-                        placeholder="Enter coupon code"
-                        className="flex-1 border border-gray-300 rounded-md px-4 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary"
-                        disabled={couponStatus === 'applied'}
-                      />
-                      {coupon && couponStatus === 'applied' ? (
-                        <button
-                          onClick={removeCoupon}
-                          className="bg-red-500 text-white px-4 py-2 rounded-md hover:bg-red-600 transition-colors text-sm font-medium"
-                        >
-                          Remove
-                        </button>
-                      ) : (
-                        <button
-                          onClick={handleApplyCoupon}
-                          className="bg-primary text-white px-4 py-2 rounded-md hover:bg-primary-HOVER transition-colors text-sm font-medium"
-                        >
-                          Apply
-                        </button>
-                      )}
-                    </div>
-                    {couponStatus === 'applied' && coupon && (
-                      <p className="text-sm text-green-600 mt-2">
-                        Coupon {coupon.code} applied (
-                        {coupon.type === 'amount'
-                          ? formatCurrency(coupon.value)
-                          : coupon.value != null
-                          ? `${coupon.value}%`
-                          : 'Invalid discount'}
-                        )
-                      </p>
-                    )}
-                    {couponStatus === 'invalid' && (
-                      <p className="text-sm text-red-600 mt-2">Invalid coupon code</p>
-                    )}
-                    {couponStatus === 'invalid_amount' && (
-                      <p className="text-sm text-red-600 mt-2">Coupon has an invalid discount value</p>
-                    )}
-                    {couponStatus === 'used' && (
-                      <p className="text-sm text-red-600 mt-2">Coupon has already been used</p>
-                    )}
-                    {couponStatus === 'expired' && (
-                      <p className="text-sm text-red-600 mt-2">Coupon has expired</p>
-                    )}
-                  </div> */}
-
                 <div className="space-y-2">
                   <div className="flex justify-between text-sm">
                     <span className="text-gray-600">

@@ -72,7 +72,12 @@ interface CheckoutItem {
   createdAt: string;
   updatedAt: string;
   product: { shortName: string; brand: string; deliveryMode: string };
-  variant: { name: string; ourPrice: number; mrp: number; productImages: ProductImage[] };
+  variant: {
+    name: string;
+    ourPrice: number;
+    mrp: number;
+    productImages: ProductImage[];
+  };
 }
 
 interface Coupon {
@@ -81,6 +86,21 @@ interface Coupon {
   value: number;
   couponId: string;
   couponType: "individual" | "special";
+}
+
+export interface CouponCheckoutItem {
+  productId: string;
+  variantId: string;
+  quantity: number;
+  variant: {
+    ourPrice: string;
+    mrp: string;
+  };
+  cartOfferProductId?: string;
+  offerProductPrice?: string;
+  offerProduct?: {
+    ourPrice: string;
+  };
 }
 
 export type CouponStatus =
@@ -122,12 +142,16 @@ interface CartState {
   ) => Promise<void>;
   removeFromCart: (productId: string, variantId: string) => Promise<void>;
   clearCart: () => Promise<void>;
-  applyCoupon: (code: string, checkoutItems: CheckoutItem[]) => Promise<void>;
+  applyCoupon: (
+    code: string,
+    checkoutItems: CouponCheckoutItem[]
+  ) => Promise<void>;
+  getCheckoutSubtotal: (items: CouponCheckoutItem[]) => number;
+
   removeCoupon: () => void;
   markCouponUsed: (code: string) => Promise<void>;
   clearCoupon: () => void;
   getCartSubtotal: () => number;
-  getCheckoutSubtotal: (items: CheckoutItem[]) => number;
   getCartTotal: () => number;
   getItemCount: () => number;
   getSavings: () => number;
@@ -543,8 +567,6 @@ export const useCartStore = create<CartState>((set, get) => ({
     if (get().loading) return;
 
     const subtotal = get().getCheckoutSubtotal(checkoutItems);
-
-    console.log("Coupon subtotal:", subtotal);
 
     if (subtotal <= 0) {
       set({ couponStatus: "invalid_amount" });

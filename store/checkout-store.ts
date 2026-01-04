@@ -1,39 +1,38 @@
-'use client';
+"use client";
 
-import { create } from 'zustand';
-import { produce } from 'immer';
-import { fetchWithRetry, logError, AppError } from './store-utils';
-import { ProductImage } from '@/types/product';
+import { create } from "zustand";
+import { fetchWithRetry, logError, AppError } from "./store-utils";
 
 interface CheckoutItem {
-  [x: string]: any;
-  userId: string;
+  id: string;
   productId: string;
   variantId: string;
-  cartOfferProductId: string;
-  offerProduct: any;
+  cartOfferProductId?: string;
   quantity: number;
   totalPrice: number;
-  createdAt: string;
-  updatedAt: string;
-  product: { shortName: string; brand: string; deliveryMode: string };
-  variant: { name: string; ourPrice: number; mrp: number; productImages: ProductImage[] };
+  product: any;
+  variant: any;
+  offerProduct?: any;
+  offerProductPrice?: string;
 }
 
 interface CheckoutState {
   checkoutItems: CheckoutItem[];
+  checkoutSessionId: string | null;
   isLoading: boolean;
   error: AppError | null;
   lastFetched: number | null;
+
   fetchCheckoutItems: (userId: string) => Promise<void>;
   addToCheckout: (item: {
     userId: string;
     productId: string;
     variantId: string;
-    totalPrice: number;
     quantity: number;
+    totalPrice: number;
     cartOfferProductId?: string;
   }) => Promise<void>;
+  syncCheckout: (userId: string, items: any[]) => Promise<void>;
   removeFromCheckout: (id: string, userId: string) => Promise<void>;
   clearCheckout: (userId: string) => Promise<void>;
   setError: (error: AppError | null) => void;
@@ -41,78 +40,140 @@ interface CheckoutState {
 
 export const useCheckoutStore = create<CheckoutState>((set, get) => ({
   checkoutItems: [],
+  checkoutSessionId: null,
   isLoading: false,
   error: null,
   lastFetched: null,
-  fetchCheckoutItems: async (userId) => {
+
+  /* 🔒 Ensure checkout session always exists */
+  async fetchCheckoutItems(userId) {
     try {
-      const response = await fetch(`/api/checkout?userId=${userId}`, {
-        headers: { 'Content-Type': 'application/json' },
-        credentials: 'include',
+      set({ isLoading: true });
+
+      // 🔥 FETCH ONLY — do NOT create
+      const sessionRes = await fetch(`/api/checkout/session?userId=${userId}`);
+      const session = await sessionRes.json();
+
+      if (!session) {
+        // No session → user came directly → bounce
+        set({ checkoutItems: [] });
+        return;
+      }
+
+      set({ checkoutSessionId: session.id });
+
+      const res = await fetch(`/api/checkout?userId=${userId}`);
+      const data = await res.json();
+
+      set({
+        checkoutItems: data,
+        isLoading: false,
       });
-      if (!response.ok) throw new Error('Failed to fetch checkout items');
-      const data = await response.json();
-      // console.log('Fetched checkout items:', data); // Log the API response
-      set({ checkoutItems: data });
-    } catch (error) {
-      console.error('Error fetching checkout items:', error);
-      set({ checkoutItems: [] }); // Ensure state is not corrupted
+    } catch {
+      set({ checkoutItems: [], isLoading: false });
     }
   },
-  addToCheckout: async (item) => {
-    const optimisticItem = { ...item, createdAt: new Date().toISOString(), updatedAt: new Date().toISOString() };
-    set(
-      produce((state: CheckoutState) => {
-        state.checkoutItems.push(optimisticItem as CheckoutItem);
-        state.isLoading = true;
-      })
-    );
 
+  /* Used only if UI directly adds single item */
+  async addToCheckout(item) {
     try {
+      set({ isLoading: true });
+
       await fetchWithRetry(() =>
-        fetch('/api/checkout', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
+        fetch("/api/checkout", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
           body: JSON.stringify(item),
         })
       );
+
       await get().fetchCheckoutItems(item.userId);
-      set({ isLoading: false }); // Ensure loading state is reset
     } catch (error) {
-      logError('addToCheckout', error);
-      set(
-        produce((state: CheckoutState) => {
-          state.checkoutItems = state.checkoutItems.filter((i) => i.variantId !== item.variantId);
-          state.error = error as AppError;
-          state.isLoading = false;
+      logError("addToCheckout", error);
+      set({ error: error as AppError });
+    } finally {
+      set({ isLoading: false });
+    }
+  },
+
+  /* ✅ THIS IS WHAT CartPage USES */
+  async syncCheckout(userId, items) {
+    try {
+      set({ isLoading: true });
+
+      // Ensure session
+      const sessionRes = await fetch("/api/checkout/session", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ userId }),
+      });
+
+      if (!sessionRes.ok) {
+        throw new Error("Failed to create checkout session");
+      }
+
+      const session = await sessionRes.json();
+      set({ checkoutSessionId: session.id });
+
+      // Add all items (backend enforces uniqueness)
+      for (const item of items) {
+        await fetch("/api/checkout", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            userId,
+            ...item,
+          }),
+        });
+      }
+
+      // Fetch final checkout
+      await get().fetchCheckoutItems(userId);
+    } catch (error) {
+      logError("syncCheckout", error);
+      set({ error: error as AppError });
+      throw error;
+    } finally {
+      set({ isLoading: false });
+    }
+  },
+
+  async removeFromCheckout(id, userId) {
+    try {
+      set({ isLoading: true });
+
+      await fetchWithRetry(() =>
+        fetch(`/api/checkout?id=${id}&userId=${userId}`, {
+          method: "DELETE",
         })
       );
-    }
-  },
-  removeFromCheckout: async (id: string, userId: string) => {
-    const currentItems = get().checkoutItems;
-    set(
-      produce((state: CheckoutState) => {
-        state.checkoutItems = state.checkoutItems.filter((item) => item.variantId !== id);
-        state.isLoading = true;
-      })
-    );
 
-    try {
-      await fetchWithRetry(() => fetch(`/api/checkout?id=${id}&userId=${userId}`, { method: 'DELETE' }));
+      await get().fetchCheckoutItems(userId);
+    } catch (error) {
+      logError("removeFromCheckout", error);
+      set({ error: error as AppError });
+    } finally {
       set({ isLoading: false });
-    } catch (error) {
-      logError('removeFromCheckout', error);
-      set({ checkoutItems: currentItems, error: error as AppError, isLoading: false });
     }
   },
-  clearCheckout: async (userId: string) => {
+
+  async clearCheckout(userId) {
     try {
-      await fetchWithRetry(() => fetch(`/api/checkout/clear?userId=${userId}`, { method: 'DELETE' }));
+      await fetch(`/api/checkout/session?userId=${userId}`, {
+        method: "DELETE",
+      });
+
+      set({
+        checkoutItems: [],
+        checkoutSessionId: null,
+      });
     } catch (error) {
-      logError('clearCheckout', error);
-      set({ error: error as AppError, isLoading: false });
+      logError("clearCheckout", error);
+      set({ error: error as AppError });
     }
   },
-  setError: (error) => set({ error }),
+
+  setError(error) {
+    set({ error });
+  },
 }));

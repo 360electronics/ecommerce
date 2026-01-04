@@ -3,6 +3,11 @@ import { fetchWithRetry } from "@/store/store-utils";
 import { Banner } from "@/types/banner";
 import { Product } from "@/store/types";
 
+/* ---------------------------------------------
+   ISR CONFIG (VERY IMPORTANT)
+--------------------------------------------- */
+export const revalidate = 300; // 5 minutes
+
 // SEO
 export const metadata = {
   title: "360 Electronics - Shop the Latest Products",
@@ -18,24 +23,36 @@ export const metadata = {
 
 async function fetchHomeData() {
   try {
-    const baseUrl = process.env.NEXT_PUBLIC_API_BASE_URL;
+    const baseUrl = process.env.NEXT_PUBLIC_API_BASE_URL!;
     const headers = { "x-super-secure-key": process.env.API_SECRET_KEY! };
 
+    /* ---------------------------------------------
+       PARALLEL FETCH (CACHED)
+    --------------------------------------------- */
     const [bannerResponse, featuredProducts, newArrivals, gamersZoneProducts] =
       await Promise.all([
         // 🧱 Banners
         fetchWithRetry<{ data: Banner[] }>(() =>
-          fetch(`${baseUrl}/api/banner`, { headers })
+          fetch(`${baseUrl}/api/banner`, {
+            headers,
+            next: { revalidate: 300 },
+          })
         ).then((res) => res?.data || []),
 
         // 💥 Offer Zone
         fetchWithRetry<Product[]>(() =>
-          fetch(`${baseUrl}/api/products/offer-zone`, { headers })
+          fetch(`${baseUrl}/api/products/offer-zone`, {
+            headers,
+            next: { revalidate: 300 },
+          })
         ).then((res) => res || []),
 
         // 🆕 New Arrivals
         fetchWithRetry<Product[]>(() =>
-          fetch(`${baseUrl}/api/products/new-arrivals`, { headers })
+          fetch(`${baseUrl}/api/products/new-arrivals`, {
+            headers,
+            next: { revalidate: 300 },
+          })
         ).then((res) => res || []),
 
         // 🎮 Gamers Zone
@@ -45,7 +62,10 @@ async function fetchHomeData() {
           laptops: Product[];
           "steering-chairs": Product[];
         }>(() =>
-          fetch(`${baseUrl}/api/products/gamers-zone`, { headers })
+          fetch(`${baseUrl}/api/products/gamers-zone`, {
+            headers,
+            next: { revalidate: 300 },
+          })
         ).then((res) => ({
           consoles: res?.consoles || [],
           accessories: res?.accessories || [],
@@ -54,6 +74,9 @@ async function fetchHomeData() {
         })),
       ]);
 
+    /* ---------------------------------------------
+       BRAND PRODUCTS (SEQUENTIAL BUT CACHED)
+    --------------------------------------------- */
     const brands = ["asus", "hp", "dell", "apple", "acer"];
     const brandProducts: { brand: string; products: Product[] }[] = [];
 
@@ -61,33 +84,33 @@ async function fetchHomeData() {
       try {
         const response = await fetch(
           `${baseUrl}/api/products/brands?brand=${brand}&category=laptops`,
-          { headers, cache: "no-store" } // no-cache ensures freshness
+          {
+            headers,
+            next: { revalidate: 300 }, // ✅ CACHED
+          }
         );
+
         const json = await response.json();
-        // console.log(
-        //   `✅ Brand Products API → ${brand} (${
-        //     json?.data?.length || 0
-        //   } products)`
-        // );
-        brandProducts.push({ brand, products: json?.data || [] });
+        brandProducts.push({
+          brand,
+          products: json?.data || [],
+        });
       } catch (err) {
         console.error(`⚠️ Brand fetch failed for ${brand}:`, err);
         brandProducts.push({ brand, products: [] });
       }
     }
 
-    // 🧠 Debug Summary
-    // console.log("📦 Final brandProducts shape:", brandProducts);
-
     return {
       banners: bannerResponse,
       featuredProducts,
       newArrivals,
       gamersZoneProducts,
-      brandProducts: brandProducts,
+      brandProducts,
     };
   } catch (error) {
-    console.error("[fetchHomeData] Error fetching home data:", error);
+    console.error("[fetchHomeData] Error:", error);
+
     return {
       banners: [],
       featuredProducts: [],
@@ -103,6 +126,9 @@ async function fetchHomeData() {
   }
 }
 
+/* ---------------------------------------------
+   PAGE
+--------------------------------------------- */
 export default async function Home() {
   const initialData = await fetchHomeData();
   return <HomeContent initialData={initialData} />;
