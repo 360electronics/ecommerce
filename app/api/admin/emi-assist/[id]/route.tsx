@@ -3,10 +3,10 @@ import { db } from "@/db/drizzle";
 import { emiAssistRequests, variants } from "@/db/schema";
 import { eq } from "drizzle-orm";
 
-export async function GET(
-  _req: Request,
-  { params }: { params: { id: string } }
-) {
+type params = Promise<{ id: string }>;
+
+export async function GET(_req: Request, { params }: { params: params }) {
+  const { id } = await params;
   try {
     const [lead] = await db
       .select({
@@ -24,7 +24,7 @@ export async function GET(
       })
       .from(emiAssistRequests)
       .leftJoin(variants, eq(variants.id, emiAssistRequests.variantId))
-      .where(eq(emiAssistRequests.id, params.id));
+      .where(eq(emiAssistRequests.id, id));
 
     if (!lead) {
       return NextResponse.json(
@@ -43,20 +43,14 @@ export async function GET(
   }
 }
 
-
-export async function PATCH(
-  req: Request,
-  { params }: { params: { id: string } }
-) {
+export async function PATCH(req: Request, { params }: { params: params }) {
+  const { id } = await params;
   try {
     const body = await req.json();
     const { status, notes } = body;
 
     if (!status && !notes) {
-      return NextResponse.json(
-        { error: "Nothing to update" },
-        { status: 400 }
-      );
+      return NextResponse.json({ error: "Nothing to update" }, { status: 400 });
     }
 
     await db
@@ -66,7 +60,7 @@ export async function PATCH(
         notes: notes ?? undefined,
         updatedAt: new Date(),
       })
-      .where(eq(emiAssistRequests.id, params.id));
+      .where(eq(emiAssistRequests.id, id));
 
     return NextResponse.json({ success: true });
   } catch (err) {
@@ -78,15 +72,10 @@ export async function PATCH(
   }
 }
 
-
-export async function DELETE(
-  _req: Request,
-  { params }: { params: { id: string } }
-) {
+export async function DELETE(_req: Request, { params }: { params: params }) {
+  const { id } = await params;
   try {
-    await db
-      .delete(emiAssistRequests)
-      .where(eq(emiAssistRequests.id, params.id));
+    await db.delete(emiAssistRequests).where(eq(emiAssistRequests.id, id));
 
     return NextResponse.json({ success: true });
   } catch (err) {
