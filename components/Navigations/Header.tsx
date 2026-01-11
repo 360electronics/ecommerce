@@ -472,7 +472,7 @@ const Header = ({ isCategory = true }: HeaderProps) => {
             </button>
             <Link href="/" className="flex-shrink-0">
               <img
-                src="/logo/360_logo.png"
+                src="/logo/360_logo.PNG"
                 alt="Computer 360 Logo"
                 width={150}
                 height={150}

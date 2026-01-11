@@ -202,7 +202,7 @@ function SignupForm({ referralCode = "", callbackUrl = "/" }) {
           {/* Logo */}
           <div className="flex justify-center">
             <img
-              src="/logo/360_logo.png"
+              src="/logo/360_logo.PNG"
               alt="Computer Garage Logo"
               width={180}
               height={54}

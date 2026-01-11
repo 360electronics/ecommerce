@@ -147,7 +147,7 @@ export default function Layout({ children }: AdminLayoutProps) {
           <div className="flex items-center justify-between px-4 py-4">
             <Link href={"/"} className="flex-1 text-center mx-auto">
               <img
-                src="/logo/360_logo.png"
+                src="/logo/360_logo.PNG"
                 alt="Computer Garage Logo"
                 width={200}
                 height={50}
