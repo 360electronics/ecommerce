@@ -22,6 +22,7 @@ import {
   Tag,
   StoreIcon,
   TicketPercent,
+  CreditCard,
 } from "lucide-react";
 import Breadcrumbs from "@/components/Reusable/BreadScrumb";
 import { useAuthStore } from "@/store/auth-store";
@@ -82,6 +83,7 @@ export default function Layout({ children }: AdminLayoutProps) {
     { name: "Products", path: "/admin/products", icon: Package },
     { name: "Users", path: "/admin/users", icon: Users },
     { name: "Orders", path: "/admin/orders", icon: ShoppingBag },
+    { name: "EMI Enquiry", path: "/admin/emi-enquiry", icon: CreditCard },
     { name: "Tickets", path: "/admin/tickets", icon: Ticket },
     { name: "Coupons", path: "/admin/coupons", icon: TicketPercent },
     { name: "Offer Zone", path: "/admin/offer-zone", icon: Heart },

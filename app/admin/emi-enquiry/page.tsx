@@ -20,7 +20,7 @@ import { cn } from "@/lib/utils";
 
 /* ---------------- TYPES ---------------- */
 
-export interface EmiAssistAdminRow {
+interface EmiAssistAdminRow {
   id: string;
   name: string;
   phone: string;
@@ -55,7 +55,7 @@ async function updateStatus(id: string, status: EmiAssistAdminRow["status"]) {
 
 /* ---------------- COLUMNS ---------------- */
 
-export const emiColumns: ColumnDefinition<EmiAssistAdminRow>[] = [
+const emiColumns: ColumnDefinition<EmiAssistAdminRow>[] = [
   {
     key: "name",
     header: "Customer",
