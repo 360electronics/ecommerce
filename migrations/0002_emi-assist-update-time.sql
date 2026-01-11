@@ -1,0 +1,1 @@
+ALTER TABLE "emi_assist_requests" ADD COLUMN "updated_at" timestamp DEFAULT now();

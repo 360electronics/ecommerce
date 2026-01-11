@@ -19,7 +19,6 @@ interface ErrorResponse {
 export async function POST(req: Request) {
   try {
     const body = await req.json();
-    console.log("CREATE ORDER BODY:", body);
 
     const {
       userId,
@@ -31,8 +30,8 @@ export async function POST(req: Request) {
       shippingAmount,
       deliveryMode,
       paymentMethod,
-      paymentStatus,
-      status,
+      paymentStatus = "pending",
+      status = "pending",
     } = body;
 
     if (!userId || !checkoutSessionId || !addressId) {
@@ -42,47 +41,17 @@ export async function POST(req: Request) {
       );
     }
 
-    /* 1️⃣ If order already exists → return it (IDEMPOTENT) */
-    const existing = await db
-      .select()
-      .from(orders)
-      .where(eq(orders.checkoutSessionId, checkoutSessionId))
-      .limit(1);
-
-    if (existing[0]) {
-      return NextResponse.json(existing[0], { status: 200 });
-    }
-
-    /* 2️⃣ Lock checkout session */
-    const locked = await db
-      .update(checkoutSessions)
-      .set({ lockedAt: new Date(), status: "converted" })
-      .where(
-        and(
-          eq(checkoutSessions.id, checkoutSessionId),
-          eq(checkoutSessions.userId, userId),
-          eq(checkoutSessions.status, "active")
-        )
-      );
-
-    if (!locked.rowCount) {
-      return NextResponse.json(
-        { error: "Checkout already converted or expired" },
-        { status: 409 }
-      );
-    }
-
-    /* 3️⃣ Load checkout items */
+    /* 1️⃣ Load checkout items */
     const items = await db
       .select()
       .from(checkout)
       .where(eq(checkout.checkoutSessionId, checkoutSessionId));
 
     if (items.length === 0) {
-      return NextResponse.json({ error: "Checkout is empty" }, { status: 400 });
+      return NextResponse.json({ error: "Checkout empty" }, { status: 400 });
     }
 
-    /* 4️⃣ Create order */
+    /* 2️⃣ CREATE ORDER (ALWAYS) */
     const [order] = await db
       .insert(orders)
       .values({
@@ -100,7 +69,7 @@ export async function POST(req: Request) {
       })
       .returning();
 
-    /* 5️⃣ Insert order items */
+    /* 3️⃣ Insert order items */
     await db.insert(orderItems).values(
       items.map((item) => ({
         orderId: order.id,
@@ -112,15 +81,22 @@ export async function POST(req: Request) {
       }))
     );
 
+    /* 4️⃣ LOCK checkout session (AFTER order exists) */
+    await db
+      .update(checkoutSessions)
+      .set({ lockedAt: new Date(), status: "converted" })
+      .where(eq(checkoutSessions.id, checkoutSessionId));
+
     return NextResponse.json(order, { status: 201 });
-  } catch (error) {
-    console.error("Order creation failed:", error);
+  } catch (err) {
+    console.error("ORDER CREATE FAILED", err);
     return NextResponse.json(
       { error: "Failed to create order" },
       { status: 500 }
     );
   }
 }
+
 
 export async function GET(request: Request) {
   try {

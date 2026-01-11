@@ -104,7 +104,7 @@ export default function Orders() {
                     <h3 className="text-lg font-medium text-gray-900">
                       Order #{order.id.substring(0, 8)}
                     </h3>
-                    <p className="text-sm text-gray-500 mt-1">{formatDate(order.orderDate)}</p>
+                    <p className="text-sm text-gray-500 mt-1">{formatDate(order.createdAt)}</p>
                   </div>
                   <div className="flex space-x-2">
                     <span

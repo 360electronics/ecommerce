@@ -1,0 +1,4 @@
+-- Baseline migration
+-- This migration represents the current database state.
+-- All tables already exist in Neon.
+-- No SQL should be executed here.

@@ -9,6 +9,7 @@ import {
   Package,
   Phone,
   MapPin,
+  ChevronRight,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useRouter, usePathname } from "next/navigation";
@@ -21,6 +22,7 @@ import { useAuthStore } from "@/store/auth-store";
 import { ProductVariant, FlattenedProduct } from "@/types/product";
 import { refetchCart, refetchWishlist } from "@/app/provider";
 import { showFancyToast } from "@/components/Reusable/ShowCustomToast";
+import { X, CreditCard } from "lucide-react";
 
 interface ProductDetailsContentProps {
   className?: string;
@@ -55,6 +57,14 @@ export default function ProductDetailsContent({
   const [district, setDistrict] = useState<string | null>(null);
   const inputRef = useRef<HTMLInputElement>(null); // Add ref for input focus
   const userId = user?.id;
+
+  const [isEmiOpen, setIsEmiOpen] = useState(false);
+  const [emiName, setEmiName] = useState("");
+  const [emiPhone, setEmiPhone] = useState("");
+  const [emiEmail, setEmiEmail] = useState("");
+  const [emiPan, setEmiPan] = useState("");
+  const [emiBank, setEmiBank] = useState<"HDFC" | "ICICI" | "BAJAJ" | null>("HDFC");
+  const [isSubmittingEmi, setIsSubmittingEmi] = useState(false);
 
   // Debounce function to limit rapid API calls
   const debounce = (func: (...args: any[]) => void, wait: number) => {
@@ -595,95 +605,122 @@ export default function ProductDetailsContent({
 
   // Handle buy now click
   const handleBuyNowClick = async (e: React.MouseEvent) => {
-  e.preventDefault();
-  e.stopPropagation();
+    e.preventDefault();
+    e.stopPropagation();
 
-  if (!userId) {
-    showFancyToast({
-      title: "Login Required",
-      message: "Please login to continue",
-      type: "error",
-    });
-    router.push(`/signin?callbackUrl=${encodeURIComponent(pathname)}`);
-    return;
-  }
-
-  if (!activeVariant) {
-    showFancyToast({
-      title: "Variant unavailable",
-      message: "Please select a valid variant",
-      type: "error",
-    });
-    return;
-  }
-
-  if (activeVariant.stock < quantity && !activeVariant.isBackorderable) {
-    showFancyToast({
-      title: "Out of stock",
-      message: `Only ${activeVariant.stock} items available`,
-      type: "error",
-    });
-    return;
-  }
-
-  setIsAddingToCart(true);
-
-  try {
-    /* ---------------------------------------------
-       1️⃣ ENSURE CHECKOUT SESSION
-    --------------------------------------------- */
-    const sessionRes = await fetch("/api/checkout/session", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ userId }),
-    });
-
-    if (!sessionRes.ok) {
-      throw new Error("Failed to create checkout session");
+    if (!userId) {
+      showFancyToast({
+        title: "Login Required",
+        message: "Please login to continue",
+        type: "error",
+      });
+      router.push(`/signin?callbackUrl=${encodeURIComponent(pathname)}`);
+      return;
     }
 
-    /* ---------------------------------------------
-       2️⃣ CLEAR EXISTING CHECKOUT ITEMS
-    --------------------------------------------- */
-    await fetch(`/api/checkout/clear?userId=${userId}`, {
-      method: "DELETE",
-    });
-
-    /* ---------------------------------------------
-       3️⃣ INSERT SINGLE CHECKOUT ITEM
-    --------------------------------------------- */
-    const checkoutRes = await fetch("/api/checkout", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        userId,
-        productId: activeVariant.productId,
-        variantId: activeVariant.id,
-        quantity,
-        totalPrice: Number(activeVariant.ourPrice) * quantity,
-      }),
-    });
-
-    if (!checkoutRes.ok) {
-      throw new Error("Failed to add item to checkout");
+    if (!activeVariant || !product) {
+      showFancyToast({
+        title: "Variant unavailable",
+        message: "Please select a valid variant",
+        type: "error",
+      });
+      return;
     }
 
-    /* ---------------------------------------------
-       4️⃣ GO TO CHECKOUT
-    --------------------------------------------- */
-    router.push("/checkout");
-  } catch (err) {
-    console.error(err);
-    showFancyToast({
-      title: "Checkout failed",
-      message: "Unable to proceed. Please try again.",
-      type: "error",
-    });
-  } finally {
-    setIsAddingToCart(false);
-  }
-};
+    if (activeVariant.stock < quantity && !activeVariant.isBackorderable) {
+      showFancyToast({
+        title: "Out of stock",
+        message: `Only ${activeVariant.stock} items available`,
+        type: "error",
+      });
+      return;
+    }
 
+    setIsAddingToCart(true);
+
+    try {
+      // 1️⃣ Add to cart
+      await addToCart(activeVariant.productId, activeVariant.id, quantity);
+
+      router.push("/cart");
+
+      // 2️⃣ Refresh cart state
+      refetchCart();
+
+      showFancyToast({
+        title: "Added to Cart",
+        message: `${product.name} added to cart.`,
+        type: "success",
+      });
+
+      // 3️⃣ Go to cart page
+    } catch (error) {
+      showFancyToast({
+        title: "Error",
+        message: "Unable to add item to cart. Please try again.",
+        type: "error",
+      });
+    } finally {
+      setIsAddingToCart(false);
+    }
+  };
+
+  const handleEmiSubmit = async () => {
+    if (!emiName.trim() || emiPhone.length !== 10) {
+      showFancyToast({
+        title: "Invalid details",
+        message: "Name and valid phone number are required",
+        type: "error",
+      });
+      return;
+    }
+
+    try {
+      setIsSubmittingEmi(true);
+
+      const res = await fetch("/api/emi-assist", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          productId: activeVariant.productId,
+          variantId: activeVariant.id,
+          price: activeVariant.ourPrice, // ✅ ADD THIS
+          bankPreference: emiBank, // ✅ RENAME THIS
+          name: emiName.trim(),
+          phone: emiPhone,
+          email: emiEmail || undefined,
+          pan: emiPan || undefined,
+        }),
+      });
+
+      if (!res.ok) {
+        const err = await res.json();
+        throw new Error(err?.error || "Failed to submit EMI request");
+      }
+
+      setEmiName("");
+      setEmiPhone("");
+      setEmiEmail("");
+      setEmiPan("");
+      setEmiBank(null);
+
+      showFancyToast({
+        title: "Request submitted 🎉",
+        message: "Our EMI team will contact you shortly",
+        type: "success",
+      });
+
+      setIsEmiOpen(false);
+    } catch (err: any) {
+      showFancyToast({
+        title: "Submission failed",
+        message: err.message,
+        type: "error",
+      });
+    } finally {
+      setIsSubmittingEmi(false);
+    }
+  };
 
   // Handle attribute selection effect
   useEffect(() => {
@@ -748,7 +785,6 @@ export default function ProductDetailsContent({
   ) {
     return (
       <div className={cn("p-6 bg-white rounded-xl shadow-lg", className)}>
-
         <div className="flex items-center justify-end mb-4">
           <button
             onClick={handleShare}
@@ -804,6 +840,189 @@ export default function ProductDetailsContent({
       )}
     </div>
   );
+
+  const EmiBanner = ({ onOpen }: { onOpen: () => void }) => (
+    <div
+      onClick={onOpen}
+      className="my-4 p-4 cursor-pointer rounded-xl border border-primary/20 bg-gradient-to-r from-primary/10 to-orange-50"
+    >
+      <div className="flex items-start justify-between gap-4">
+        <div className="flex items-start gap-3">
+          <Shield className="w-6 h-6 text-primary mt-0.5" />
+          <div>
+            <p className="text-sm font-semibold text-primary/90">
+              EMI starting from ₹
+              {Math.ceil(activeVariant.ourPrice / 12).toLocaleString()}
+              /month
+            </p>
+            <p className="text-xs text-primary mt-0.5">
+              No Cost EMI available • 3, 6 & 12 months
+            </p>
+
+            {/* Bank Logos */}
+            <div className="flex items-center gap-3 mt-4">
+              <img src="/banks/hdfc.png" alt="HDFC" width={100} />
+              <img src="/banks/bajaj.png" alt="Bajaj Finserv" width={100} />
+              <img src="/banks/icici.webp" alt="ICICI" width={110} />
+            </div>
+          </div>
+        </div>
+
+        <button
+          onClick={onOpen}
+          className="flex items-center cursor-pointer gap-1 text-sm font-medium text-primary hover:text-primary/80"
+        >
+          View options
+          <ChevronRight className="w-4 h-4" />
+        </button>
+      </div>
+    </div>
+  );
+
+  const EmiModal = () => {
+    if (!isEmiOpen) return null;
+
+    return (
+      <div className="fixed inset-0 z-50 flex items-center justify-center">
+        {/* Backdrop */}
+        <div
+          className="absolute inset-0 bg-black/50"
+          onClick={() => setIsEmiOpen(false)}
+        />
+
+        {/* Modal */}
+        <div className="relative bg-white w-full max-w-lg mx-4 rounded-2xl shadow-xl overflow-hidden">
+          {/* Header */}
+          <div className="flex items-center justify-between p-4 border-b">
+            <div className="flex items-center gap-2">
+              <CreditCard className="w-5 h-5 text-primary" />
+              <h3 className="text-lg font-semibold">EMI Options</h3>
+            </div>
+            <button
+              onClick={() => setIsEmiOpen(false)}
+              className="p-1 rounded-full cursor-pointer hover:bg-gray-100"
+            >
+              <X className="w-5 h-5" />
+            </button>
+          </div>
+
+          {/* Content */}
+          <div className="p-4 space-y-4 max-h-[70vh] overflow-y-auto">
+            {/* Banks */}
+            <div className="space-y-2">
+              <p className="text-sm font-medium text-gray-700">
+                Available Banks & NBFCs
+              </p>
+              <div className="flex items-center gap-4">
+                <img src="/banks/hdfc.png" alt="HDFC" width={60} height={28} />
+
+                <img
+                  src="/banks/bajaj.png"
+                  alt="Bajaj Finserv"
+                  width={60}
+                  height={28}
+                />
+                <img
+                  src="/banks/icici.webp"
+                  alt="ICICI"
+                  width={60}
+                  height={28}
+                />
+              </div>
+            </div>
+
+            {/* EMI Info */}
+            <div className="bg-gray-50 rounded-lg p-3 text-sm text-gray-700">
+              <ul className="list-disc pl-5 space-y-1">
+                <li>No Cost EMI on select credit cards</li>
+                <li>Tenure: 3, 6 & 12 months</li>
+                <li>Subject to bank approval</li>
+                <li>Minimum transaction value may apply</li>
+              </ul>
+            </div>
+
+            {/* Lead Form */}
+            <div className="space-y-3">
+              <h4 className="text-sm font-semibold text-gray-900">
+                Get EMI Assistance
+              </h4>
+
+              <input
+                type="text"
+                placeholder="Full Name *"
+                value={emiName}
+                onChange={(e) => setEmiName(e.target.value)}
+                className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm"
+              />
+
+              <input
+                type="tel"
+                placeholder="Phone Number *"
+                maxLength={10}
+                value={emiPhone}
+                onChange={(e) => setEmiPhone(e.target.value.replace(/\D/g, ""))}
+                className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm"
+              />
+
+              <input
+                type="email"
+                placeholder="Email (optional)"
+                value={emiEmail}
+                onChange={(e) => setEmiEmail(e.target.value)}
+                className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm"
+              />
+
+              <input
+                type="text"
+                placeholder="PAN Card (optional)"
+                maxLength={10}
+                value={emiPan}
+                onChange={(e) => setEmiPan(e.target.value.toUpperCase())}
+                className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm uppercase"
+              />
+
+              <div className="flex gap-2">
+                {(["HDFC", "ICICI", "BAJAJ"] as const).map((bank) => (
+                  <button
+                    key={bank}
+                    onClick={() => setEmiBank(bank)}
+                    className={cn(
+                      "px-4 py-2 rounded-lg cursor-pointer text-sm border",
+                      emiBank === bank
+                        ? "bg-primary text-white border-primary"
+                        : "bg-white border-gray-300"
+                    )}
+                  >
+                    {bank}
+                  </button>
+                ))}
+              </div>
+            </div>
+          </div>
+
+          {/* Footer */}
+          <div className="p-4 border-t">
+            <button
+              onClick={handleEmiSubmit}
+              disabled={isSubmittingEmi}
+              className={cn(
+                "w-full py-2.5 rounded-lg cursor-pointer font-semibold text-white",
+                isSubmittingEmi
+                  ? "bg-gray-400 cursor-not-allowed"
+                  : "bg-primary hover:bg-primary-hover"
+              )}
+            >
+              {isSubmittingEmi ? "Submitting..." : "Request EMI Callback"}
+            </button>
+
+            <p className="text-[11px] text-gray-500 mt-2 text-center">
+              By continuing, you agree to be contacted regarding EMI options.
+            </p>
+          </div>
+        </div>
+      </div>
+    );
+  };
 
   const QuantityAndWishlist = () => (
     <div className="flex items-center gap-4 flex-wrap">
@@ -929,7 +1148,6 @@ export default function ProductDetailsContent({
 
   return (
     <div className={cn("p-2 md:p-6 w-full  mx-auto", className)}>
-
       <div className="flex items-center justify-end mb-4 w-full">
         <button
           onClick={handleShare}
@@ -950,46 +1168,9 @@ export default function ProductDetailsContent({
       </div>
 
       <Pricing />
-      <div className=" my-3 md:my-6 bg-white rounded-lg border border-gray-100 p-2 md:p-4">
-        <h3 className="text-sm font-semibold text-gray-900 mb-2 flex items-center gap-2">
-          <MapPin className="w-4 h-4 text-gray-600" /> Check Delivery
-        </h3>
-        <div className="flex items-center gap-2">
-          <input
-            ref={inputRef}
-            inputMode="numeric"
-            pattern="[0-9]*"
-            value={pinCode}
-            onChange={(e) => setPinCode(e.target.value.replace(/\D/g, ""))}
-            placeholder="Enter PIN code"
-            maxLength={6}
-            className="flex-1 border border-gray-300 rounded-lg px-3 py-2 text-sm focus:ring-primary focus:border-primary"
-          />
-          <button
-            onClick={handleCheckDelivery}
-            disabled={isCheckingPin}
-            className="px-4 py-2 text-sm rounded-lg bg-primary text-white hover:bg-primary-hover disabled:opacity-50"
-          >
-            {isCheckingPin ? "Checking..." : "Check"}
-          </button>
-        </div>
 
-        {/* Results */}
-        {pinCodeError && (
-          <p className="text-red-500 text-sm mt-2">{pinCodeError}</p>
-        )}
-        {district && (
-          <p className="text-sm text-gray-700 mt-2">
-            Delivery available to{" "}
-            <span className="font-medium">{district}</span>
-          </p>
-        )}
-        {deliveryEstimate && (
-          <p className="text-sm text-green-600 font-medium mt-1">
-            {deliveryEstimate}
-          </p>
-        )}
-      </div>
+      <EmiBanner onOpen={() => setIsEmiOpen(true)} />
+      <EmiModal />
 
       <div className="my-6 space-y-4">
         {attributeKeys.map((key) => {
@@ -1041,6 +1222,47 @@ export default function ProductDetailsContent({
       </div>
 
       <Actions />
+
+      <div className=" my-3 md:my-6 bg-white rounded-lg border border-gray-100 p-2 md:p-4">
+        <h3 className="text-sm font-semibold text-gray-900 mb-2 flex items-center gap-2">
+          <MapPin className="w-4 h-4 text-gray-600" /> Check Delivery
+        </h3>
+        <div className="flex items-center gap-2">
+          <input
+            ref={inputRef}
+            inputMode="numeric"
+            pattern="[0-9]*"
+            value={pinCode}
+            onChange={(e) => setPinCode(e.target.value.replace(/\D/g, ""))}
+            placeholder="Enter PIN code"
+            maxLength={6}
+            className="flex-1 border border-gray-300 rounded-lg px-3 py-2 text-sm focus:ring-primary focus:border-primary"
+          />
+          <button
+            onClick={handleCheckDelivery}
+            disabled={isCheckingPin}
+            className="px-4 py-2 text-sm rounded-lg bg-primary text-white hover:bg-primary-hover disabled:opacity-50"
+          >
+            {isCheckingPin ? "Checking..." : "Check"}
+          </button>
+        </div>
+
+        {/* Results */}
+        {pinCodeError && (
+          <p className="text-red-500 text-sm mt-2">{pinCodeError}</p>
+        )}
+        {district && (
+          <p className="text-sm text-gray-700 mt-2">
+            Delivery available to{" "}
+            <span className="font-medium">{district}</span>
+          </p>
+        )}
+        {deliveryEstimate && (
+          <p className="text-sm text-green-600 font-medium mt-1">
+            {deliveryEstimate}
+          </p>
+        )}
+      </div>
 
       <div className="mt-6">
         {nonVaryingAttributes.length > 0 && (

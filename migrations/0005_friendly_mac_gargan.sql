@@ -1,1 +1,0 @@
-ALTER TABLE "special_coupons" ADD COLUMN "min_order_amount" numeric DEFAULT '0';

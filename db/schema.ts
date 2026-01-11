@@ -10,4 +10,5 @@ export * from "./schema/cart/cart.schema";
 export * from "./schema/checkout/checkout.schema";
 export * from "./schema/coupons/coupons.schema";
 export * from "./schema/goals/goals.schema";
-export * from "./schema/stores/store.schema"
+export * from "./schema/stores/store.schema";
+export * from "./schema/emi/emi-assist.schema";

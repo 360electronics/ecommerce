@@ -25,7 +25,7 @@ interface Order {
   paymentStatus(paymentStatus: any): unknown;
   paymentMethod: ReactNode;
   id: string;
-  orderDate: string;
+  createdAt: string;
   totalAmount: number;
   status: string;
   items: Array<{
@@ -230,6 +230,8 @@ const fetchOrders = async (userId: string, signal?: AbortSignal) => {
         },
       })
     );
+
+    // console.log("Orders data: ", data)
     return Array.isArray(data) ? data : [];
   } catch (error: any) {
     if (error.status === 401 || error.message.includes("Unauthorized")) {

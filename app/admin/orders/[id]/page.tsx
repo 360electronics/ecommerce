@@ -320,7 +320,7 @@ export default function OrderDetailsPage() {
 
     doc.setFont("helvetica", "normal");
 
-    const logoUrl = "/red-logo.png"; // Replace with your logo
+    const logoUrl = "/logo/360_logo.png"; // Replace with your logo
     doc.addImage(logoUrl, "PNG", leftMargin, 10, 15, 15); // Logo at top-left, 50mm wide, 15mm tall
 
     // Header

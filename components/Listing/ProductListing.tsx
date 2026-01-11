@@ -18,6 +18,13 @@ interface Props {
   currentPage: number;
 }
 
+type SortKey =
+  | "relevance"
+  | "price_asc"
+  | "price_desc"
+  | "rating_desc"
+  | "newest";
+
 export default function ProductListing({
   category,
   searchQuery,
@@ -32,13 +39,24 @@ export default function ProductListing({
 
   const totalPages = Math.ceil(totalCount / pageSize);
 
+  const sort = searchParams.get("sort") || "relevance";
+
+  const handleSortChange = (value: string) => {
+    const params = new URLSearchParams(searchParams.toString());
+    params.set("sort", value);
+    params.delete("page"); // reset pagination on sort change
+
+    window.history.replaceState({}, "", `${pathname}?${params.toString()}`);
+  };
+
   /* ---------------- Filter handler (URL ONLY) ---------------- */
   const handleFilterChange = (filters: Record<string, any>) => {
     const params = new URLSearchParams();
 
     Object.entries(filters).forEach(([key, value]) => {
       if (Array.isArray(value)) {
-        value.forEach((v) => params.append(key, v));
+        value.forEach((v) => params.append(key, v.toString().toLowerCase()));
+
         return;
       }
 
@@ -94,14 +112,28 @@ export default function ProductListing({
       </aside>
 
       <main className="flex-1">
-        <div className="mb-4 text-lg font-medium">{headerText}</div>
+        <div className="flex items-center justify-between mb-4">
+          <div className="text-lg font-medium">{headerText}</div>
 
-        {/* ✅ TRUE empty state */}
+          <select
+            value={sort}
+            onChange={(e) => handleSortChange(e.target.value)}
+            className="border border-gray-300 rounded-md px-3 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-primary"
+          >
+            <option value="relevance">Relevance</option>
+            <option value="newest">Newest Arrivals</option>
+            <option value="price_asc">Price: Low to High</option>
+            <option value="price_desc">Price: High to Low</option>
+            <option value="rating_desc">Customer Rating</option>
+          </select>
+        </div>
+
+        {/* TRUE empty state */}
         {totalCount === 0 && products.length === 0 ? (
           <div className="py-20 text-center">No products found</div>
         ) : (
           <>
-            {/* ✅ Product grid */}
+            {/* Product grid */}
             <div className="grid grid-cols-2 lg:grid-cols-3 gap-4">
               {products.map((p) => (
                 <MemoCard

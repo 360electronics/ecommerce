@@ -143,13 +143,13 @@ export default function Layout({ children }: AdminLayoutProps) {
         <div className="flex h-full flex-col border-r border-gray-200">
           {/* Logo and Close Button */}
           <div className="flex items-center justify-between px-4 py-4">
-            <Link href={"/"} className="flex-1 text-center">
+            <Link href={"/"} className="flex-1 text-center mx-auto">
               <img
-                src="/logo/logo.png"
+                src="/logo/360_logo.png"
                 alt="Computer Garage Logo"
                 width={200}
                 height={50}
-                className="h-auto w-[200px]"
+                className="h-auto w-[100px] "
               />
             </Link>
             <button

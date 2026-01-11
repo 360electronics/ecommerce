@@ -86,6 +86,15 @@ const filterConfig = [
   { id: "brand", title: "Brands", type: "checkbox", enabled: true },
 ] as const;
 
+const normalizeValue = (v: string) =>
+  v
+    .toString()
+    .normalize("NFKD")
+    .replace(/[\u200E\u200F\u00A0]/g, "")
+    .replace(/\s+/g, " ")
+    .trim()
+    .toLowerCase();
+
 const DynamicFilter: React.FC<FilterProps> = ({
   // category,
   products,
@@ -267,7 +276,7 @@ const DynamicFilter: React.FC<FilterProps> = ({
         title: "Brands",
         type: "checkbox",
         options: uniqueBrands.map((brand) => ({
-          id: brand,
+          id: normalizeValue(brand),
           label: formatLabel(brand, "brand"),
           checked: false,
         })),
@@ -300,13 +309,8 @@ const DynamicFilter: React.FC<FilterProps> = ({
       });
 
       // 🔹 Filter valid values (exist in current products)
-      const validValues = Array.from(uniqueNormalized.values()).filter((val) =>
-        products.some(
-          (p) =>
-            p.attributes &&
-            p.attributes[attrKey] &&
-            normalize(p.attributes[attrKey] as string) === normalize(val)
-        )
+      const validValues = Array.from(uniqueNormalized.values()).filter(
+        (v) => v && v.trim()
       );
 
       if (validValues.length > 0) {
@@ -325,7 +329,7 @@ const DynamicFilter: React.FC<FilterProps> = ({
             attrKey.slice(1).replace(/([A-Z])/g, " $1"),
           type: "checkbox",
           options: sortedValues.map((value) => ({
-            id: value.trim(),
+            id: normalizeValue(value),
             label: formatLabel(value, attrKey),
             checked: false,
           })),
@@ -403,7 +407,9 @@ const DynamicFilter: React.FC<FilterProps> = ({
             ...section,
             options: section.options.map((option) => ({
               ...option,
-              checked: paramValues.includes(option.id),
+              checked: paramValues
+                .map(normalizeValue)
+                .includes(normalizeValue(option.id)),
             })),
           };
         }
@@ -468,7 +474,7 @@ const DynamicFilter: React.FC<FilterProps> = ({
         return {
           ...section,
           options: section.options.map((option) =>
-            option.id === optionId
+            normalizeValue(option.id) === normalizeValue(optionId)
               ? { ...option, checked: !option.checked }
               : option
           ),
@@ -543,34 +549,33 @@ const DynamicFilter: React.FC<FilterProps> = ({
 
   const applyFilters = (sections: FilterSection[], excludeOOS: boolean) => {
     const filters = getFilterValues(sections, excludeOOS);
-    onFilterChange(filters); 
+    onFilterChange(filters);
   };
 
- const clearFilters = () => {
-  setFilterSections((prev) =>
-    prev.map((section) => {
-      if (section.type === "checkbox" && section.options) {
-        return {
-          ...section,
-          options: section.options.map((o) => ({ ...o, checked: false })),
-        };
-      }
-      if (section.type === "range") {
-        return {
-          ...section,
-          currentMin: section.min ?? 0,
-          currentMax: section.max ?? section.max,
-        };
-      }
-      return section;
-    })
-  );
+  const clearFilters = () => {
+    setFilterSections((prev) =>
+      prev.map((section) => {
+        if (section.type === "checkbox" && section.options) {
+          return {
+            ...section,
+            options: section.options.map((o) => ({ ...o, checked: false })),
+          };
+        }
+        if (section.type === "range") {
+          return {
+            ...section,
+            currentMin: section.min ?? 0,
+            currentMax: section.max ?? section.max,
+          };
+        }
+        return section;
+      })
+    );
 
-  setExcludeOutOfStock(false);
+    setExcludeOutOfStock(false);
 
-  onFilterChange({}); // 🔥 THAT’S IT
-};
-
+    onFilterChange({}); // 🔥 THAT’S IT
+  };
 
   const getAppliedFilterCount = () => {
     let count = 0;

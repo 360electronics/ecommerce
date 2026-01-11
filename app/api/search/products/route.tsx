@@ -2,6 +2,27 @@ import { db } from "@/db/drizzle";
 import { sql } from "drizzle-orm";
 import { NextResponse } from "next/server";
 
+const normalize = (v: string) =>
+  v
+    .toString()
+    .normalize("NFKD")
+    .replace(/[\u200E\u200F\u00A0]/g, "")
+    .trim()
+    .toLowerCase();
+
+const NON_ATTRIBUTE_KEYS = [
+  "category",
+  "subcategory",
+  "q",
+  "page",
+  "sort",
+  "brand",
+  "rating",
+  "minPrice",
+  "maxPrice",
+  "inStock",
+];
+
 export async function GET(req: Request) {
   try {
     const { searchParams } = new URL(req.url);
@@ -10,6 +31,7 @@ export async function GET(req: Request) {
     const page = Number(searchParams.get("page") || 1);
     const limit = 24;
     const offset = (page - 1) * limit;
+    const sort = searchParams.get("sort") || "relevance";
 
     /* ---------------- FILTERS ---------------- */
     const brands = searchParams.getAll("brand");
@@ -20,10 +42,8 @@ export async function GET(req: Request) {
 
     // Dynamic attribute filters (Panel, Resolution, etc)
     const attributeFilters: Record<string, string[]> = {};
-    searchParams.forEach((value, key) => {
-      if (
-        !["q", "page", "brand", "rating", "minPrice", "maxPrice", "inStock"].includes(key)
-      ) {
+    searchParams.forEach((_, key) => {
+      if (!NON_ATTRIBUTE_KEYS.includes(key)) {
         attributeFilters[key] = searchParams.getAll(key);
       }
     });
@@ -55,9 +75,7 @@ export async function GET(req: Request) {
     ];
 
     if (brands.length > 0) {
-      whereClauses.push(
-        sql`b.name IN (${sql.join(brands, sql`,`)})`
-      );
+      whereClauses.push(sql`LOWER(b.name) IN (${sql.join(brands, sql`,`)})`);
     }
 
     if (ratings.length > 0) {
@@ -73,7 +91,10 @@ export async function GET(req: Request) {
     Object.entries(attributeFilters).forEach(([key, values]) => {
       if (values.length > 0) {
         whereClauses.push(
-          sql`v.attributes ->> ${key} IN (${sql.join(values, sql`,`)})`
+          sql`LOWER(v.attributes ->> ${key}) IN (${sql.join(
+            values.map(normalize),
+            sql`,`
+          )})`
         );
       }
     });
@@ -145,6 +166,34 @@ export async function GET(req: Request) {
       },
     };
 
+    let orderBy = sql`
+  ts_rank(p.search_vector, plainto_tsquery('simple', ${q})) DESC
+`; // default: relevance
+
+    switch (sort) {
+      case "price_asc":
+        orderBy = sql`v.our_price ASC`;
+        break;
+
+      case "price_desc":
+        orderBy = sql`v.our_price DESC`;
+        break;
+
+      case "rating_desc":
+        orderBy = sql`p.average_rating DESC NULLS LAST`;
+        break;
+
+      case "newest":
+        orderBy = sql`p.created_at DESC`;
+        break;
+
+      case "relevance":
+      default:
+        orderBy = sql`
+      ts_rank(p.search_vector, plainto_tsquery('simple', ${q})) DESC
+    `;
+    }
+
     /* ---------------- DATA ---------------- */
     const rows = await db.execute(sql`
       SELECT
@@ -170,14 +219,13 @@ export async function GET(req: Request) {
 
       WHERE ${where}
 
-      ORDER BY
-        ts_rank(p.search_vector, plainto_tsquery('simple', ${q})) DESC
+      ORDER BY ${orderBy}
 
       LIMIT ${limit}
       OFFSET ${offset}
     `);
 
-    console.log("Data from search products api:", totalCount, page,)
+    console.log("Data from search products api:", totalCount, page);
 
     return NextResponse.json({
       data: rows.rows,
@@ -188,9 +236,6 @@ export async function GET(req: Request) {
     });
   } catch (err) {
     console.error("Search error:", err);
-    return NextResponse.json(
-      { error: "Search failed" },
-      { status: 500 }
-    );
+    return NextResponse.json({ error: "Search failed" }, { status: 500 });
   }
 }

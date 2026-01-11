@@ -6,8 +6,8 @@ import ProductListing from "@/components/Listing/ProductListing";
 
 /* ---------------- TYPES ---------------- */
 interface FlattenedProduct {
-  id: string;              // PRODUCT ID
-  variantId?: string;       // VARIANT ID
+  id: string; // PRODUCT ID
+  variantId?: string; // VARIANT ID
 
   sku?: string;
   attributes: Record<string, any>;
@@ -41,7 +41,6 @@ interface FlattenedProduct {
   updatedAt: string;
 }
 
-
 /* ---------------- SAFE DEFAULT FILTER OPTIONS ---------------- */
 
 const EMPTY_FILTER_OPTIONS = {
@@ -60,10 +59,10 @@ async function fetchCategoryProductsApi(
   params: URLSearchParams,
   signal: AbortSignal
 ) {
-  const res = await fetch(
-    `/api/products/category?${params.toString()}`,
-    { cache: "no-store", signal }
-  );
+  const res = await fetch(`/api/products/category?${params.toString()}`, {
+    cache: "no-store",
+    signal,
+  });
 
   if (!res.ok) throw new Error("Failed to load category products");
   return res.json();
@@ -75,9 +74,9 @@ function mapRowToFlattened(row: any): FlattenedProduct {
   const now = new Date().toISOString();
 
   return {
-    id: row.id,                     // ✅ PRODUCT ID (stable)
+    id: row.id, // ✅ PRODUCT ID (stable)
     productId: row.id,
-    variantId: row.variant_id,      // ✅ VARIANT ID (explicit)
+    variantId: row.variant_id, // ✅ VARIANT ID (explicit)
 
     sku: row.sku,
     attributes: row.attributes ?? {},
@@ -91,29 +90,20 @@ function mapRowToFlattened(row: any): FlattenedProduct {
     totalStocks: String(row.stock ?? "0"),
     averageRating: String(row.average_rating ?? "0"),
 
-    brand: row.brand_id
-      ? { id: row.brand_id, name: row.brand_name }
-      : null,
+    brand: row.brand_id ? { id: row.brand_id, name: row.brand_name } : null,
 
     category: row.category ?? "",
     subcategory: row.subcategory ?? "",
 
-    productImages: row.image
-      ? [{ url: row.image, alt: row.short_name }]
-      : [],
+    productImages: row.image ? [{ url: row.image, alt: row.short_name }] : [],
 
     tags: [],
     status: "active",
 
-    createdAt: row.created_at
-      ? new Date(row.created_at).toISOString()
-      : now,
-    updatedAt: row.updated_at
-      ? new Date(row.updated_at).toISOString()
-      : now,
+    createdAt: row.created_at ? new Date(row.created_at).toISOString() : now,
+    updatedAt: row.updated_at ? new Date(row.updated_at).toISOString() : now,
   };
 }
-
 
 /* ---------------- LOADER ---------------- */
 
@@ -185,16 +175,15 @@ function CategoryContent({
         params.set("category", category);
         if (subcategory) params.set("subcategory", subcategory);
 
-        const res = await fetchCategoryProductsApi(
-          params,
-          controller.signal
-        );
+        const res = await fetchCategoryProductsApi(params, controller.signal);
 
         if (controller.signal.aborted) return;
 
         setProducts(res.data.map(mapRowToFlattened));
         setTotalCount(res.totalCount ?? 0);
         setFilterOptions(res.filterOptions ?? EMPTY_FILTER_OPTIONS);
+
+        console.log("Filter options: ", category, ":", res.filterOptions);
       } catch (err) {
         if (!controller.signal.aborted) {
           console.error("Category fetch error:", err);
@@ -226,9 +215,6 @@ function CategoryContent({
     </>
   );
 }
-
-
-
 
 /* ---------------- PAGE ---------------- */
 

@@ -27,7 +27,7 @@ export const orders = pgTable(
       .references(() => savedAddresses.id, { onDelete: "restrict" }),
     checkoutSessionId: uuid("checkout_session_id")
       .notNull()
-      .references(() => checkoutSessions.id, { onDelete: "cascade" }),
+      .references(() => checkoutSessions.id, { onDelete: "restrict" }),
     couponId: uuid("coupon_id"),
     couponCode: varchar("coupon_code", { length: 50 }),
     gatewayOrderId: varchar("gateway_order_id", { length: 255 }),
@@ -46,12 +46,12 @@ export const orders = pgTable(
       .default("pending")
       .notNull(),
     paymentStatus: varchar("payment_status", {
-      enum: ["pending", "paid", "failed", "refunded"],
+      enum: ["pending", "paid", "failed", "refunded", "cancelled", "cod"],
     })
       .default("pending")
       .notNull(),
     paymentMethod: varchar("payment_method", {
-      enum: ["cod", "cashfree"],
+      enum: ["cod", "razorpay"],
     }).notNull(),
     totalAmount: numeric("total_amount", { precision: 10, scale: 2 }).notNull(),
     discountAmount: numeric("discount_amount", { precision: 10, scale: 2 })

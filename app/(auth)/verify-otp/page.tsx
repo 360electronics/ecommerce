@@ -363,7 +363,7 @@ function VerifyOTPContent() {
           {/* Logo */}
           <div className="flex justify-center">
             <img
-              src="/logo/logo.png"
+              src="/logo/360_logo.png"
               alt="Computer Garage Logo"
               width={180}
               height={54}

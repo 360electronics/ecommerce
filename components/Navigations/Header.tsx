@@ -93,27 +93,27 @@ export const categoryFeatures: Record<string, { [feature: string]: string[] }> =
         "RTX 5060",
       ],
       Ram: ["8 GB", "16 GB", "32 GB"],
-      Storage: ["512 GB SSD", "1 TB SSD", "2 TB SSD"],
+      Storage: ["512 GB", "1 TB SSD", "2 TB"],
       "Display Size": [
-        "13 inches",
-        "14 inches",
-        "15.6 inches",
-        "16 inches",
-        "17 inches",
+        "13.3 inch",
+        "13.6 inch",
+        "14 inch",
+        "14.2 inch",
+        "15 inches",
       ],
     },
 
     // ⚙️ Processors
     Processors: {
       Cpu: [
-        "AMD Ryzen 3",
-        "AMD Ryzen 5",
-        "AMD Ryzen 7",
-        "AMD Ryzen 9",
-        "Intel Core i3",
-        "Intel Core i5",
-        "Intel Core i7",
-        "Intel Core i9",
+        "Ryzen 3",
+        "Ryzen 5",
+        "Ryzen 7",
+        "Ryzen 9",
+        "Intel i3",
+        "Intel i5",
+        "Intel i7",
+        "Intel i9",
         "Intel Ultra 5",
         "Intel Ultra 7",
         "Intel Ultra 9",
@@ -147,16 +147,16 @@ export const categoryFeatures: Record<string, { [feature: string]: string[] }> =
 
     // 🖥 Monitors
     Monitors: {
-      Brand: ["LG", "Samsung", "ACER", "ASUS", "MSI", "BenQ"],
+      brand: ["LG", "Samsung", "ACER", "ASUS", "MSI", "BenQ"],
       "Screen Size": [
-        "19 Inches",
-        "22 Inches",
-        "24 Inches",
-        "27 Inches",
-        "32 Inches",
-        "34 Inches",
+        "19 Inch",
+        "22 Inch",
+        "24 Inch",
+        "27 Inch",
+        "32 Inch",
+        "34 Inch",
       ],
-      Display: ["HD 1280x720", "QHD 2560x1440", "UHD 2560x1600"],
+      Display: ["HD", "QHD", "UHD", "FHD"],
     },
     // 🧬 Motherboard
     Motherboard: {
@@ -167,13 +167,12 @@ export const categoryFeatures: Record<string, { [feature: string]: string[] }> =
         "B550",
         "B650",
         "X870",
-        "X670",
         "Z790",
         "B760",
         "H610",
         "Z890",
       ],
-      platform: ["AMD", "INTEL"],
+      Platform: ["AMD", "INTEL"],
     },
 
     // 🎧 Peripherals
@@ -473,11 +472,11 @@ const Header = ({ isCategory = true }: HeaderProps) => {
             </button>
             <Link href="/" className="flex-shrink-0">
               <img
-                src="/logo/logo.png"
+                src="/logo/360_logo.png"
                 alt="Computer 360 Logo"
                 width={150}
                 height={150}
-                className="h-auto w-[120px]"
+                className="h-auto w-[60px] md:w-[80px]"
               />
             </Link>
           </div>
@@ -625,7 +624,6 @@ const Header = ({ isCategory = true }: HeaderProps) => {
                     )}
 
                     {/* Filterable Attributes */}
-                    {/* Filterable Attributes */}
                     {(() => {
                       // dynamic attribute values or fallback to static categoryFeatures
                       const dynamicAttrs =
@@ -761,7 +759,7 @@ const Header = ({ isCategory = true }: HeaderProps) => {
                                                   selectedMobileCategory.slug
                                                 }?${
                                                   attr.name
-                                                }=${encodeURIComponent(value)}`}
+                                                }=${encodeURIComponent(value).toLocaleLowerCase()}`}
                                                 onClick={closeMenu}
                                                 className="flex items-center justify-between py-2 px-3 text-xs text-gray-600 hover:text-primary hover:bg-primary/5 rounded transition-all group"
                                               >
@@ -1114,7 +1112,7 @@ const Header = ({ isCategory = true }: HeaderProps) => {
                                             category.slug
                                           }?${encodeURIComponent(
                                             feature
-                                          )}=${encodeURIComponent(value)}`}
+                                          )}=${encodeURIComponent(value).toLocaleLowerCase()}`}
                                           onClick={() =>
                                             setHoveredCategory(null)
                                           }

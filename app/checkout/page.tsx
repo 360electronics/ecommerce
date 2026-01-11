@@ -63,7 +63,10 @@ const CheckoutPage: React.FC = () => {
   const [deliveryMode, setDeliveryMode] = useState<"standard" | "express">(
     "standard"
   );
-  const [paymentMethod, setPaymentMethod] = useState<"razorpay">("razorpay");
+  const [paymentMethod, setPaymentMethod] = useState<"razorpay" | "cod">(
+    "razorpay"
+  );
+
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isProcessingPayment, setIsProcessingPayment] = useState(false);
   const [isCancelling, setIsCancelling] = useState(false);
@@ -71,6 +74,8 @@ const CheckoutPage: React.FC = () => {
   const [selectedCity, setSelectedCity] = useState<string | null>(null);
   const [remainingTime, setRemainingTime] = useState(15 * 60); // 15 minutes in seconds
   const [currentOrderId, setCurrentOrderId] = useState<string | null>(null);
+
+  const COD_LIMIT = 50000;
 
   // New address form state
   const [newAddress, setNewAddress] = useState({
@@ -306,13 +311,47 @@ const CheckoutPage: React.FC = () => {
   };
 
   // Handle cancel checkout
-  const handleCancelCheckout = () => {
+  const handleCancelCheckout = async () => {
+    if (!checkoutSessionId || !user?.id) {
+      router.replace("/");
+      return;
+    }
+
     setIsCancelling(true);
 
-    startTransition(() => {
-      clearCheckout(user!.id);
+    try {
+      const res = await fetch("/api/orders", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          userId: user.id,
+          checkoutSessionId,
+          addressId: selectedAddressId,
+          totalAmount: grandTotal,
+          discountAmount,
+          couponCode: coupon?.code ?? null,
+          shippingAmount,
+          deliveryMode,
+          paymentMethod,
+          status: "cancelled",
+          paymentStatus: "cancelled",
+        }),
+      });
+
+      const order = await res.json();
+
+      showFancyToast({
+        title: "Order cancelled",
+        message: "Your order has been cancelled.",
+        type: "info",
+      });
+
+      await safeClearCheckout();
       router.replace("/");
-    });
+    } catch (err) {
+      console.error("Cancel error", err);
+      router.replace("/");
+    }
   };
 
   // Handle apply coupon (FIXED)
@@ -471,6 +510,8 @@ const CheckoutPage: React.FC = () => {
     shippingAmount,
     grandTotal,
   } = calculateTotals();
+
+  const isCODAvailable = grandTotal <= COD_LIMIT;
 
   // Format currency
   const formatCurrency = (value: number): string => {
@@ -701,7 +742,6 @@ const CheckoutPage: React.FC = () => {
       });
       return;
     }
-    console.log(checkoutSessionId);
 
     if (!checkoutSessionId) {
       showFancyToast({
@@ -721,7 +761,7 @@ const CheckoutPage: React.FC = () => {
       return;
     }
 
-    // 🔒 Prevent double creation
+    // 🔒 Prevent duplicate order creation
     if (currentOrderId) {
       showFancyToast({
         title: "Order Already Created",
@@ -734,6 +774,7 @@ const CheckoutPage: React.FC = () => {
     setIsSubmitting(true);
 
     try {
+      /* ---------------- CREATE ORDER ---------------- */
       const response = await fetch("/api/orders", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -746,7 +787,7 @@ const CheckoutPage: React.FC = () => {
           couponCode: coupon && couponStatus === "applied" ? coupon.code : null,
           shippingAmount,
           deliveryMode,
-          paymentMethod,
+          paymentMethod, // razorpay | cod
           status: "pending",
           paymentStatus: "pending",
           orderItems: checkoutItems.map((item) => ({
@@ -763,18 +804,50 @@ const CheckoutPage: React.FC = () => {
 
       const createdOrder = await response.json();
 
-      // ✅ SAVE ORDER ID
+      // ✅ Save order ID to prevent duplicates
       setCurrentOrderId(createdOrder.id);
 
-      await initiateRazorpayPayment({
-        id: createdOrder.id,
-        totalAmount: grandTotal,
+      /* ---------------- PAYMENT HANDLING ---------------- */
+      if (paymentMethod === "razorpay") {
+        // 🔹 ONLINE PAYMENT
+        await initiateRazorpayPayment({
+          id: createdOrder.id,
+          totalAmount: grandTotal,
+        });
+        return;
+      }
+
+      /* ---------------- CASH ON DELIVERY ---------------- */
+      await fetch("/api/orders/update-status", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          orderId: createdOrder.id,
+          status: "confirmed",
+          paymentStatus: "cod",
+        }),
       });
-    } catch (err) {
-      console.error(err);
+
+      showFancyToast({
+        title: "Order placed successfully",
+        message: "Pay cash when your order is delivered.",
+        type: "success",
+      });
+
+      // Mark coupon as used
+      if (coupon && coupon.code && couponStatus === "applied") {
+        await markCouponUsed(coupon.code);
+      }
+
+      router.push("/profile/orders");
+      clearCoupon();
+
+      await safeClearCheckout();
+    } catch (error: any) {
+      console.error("Order creation error:", error);
       showFancyToast({
         title: "Sorry, there was an error",
-        message: "Failed to create order: " + err,
+        message: "Failed to place order. Please try again.",
         type: "error",
       });
     } finally {
@@ -1233,7 +1306,9 @@ const CheckoutPage: React.FC = () => {
                     <h2 className="text-xl font-semibold text-gray-900 mb-4">
                       Payment Method
                     </h2>
+
                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                      {/* Razorpay */}
                       <div
                         className={`border relative rounded-lg p-4 cursor-pointer transition-all duration-200 ${
                           paymentMethod === "razorpay"
@@ -1246,14 +1321,52 @@ const CheckoutPage: React.FC = () => {
                           <CreditCard className="h-6 w-6 text-gray-600" />
                           <div>
                             <p className="text-gray-900 font-medium">
-                              Pay with Razorpay
+                              Pay Online
                             </p>
                             <p className="text-sm text-gray-500">
-                              Secure online payment with UPI/Card
+                              UPI / Card / Netbanking
                             </p>
                           </div>
                         </div>
                         {paymentMethod === "razorpay" && (
+                          <Check className="absolute right-4 top-4 text-primary h-5 w-5" />
+                        )}
+                      </div>
+
+                      {/* Cash on Delivery */}
+                      <div
+                        className={`border relative rounded-lg p-4 transition-all duration-200 ${
+                          !isCODAvailable
+                            ? "opacity-50 cursor-not-allowed"
+                            : "cursor-pointer hover:border-secondary"
+                        } ${
+                          paymentMethod === "cod"
+                            ? "border-primary bg-primary-LIGHT"
+                            : "border-gray-200"
+                        }`}
+                        onClick={() => {
+                          if (isCODAvailable) setPaymentMethod("cod");
+                        }}
+                      >
+                        <div className="flex items-center gap-3">
+                          <Truck className="h-6 w-6 text-gray-600" />
+                          <div>
+                            <p className="text-gray-900 font-medium">
+                              Cash on Delivery
+                            </p>
+                            <p className="text-sm text-gray-500">
+                              Pay when product is delivered
+                            </p>
+                            {!isCODAvailable && (
+                              <p className="text-xs text-red-600 mt-1">
+                                COD not available above ₹
+                                {COD_LIMIT.toLocaleString()}
+                              </p>
+                            )}
+                          </div>
+                        </div>
+
+                        {paymentMethod === "cod" && (
                           <Check className="absolute right-4 top-4 text-primary h-5 w-5" />
                         )}
                       </div>
@@ -1473,7 +1586,7 @@ const CheckoutPage: React.FC = () => {
                       <div className="mt-6 space-y-3">
                         <button
                           onClick={handleConfirmOrder}
-                          className="w-full bg-primary text-white py-3 rounded-md hover:bg-primary-HOVER transition-colors disabled:opacity-50 flex items-center justify-center"
+                          className="w-full bg-primary text-white py-3 cursor-pointer rounded-md hover:bg-primary-HOVER transition-colors disabled:opacity-50 flex items-center justify-center"
                           disabled={
                             isSubmitting ||
                             isProcessingPayment ||

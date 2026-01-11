@@ -1,1 +1,0 @@
---ALTER TABLE "saved_addresses" ADD COLUMN "gst" varchar(100);
