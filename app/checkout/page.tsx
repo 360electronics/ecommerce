@@ -75,7 +75,7 @@ const CheckoutPage: React.FC = () => {
   const [remainingTime, setRemainingTime] = useState(15 * 60); // 15 minutes in seconds
   const [currentOrderId, setCurrentOrderId] = useState<string | null>(null);
 
-  const COD_LIMIT = 50000;
+  const COD_LIMIT = 100000;
 
   // New address form state
   const [newAddress, setNewAddress] = useState({
