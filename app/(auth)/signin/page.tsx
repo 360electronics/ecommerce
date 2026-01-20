@@ -228,7 +228,7 @@ function LoginContent() {
               type="submit"
               disabled={loading}
               className={cn(
-                "w-full py-3 px-4 rounded-md font-medium text-white",
+                "w-full py-3 px-4 rounded-md cursor-pointer font-medium text-white",
                 "bg-gradient-to-r from-[#ff6b00] to-[#ff9f00] hover:to-primary-hover ",
                 "transition duration-300",
                 loading && "bg-primary cursor-not-allowed"

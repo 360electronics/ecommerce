@@ -63,7 +63,9 @@ export default function ProductDetailsContent({
   const [emiPhone, setEmiPhone] = useState("");
   const [emiEmail, setEmiEmail] = useState("");
   const [emiPan, setEmiPan] = useState("");
-  const [emiBank, setEmiBank] = useState<"HDFC" | "ICICI" | "BAJAJ" | null>("HDFC");
+  const [emiBank, setEmiBank] = useState<"HDFC" | "ICICI" | "BAJAJ" | null>(
+    "HDFC",
+  );
   const [isSubmittingEmi, setIsSubmittingEmi] = useState(false);
 
   // Debounce function to limit rapid API calls
@@ -93,7 +95,7 @@ export default function ProductDetailsContent({
             "text-base sm:text-lg",
             index < Math.floor(Number(product?.averageRating))
               ? "text-yellow-500"
-              : "text-gray-300"
+              : "text-gray-300",
           )}
         >
           ★
@@ -123,7 +125,7 @@ export default function ProductDetailsContent({
 
     try {
       const response = await fetch(
-        `https://api.postalpincode.in/pincode/${pinCode}`
+        `https://api.postalpincode.in/pincode/${pinCode}`,
       );
       const data = await response.json();
 
@@ -175,10 +177,10 @@ export default function ProductDetailsContent({
       activeVariant.mrp && activeVariant.mrp > activeVariant.ourPrice
         ? Math.round(
             ((activeVariant.mrp - activeVariant.ourPrice) / activeVariant.mrp) *
-              100
+              100,
           )
         : 0,
-    [activeVariant.mrp, activeVariant.ourPrice]
+    [activeVariant.mrp, activeVariant.ourPrice],
   );
 
   // Handle share functionality
@@ -210,7 +212,7 @@ export default function ProductDetailsContent({
             title: "Success",
             message: "Shared successfully!",
             type: "success",
-          })
+          }),
         )
         .catch(() => {
           navigator.clipboard
@@ -220,14 +222,14 @@ export default function ProductDetailsContent({
                 title: "Success",
                 message: "Link copied to clipboard!",
                 type: "success",
-              })
+              }),
             )
             .catch(() =>
               showFancyToast({
                 title: "Error",
                 message: "Failed to share product",
                 type: "error",
-              })
+              }),
             );
         });
     } else {
@@ -238,14 +240,14 @@ export default function ProductDetailsContent({
             title: "Success",
             message: "Link copied to clipboard!",
             type: "success",
-          })
+          }),
         )
         .catch(() =>
           showFancyToast({
             title: "Error",
             message: "Failed to copy link",
             type: "error",
-          })
+          }),
         );
     }
   }, [product, activeVariant.ourPrice, discount]);
@@ -341,28 +343,35 @@ export default function ProductDetailsContent({
   const attributeOptions = useMemo(() => {
     if (!product?.productParent?.variants) return {};
 
-    return attributeKeys.reduce((acc, key) => {
-      const options = Array.from(
-        new Set(
-          product.productParent?.variants
-            ?.map((variant) =>
-              normalizeValue(String(variant.attributes[key] ?? ""))
-            )
-            .filter((value): value is string => !!value) ?? []
-        )
-      ).map((value) => ({
-        value,
-        label: value, // already normalized
-        variantIds:
-          product.productParent?.variants
-            ?.filter(
-              (v) => normalizeValue(String(v.attributes[key] ?? "")) === value
-            )
-            .map((v) => v.id) ?? [],
-      }));
-      acc[key] = options;
-      return acc;
-    }, {} as Record<string, Array<{ value: string; label: string; variantIds: string[] }>>);
+    return attributeKeys.reduce(
+      (acc, key) => {
+        const options = Array.from(
+          new Set(
+            product.productParent?.variants
+              ?.map((variant) =>
+                normalizeValue(String(variant.attributes[key] ?? "")),
+              )
+              .filter((value): value is string => !!value) ?? [],
+          ),
+        ).map((value) => ({
+          value,
+          label: value, // already normalized
+          variantIds:
+            product.productParent?.variants
+              ?.filter(
+                (v) =>
+                  normalizeValue(String(v.attributes[key] ?? "")) === value,
+              )
+              .map((v) => v.id) ?? [],
+        }));
+        acc[key] = options;
+        return acc;
+      },
+      {} as Record<
+        string,
+        Array<{ value: string; label: string; variantIds: string[] }>
+      >,
+    );
   }, [attributeKeys, product?.productParent?.variants]);
 
   const findValidVariant = useCallback(
@@ -371,10 +380,10 @@ export default function ProductDetailsContent({
       return product?.productParent?.variants?.find(
         (variant) =>
           normalizeValue(String(variant.attributes[key] ?? "")) ===
-          normalizedValue
+          normalizedValue,
       );
     },
-    [product?.productParent?.variants]
+    [product?.productParent?.variants],
   );
 
   const isValidAttributeCombination = useCallback(
@@ -384,11 +393,11 @@ export default function ProductDetailsContent({
         product?.productParent?.variants?.some(
           (variant) =>
             normalizeValue(String(variant.attributes[key] ?? "")) ===
-            normalizedValue
+            normalizedValue,
         ) ?? false
       );
     },
-    [product?.productParent?.variants]
+    [product?.productParent?.variants],
   );
 
   const handleAttributeSelection = useCallback(
@@ -404,7 +413,7 @@ export default function ProductDetailsContent({
       attributeKeys.forEach((k) => {
         if (k !== key) {
           newAttributes[k] = normalizeValue(
-            String(validVariant.attributes[k] ?? selectedAttributes[k] ?? "")
+            String(validVariant.attributes[k] ?? selectedAttributes[k] ?? ""),
           );
         }
       });
@@ -436,7 +445,7 @@ export default function ProductDetailsContent({
       activeVariant.id,
       router,
       setProduct,
-    ]
+    ],
   );
 
   const handleVariantNavigation = useCallback(() => {
@@ -476,7 +485,7 @@ export default function ProductDetailsContent({
         const values = new Set(
           product.productParent?.variants
             .map((v) => String(v.attributes[key]))
-            .filter((v): v is string => !!v)
+            .filter((v): v is string => !!v),
         );
         if (values.size === 1) {
           return { key, value: values.values().next().value };
@@ -727,7 +736,7 @@ export default function ProductDetailsContent({
     if (!product?.productParent?.variants) return;
 
     const currentVariant = product.productParent.variants.find(
-      (v) => v.id === product.id
+      (v) => v.id === product.id,
     );
     if (!currentVariant) return;
 
@@ -735,15 +744,20 @@ export default function ProductDetailsContent({
       Object.keys(selectedAttributes).length > 0 &&
       product.productParent.variants.some((v) =>
         Object.entries(selectedAttributes).every(
-          ([key, value]) => String(v.attributes[key]) === String(value)
-        )
+          ([key, value]) => String(v.attributes[key]) === String(value),
+        ),
       );
 
     if (!isValidSelection) {
-      const newAttributes = attributeKeys.reduce((acc, key) => {
-        acc[key] = normalizeValue(String(currentVariant.attributes[key] || ""));
-        return acc;
-      }, {} as Record<string, string | number | boolean>);
+      const newAttributes = attributeKeys.reduce(
+        (acc, key) => {
+          acc[key] = normalizeValue(
+            String(currentVariant.attributes[key] || ""),
+          );
+          return acc;
+        },
+        {} as Record<string, string | number | boolean>,
+      );
       setSelectedAttributes(newAttributes);
     }
   }, [
@@ -844,37 +858,66 @@ export default function ProductDetailsContent({
   const EmiBanner = ({ onOpen }: { onOpen: () => void }) => (
     <div
       onClick={onOpen}
-      className="my-4 p-4 cursor-pointer rounded-xl border border-primary/20 bg-gradient-to-r from-primary/10 to-orange-50"
+      className="
+      my-4 p-4 sm:p-5 cursor-pointer rounded-xl
+      border border-primary/20
+      bg-gradient-to-r from-primary/10 to-orange-50
+      hover:border-primary/40 transition
+    "
     >
-      <div className="flex items-start justify-between gap-4">
+      <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-4">
+        {/* Left content */}
         <div className="flex items-start gap-3">
-          <Shield className="w-6 h-6 text-primary mt-0.5" />
-          <div>
-            <p className="text-sm font-semibold text-primary/90">
+          <Shield className="w-6 h-6 text-primary mt-0.5 shrink-0" />
+
+          <div className="flex-1">
+            <p className="text-sm sm:text-base font-semibold text-primary/90">
               EMI starting from ₹
               {Math.ceil(activeVariant.ourPrice / 12).toLocaleString()}
-              /month
+              <span className="text-xs sm:text-sm font-medium"> / month</span>
             </p>
-            <p className="text-xs text-primary mt-0.5">
+
+            <p className="text-xs sm:text-sm text-primary mt-0.5">
               No Cost EMI available • 3, 6 & 12 months
             </p>
 
             {/* Bank Logos */}
-            <div className="flex items-center gap-3 mt-4">
-              <img src="/banks/hdfc.png" alt="HDFC" width={100} />
-              <img src="/banks/bajaj.png" alt="Bajaj Finserv" width={100} />
-              <img src="/banks/icici.webp" alt="ICICI" width={110} />
+            <div className="flex flex-wrap items-center gap-3 mt-3 sm:mt-4">
+              <img
+                src="/banks/hdfc.png"
+                alt="HDFC"
+                className=" w-32  object-contain"
+              />
+              <img
+                src="/banks/bajaj.png"
+                alt="Bajaj Finserv"
+                className="w-32 object-contain"
+              />
+              <img
+                src="/banks/icici.webp"
+                alt="ICICI"
+                className=" w-32 object-contain"
+              />
             </div>
           </div>
         </div>
 
-        <button
-          onClick={onOpen}
-          className="flex items-center cursor-pointer gap-1 text-sm font-medium text-primary hover:text-primary/80"
-        >
-          View options
-          <ChevronRight className="w-4 h-4" />
-        </button>
+        {/* CTA */}
+        <div className="flex justify-end sm:justify-start">
+          <button
+            type="button"
+            onClick={onOpen}
+            className="
+            flex items-center gap-1
+            text-sm font-medium text-primary
+            hover:text-primary/80
+            whitespace-nowrap
+          "
+          >
+            View options
+            <ChevronRight className="w-4 h-4" />
+          </button>
+        </div>
       </div>
     </div>
   );
@@ -990,7 +1033,7 @@ export default function ProductDetailsContent({
                       "px-4 py-2 rounded-lg cursor-pointer text-sm border",
                       emiBank === bank
                         ? "bg-primary text-white border-primary"
-                        : "bg-white border-gray-300"
+                        : "bg-white border-gray-300",
                     )}
                   >
                     {bank}
@@ -1009,7 +1052,7 @@ export default function ProductDetailsContent({
                 "w-full py-2.5 rounded-lg cursor-pointer font-semibold text-white",
                 isSubmittingEmi
                   ? "bg-gray-400 cursor-not-allowed"
-                  : "bg-primary hover:bg-primary-hover"
+                  : "bg-primary hover:bg-primary-hover",
               )}
             >
               {isSubmittingEmi ? "Submitting..." : "Request EMI Callback"}
@@ -1057,7 +1100,7 @@ export default function ProductDetailsContent({
           isInWishlistStatus
             ? "text-red-500 border-red-500 bg-red-50"
             : "text-gray-500 border-gray-300 bg-white",
-          "hover:bg-gray-100 disabled:opacity-50"
+          "hover:bg-gray-100 disabled:opacity-50",
         )}
         disabled={isAddingToWishlist}
         aria-label={
@@ -1121,7 +1164,7 @@ export default function ProductDetailsContent({
               "flex-1 flex items-center justify-center gap-2 py-3 px-6 rounded-full border border-gray-300 hover:bg-gray-50 text-sm font-semibold transition-colors",
               isAddingToCart || isOutOfStock
                 ? "opacity-50 cursor-not-allowed"
-                : "cursor-pointer"
+                : "cursor-pointer",
             )}
             disabled={isAddingToCart || isOutOfStock}
           >
@@ -1135,7 +1178,7 @@ export default function ProductDetailsContent({
               "flex-1 flex items-center justify-center gap-2 py-3 px-6 rounded-full bg-primary hover:bg-primary-hover text-white text-sm font-semibold transition-colors",
               isAddingToCart || isOutOfStock
                 ? "opacity-50 cursor-not-allowed"
-                : "cursor-pointer"
+                : "cursor-pointer",
             )}
             disabled={isAddingToCart || isOutOfStock}
           >
@@ -1188,7 +1231,7 @@ export default function ProductDetailsContent({
                     String(selectedAttributes[key]) === option.value;
                   const isValid = isValidAttributeCombination(
                     key,
-                    option.value
+                    option.value,
                   );
 
                   return (
@@ -1202,7 +1245,7 @@ export default function ProductDetailsContent({
                         isSelected
                           ? "bg-primary text-white border-primary"
                           : "bg-white text-gray-900 border-gray-300 hover:bg-primary-hover",
-                        !isValid && "opacity-50 cursor-not-allowed"
+                        !isValid && "opacity-50 cursor-not-allowed",
                       )}
                       disabled={!isValid}
                       aria-label={option.label}

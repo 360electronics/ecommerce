@@ -20,7 +20,7 @@ export async function GET(request: NextRequest) {
     if (!userId) {
       return NextResponse.json(
         { error: "User ID is required" },
-        { status: 400 }
+        { status: 400 },
       );
     }
 
@@ -28,13 +28,12 @@ export async function GET(request: NextRequest) {
       .select({
         id: checkout.id,
         userId: checkout.userId,
+        checkoutSessionId: checkout.checkoutSessionId,
         productId: checkout.productId,
         variantId: checkout.variantId,
         cartOfferProductId: checkout.cartOfferProductId,
         quantity: checkout.quantity,
         totalPrice: checkout.totalPrice,
-        createdAt: checkout.createdAt,
-        updatedAt: checkout.updatedAt,
         product: products,
         variant: variants,
         offerProduct: {
@@ -45,20 +44,26 @@ export async function GET(request: NextRequest) {
         },
       })
       .from(checkout)
+      .innerJoin(
+        checkoutSessions,
+        eq(checkout.checkoutSessionId, checkoutSessions.id),
+      )
       .innerJoin(variants, eq(checkout.variantId, variants.id))
       .leftJoin(products, eq(checkout.productId, products.id))
       .leftJoin(
         cart_offer_products,
-        eq(checkout.cartOfferProductId, cart_offer_products.id)
+        eq(checkout.cartOfferProductId, cart_offer_products.id),
       )
-      .where(eq(checkout.userId, userId));
+      .where(
+        and(eq(checkout.userId, userId), eq(checkoutSessions.status, "active")),
+      );
 
     return NextResponse.json(items, { status: 200 });
   } catch (error) {
     console.error("Error fetching checkout:", error);
     return NextResponse.json(
       { error: "Internal server error" },
-      { status: 500 }
+      { status: 500 },
     );
   }
 }
@@ -83,7 +88,7 @@ export async function POST(request: NextRequest) {
     if (!userId || !productId || !variantId || !quantity || !totalPrice) {
       return NextResponse.json(
         { error: "Missing required fields" },
-        { status: 400 }
+        { status: 400 },
       );
     }
 
@@ -94,15 +99,15 @@ export async function POST(request: NextRequest) {
       .where(
         and(
           eq(checkoutSessions.userId, userId),
-          eq(checkoutSessions.status, "active")
-        )
+          eq(checkoutSessions.status, "active"),
+        ),
       )
       .limit(1);
 
     if (!session) {
       return NextResponse.json(
         { error: "No active checkout session" },
-        { status: 400 }
+        { status: 400 },
       );
     }
 
@@ -110,7 +115,7 @@ export async function POST(request: NextRequest) {
     const [created] = await db
       .insert(checkout)
       .values({
-        userId,                     // 🔥 THIS FIXES YOUR ERROR
+        userId, // 🔥 THIS FIXES YOUR ERROR
         checkoutSessionId: session.id,
         productId,
         variantId,
@@ -126,7 +131,7 @@ export async function POST(request: NextRequest) {
     console.error("Error creating checkout item:", error);
     return NextResponse.json(
       { error: "Internal server error" },
-      { status: 500 }
+      { status: 500 },
     );
   }
 }
@@ -143,7 +148,7 @@ export async function DELETE(request: NextRequest) {
     if (!id || !userId) {
       return NextResponse.json(
         { error: "Checkout ID and User ID are required" },
-        { status: 400 }
+        { status: 400 },
       );
     }
 
@@ -153,13 +158,13 @@ export async function DELETE(request: NextRequest) {
 
     return NextResponse.json(
       { message: "Checkout item removed" },
-      { status: 200 }
+      { status: 200 },
     );
   } catch (error) {
     console.error("Error deleting checkout item:", error);
     return NextResponse.json(
       { error: "Internal server error" },
-      { status: 500 }
+      { status: 500 },
     );
   }
 }

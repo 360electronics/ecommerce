@@ -1,10 +1,10 @@
 import { db } from "@/db/drizzle";
-import { checkoutSessions } from "@/db/schema";
+import { checkout, checkoutSessions } from "@/db/schema";
 import { and, eq, lt } from "drizzle-orm";
 import { NextRequest, NextResponse } from "next/server";
 
 /* -----------------------------------------
-   GET → FETCH ONLY (NO CREATION)
+   GET → FETCH ONLY 
 ------------------------------------------ */
 export async function GET(req: NextRequest) {
   const userId = req.nextUrl.searchParams.get("userId");
@@ -13,21 +13,17 @@ export async function GET(req: NextRequest) {
     return NextResponse.json({ error: "userId required" }, { status: 400 });
   }
 
-  // 🔥 Always delete expired sessions
-  await db.delete(checkoutSessions).where(
-    and(
-      eq(checkoutSessions.userId, userId),
-      lt(checkoutSessions.expiresAt, new Date())
-    )
-  );
-
   const [session] = await db
     .select()
     .from(checkoutSessions)
-    .where(eq(checkoutSessions.userId, userId))
+    .where(
+      and(
+        eq(checkoutSessions.userId, userId),
+        eq(checkoutSessions.status, "active"),
+      ),
+    )
     .limit(1);
 
-  // ❗ IMPORTANT: DO NOT CREATE
   return NextResponse.json(session ?? null);
 }
 
@@ -42,18 +38,28 @@ export async function POST(req: NextRequest) {
   }
 
   // Clean expired first
-  await db.delete(checkoutSessions).where(
-    and(
-      eq(checkoutSessions.userId, userId),
-      lt(checkoutSessions.expiresAt, new Date())
-    )
-  );
+  await db
+    .update(checkoutSessions)
+    .set({ status: "expired" })
+    .where(
+      and(
+        eq(checkoutSessions.userId, userId),
+        eq(checkoutSessions.status, "active"),
+        lt(checkoutSessions.expiresAt, new Date()),
+      ),
+    );
 
   // Reuse active session if exists
+  // Reuse ONLY active session
   const [existing] = await db
     .select()
     .from(checkoutSessions)
-    .where(eq(checkoutSessions.userId, userId))
+    .where(
+      and(
+        eq(checkoutSessions.userId, userId),
+        eq(checkoutSessions.status, "active"),
+      ),
+    )
     .limit(1);
 
   if (existing) {
@@ -81,7 +87,29 @@ export async function DELETE(req: NextRequest) {
     return NextResponse.json({ error: "userId required" }, { status: 400 });
   }
 
-  await db.delete(checkoutSessions).where(eq(checkoutSessions.userId, userId));
+  const [session] = await db
+    .select()
+    .from(checkoutSessions)
+    .where(
+      and(
+        eq(checkoutSessions.userId, userId),
+        eq(checkoutSessions.status, "active"),
+      ),
+    )
+    .limit(1);
 
-  return NextResponse.json({ message: "Checkout session cleared" });
+  if (!session) {
+    return NextResponse.json({ message: "No active session" });
+  }
+
+  // 1️⃣ Cancel session
+  await db
+    .update(checkoutSessions)
+    .set({ status: "cancelled" })
+    .where(eq(checkoutSessions.id, session.id));
+
+  // 2️⃣ Remove checkout items
+  await db.delete(checkout).where(eq(checkout.checkoutSessionId, session.id));
+
+  return NextResponse.json({ message: "Checkout cancelled" });
 }

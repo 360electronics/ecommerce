@@ -147,7 +147,7 @@ export const categoryFeatures: Record<string, { [feature: string]: string[] }> =
 
     // 🖥 Monitors
     Monitors: {
-      brand: ["LG", "Samsung", "ACER", "ASUS", "MSI", "BenQ"],
+      brand: ["LG", "Samsung", "ACER", "ASUS", "MSI", "BenQ", "Dell", "Lenovo", "Viewsonic", "Zebronics"],
       "Screen Size": [
         "19 Inch",
         "22 Inch",
@@ -476,7 +476,7 @@ const Header = ({ isCategory = true }: HeaderProps) => {
                 alt="Computer 360 Logo"
                 width={150}
                 height={150}
-                className="h-auto w-[60px] md:w-[80px]"
+                className="h-auto w-[60px] md:w-[70px]"
               />
             </Link>
           </div>
@@ -912,7 +912,7 @@ const Header = ({ isCategory = true }: HeaderProps) => {
                     />
                   </motion.button>
                   {hoveredAllCategories && (
-                    <div className="fixed left-0 right-0 top-22 h-dvh bg-black/30 z-[100]">
+                    <div className="fixed left-0 right-0 top-24 h-dvh bg-black/30 z-[100]">
                       <motion.div
                         initial={{ opacity: 0, y: -10 }}
                         animate={{ opacity: 1, y: 0 }}
@@ -1026,7 +1026,7 @@ const Header = ({ isCategory = true }: HeaderProps) => {
 
             {/* Full-Screen Dropdown for Individual Categories */}
             {hoveredCategory && (
-              <div className="fixed left-0 right-0 top-22 h-dvh bg-black/30  z-[100]">
+              <div className="fixed left-0 right-0 top-24 h-dvh bg-black/30  z-[100]">
                 <motion.div
                   initial={{ opacity: 0, y: -8 }}
                   animate={{ opacity: 1, y: 0 }}

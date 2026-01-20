@@ -121,7 +121,7 @@ function SearchContent({ query }: { query: string }) {
           productId: row.id,
           variantId: row.variant_id,
 
-          name: row.short_name,
+          name: row.full_name,
           slug: row.slug,
           mrp: String(row.mrp),
           ourPrice: String(row.our_price),

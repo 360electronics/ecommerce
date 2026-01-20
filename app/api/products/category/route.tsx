@@ -203,7 +203,7 @@ export async function GET(req: Request) {
       SELECT
         p.id,
         p.slug,
-        p.short_name,
+        p.full_name,
         p.average_rating,
 
         b.id AS brand_id,

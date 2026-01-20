@@ -57,14 +57,14 @@ const CheckoutPage: React.FC = () => {
   const router = useRouter();
   const [addresses, setAddresses] = useState<Address[]>([]);
   const [selectedAddressId, setSelectedAddressId] = useState<string | null>(
-    null
+    null,
   );
   const [showAddressForm, setShowAddressForm] = useState(false);
   const [deliveryMode, setDeliveryMode] = useState<"standard" | "express">(
-    "standard"
+    "standard",
   );
   const [paymentMethod, setPaymentMethod] = useState<"razorpay" | "cod">(
-    "razorpay"
+    "razorpay",
   );
 
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -100,13 +100,13 @@ const CheckoutPage: React.FC = () => {
     fetchCheckoutItems(user.id).finally(() => setHasFetchedCheckout(true));
   }, [user?.id]);
 
-  useLayoutEffect(() => {
+  useEffect(() => {
     if (!hasFetchedCheckout) return;
 
-    if (checkoutItems.length === 0) {
+    if (!checkoutSessionId) {
       router.replace("/");
     }
-  }, [hasFetchedCheckout, checkoutItems.length, router]);
+  }, [hasFetchedCheckout, checkoutSessionId]);
 
   const hasClearedCheckoutRef = React.useRef(false);
 
@@ -164,14 +164,14 @@ const CheckoutPage: React.FC = () => {
             {
               headers: { "Content-Type": "application/json" },
               credentials: "include",
-            }
+            },
           );
           if (!response.ok) throw new Error("Failed to fetch addresses");
           const data: Address[] = await response.json();
           setAddresses(data);
           const defaultAddress = data.find((addr) => addr.isDefault);
           setSelectedAddressId(
-            defaultAddress ? defaultAddress.id : data[0]?.id || null
+            defaultAddress ? defaultAddress.id : data[0]?.id || null,
           );
         } catch (error) {
           console.error("Error fetching addresses:", error);
@@ -191,12 +191,12 @@ const CheckoutPage: React.FC = () => {
     const fetchCityFromPincode = async () => {
       if (selectedAddressId) {
         const selectedAddress = addresses.find(
-          (addr) => addr.id === selectedAddressId
+          (addr) => addr.id === selectedAddressId,
         );
         if (selectedAddress?.postalCode) {
           try {
             const response = await fetch(
-              `https://api.postalpincode.in/pincode/${selectedAddress.postalCode}`
+              `https://api.postalpincode.in/pincode/${selectedAddress.postalCode}`,
             );
             if (!response.ok) throw new Error("Failed to fetch pincode data");
             const data = await response.json();
@@ -312,44 +312,23 @@ const CheckoutPage: React.FC = () => {
 
   // Handle cancel checkout
   const handleCancelCheckout = async () => {
-    if (!checkoutSessionId || !user?.id) {
-      router.replace("/");
-      return;
-    }
-
-    setIsCancelling(true);
-
     try {
-      const res = await fetch("/api/orders", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          userId: user.id,
-          checkoutSessionId,
-          addressId: selectedAddressId,
-          totalAmount: grandTotal,
-          discountAmount,
-          couponCode: coupon?.code ?? null,
-          shippingAmount,
-          deliveryMode,
-          paymentMethod,
-          status: "cancelled",
-          paymentStatus: "cancelled",
-        }),
+      await fetch(`/api/checkout/cancel?userId=${user!.id}`, {
+        method: "DELETE",
       });
 
-      const order = await res.json();
+      clearCoupon();
+      await clearCheckout(user!.id);
 
       showFancyToast({
-        title: "Order cancelled",
-        message: "Your order has been cancelled.",
+        title: "Checkout cancelled",
+        message: "Your checkout has been cancelled.",
         type: "info",
       });
 
-      await safeClearCheckout();
       router.replace("/");
     } catch (err) {
-      console.error("Cancel error", err);
+      console.error(err);
       router.replace("/");
     }
   };
@@ -485,7 +464,7 @@ const CheckoutPage: React.FC = () => {
               sum +
               (deliveryMode === "standard" ? 50 : 79) *
                 (item.cartOfferProductId ? 1 : item.quantity), // Offer product counts as 1 item
-            0
+            0,
           );
 
     const grandTotal = Math.max(0, subtotal - discountAmount) + shippingAmount;
@@ -607,11 +586,17 @@ const CheckoutPage: React.FC = () => {
             if (coupon && coupon.code && couponStatus === "applied") {
               await markCouponUsed(coupon.code);
             }
-
-            router.push("/profile?tab=orders");
             clearCoupon();
             setCurrentOrderId(null);
-            await safeClearCheckout();
+            await fetch("/api/checkout/session/complete", {
+              method: "POST",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify({ sessionId: checkoutSessionId }),
+            });
+
+            clearCoupon();
+            router.push("/profile?tab=orders");
+
             showFancyToast({
               title: "Payment successful",
               message: "Your payment has been processed successfully.",
@@ -839,10 +824,16 @@ const CheckoutPage: React.FC = () => {
         await markCouponUsed(coupon.code);
       }
 
-      router.push("/profile/orders");
       clearCoupon();
 
-      await safeClearCheckout();
+      await fetch("/api/checkout/session/complete", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ sessionId: checkoutSessionId }),
+      });
+
+      clearCoupon();
+      router.push("/profile?tab=orders");
     } catch (error: any) {
       console.error("Order creation error:", error);
       showFancyToast({
@@ -1403,7 +1394,7 @@ const CheckoutPage: React.FC = () => {
                                 <p className="text-sm font-medium text-gray-900">
                                   {formatCurrency(
                                     Number(item.variant.ourPrice) *
-                                      item.quantity
+                                      item.quantity,
                                   )}
                                 </p>
                               </div>
@@ -1520,7 +1511,7 @@ const CheckoutPage: React.FC = () => {
                                 (sum, item) =>
                                   sum +
                                   (item.cartOfferProductId ? 0 : item.quantity),
-                                0
+                                0,
                               )}{" "}
                               items)
                             </span>
@@ -1535,7 +1526,7 @@ const CheckoutPage: React.FC = () => {
                                 {checkoutItems.reduce(
                                   (sum, item) =>
                                     sum + (item.cartOfferProductId ? 1 : 0),
-                                  0
+                                  0,
                                 )}{" "}
                                 item)
                               </span>

@@ -50,27 +50,26 @@ export const useCheckoutStore = create<CheckoutState>((set, get) => ({
     try {
       set({ isLoading: true });
 
-      // 🔥 FETCH ONLY — do NOT create
       const sessionRes = await fetch(`/api/checkout/session?userId=${userId}`);
       const session = await sessionRes.json();
 
       if (!session) {
-        // No session → user came directly → bounce
-        set({ checkoutItems: [] });
+        set({ isLoading: false });
         return;
       }
-
-      set({ checkoutSessionId: session.id });
 
       const res = await fetch(`/api/checkout?userId=${userId}`);
       const data = await res.json();
 
       set({
+        checkoutSessionId: session.id,
         checkoutItems: data,
         isLoading: false,
+        lastFetched: Date.now(),
       });
-    } catch {
-      set({ checkoutItems: [], isLoading: false });
+    } catch (error) {
+      logError("fetchCheckoutItems", error);
+      set({ isLoading: false, error: error as AppError });
     }
   },
 
@@ -84,7 +83,7 @@ export const useCheckoutStore = create<CheckoutState>((set, get) => ({
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify(item),
-        })
+        }),
       );
 
       await get().fetchCheckoutItems(item.userId);
@@ -145,7 +144,7 @@ export const useCheckoutStore = create<CheckoutState>((set, get) => ({
       await fetchWithRetry(() =>
         fetch(`/api/checkout?id=${id}&userId=${userId}`, {
           method: "DELETE",
-        })
+        }),
       );
 
       await get().fetchCheckoutItems(userId);

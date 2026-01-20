@@ -81,7 +81,7 @@ function mapRowToFlattened(row: any): FlattenedProduct {
     sku: row.sku,
     attributes: row.attributes ?? {},
 
-    name: row.short_name,
+    name: row.full_name,
     slug: row.slug,
     description: row.description ?? "",
 
@@ -168,7 +168,7 @@ function CategoryContent({
       try {
         setLoading(true);
 
-        // 🔑 USE FULL URL PARAMS
+        // USE FULL URL PARAMS
         const params = new URLSearchParams(searchParams.toString());
 
         // ensure category & subcategory always exist
@@ -197,7 +197,7 @@ function CategoryContent({
 
     load();
     return () => controller.abort();
-  }, [searchParams, category, subcategory]); // 🔥 KEY CHANGE
+  }, [searchParams, category, subcategory]); // KEY CHANGE
 
   return (
     <>

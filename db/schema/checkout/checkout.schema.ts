@@ -61,7 +61,7 @@ export const checkoutSessions = pgTable(
       .references(() => users.id, { onDelete: "cascade" }),
 
     status: varchar("status", {
-      enum: ["active", "expired", "converted"],
+      enum: ["active", "expired", "converted", "cancelled"],
     })
       .notNull()
       .default("active"),
