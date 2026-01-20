@@ -82,7 +82,7 @@ export async function GET(req: Request) {
 
     if (ratings.length > 0) {
       whereClauses.push(
-        sql`FLOOR(p.average_rating) IN (${sql.join(ratings, sql`,`)})`
+        sql`FLOOR(p.average_rating) IN (${sql.join(ratings, sql`,`)})`,
       );
     }
 
@@ -99,8 +99,8 @@ export async function GET(req: Request) {
         whereClauses.push(
           sql`LOWER(v.attributes ->> ${key}) IN (${sql.join(
             values.map(normalize),
-            sql`,`
-          )})`
+            sql`,`,
+          )})`,
         );
       }
     });
@@ -158,15 +158,32 @@ export async function GET(req: Request) {
         });
       }
     }
+    const subcategoryRows = await db.execute(sql`
+  SELECT DISTINCT sc.slug
+  FROM products p
+  JOIN categories c ON c.id = p.category_id
+  LEFT JOIN subcategories sc ON sc.id = p.subcategory_id
+  WHERE
+    p.status = 'active'
+    AND c.slug = ${categorySlug}
+    AND sc.slug IS NOT NULL
+`);
+
+    const subcategories = subcategoryRows.rows
+      .map((r: any) => r.slug)
+      .filter(Boolean);
 
     const filterOptions = {
       brands: Array.from(brandSet),
+
+      subcategories, 
+
       colors: attributesMap.color ? Array.from(attributesMap.color) : [],
       storageOptions: attributesMap.storage
         ? Array.from(attributesMap.storage)
         : [],
       attributes: Object.fromEntries(
-        Object.entries(attributesMap).map(([k, v]) => [k, Array.from(v)])
+        Object.entries(attributesMap).map(([k, v]) => [k, Array.from(v)]),
       ),
       priceRange: {
         min: min === Infinity ? 0 : min,
@@ -247,7 +264,7 @@ export async function GET(req: Request) {
     console.error("Category API error:", err);
     return NextResponse.json(
       { error: "Failed to fetch category products" },
-      { status: 500 }
+      { status: 500 },
     );
   }
 }

@@ -183,7 +183,7 @@ function CategoryContent({
         setTotalCount(res.totalCount ?? 0);
         setFilterOptions(res.filterOptions ?? EMPTY_FILTER_OPTIONS);
 
-        console.log("Filter options: ", category, ":", res.filterOptions);
+        // console.log("Filter options: ", category, ":", res.filterOptions);
       } catch (err) {
         if (!controller.signal.aborted) {
           console.error("Category fetch error:", err);

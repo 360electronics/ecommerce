@@ -61,6 +61,7 @@ interface FilterSection {
 interface FilterOptions {
   colors: string[];
   brands: string[];
+  subcategories: any[];
   storageOptions: string[];
   priceRange: { min: number; max: number };
   attributes: { [key: string]: string[] };
@@ -160,7 +161,7 @@ const DynamicFilter: React.FC<FilterProps> = ({
 
   const generateOptions = (
     products: FlattenedProduct[],
-    key: keyof FlattenedProduct | string
+    key: keyof FlattenedProduct | string,
   ) => {
     const uniqueValues = new Set<string>();
     products.forEach((product) => {
@@ -254,7 +255,7 @@ const DynamicFilter: React.FC<FilterProps> = ({
     ) {
       let uniqueStorage = Array.from(new Set(filterOptions.storageOptions));
       uniqueStorage = uniqueStorage.sort(
-        (a, b) => getCapacityValue(a) - getCapacityValue(b)
+        (a, b) => getCapacityValue(a) - getCapacityValue(b),
       );
       sections.push({
         id: "storage",
@@ -310,7 +311,7 @@ const DynamicFilter: React.FC<FilterProps> = ({
 
       // 🔹 Filter valid values (exist in current products)
       const validValues = Array.from(uniqueNormalized.values()).filter(
-        (v) => v && v.trim()
+        (v) => v && v.trim(),
       );
 
       if (validValues.length > 0) {
@@ -318,7 +319,7 @@ const DynamicFilter: React.FC<FilterProps> = ({
         const lowerKey = attrKey.toLowerCase();
         if (["ram", "storage", "rom", "memory"].includes(lowerKey)) {
           sortedValues = validValues.sort(
-            (a, b) => getCapacityValue(a) - getCapacityValue(b)
+            (a, b) => getCapacityValue(a) - getCapacityValue(b),
           );
         }
 
@@ -336,6 +337,23 @@ const DynamicFilter: React.FC<FilterProps> = ({
         });
       }
     });
+
+    if (filterOptions.subcategories?.length > 0) {
+      const uniqueSubs = Array.from(
+        new Set(filterOptions.subcategories),
+      ).sort();
+
+      sections.push({
+        id: "subcategory",
+        title: "Subcategory",
+        type: "checkbox",
+        options: uniqueSubs.map((subcat) => ({
+          id: normalizeValue(subcat),
+          label: formatLabel(subcat, "subcategory"),
+          checked: false,
+        })),
+      });
+    }
 
     return sections;
   }, [products, filterOptions]);
@@ -381,10 +399,10 @@ const DynamicFilter: React.FC<FilterProps> = ({
       filterConfig.some(
         (config) =>
           config.type === "checkbox" &&
-          searchParams.getAll(config.id).length > 0
+          searchParams.getAll(config.id).length > 0,
       ) ||
       Object.keys(filterOptions.attributes).some(
-        (key) => searchParams.getAll(key).length > 0
+        (key) => searchParams.getAll(key).length > 0,
       );
 
     if (!hasUrlParams) return;
@@ -459,7 +477,7 @@ const DynamicFilter: React.FC<FilterProps> = ({
 
   const toggleSection = (
     sectionId: string,
-    event: React.MouseEvent | React.KeyboardEvent
+    event: React.MouseEvent | React.KeyboardEvent,
   ) => {
     event.stopPropagation();
     setExpanded((prev) => ({
@@ -476,7 +494,7 @@ const DynamicFilter: React.FC<FilterProps> = ({
           options: section.options.map((option) =>
             normalizeValue(option.id) === normalizeValue(optionId)
               ? { ...option, checked: !option.checked }
-              : option
+              : option,
           ),
         };
       }
@@ -507,16 +525,17 @@ const DynamicFilter: React.FC<FilterProps> = ({
   const handlePriceInputChange = (
     sectionId: string,
     type: "min" | "max",
-    value: string
+    value: string,
   ) => {
     const numValue = value === "" ? undefined : Number(value);
     const updatedSections = filterSections.map((section) => {
       if (section.id === sectionId && section.type === "range") {
-        const min = type === "min" ? numValue ?? 0 : section.currentMin ?? 0;
+        const min =
+          type === "min" ? (numValue ?? 0) : (section.currentMin ?? 0);
         const max =
           type === "max"
-            ? numValue ?? section.max ?? 1000
-            : section.currentMax ?? section.max ?? 1000;
+            ? (numValue ?? section.max ?? 1000)
+            : (section.currentMax ?? section.max ?? 1000);
         return {
           ...section,
           currentMin: Math.max(min, 0),
@@ -532,7 +551,7 @@ const DynamicFilter: React.FC<FilterProps> = ({
 
   const handleViewMore = (
     sectionId: string,
-    event: React.MouseEvent | React.KeyboardEvent
+    event: React.MouseEvent | React.KeyboardEvent,
   ) => {
     event.stopPropagation();
     setVisibleOptions((prev) => ({
@@ -569,7 +588,7 @@ const DynamicFilter: React.FC<FilterProps> = ({
           };
         }
         return section;
-      })
+      }),
     );
 
     setExcludeOutOfStock(false);
@@ -799,7 +818,7 @@ const DynamicFilter: React.FC<FilterProps> = ({
                                 handlePriceInputChange(
                                   section.id,
                                   "min",
-                                  e.target.value
+                                  e.target.value,
                                 )
                               }
                               placeholder="Min"
@@ -817,7 +836,7 @@ const DynamicFilter: React.FC<FilterProps> = ({
                                 handlePriceInputChange(
                                   section.id,
                                   "max",
-                                  e.target.value
+                                  e.target.value,
                                 )
                               }
                               placeholder="Max"
