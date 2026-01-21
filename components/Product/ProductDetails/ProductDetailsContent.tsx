@@ -922,150 +922,6 @@ export default function ProductDetailsContent({
     </div>
   );
 
-  const EmiModal = () => {
-    if (!isEmiOpen) return null;
-
-    return (
-      <div className="fixed inset-0 z-50 flex items-center justify-center">
-        {/* Backdrop */}
-        <div
-          className="absolute inset-0 bg-black/50"
-          onClick={() => setIsEmiOpen(false)}
-        />
-
-        {/* Modal */}
-        <div className="relative bg-white w-full max-w-lg mx-4 rounded-2xl shadow-xl overflow-hidden">
-          {/* Header */}
-          <div className="flex items-center justify-between p-4 border-b">
-            <div className="flex items-center gap-2">
-              <CreditCard className="w-5 h-5 text-primary" />
-              <h3 className="text-lg font-semibold">EMI Options</h3>
-            </div>
-            <button
-              onClick={() => setIsEmiOpen(false)}
-              className="p-1 rounded-full cursor-pointer hover:bg-gray-100"
-            >
-              <X className="w-5 h-5" />
-            </button>
-          </div>
-
-          {/* Content */}
-          <div className="p-4 space-y-4 max-h-[70vh] overflow-y-auto">
-            {/* Banks */}
-            <div className="space-y-2">
-              <p className="text-sm font-medium text-gray-700">
-                Available Banks & NBFCs
-              </p>
-              <div className="flex items-center gap-4">
-                <img src="/banks/hdfc.png" alt="HDFC" width={60} height={28} />
-
-                <img
-                  src="/banks/bajaj.png"
-                  alt="Bajaj Finserv"
-                  width={60}
-                  height={28}
-                />
-                <img
-                  src="/banks/icici.webp"
-                  alt="ICICI"
-                  width={60}
-                  height={28}
-                />
-              </div>
-            </div>
-
-            {/* EMI Info */}
-            <div className="bg-gray-50 rounded-lg p-3 text-sm text-gray-700">
-              <ul className="list-disc pl-5 space-y-1">
-                <li>No Cost EMI on select credit cards</li>
-                <li>Tenure: 3, 6 & 12 months</li>
-                <li>Subject to bank approval</li>
-                <li>Minimum transaction value may apply</li>
-              </ul>
-            </div>
-
-            {/* Lead Form */}
-            <div className="space-y-3">
-              <h4 className="text-sm font-semibold text-gray-900">
-                Get EMI Assistance
-              </h4>
-
-              <input
-                type="text"
-                placeholder="Full Name *"
-                value={emiName}
-                onChange={(e) => setEmiName(e.target.value)}
-                className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm"
-              />
-
-              <input
-                type="tel"
-                placeholder="Phone Number *"
-                maxLength={10}
-                value={emiPhone}
-                onChange={(e) => setEmiPhone(e.target.value.replace(/\D/g, ""))}
-                className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm"
-              />
-
-              <input
-                type="email"
-                placeholder="Email (optional)"
-                value={emiEmail}
-                onChange={(e) => setEmiEmail(e.target.value)}
-                className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm"
-              />
-
-              <input
-                type="text"
-                placeholder="PAN Card (optional)"
-                maxLength={10}
-                value={emiPan}
-                onChange={(e) => setEmiPan(e.target.value.toUpperCase())}
-                className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm uppercase"
-              />
-
-              <div className="flex gap-2">
-                {(["HDFC", "ICICI", "BAJAJ"] as const).map((bank) => (
-                  <button
-                    key={bank}
-                    onClick={() => setEmiBank(bank)}
-                    className={cn(
-                      "px-4 py-2 rounded-lg cursor-pointer text-sm border",
-                      emiBank === bank
-                        ? "bg-primary text-white border-primary"
-                        : "bg-white border-gray-300",
-                    )}
-                  >
-                    {bank}
-                  </button>
-                ))}
-              </div>
-            </div>
-          </div>
-
-          {/* Footer */}
-          <div className="p-4 border-t">
-            <button
-              onClick={handleEmiSubmit}
-              disabled={isSubmittingEmi}
-              className={cn(
-                "w-full py-2.5 rounded-lg cursor-pointer font-semibold text-white",
-                isSubmittingEmi
-                  ? "bg-gray-400 cursor-not-allowed"
-                  : "bg-primary hover:bg-primary-hover",
-              )}
-            >
-              {isSubmittingEmi ? "Submitting..." : "Request EMI Callback"}
-            </button>
-
-            <p className="text-[11px] text-gray-500 mt-2 text-center">
-              By continuing, you agree to be contacted regarding EMI options.
-            </p>
-          </div>
-        </div>
-      </div>
-    );
-  };
 
   const QuantityAndWishlist = () => (
     <div className="flex items-center gap-4 flex-wrap">
@@ -1213,7 +1069,154 @@ export default function ProductDetailsContent({
       <Pricing />
 
       <EmiBanner onOpen={() => setIsEmiOpen(true)} />
-      <EmiModal />
+
+      {isEmiOpen ? (
+        <div className="fixed inset-0 z-50 flex items-center justify-center">
+          {/* Backdrop */}
+          <div
+            className="absolute inset-0 bg-black/50"
+            onClick={() => setIsEmiOpen(false)}
+          />
+
+          {/* Modal */}
+          <div className="relative bg-white w-full max-w-lg mx-4 rounded-2xl shadow-xl overflow-hidden">
+            {/* Header */}
+            <div className="flex items-center justify-between p-4 border-b">
+              <div className="flex items-center gap-2">
+                <CreditCard className="w-5 h-5 text-primary" />
+                <h3 className="text-lg font-semibold">EMI Options</h3>
+              </div>
+              <button
+                onClick={() => setIsEmiOpen(false)}
+                className="p-1 rounded-full cursor-pointer hover:bg-gray-100"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            {/* Content */}
+            <div className="p-4 space-y-4 max-h-[70vh] overflow-y-auto">
+              {/* Banks */}
+              <div className="space-y-2">
+                <p className="text-sm font-medium text-gray-700">
+                  Available Banks & NBFCs
+                </p>
+                <div className="flex items-center gap-4">
+                  <img
+                    src="/banks/hdfc.png"
+                    alt="HDFC"
+                    width={60}
+                    height={28}
+                  />
+
+                  <img
+                    src="/banks/bajaj.png"
+                    alt="Bajaj Finserv"
+                    width={60}
+                    height={28}
+                  />
+                  <img
+                    src="/banks/icici.webp"
+                    alt="ICICI"
+                    width={60}
+                    height={28}
+                  />
+                </div>
+              </div>
+
+              {/* EMI Info */}
+              <div className="bg-gray-50 rounded-lg p-3 text-sm text-gray-700">
+                <ul className="list-disc pl-5 space-y-1">
+                  <li>No Cost EMI on select credit cards</li>
+                  <li>Tenure: 3, 6 & 12 months</li>
+                  <li>Subject to bank approval</li>
+                  <li>Minimum transaction value may apply</li>
+                </ul>
+              </div>
+
+              {/* Lead Form */}
+              <div className="space-y-3">
+                <h4 className="text-sm font-semibold text-gray-900">
+                  Get EMI Assistance
+                </h4>
+
+                <input
+                  type="text"
+                  placeholder="Full Name *"
+                  value={emiName}
+                  onChange={(e) => setEmiName(e.target.value)}
+                  className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm"
+                />
+
+                <input
+                  type="tel"
+                  placeholder="Phone Number *"
+                  maxLength={10}
+                  value={emiPhone}
+                  onChange={(e) =>
+                    setEmiPhone(e.target.value.replace(/\D/g, ""))
+                  }
+                  className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm"
+                />
+
+                <input
+                  type="email"
+                  placeholder="Email (optional)"
+                  value={emiEmail}
+                  onChange={(e) => setEmiEmail(e.target.value)}
+                  className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm"
+                />
+
+                <input
+                  type="text"
+                  placeholder="PAN Card (optional)"
+                  maxLength={10}
+                  value={emiPan}
+                  onChange={(e) => setEmiPan(e.target.value.toUpperCase())}
+                  className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm uppercase"
+                />
+
+                <div className="flex gap-2">
+                  {(["HDFC", "ICICI", "BAJAJ"] as const).map((bank) => (
+                    <button
+                      key={bank}
+                      onClick={() => setEmiBank(bank)}
+                      className={cn(
+                        "px-4 py-2 rounded-lg cursor-pointer text-sm border",
+                        emiBank === bank
+                          ? "bg-primary text-white border-primary"
+                          : "bg-white border-gray-300",
+                      )}
+                    >
+                      {bank}
+                    </button>
+                  ))}
+                </div>
+              </div>
+            </div>
+
+            {/* Footer */}
+            <div className="p-4 border-t">
+              <button
+                onClick={handleEmiSubmit}
+                disabled={isSubmittingEmi}
+                className={cn(
+                  "w-full py-2.5 rounded-lg cursor-pointer font-semibold text-white",
+                  isSubmittingEmi
+                    ? "bg-gray-400 cursor-not-allowed"
+                    : "bg-primary hover:bg-primary-hover",
+                )}
+              >
+                {isSubmittingEmi ? "Submitting..." : "Request EMI Callback"}
+              </button>
+
+              <p className="text-[11px] text-gray-500 mt-2 text-center">
+                By continuing, you agree to be contacted regarding EMI options.
+              </p>
+            </div>
+          </div>
+        </div>
+      ) : null}
 
       <div className="my-6 space-y-4">
         {attributeKeys.map((key) => {

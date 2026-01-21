@@ -2,7 +2,10 @@
 
 import { useState, useEffect, useMemo, useCallback } from "react";
 import { useRouter } from "next/navigation";
-import { EnhancedTable, type ColumnDefinition } from "@/components/Layouts/TableLayout";
+import {
+  EnhancedTable,
+  type ColumnDefinition,
+} from "@/components/Layouts/TableLayout";
 import { Button } from "@/components/ui/button";
 
 /* -------------------------------- TYPES -------------------------------- */
@@ -19,7 +22,7 @@ interface Order {
   shippingMethod: string;
 }
 
-type OrderTab = "confirmed" | "pending" | "cancelled" | "others" | "all";
+type OrderTab = "confirmed" | "pending" | "cancelled" | "shipped" | "delivered" | "others" | "all";
 
 /* --------------------------- UPDATE STATUS MODAL ------------------------- */
 
@@ -60,7 +63,7 @@ function UpdateOrderStatusModal({
     } catch (err) {
       console.error("[UpdateOrderStatusModal] error:", err);
       setUpdateError(
-        err instanceof Error ? err.message : "Failed to update order status"
+        err instanceof Error ? err.message : "Failed to update order status",
       );
     } finally {
       setUpdateLoading(false);
@@ -136,17 +139,16 @@ export function OrdersTable() {
         }
 
         const transformed: Order[] = result.data.map((o: any) => ({
-          id: o.orders.id,
-          customer: o.savedAddresses.fullName,
+          id: o.id,
+          customer: o.customer,
           email: "",
-          date: new Date(o.orders.createdAt).toISOString().split("T")[0],
-          status: o.orders.status.toLowerCase(),
-          payment: o.orders.paymentStatus.toLowerCase(),
-          total: Number(o.orders.totalAmount),
-          items: o.orderItems?.length || 1,
+          date: new Date(o.createdAt).toISOString().split("T")[0],
+          status: o.status,
+          payment: o.paymentStatus,
+          total: Number(o.totalAmount),
+          items: o.totalItems,
           shippingMethod:
-            o.orders.deliveryMode.charAt(0).toUpperCase() +
-            o.orders.deliveryMode.slice(1),
+            o.deliveryMode.charAt(0).toUpperCase() + o.deliveryMode.slice(1),
         }));
 
         setOrders(transformed);
@@ -172,6 +174,10 @@ export function OrdersTable() {
           return order.status === "pending";
         case "cancelled":
           return order.status === "cancelled";
+        case "shipped":
+          return order.status === "shipped";
+        case "delivered":
+          return order.status === "delivered";
         case "others":
           return ["failed", "returned"].includes(order.status);
         case "all":
@@ -184,9 +190,8 @@ export function OrdersTable() {
   const countByStatus = (status: OrderTab) => {
     if (status === "all") return orders.length;
     if (status === "others")
-      return orders.filter((o) =>
-        ["failed", "returned"].includes(o.status)
-      ).length;
+      return orders.filter((o) => ["failed", "returned"].includes(o.status))
+        .length;
 
     return orders.filter((o) => o.status === status).length;
   };
@@ -225,9 +230,7 @@ export function OrdersTable() {
 
   const handleStatusUpdated = (orderId: string, newStatus: string) => {
     setOrders((prev) =>
-      prev.map((o) =>
-        o.id === orderId ? { ...o, status: newStatus } : o
-      )
+      prev.map((o) => (o.id === orderId ? { ...o, status: newStatus } : o)),
     );
     setSelectedOrders([]);
   };
@@ -244,11 +247,7 @@ export function OrdersTable() {
   }
 
   if (error) {
-    return (
-      <div className="p-6 bg-red-50 text-red-700 rounded-md">
-        {error}
-      </div>
-    );
+    return <div className="p-6 bg-red-50 text-red-700 rounded-md">{error}</div>;
   }
 
   /* -------------------------------- RENDER ------------------------------- */
@@ -256,9 +255,7 @@ export function OrdersTable() {
   return (
     <div className="mx-auto">
       <div className="mb-6">
-        <h1 className="text-3xl font-bold text-gray-900">
-          Order Management
-        </h1>
+        <h1 className="text-3xl font-bold text-gray-900">Order Management</h1>
         <p className="text-gray-600 mt-1">
           Confirmed orders are shown by default
         </p>
@@ -270,6 +267,8 @@ export function OrdersTable() {
           { key: "confirmed", label: "Confirmed" },
           { key: "pending", label: "Pending" },
           { key: "cancelled", label: "Cancelled" },
+          { key: "shipped", label: "Shipped" },
+          { key: "delivered", label: "Delivered" },
           { key: "others", label: "Others" },
           { key: "all", label: "All" },
         ].map((tab) => (
@@ -323,9 +322,7 @@ export function OrdersTable() {
           stickyHeader: true,
           rowHoverEffect: true,
         }}
-        onRowClick={(order) =>
-          router.push(`/admin/orders/${order.id}`)
-        }
+        onRowClick={(order) => router.push(`/admin/orders/${order.id}`)}
       />
 
       {/* Update Status Modal */}

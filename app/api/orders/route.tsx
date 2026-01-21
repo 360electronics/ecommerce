@@ -98,30 +98,53 @@ export async function POST(req: Request) {
 }
 
 
-export async function GET(request: Request) {
+export async function GET() {
   try {
-    const allOrders = await db
+    const rows = await db
       .select({
-        orders: orders,
-        orderItems: orderItems,
-        variants: variants,
-        savedAddresses: savedAddresses,
+        order: orders,
+        item: orderItems,
+        variant: variants,
+        address: savedAddresses,
       })
       .from(orders)
       .leftJoin(orderItems, eq(orders.id, orderItems.orderId))
       .leftJoin(variants, eq(variants.id, orderItems.variantId))
       .leftJoin(savedAddresses, eq(savedAddresses.id, orders.addressId));
+
+    const orderMap = new Map<string, any>();
+
+    for (const row of rows) {
+      const orderId = row.order.id;
+
+      if (!orderMap.has(orderId)) {
+        orderMap.set(orderId, {
+          ...row.order,
+          customer: row.address?.fullName ?? "Guest",
+          address: row.address,
+          items: [],
+          totalItems: 0,
+        });
+      }
+
+      if (row.item) {
+        orderMap.get(orderId).items.push({
+          ...row.item,
+          variant: row.variant,
+        });
+
+        orderMap.get(orderId).totalItems += row.item.quantity;
+      }
+    }
+
     return NextResponse.json({
       success: true,
-      data: allOrders,
+      data: Array.from(orderMap.values()),
     });
-  } catch (error) {
-    console.error("[ORDER_GET_ERROR]", error);
-    return NextResponse.json<ErrorResponse>(
-      {
-        message: "Failed to fetch orders",
-        error: error instanceof Error ? error.message : String(error),
-      },
+  } catch (err) {
+    console.error("[ORDER_GET_ERROR]", err);
+    return NextResponse.json(
+      { success: false, message: "Failed to fetch orders" },
       { status: 500 }
     );
   }

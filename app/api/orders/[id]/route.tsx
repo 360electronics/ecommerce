@@ -13,6 +13,7 @@ interface ErrorResponse {
 export async function GET(request: Request, { params }: { params: Params }) {
   const { id: orderId } = await params; // Access orderId correctly
 
+
   try {
     const order = await db
       .select({
