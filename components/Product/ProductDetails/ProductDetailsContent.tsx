@@ -1127,7 +1127,7 @@ export default function ProductDetailsContent({
               {/* EMI Info */}
               <div className="bg-gray-50 rounded-lg p-3 text-sm text-gray-700">
                 <ul className="list-disc pl-5 space-y-1">
-                  <li>No Cost EMI on select credit cards</li>
+                  <li>Zero down payment on EMI</li>
                   <li>Tenure: 3, 6 & 12 months</li>
                   <li>Subject to bank approval</li>
                   <li>Minimum transaction value may apply</li>

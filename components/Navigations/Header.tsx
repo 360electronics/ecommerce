@@ -93,7 +93,7 @@ export const categoryFeatures: Record<string, { [feature: string]: string[] }> =
         "RTX 5060",
       ],
       Ram: ["8 GB", "16 GB", "32 GB"],
-      Storage: ["512 GB", "1 TB SSD", "2 TB"],
+      Storage: ["512 GB", "1 TB", "2 TB"],
       "Display Size": [
         "13.3 inch",
         "13.6 inch",
