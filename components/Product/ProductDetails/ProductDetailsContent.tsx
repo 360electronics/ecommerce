@@ -868,8 +868,6 @@ export default function ProductDetailsContent({
       <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-4">
         {/* Left content */}
         <div className="flex items-start gap-3">
-          <Shield className="w-6 h-6 text-primary mt-0.5 shrink-0" />
-
           <div className="flex-1">
             <p className="text-sm sm:text-base font-semibold text-primary/90">
               EMI starting from ₹
@@ -878,7 +876,7 @@ export default function ProductDetailsContent({
             </p>
 
             <p className="text-xs sm:text-sm text-primary mt-0.5">
-              No Cost EMI available • 3, 6 & 12 months
+              Zero Down Payment on EMI Available • 3, 6 & 12 months
             </p>
 
             {/* Bank Logos */}

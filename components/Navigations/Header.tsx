@@ -147,7 +147,18 @@ export const categoryFeatures: Record<string, { [feature: string]: string[] }> =
 
     // 🖥 Monitors
     Monitors: {
-      brand: ["LG", "Samsung", "ACER", "ASUS", "MSI", "BenQ", "Dell", "Lenovo", "Viewsonic", "Zebronics"],
+      brand: [
+        "LG",
+        "Samsung",
+        "ACER",
+        "ASUS",
+        "MSI",
+        "BenQ",
+        "Dell",
+        "Lenovo",
+        "Viewsonic",
+        "Zebronics",
+      ],
       "Screen Size": [
         "19 Inch",
         "22 Inch",
@@ -351,7 +362,7 @@ const Header = ({ isCategory = true }: HeaderProps) => {
     ]);
 
     const sortedCategories = sortedAllCategories.filter((c) =>
-      allowed.has(c.name)
+      allowed.has(c.name),
     );
 
     setAllCategories(sortedAllCategories);
@@ -392,12 +403,12 @@ const Header = ({ isCategory = true }: HeaderProps) => {
 
   const handleSearch = (
     query: string | number | boolean,
-    category: string | number | boolean
+    category: string | number | boolean,
   ) => {
     router.push(
       `/search?q=${encodeURIComponent(query)}&category=${encodeURIComponent(
-        category
-      )}`
+        category,
+      )}`,
     );
     closeMenu();
     setIsSearchOpen(false);
@@ -429,7 +440,7 @@ const Header = ({ isCategory = true }: HeaderProps) => {
       clearTimeout(dropdownTimeoutRef.current);
     }
     setHoveredCategory(
-      categoryName === "Graphics_cards" ? "Graphics Card" : categoryName
+      categoryName === "Graphics_cards" ? "Graphics Card" : categoryName,
     );
     setHoveredAttribute(null);
   };
@@ -523,17 +534,176 @@ const Header = ({ isCategory = true }: HeaderProps) => {
         )}
 
         {/* Mobile Menu Overlay */}
+        {/* Mobile Menu - Slide from Left */}
         <AnimatePresence>
           {isMenuOpen && (
             <motion.div
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              exit={{ opacity: 0 }}
-              transition={{ duration: 0.2 }}
-              className="fixed inset-0 top-0 z-40 lg:hidden"
-              onClick={() => !selectedMobileCategory && closeMenu()}
+              initial={{ x: "-100%" }}
+              animate={{ x: 0 }}
+              exit={{ x: "-100%" }}
+              transition={{ duration: 0.3, ease: "easeInOut" }}
+              className="fixed inset-y-0 left-0 z-100 lg:hidden bg-white overflow-hidden"
+              style={{ width: "80vw", maxWidth: "320px", height: "100dvh" }}
+              ref={menuRef}
             >
-              <div className="absolute inset-0 bg-black/40" />
+              {selectedMobileCategory ? (
+                /* ================= CATEGORY DETAIL ================= */
+                <motion.div
+                  initial={{ x: "100%", opacity: 0 }}
+                  animate={{ x: 0, opacity: 1 }}
+                  exit={{ x: "100%", opacity: 0 }}
+                  transition={{ duration: 0.3 }}
+                  className="p-4 flex flex-col h-full"
+                >
+                  {/* Header */}
+                  <div className="flex items-center gap-3 mb-4 pb-4 border-b">
+                    <button
+                      onClick={() => {
+                        setExpandedFeature(null);
+                        setSelectedMobileCategory(null);
+                      }}
+                      className="p-2 rounded-lg hover:bg-gray-100"
+                    >
+                      <ArrowLeft size={22} className="text-primary" />
+                    </button>
+                    <h3 className="font-bold text-lg">
+                      {selectedMobileCategory.name}
+                    </h3>
+                  </div>
+
+                  <div className="flex-grow overflow-y-auto space-y-6">
+                    {/* Subcategories */}
+                    {selectedMobileCategory.subCategories.length > 0 && (
+                      <div>
+                        <h4 className="text-xs font-bold text-gray-500 uppercase mb-3">
+                          Subcategories
+                        </h4>
+                        <div className="space-y-2">
+                          {selectedMobileCategory.subCategories.map(
+                            (subCat) => (
+                              <Link
+                                key={subCat.id}
+                                href={`/category/${selectedMobileCategory.slug}?subcategory=${subCat.slug}`}
+                                onClick={closeMenu}
+                                className="flex justify-between items-center px-3 py-2 rounded-lg bg-gray-50 hover:bg-primary/5 text-sm font-medium"
+                              >
+                                {subCat.name}
+                                <ArrowUpRight
+                                  size={14}
+                                  className="text-primary"
+                                />
+                              </Link>
+                            ),
+                          )}
+                        </div>
+                      </div>
+                    )}
+
+                    {/* Features — SAME AS DESKTOP */}
+                    {categoryFeatures[selectedMobileCategory.name] && (
+                      <div>
+                        <h4 className="text-xs font-bold text-gray-500 uppercase mb-3">
+                          Filter by Features
+                        </h4>
+
+                        <div className="space-y-3">
+                          {Object.entries(
+                            categoryFeatures[selectedMobileCategory.name],
+                          ).map(([feature, values]) => (
+                            <div key={feature}>
+                              <button
+                                onClick={() =>
+                                  setExpandedFeature(
+                                    expandedFeature === feature
+                                      ? null
+                                      : feature,
+                                  )
+                                }
+                                className="w-full flex justify-between items-center px-3 py-2 bg-gray-50 rounded-lg text-sm font-medium"
+                              >
+                                {feature}
+                                <ChevronDown
+                                  size={16}
+                                  className={`transition-transform ${
+                                    expandedFeature === feature
+                                      ? "rotate-180"
+                                      : ""
+                                  }`}
+                                />
+                              </button>
+
+                              <AnimatePresence>
+                                {expandedFeature === feature && (
+                                  <motion.div
+                                    initial={{ height: 0, opacity: 0 }}
+                                    animate={{ height: "auto", opacity: 1 }}
+                                    exit={{ height: 0, opacity: 0 }}
+                                    className="pl-3 mt-2 space-y-1"
+                                  >
+                                    {values.map((value) => (
+                                      <Link
+                                        key={value}
+                                        href={`/category/${selectedMobileCategory.slug}?${feature}=${value}`}
+                                        onClick={closeMenu}
+                                        className="block text-xs px-3 py-1 rounded hover:bg-primary/5"
+                                      >
+                                        {value}
+                                      </Link>
+                                    ))}
+                                  </motion.div>
+                                )}
+                              </AnimatePresence>
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                </motion.div>
+              ) : (
+                /* ================= MAIN CATEGORY LIST ================= */
+                <motion.div className="p-4 flex flex-col h-full">
+                  <div className="flex justify-between items-center mb-4 pb-4 border-b">
+                    <h3 className="font-bold text-lg flex items-center gap-2">
+                      <Menu size={18} /> Menu
+                    </h3>
+                    <button
+                      onClick={closeMenu}
+                      className="p-2 rounded-lg hover:bg-gray-100"
+                    >
+                      <X size={22} />
+                    </button>
+                  </div>
+
+                  <div className="flex-grow overflow-y-auto space-y-2">
+                    {allCategories.map((category) => (
+                      <div
+                        key={category.id}
+                        className="flex justify-between items-center rounded-lg hover:bg-gray-50"
+                      >
+                        <Link
+                          href={`/category/${category.slug}`}
+                          onClick={closeMenu}
+                          className="flex items-center gap-2 px-3 py-3 font-semibold text-sm"
+                        >
+                          {getCategoryIcon(category.name)}
+                          {category.name}
+                        </Link>
+
+                        {(category.subCategories.length > 0 ||
+                          categoryFeatures[category.name]) && (
+                          <button
+                            onClick={() => setSelectedMobileCategory(category)}
+                            className="p-2"
+                          >
+                            <ChevronDown size={18} />
+                          </button>
+                        )}
+                      </div>
+                    ))}
+                  </div>
+                </motion.div>
+              )}
             </motion.div>
           )}
         </AnimatePresence>
@@ -600,7 +770,7 @@ const Header = ({ isCategory = true }: HeaderProps) => {
                                 transition={{ duration: 0.2 }}
                               >
                                 <Link
-                                  href={`/category/${selectedMobileCategory.slug}?subcategory=${subCat.slug}`}
+                                  href={`/category/${selectedMobileCategory.slug}?subcategory=${subCat.slug.toLowerCase()}`}
                                   className="flex items-center justify-between py-3 px-3 text-sm text-gray-700 hover:text-primary bg-gray-50 hover:bg-primary/5 rounded-lg transition-all group font-medium"
                                   onClick={closeMenu}
                                 >
@@ -617,7 +787,7 @@ const Header = ({ isCategory = true }: HeaderProps) => {
                                   </motion.div>
                                 </Link>
                               </motion.div>
-                            )
+                            ),
                           )}
                         </div>
                       </div>
@@ -631,7 +801,7 @@ const Header = ({ isCategory = true }: HeaderProps) => {
                           (a) =>
                             a.isFilterable === true &&
                             selectedMobileCategory.attributeValues[a.name!]
-                              ?.length > 0
+                              ?.length > 0,
                         );
 
                       const staticFeatures =
@@ -658,7 +828,7 @@ const Header = ({ isCategory = true }: HeaderProps) => {
                                           setExpandedFeature(
                                             expandedFeature === feature
                                               ? null
-                                              : feature
+                                              : feature,
                                           )
                                         }
                                         className="w-full flex items-center justify-between py-3 px-3 text-sm text-gray-700 hover:text-primary bg-gray-50 hover:bg-primary/5 rounded-lg transition-all group font-medium"
@@ -689,13 +859,9 @@ const Header = ({ isCategory = true }: HeaderProps) => {
                                             {values.map((value) => (
                                               <Link
                                                 key={value}
-                                                href={`/category/${
-                                                  selectedMobileCategory.slug
-                                                }?${encodeURIComponent(
-                                                  feature
-                                                )}=${encodeURIComponent(
-                                                  value
-                                                )}`}
+                                                href={`/category/${selectedMobileCategory.slug}?${encodeURIComponent(
+                                                  feature,
+                                                )}=${encodeURIComponent(value.toLowerCase())}`}
                                                 onClick={closeMenu}
                                                 className="flex items-center justify-between py-2 px-3 text-xs text-gray-600 hover:text-primary hover:bg-primary/5 rounded transition-all group"
                                               >
@@ -710,7 +876,7 @@ const Header = ({ isCategory = true }: HeaderProps) => {
                                         )}
                                       </AnimatePresence>
                                     </div>
-                                  )
+                                  ),
                                 )
                               : dynamicAttrs.map((attr) => {
                                   const isExpanded =
@@ -724,7 +890,7 @@ const Header = ({ isCategory = true }: HeaderProps) => {
                                       <button
                                         onClick={() =>
                                           setExpandedFeature(
-                                            isExpanded ? null : attr.name
+                                            isExpanded ? null : attr.name,
                                           )
                                         }
                                         className="w-full flex items-center justify-between py-3 px-3 text-sm text-gray-700 hover:text-primary bg-gray-50 hover:bg-primary/5 rounded-lg transition-all group font-medium"
@@ -755,11 +921,9 @@ const Header = ({ isCategory = true }: HeaderProps) => {
                                             {values.map((value) => (
                                               <Link
                                                 key={value}
-                                                href={`/category/${
-                                                  selectedMobileCategory.slug
-                                                }?${
-                                                  attr.name
-                                                }=${encodeURIComponent(value).toLocaleLowerCase()}`}
+                                                href={`/category/${selectedMobileCategory.slug}?${encodeURIComponent(
+                                                  attr.name!,
+                                                )}=${encodeURIComponent(value.toLowerCase())}`}
                                                 onClick={closeMenu}
                                                 className="flex items-center justify-between py-2 px-3 text-xs text-gray-600 hover:text-primary hover:bg-primary/5 rounded transition-all group"
                                               >
@@ -813,7 +977,7 @@ const Header = ({ isCategory = true }: HeaderProps) => {
                     ) : (
                       allCategories.map((category) => {
                         const filterableAttributes = category.attributes.filter(
-                          (attr) => attr.isFilterable === true
+                          (attr) => attr.isFilterable === true,
                         );
                         const hasSubsOrFilters =
                           category.subCategories.length > 0 ||
@@ -830,7 +994,7 @@ const Header = ({ isCategory = true }: HeaderProps) => {
                           >
                             <div className="flex items-center justify-between">
                               <Link
-                                href={`/category/${category.slug}`}
+                                href={`/category/${category.slug.toLocaleLowerCase()}`}
                                 className="flex-grow py-3 px-3 text-gray-800 hover:text-primary font-semibold text-sm flex items-center gap-2 transition-colors"
                                 onClick={closeMenu}
                               >
@@ -995,7 +1159,7 @@ const Header = ({ isCategory = true }: HeaderProps) => {
                   ? null
                   : categories.map((category) => {
                       const hasFilterableAttributes = category.attributes.some(
-                        (attr) => attr.isFilterable === true
+                        (attr) => attr.isFilterable === true,
                       );
                       return (
                         <motion.li
@@ -1044,7 +1208,7 @@ const Header = ({ isCategory = true }: HeaderProps) => {
                     .filter((category) => category.name === hoveredCategory)
                     .map((category, idx) => {
                       const filterableAttributes = category.attributes.filter(
-                        (a) => a.isFilterable
+                        (a) => a.isFilterable,
                       );
 
                       return (
@@ -1093,7 +1257,7 @@ const Header = ({ isCategory = true }: HeaderProps) => {
                             {categoryFeatures[category.name] ? (
                               <div className="flex flex-col gap-6">
                                 {Object.entries(
-                                  categoryFeatures[category.name]
+                                  categoryFeatures[category.name],
                                 ).map(([feature, values]) => (
                                   <div key={feature}>
                                     <div className="flex items-center justify-between mb-1">
@@ -1111,7 +1275,7 @@ const Header = ({ isCategory = true }: HeaderProps) => {
                                           href={`/category/${
                                             category.slug
                                           }?${encodeURIComponent(
-                                            feature
+                                            feature,
                                           )}=${encodeURIComponent(value).toLocaleLowerCase()}`}
                                           onClick={() =>
                                             setHoveredCategory(null)
