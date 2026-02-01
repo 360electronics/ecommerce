@@ -16,6 +16,7 @@ interface Props {
   filterOptions: any;
   pageSize: number;
   currentPage: number;
+  loading: boolean;
 }
 
 type SortKey =
@@ -33,6 +34,7 @@ export default function ProductListing({
   filterOptions,
   pageSize,
   currentPage,
+  loading,
 }: Props) {
   const pathname = usePathname();
   const searchParams = useSearchParams();
@@ -94,11 +96,16 @@ export default function ProductListing({
       parts.push(
         `in ${DOMPurify.sanitize(category)
           .replace(/[-_]/g, " ")
-          .replace(/\b\w/g, (c) => c.toUpperCase())}`
+          .replace(/\b\w/g, (c) => c.toUpperCase())}`,
       );
     if (searchQuery) parts.push(`for "${searchQuery}"`);
     return parts.join(" ");
   }, [totalCount, category, searchQuery]);
+
+  if (loading) {
+  return null; // ⛔ nothing renders while loading
+}
+
 
   return (
     <div className="flex gap-6 pb-10">

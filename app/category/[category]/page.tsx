@@ -57,7 +57,7 @@ const EMPTY_FILTER_OPTIONS = {
 /* ---------------- API ---------------- */
 async function fetchCategoryProductsApi(
   params: URLSearchParams,
-  signal: AbortSignal
+  signal: AbortSignal,
 ) {
   const res = await fetch(`/api/products/category?${params.toString()}`, {
     cache: "no-store",
@@ -159,7 +159,7 @@ function CategoryContent({
   const [products, setProducts] = useState<FlattenedProduct[]>([]);
   const [filterOptions, setFilterOptions] = useState(EMPTY_FILTER_OPTIONS);
   const [totalCount, setTotalCount] = useState(0);
-  const [loading, setLoading] = useState(false);
+  const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     const controller = new AbortController();
@@ -201,17 +201,19 @@ function CategoryContent({
 
   return (
     <>
-      {/* loader overlay */}
-      {loading && <CategoryLoading />}
-
-      <ProductListing
-        products={products}
-        totalCount={totalCount}
-        pageSize={24}
-        currentPage={page}
-        filterOptions={filterOptions}
-        category={category}
-      />
+      {loading ? (
+        <CategoryLoading />
+      ) : (
+        <ProductListing
+          products={products}
+          totalCount={totalCount}
+          pageSize={24}
+          currentPage={page}
+          filterOptions={filterOptions}
+          category={category}
+          loading={loading}
+        />
+      )}
     </>
   );
 }

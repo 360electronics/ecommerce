@@ -96,7 +96,7 @@ function SearchContent({ query }: { query: string }) {
   );
   const [totalCount, setTotalCount] = useState(0);
   const [pageSize, setPageSize] = useState(24);
-  const [loading, setLoading] = useState(false);
+  const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
   const abortRef = useRef<AbortController | null>(null);
@@ -164,29 +164,18 @@ function SearchContent({ query }: { query: string }) {
 
   return (
     <>
-      {/* ✅ Loader overlay */}
-      {loading && <SearchLoading />}
-
-      {/* ✅ Error */}
-      {error && <div className="text-red-500 text-center py-10">{error}</div>}
-
-      {/* ✅ True empty state */}
-      {!loading && totalCount === 0 && products.length === 0 && (
-        <div className="text-center py-20">
-          <h3 className="text-xl">No results found</h3>
-        </div>
-      )}
-
-      {/* ✅ Results */}
-      {products.length > 0 && (
-        <ProductListing
-          products={products}
-          totalCount={totalCount}
-          pageSize={pageSize}
-          currentPage={page}
-          filterOptions={filterOptions}
-        />
-      )}
+      {loading ? (
+              <SearchLoading />
+            ) : (
+              <ProductListing
+                products={products}
+                totalCount={totalCount}
+                pageSize={24}
+                currentPage={page}
+                filterOptions={filterOptions}
+                loading={loading}
+              />
+            )}
     </>
   );
 }
