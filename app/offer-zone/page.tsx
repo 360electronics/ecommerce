@@ -59,7 +59,7 @@ function OfferZoneContent() {
   const [filterOptions, setFilterOptions] = useState<any>(null);
   const [totalCount, setTotalCount] = useState(0);
   const [pageSize, setPageSize] = useState(12);
-  const [loading, setLoading] = useState(false);
+  const [loading, setLoading] = useState(true);
 
   const abortRef = useRef<AbortController | null>(null);
 
@@ -111,6 +111,7 @@ function OfferZoneContent() {
       pageSize={pageSize}
       currentPage={page}
       filterOptions={filterOptions}
+      loading={loading}
     />
   );
 }
