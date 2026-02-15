@@ -10,6 +10,7 @@ interface FlattenedProduct {
   productId: string;
   name: string;
   slug: string;
+  variantSlug: string;
   mrp: string;
   ourPrice: string;
   totalStocks: string;
@@ -123,6 +124,7 @@ function SearchContent({ query }: { query: string }) {
 
           name: row.full_name,
           slug: row.slug,
+          variantSlug: row.variant_slug,
           mrp: String(row.mrp),
           ourPrice: String(row.our_price),
           totalStocks: String(row.stock),

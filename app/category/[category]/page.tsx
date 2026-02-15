@@ -11,6 +11,7 @@ interface FlattenedProduct {
 
   sku?: string;
   attributes: Record<string, any>;
+  variantSlug: string;
 
   productId: string;
   name: string;
@@ -83,6 +84,7 @@ function mapRowToFlattened(row: any): FlattenedProduct {
 
     name: row.full_name,
     slug: row.slug,
+    variantSlug: row.variant_slug ,
     description: row.description ?? "",
 
     mrp: String(row.mrp ?? "0"),

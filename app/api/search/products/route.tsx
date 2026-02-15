@@ -206,6 +206,7 @@ export async function GET(req: Request) {
         b.name AS brand_name,
 
         v.id AS variant_id,
+        v.slug AS variant_slug, 
         v.attributes,
         v.our_price,
         v.mrp,

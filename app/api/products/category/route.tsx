@@ -230,6 +230,7 @@ export async function GET(req: Request) {
         sc.slug AS subcategory,
 
         v.id AS variant_id,
+        v.slug AS variant_slug, 
         v.our_price,
         v.mrp,
         v.stock,

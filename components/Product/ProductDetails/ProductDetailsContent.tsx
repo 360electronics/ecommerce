@@ -876,7 +876,7 @@ export default function ProductDetailsContent({
             </p>
 
             <p className="text-xs sm:text-sm text-primary mt-0.5">
-              Zero Down Payment on EMI Available • 3, 6 & 12 months
+              Zero Down Payment and EMI Available • 3, 6 & 12 months
             </p>
 
             {/* Bank Logos */}
@@ -1125,7 +1125,7 @@ export default function ProductDetailsContent({
               {/* EMI Info */}
               <div className="bg-gray-50 rounded-lg p-3 text-sm text-gray-700">
                 <ul className="list-disc pl-5 space-y-1">
-                  <li>Zero down payment on EMI</li>
+                  <li>Zero down payment and EMI</li>
                   <li>Tenure: 3, 6 & 12 months</li>
                   <li>Subject to bank approval</li>
                   <li>Minimum transaction value may apply</li>

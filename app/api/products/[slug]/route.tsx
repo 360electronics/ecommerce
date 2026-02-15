@@ -12,13 +12,13 @@ export async function GET(
   context: { params: Promise<Params> }
 ) {
   //API Proxy
-  const apiKey = req.headers.get('x-super-secure-key');
-  if (apiKey !== process.env.API_SECRET_KEY) {
-    return NextResponse.json(
-      { message: 'Unauthorized' },
-      { status: 401 }
-    );
-  }
+  // const apiKey = req.headers.get('x-super-secure-key');
+  // if (apiKey !== process.env.API_SECRET_KEY) {
+  //   return NextResponse.json(
+  //     { message: 'Unauthorized' },
+  //     { status: 401 }
+  //   );
+  // }
   //
   try {
     const { slug } = await context.params;

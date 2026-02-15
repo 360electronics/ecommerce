@@ -223,7 +223,6 @@ function LoginContent() {
                 </p>
               )}
             </div>
-
             <button
               type="submit"
               disabled={loading}

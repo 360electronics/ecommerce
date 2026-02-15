@@ -103,29 +103,37 @@ export default function ProductListing({
   }, [totalCount, category, searchQuery]);
 
   if (loading) {
-  return null; // ⛔ nothing renders while loading
-}
-
+    return null; // ⛔ nothing renders while loading
+  }
 
   return (
-    <div className="flex gap-6 pb-10">
+    <div className="flex flex-col md:flex-row gap-6 pb-10">
       {/* FILTER */}
-      <aside className="hidden md:block w-1/4">
+      <aside className=" hidden md:block md:w-1/4">
         <DynamicFilter
           products={products}
           filterOptions={filterOptions}
           onFilterChange={handleFilterChange}
         />
       </aside>
-
+     
       <main className="flex-1">
         <div className="flex items-center justify-between mb-4">
-          <div className="text-lg font-medium">{headerText}</div>
+          <div className="text-lg font-medium hidden md:block">
+            {headerText}
+          </div>
+          <div className=" block md:hidden w-full">
+            <DynamicFilter
+              products={products}
+              filterOptions={filterOptions}
+              onFilterChange={handleFilterChange}
+            />
+          </div>
 
           <select
             value={sort}
             onChange={(e) => handleSortChange(e.target.value)}
-            className="border border-gray-300 rounded-md px-3 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-primary"
+            className="border border-gray-300 md:rounded-md px-3 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-primary"
           >
             <option value="relevance">Relevance</option>
             <option value="newest">Newest Arrivals</option>
@@ -134,6 +142,10 @@ export default function ProductListing({
             <option value="rating_desc">Customer Rating</option>
           </select>
         </div>
+
+          <div className="text-lg font-medium md:hidden block mb-2">
+            {headerText}
+          </div>
 
         {/* TRUE empty state */}
         {totalCount === 0 && products.length === 0 ? (
@@ -147,7 +159,7 @@ export default function ProductListing({
                   key={p.variantId} // ✅ stable
                   productId={p.productId}
                   variantId={p.variantId}
-                  slug={p.slug}
+                  slug={p.variantSlug}
                   name={p.name}
                   image={p.productImages?.[0]?.url}
                   ourPrice={+p.ourPrice}
