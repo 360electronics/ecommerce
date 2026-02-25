@@ -8,7 +8,7 @@ export async function sendSmsOTP(phoneNumber: string, otp: string) {
   }
 
   try {
-    const url = `https://2factor.in/API/R1/?module=TRANS_SMS&apikey=${twoFactorApiKey}&to=${phoneNumber}&from=GARAGE&templatename=360Electronics-Ecom&var1=${otp}`;
+    const url = `https://2factor.in/API/R1/?module=TRANS_SMS&apikey=${twoFactorApiKey}&to=${phoneNumber}&from=GARAGE&templatename=360Electronics&var1=${otp}`;
 
     const { data } = await axios.get(url);
 

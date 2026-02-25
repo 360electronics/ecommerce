@@ -189,7 +189,7 @@ export default function OrderDetailsPage() {
       doc.setFontSize(10)
       doc.text("360 Electronics", right, 14, { align: "right" })
       doc.text("Coimbatore, Tamil Nadu - 641107", right, 19, { align: "right" })
-      doc.text("360electronicspvtltd@gmail.com", right, 24, { align: "right" })
+      doc.text("360electronicsofficial@gmail.com", right, 24, { align: "right" })
 
       // Order info
       doc.setFontSize(12)

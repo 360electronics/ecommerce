@@ -190,7 +190,7 @@ export default function PrivacyPolicy() {
                   <p className="mt-4"><strong>Business Name:</strong> 360 Electronics (a.k.a. Computer Garage 360)</p>
                   <p><strong>Address:</strong> 173-178, Chinnaswamy Road, New Siddhapudur, Coimbatore, Tamil Nadu 641044, India</p>
                   <p><strong>Phone:</strong> 7558132543</p>
-                  <p><strong>Email:</strong> 360electronicspvtltd@gmail.com</p>
+                  <p><strong>Email:</strong> 360electronicsofficial@gmail.com</p>
                   <p className="mt-4">We will respond to your privacy-related inquiries promptly and work to resolve any concerns you may have.</p>
                 </div>
               </section>

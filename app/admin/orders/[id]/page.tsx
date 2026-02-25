@@ -331,7 +331,7 @@ export default function OrderDetailsPage() {
     doc.text("Coimbatore, Tamil Nadu - 641107", rightMargin, 26, {
       align: "right",
     });
-    doc.text("360electronicspvtltd@gmail.com", rightMargin, 32, {
+    doc.text("360electronicsofficial@gmail.com", rightMargin, 32, {
       align: "right",
     });
 

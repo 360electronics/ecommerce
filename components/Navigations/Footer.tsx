@@ -90,7 +90,7 @@ const Footer = () => {
 
   const socialLinks = [
     {
-      href: "https://www.instagram.com/computergarage360",
+      href: "https://www.instagram.com/360electronics.in",
       icon: <FaInstagram size={22} />,
       label: "Instagram",
     },

@@ -79,7 +79,7 @@ export default function RefundPolicy() {
                     <div className="space-y-2 text-gray-700 leading-relaxed">
                       <p>Contact our customer service team to initiate a return:</p>
                       <p>• Phone: +91 7558132543 (Mon-Sat, 9:00 AM - 7:00 PM IST)</p>
-                      <p>• Email: 360electronicspvtltd@gmail.com</p>
+                      <p>• Email: 360electronicsofficial@gmail.com</p>
                       <p>• Provide order number, item details, and reason for return</p>
                       <p>Our team will verify eligibility and provide return authorization if approved</p>
                     </div>
@@ -251,7 +251,7 @@ export default function RefundPolicy() {
                   <p><strong>Proprietor:</strong> NOOR MOHAMED MOHAMED USSAN</p>
                   <p><strong>Address:</strong> 173-178, Chinnaswamy Road, New Siddhapudur, Coimbatore, Tamil Nadu 641044, India</p>
                   <p><strong>Phone:</strong> +91 7558132543</p>
-                  <p><strong>Email:</strong> 360electronicspvtltd@gmail.com</p>
+                  <p><strong>Email:</strong> 360electronicsofficial@gmail.com</p>
                   <p><strong>Returns Email:</strong> returns@360electronics.com</p>
                   <p><strong>Business Hours:</strong> Monday to Saturday, 9:00 AM to 7:00 PM IST</p>
                   <p className="mt-4">When contacting us about returns, please have your order number, item details, and reason for return ready. Our customer service team will guide you through the return process and provide updates on your refund status.</p>

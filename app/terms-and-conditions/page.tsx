@@ -75,7 +75,7 @@ export default function TermsAndConditions() {
                   <p><strong>Delivery Address:</strong> All orders will be delivered to the address provided by the buyer during checkout.</p>
                   <p><strong>Service Confirmation:</strong> Delivery of our services will be confirmed via email to the address specified during registration.</p>
                   <p><strong>Liability:</strong> 360 Electronics is not liable for any delay in delivery by the courier company or postal authorities. We guarantee to hand over the consignment to the courier company or postal authorities within 0-7 days from the date of order and payment, or as per the agreed delivery date.</p>
-                  <p><strong>Support:</strong> For any issues regarding shipping or our services, contact our helpdesk at 7558132543 or email us at 360electronicspvtltd@gmail.com</p>
+                  <p><strong>Support:</strong> For any issues regarding shipping or our services, contact our helpdesk at 7558132543 or email us at 360electronicsofficial@gmail.com</p>
                 </div>
               </section>
 
@@ -161,7 +161,7 @@ export default function TermsAndConditions() {
                   <p><strong>Business Name:</strong> 360 Electronics (a.k.a Computer Garage 360)</p>
                   <p><strong>Address:</strong> 173-178, Chinnaswamy Road, New Siddhapudur, Coimbatore, Tamil Nadu 641044, India</p>
                   <p><strong>Phone:</strong> 7558132543</p>
-                  <p><strong>Email:</strong> 360electronicspvtltd@gmail.com</p>
+                  <p><strong>Email:</strong> 360electronicsofficial@gmail.com</p>
                   <p className="mt-4">For questions regarding these terms, shipping inquiries, or any service-related issues, please contact us through the above channels.</p>
                 </div>
               </section>

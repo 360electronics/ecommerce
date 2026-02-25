@@ -68,6 +68,12 @@ export default function ProductDetailsContent({
   );
   const [isSubmittingEmi, setIsSubmittingEmi] = useState(false);
 
+  const [postOffices, setPostOffices] = useState<any[]>([]);
+  const [selectedPostOffice, setSelectedPostOffice] = useState<any | null>(
+    null,
+  );
+  const [showOptions, setShowOptions] = useState(false);
+
   // Debounce function to limit rapid API calls
   const debounce = (func: (...args: any[]) => void, wait: number) => {
     let timeout: NodeJS.Timeout;
@@ -136,31 +142,17 @@ export default function ProductDetailsContent({
         data[0].PostOffice &&
         data[0].PostOffice.length > 0
       ) {
-        const postOffices = data[0].PostOffice;
-        const postOfficeData = postOffices[postOffices.length - 2];
-        const districtName = postOfficeData.District;
-        const location = postOfficeData.Name;
-        setDistrict(`${location}, ${districtName}`);
+        const offices = data[0].PostOffice;
 
-        // Delivery days logic
-        const firstDigit = Number(pinCode[0]);
-        let deliveryDays = 5;
-
-        if ([1, 2].includes(firstDigit)) {
-          deliveryDays = 5; // North India
-        } else if ([7, 8].includes(firstDigit)) {
-          deliveryDays = 7; // Northeast/remote
-        } else if ([3, 4].includes(firstDigit)) {
-          deliveryDays = 5; // Central/West
-        } else if ([5, 6].includes(firstDigit)) {
-          deliveryDays = 3; // South India
-        }
-
-        setDeliveryEstimate(`Estimated delivery in ${deliveryDays} days`);
+        setPostOffices(offices);
+        setShowOptions(true);
+        setSelectedPostOffice(null);
+        setDistrict(null);
+        setDeliveryEstimate(null);
       } else {
         setPinCodeError("Invalid PIN code or no delivery service available.");
-        setDeliveryEstimate(null);
-        setDistrict(null);
+        setPostOffices([]);
+        setShowOptions(false);
       }
     } catch (err) {
       setPinCodeError("Failed to check delivery. Try again.");
@@ -170,6 +162,84 @@ export default function ProductDetailsContent({
       setIsCheckingPin(false);
     }
   };
+
+  const handlePostOfficeSelect = (office: any) => {
+    setSelectedPostOffice(office);
+    setShowOptions(false);
+
+    const location = office.Name;
+    const districtName = office.District;
+
+    setDistrict(`${location}, ${districtName}`);
+
+    // Delivery days logic
+    const firstDigit = Number(pinCode[0]);
+    let deliveryDays = 5;
+
+    if ([1, 2].includes(firstDigit)) deliveryDays = 5;
+    else if ([7, 8].includes(firstDigit)) deliveryDays = 7;
+    else if ([3, 4].includes(firstDigit)) deliveryDays = 5;
+    else if ([5, 6].includes(firstDigit)) deliveryDays = 3;
+
+    setDeliveryEstimate(`Estimated delivery in ${deliveryDays} days`);
+  };
+
+  const fetchPincodeDetails = async (code: string) => {
+    setIsCheckingPin(true);
+    setPinCodeError(null);
+
+    try {
+      const response = await fetch(
+        `https://api.postalpincode.in/pincode/${code}`,
+      );
+      const data = await response.json();
+
+      if (
+        data &&
+        data[0] &&
+        data[0].Status === "Success" &&
+        data[0].PostOffice &&
+        data[0].PostOffice.length > 0
+      ) {
+        // ✅ Filter only delivery offices
+        const offices = data[0].PostOffice.filter(
+          (office: any) => office.DeliveryStatus === "Delivery",
+        );
+
+        if (offices.length === 0) {
+          setPinCodeError("Delivery not available in this area.");
+          setPostOffices([]);
+          return;
+        }
+
+        setPostOffices(offices);
+        setShowOptions(true);
+        setSelectedPostOffice(null);
+        setDistrict(null);
+        setDeliveryEstimate(null);
+      } else {
+        setPinCodeError("Invalid PIN code.");
+        setPostOffices([]);
+        setShowOptions(false);
+      }
+    } catch (err) {
+      setPinCodeError("Failed to check delivery.");
+    } finally {
+      setIsCheckingPin(false);
+    }
+  };
+
+  useEffect(() => {
+    if (pinCode.length === 6) {
+      fetchPincodeDetails(pinCode);
+    } else {
+      setPostOffices([]);
+      setShowOptions(false);
+      setDistrict(null);
+      setDeliveryEstimate(null);
+      setPinCodeError(null);
+    }
+  }, [pinCode]);
 
   // Calculate discount
   const discount = useMemo(
@@ -920,7 +990,6 @@ export default function ProductDetailsContent({
     </div>
   );
 
-
   const QuantityAndWishlist = () => (
     <div className="flex items-center gap-4 flex-wrap">
       <div className="flex items-center border border-gray-300 rounded-full px-3 py-1.5 bg-white">
@@ -1290,6 +1359,25 @@ export default function ProductDetailsContent({
             {isCheckingPin ? "Checking..." : "Check"}
           </button>
         </div>
+        {showOptions && postOffices.length > 0 && (
+          <div className="mt-3 border border-gray-200 rounded-lg max-h-48 overflow-y-auto bg-white shadow-sm">
+            {postOffices.map((office, index) => (
+              <button
+                key={index}
+                onClick={() => handlePostOfficeSelect(office)}
+                className="w-full text-left px-3 py-2 text-sm hover:bg-gray-100 border-b last:border-b-0"
+              >
+                <div className="font-medium">{office.Name}</div>
+                <div className="text-xs text-gray-500">
+                  {office.Block}, {office.District}
+                </div>
+                <div className="text-xs text-gray-400">
+                  {office.DeliveryStatus}
+                </div>
+              </button>
+            ))}
+          </div>
+        )}
 
         {/* Results */}
         {pinCodeError && (
