@@ -3,6 +3,8 @@ import crypto from "crypto";
 import { eq } from "drizzle-orm";
 import { db } from "@/db/drizzle";
 import { checkout, orders } from "@/db/schema";
+import { sendOrderConfirmationEmail, sendAdminOrderNotification } from "@/lib/nodemailer";
+import { getOrderEmailData } from "@/lib/order-email-helper";
 
 export async function POST(request: Request) {
   try {
@@ -52,6 +54,14 @@ export async function POST(request: Request) {
 
     // Clear checkout items
     await db.delete(checkout).where(eq(checkout.userId, userId));
+
+    // Send confirmation emails (non-blocking)
+    getOrderEmailData(orderId).then((emailData) => {
+      if (emailData) {
+        sendOrderConfirmationEmail(emailData);
+        sendAdminOrderNotification(emailData);
+      }
+    }).catch((err) => console.error("[ORDER_EMAIL_FETCH_ERROR]", err));
 
     return NextResponse.json(
       { message: "Payment verified successfully" },

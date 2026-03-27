@@ -3,6 +3,8 @@ import { Cashfree, CFEnvironment } from "cashfree-pg";
 import { orders } from "@/db/schema";
 import { eq } from "drizzle-orm";
 import { db } from "@/db/drizzle";
+import { sendOrderConfirmationEmail, sendAdminOrderNotification } from "@/lib/nodemailer";
+import { getOrderEmailData } from "@/lib/order-email-helper";
 
 const cashfree = new Cashfree(
   CFEnvironment.SANDBOX, // or CFEnvironment.PRODUCTION
@@ -63,6 +65,16 @@ export async function POST(request: Request) {
     }
 
     await db.update(orders).set(statusUpdate).where(eq(orders.id, orderId));
+
+    // Send confirmation emails on successful payment (non-blocking)
+    if (payment.payment_status === "SUCCESS" && payment.is_captured) {
+      getOrderEmailData(orderId).then((emailData) => {
+        if (emailData) {
+          sendOrderConfirmationEmail(emailData);
+          sendAdminOrderNotification(emailData);
+        }
+      }).catch((err) => console.error("[ORDER_EMAIL_FETCH_ERROR]", err));
+    }
 
     return NextResponse.json({ success: true, payment, statusUpdate });
   } catch (error: any) {

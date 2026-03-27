@@ -2,6 +2,8 @@ import { db } from "@/db/drizzle";
 import { orders, orderItems, variants, savedAddresses } from "@/db/schema";
 import { eq } from "drizzle-orm";
 import { NextRequest, NextResponse } from "next/server";
+import { sendOrderStatusUpdateEmail } from "@/lib/nodemailer";
+import { getOrderEmailData } from "@/lib/order-email-helper";
 
 type Params = Promise<{ id: string }>;
 
@@ -112,6 +114,21 @@ export async function PATCH(
         { status: 404 }
       );
     }
+
+    // Send status update email to user (non-blocking)
+    getOrderEmailData(orderId).then((emailData) => {
+      if (emailData) {
+        sendOrderStatusUpdateEmail(
+          {
+            orderId: emailData.orderId,
+            customerName: emailData.customerName,
+            customerEmail: emailData.customerEmail,
+            totalAmount: emailData.totalAmount,
+          },
+          status
+        );
+      }
+    }).catch((err) => console.error("[ORDER_STATUS_EMAIL_ERROR]", err));
 
     return NextResponse.json({ success: true, data: updatedOrder });
   } catch (error) {

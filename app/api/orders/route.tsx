@@ -10,6 +10,8 @@ import {
 } from "@/db/schema";
 import { and, eq } from "drizzle-orm";
 import { NextResponse } from "next/server";
+import { sendOrderConfirmationEmail, sendAdminOrderNotification } from "@/lib/nodemailer";
+import { getOrderEmailData } from "@/lib/order-email-helper";
 
 interface ErrorResponse {
   message: string;
@@ -86,6 +88,16 @@ export async function POST(req: Request) {
       .update(checkoutSessions)
       .set({ lockedAt: new Date(), status: "converted" })
       .where(eq(checkoutSessions.id, checkoutSessionId));
+
+    /* 5️⃣ Send confirmation emails for COD orders (non-blocking) */
+    if (paymentMethod === "cod") {
+      getOrderEmailData(order.id).then((emailData) => {
+        if (emailData) {
+          sendOrderConfirmationEmail(emailData);
+          sendAdminOrderNotification(emailData);
+        }
+      }).catch((err) => console.error("[ORDER_EMAIL_FETCH_ERROR]", err));
+    }
 
     return NextResponse.json(order, { status: 201 });
   } catch (err) {
