@@ -1,26 +1,50 @@
 import axios from "axios";
 
 export async function sendSmsOTP(phoneNumber: string, otp: string) {
-  const twoFactorApiKey = process.env.TWO_FACTOR_API_KEY; // Your 2Factor API Key
+  const authKey = process.env.MSG91_AUTH_KEY;
+  const templateId = process.env.MSG91_TEMPLATE_ID;
 
-  if (!twoFactorApiKey) {
-    throw new Error("Missing TWO_FACTOR_API_KEY in environment variables");
+  if (!authKey || !templateId) {
+    throw new Error("Missing MSG91_AUTH_KEY or MSG91_TEMPLATE_ID in environment variables");
   }
 
+  // Ensure phone number has country code (default to India +91)
+  const mobile = phoneNumber.startsWith("+")
+    ? phoneNumber.replace("+", "")
+    : phoneNumber.startsWith("91") && phoneNumber.length === 12
+    ? phoneNumber
+    : `91${phoneNumber}`;
+
   try {
-    const url = `https://2factor.in/API/R1/?module=TRANS_SMS&apikey=${twoFactorApiKey}&to=${phoneNumber}&from=GARAGE&templatename=360Electronics&var1=${otp}`;
+    const { data } = await axios.post(
+      "https://control.msg91.com/api/v5/flow/",
+      {
+        template_id: templateId,
+        short_url: "0",
+        recipients: [
+          {
+            mobiles: mobile,
+            var1: otp,
+          },
+        ],
+      },
+      {
+        headers: {
+          authkey: authKey,
+          "Content-Type": "application/json",
+          accept: "application/json",
+        },
+      }
+    );
 
-    const { data } = await axios.get(url);
-
-    if (data.Status === "Success") {
-      // console.log("✅ OTP SMS sent successfully to", phoneNumber);
+    if (data.type === "success") {
       return true;
     } else {
-      console.error("❌ Failed to send OTP:", data);
+      console.error("MSG91 OTP send failed:", data);
       return false;
     }
   } catch (error: any) {
-    console.error("🚨 Error sending transactional SMS:", error.message || error);
+    console.error("Error sending OTP via MSG91:", error.message || error);
     return false;
   }
 }
