@@ -40,6 +40,7 @@
     "html2pdf.js": "^0.10.3",
     "immer": "^10.1.1",
     "isomorphic-dompurify": "^2.24.0",
+    "jose": "^6.2.2",
     "js-cookie": "^3.0.5",
     "jsonwebtoken": "^9.0.2",
     "jspdf": "^3.0.1",

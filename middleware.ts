@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server"
 import type { NextRequest } from "next/server"
+import { jwtVerify } from "jose"
 
 const authProtectedRoutes = ["/profile", "/cart", "/checkout", "/wishlist"]
 const adminRoutes = ["/admin"]
@@ -7,57 +8,36 @@ const nonAuthRoutes = ["/signin", "/signup"]
 
 export async function middleware(request: NextRequest) {
   const { pathname } = request.nextUrl
-  
-  // Get authToken from cookies
+
   const token = request.cookies.get("authToken")?.value
   let isAuthenticated = false
   let isAdmin = false
-  let userRole = null
-  let response: NextResponse
+  let userRole: string | null = null
 
   if (token) {
     try {
-      // Call /api/auth/status with the authToken cookie
-      const res = await fetch(`${request.nextUrl.origin}/api/auth/status`, {
-        method: "GET",
-        headers: {
-          Cookie: `authToken=${token}`,
-        },
-      })
-      
-      if (res.ok) {
-        const data = await res.json()
-        isAuthenticated = data.isAuthenticated
-        userRole = data.user?.role
-        if (data.user && data.user.role === "admin") {
-          isAdmin = true
-        }
-      } else {
-        console.warn("Auth status check failed:", res.status, await res.text())
-        // Don't immediately clear cookie on 401/403, might be temporary
-        if (res.status === 401 || res.status === 403) {
-          response = NextResponse.next()
-          response.cookies.set("authToken", "", { expires: new Date(0), path: "/" })
-          return response
-        }
-      }
-    } catch (error) {
-      console.error("Error checking auth status in middleware:", error)
-      // Don't clear cookie on network errors, might be temporary
-      response = NextResponse.next()
-      return response
+      const secret = new TextEncoder().encode(process.env.JWT_SECRET!)
+      const { payload } = await jwtVerify(token, secret)
+      isAuthenticated = true
+      userRole = (payload.role as string) ?? null
+      isAdmin = userRole === "admin"
+    } catch {
+      // Token invalid or expired — treat as unauthenticated
+      const response = NextResponse.next()
+      response.cookies.set("authToken", "", { expires: new Date(0), path: "/" })
+      // Still fall through to route protection below with isAuthenticated = false
     }
   }
 
-  // Case 1: User tries to access auth-protected routes without being logged in
+  // Auth-protected routes require login
   if (
     authProtectedRoutes.some((route) => pathname.startsWith(route)) &&
     !isAuthenticated
   ) {
-    return redirectToSignIn(request);
+    return redirectToSignIn(request)
   }
 
-  // Case 3: Admin routes require admin role
+  // Admin routes require admin role
   if (adminRoutes.some((route) => pathname.startsWith(route))) {
     if (!isAuthenticated) {
       return redirectToSignIn(request)
@@ -67,12 +47,12 @@ export async function middleware(request: NextRequest) {
     }
   }
 
-  // Case 4: Authenticated users shouldn't access signin/signup
+  // Authenticated users shouldn't access signin/signup
   if (nonAuthRoutes.some((route) => pathname === route) && isAuthenticated) {
     return redirectToHome(request)
   }
 
-  response = NextResponse.next()
+  const response = NextResponse.next()
   if (isAuthenticated && userRole) {
     response.headers.set("x-user-role", userRole)
     response.headers.set("x-authenticated", "true")
@@ -83,7 +63,6 @@ export async function middleware(request: NextRequest) {
   return response
 }
 
-// Helper function to redirect to sign in page
 function redirectToSignIn(request: NextRequest) {
   const url = request.nextUrl.clone()
   url.searchParams.set("callbackUrl", request.nextUrl.pathname)
@@ -91,7 +70,6 @@ function redirectToSignIn(request: NextRequest) {
   return NextResponse.redirect(url)
 }
 
-// Helper function to redirect to home page
 function redirectToHome(request: NextRequest) {
   const url = request.nextUrl.clone()
   url.pathname = "/"
@@ -100,14 +78,6 @@ function redirectToHome(request: NextRequest) {
 
 export const config = {
   matcher: [
-    /*
-     * Match all request paths except for the ones starting with:
-     * - api (API routes)
-     * - _next/static (static files)
-     * - _next/image (image optimization files)
-     * - favicon.ico (favicon file)
-     * - public folder
-     */
     "/((?!api|_next/static|_next/image|favicon.ico|public).*)",
   ],
 }
