@@ -1,13 +1,10 @@
 "use client";
 
 import { useState, useEffect, useCallback, useRef, Suspense } from "react";
-import { useRouter, useSearchParams } from "next/navigation";
+import { useSearchParams } from "next/navigation";
 import Link from "next/link";
 import { cn } from "@/lib/utils";
 import { useAuthStore } from "@/store/auth-store";
-import { useCartStore } from "@/store/cart-store";
-import { useCheckoutStore } from "@/store/checkout-store";
-import { useWishlistStore } from "@/store/wishlist-store";
 import { showFancyToast } from "@/components/Reusable/ShowCustomToast";
 
 interface ImageUrls {
@@ -55,8 +52,7 @@ function VerifyOTPContent() {
   const [userId, setUserId] = useState<string | null>(null);
   const [type, setType] = useState<"email" | "phone">("email");
   const [callbackUrl, setCallbackUrl] = useState<string>("/");
-  const router = useRouter();
-  const searchParams = useSearchParams(); // Use useSearchParams
+  const searchParams = useSearchParams();
   const inputRefs = useRef<(HTMLInputElement | null)[]>(Array(6).fill(null));
   const { setAuth } = useAuthStore();
 
@@ -244,26 +240,10 @@ function VerifyOTPContent() {
       // console.log('user role:', data.user.role); // Debug log
       // console.log('targetUrl:', targetUrl); // Debug log
 
-      router.replace(targetUrl);
-
-      // Fetch critical store data
-      if (data.user.id) {
-        const results = await Promise.allSettled([
-          useCartStore.getState().fetchCart(),
-          useWishlistStore.getState().fetchWishlist(true),
-          useCheckoutStore.getState().fetchCheckoutItems(data.user.id),
-        ]);
-        results.forEach((result, index) => {
-          if (result.status === "rejected") {
-            console.log(
-              `[VerifyOTPContent] Fetch[${index}] failed:`,
-              result.reason
-            );
-          } else {
-            console.log(`[VerifyOTPContent] Fetch[${index}] succeeded`);
-          }
-        });
-      }
+      // Hard redirect so the browser commits the authToken cookie before the
+      // next request — router.replace() is client-side and races with the
+      // Set-Cookie header, causing the cookie to be missing from middleware.
+      window.location.replace(targetUrl);
     } catch (err: unknown) {
       const errorMessage =
         err instanceof Error ? err.message : "Failed to verify OTP";
