@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useState, useEffect } from "react";
+import { useCallback, useState, useEffect, useRef } from "react";
 import {
   Search,
   Clock,
@@ -58,21 +58,57 @@ export default function TicketsPage() {
   const [searchQuery, setSearchQuery] = useState("");
   const [isMounted, setIsMounted] = useState(false);
   const [loading, setLoading] = useState(true);
+  const [hasLoaded, setHasLoaded] = useState(false); // full-page loader only on first load
   const [error, setError] = useState<string | null>(null);
 
+  // Server-side pagination
+  const PAGE_SIZE = 12;
+  const [page, setPage] = useState(1);
+  const [total, setTotal] = useState(0);
+  const [debouncedSearch, setDebouncedSearch] = useState("");
+  const [stats, setStats] = useState<{
+    total: number;
+    active: number;
+    inactive: number;
+    closed: number;
+    avgResponseHours: number | null;
+  }>({ total: 0, active: 0, inactive: 0, closed: 0, avgResponseHours: null });
+  const requestIdRef = useRef(0);
+  const totalPages = Math.max(1, Math.ceil(total / PAGE_SIZE));
+
+  // Debounce search; any filter/search change goes back to page 1
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      setDebouncedSearch(searchQuery.trim());
+      setPage(1);
+    }, 350);
+    return () => clearTimeout(timer);
+  }, [searchQuery]);
+
   const fetchTickets = useCallback(async () => {
+    const requestId = ++requestIdRef.current;
     setLoading(true);
     setError(null);
     try {
-      const response = await fetch("/api/tickets", {
-        method: "GET",
-        headers: { "Content-Type": "application/json" },
+      const params = new URLSearchParams({
+        page: String(page),
+        pageSize: String(PAGE_SIZE),
+      });
+      if (filter !== "all") params.set("status", filter);
+      if (debouncedSearch) params.set("q", debouncedSearch);
+
+      const response = await fetch(`/api/admin/tickets?${params}`, {
+        cache: "no-store",
       });
       const data = await response.json();
+      if (requestId !== requestIdRef.current) return; // stale response
       if (!response.ok)
         throw new Error(data.error || "Failed to fetch tickets");
-      setTickets(data);
+      setTickets(data.data);
+      setTotal(data.total);
+      setStats(data.stats);
     } catch (err) {
+      if (requestId !== requestIdRef.current) return;
       const message =
         err instanceof Error ? err.message : "Failed to fetch tickets";
       setError(message);
@@ -82,9 +118,12 @@ export default function TicketsPage() {
         type: "error",
       });
     } finally {
-      setLoading(false);
+      if (requestId === requestIdRef.current) {
+        setLoading(false);
+        setHasLoaded(true);
+      }
     }
-  }, []);
+  }, [page, filter, debouncedSearch]);
 
   useEffect(() => {
     setIsMounted(true);
@@ -137,34 +176,9 @@ export default function TicketsPage() {
     [handleCloseModal, fetchTickets]
   );
 
-  const filteredTickets = tickets.filter((ticket) => {
-    const matchesFilter = filter === "all" || ticket.status === filter;
-    const matchesSearch =
-      searchQuery === "" ||
-      ticket.type.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      ticket.id.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      ticket.customer.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      ticket.customer.email.toLowerCase().includes(searchQuery.toLowerCase());
-
-    return matchesFilter && matchesSearch;
-  });
-
-  // Calculate average response time (in hours) for tickets with replies
-  const avgResponseTime =
-    tickets.length > 0
-      ? tickets.reduce((acc, ticket) => {
-          const firstReply = ticket.replies.find(
-            (reply) => reply.sender === "support"
-          );
-          if (!firstReply) return acc;
-          const created = new Date(ticket.createdAt).getTime();
-          const replied = new Date(firstReply.createdAt).getTime();
-          const diffHours = (replied - created) / (1000 * 60 * 60);
-          return acc + diffHours;
-        }, 0) /
-        tickets.filter((t) => t.replies.some((r) => r.sender === "support"))
-          .length
-      : 0;
+  // Search / status filtering and stats are computed server-side
+  const filteredTickets = tickets;
+  const avgResponseTime = stats.avgResponseHours ?? NaN;
 
   const modalComponent =
     isMounted && selectedTicket ? (
@@ -176,7 +190,7 @@ export default function TicketsPage() {
       />
     ) : null;
 
-  if (loading) {
+  if (loading && !hasLoaded) {
     return (
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         <div className="p-4 flex items-center justify-center">
@@ -220,7 +234,7 @@ export default function TicketsPage() {
       </div>
 
       {/* Stats Cards */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-6 mb-8">
         <div className="bg-white p-6 rounded-xl border border-gray-200 ">
           <div className="flex items-center">
             <div className="p-3 bg-blue-100 rounded-lg">
@@ -229,7 +243,7 @@ export default function TicketsPage() {
             <div className="ml-4">
               <p className="text-sm font-medium text-gray-600">Total Tickets</p>
               <p className="text-2xl font-bold text-gray-900">
-                {tickets.length}
+                {stats.total}
               </p>
             </div>
           </div>
@@ -244,7 +258,22 @@ export default function TicketsPage() {
                 Active Tickets
               </p>
               <p className="text-2xl font-bold text-gray-900">
-                {tickets.filter((t) => t.status === "active").length}
+                {stats.active}
+              </p>
+            </div>
+          </div>
+        </div>
+        <div className="bg-white p-6 rounded-xl border border-gray-200 ">
+          <div className="flex items-center">
+            <div className="p-3 bg-gray-100 rounded-lg">
+              <XCircle className="w-6 h-6 text-gray-600" />
+            </div>
+            <div className="ml-4">
+              <p className="text-sm font-medium text-gray-600">
+                Inactive Tickets
+              </p>
+              <p className="text-2xl font-bold text-gray-900">
+                {stats.inactive}
               </p>
             </div>
           </div>
@@ -259,7 +288,7 @@ export default function TicketsPage() {
                 Closed Tickets
               </p>
               <p className="text-2xl font-bold text-gray-900">
-                {tickets.filter((t) => t.status === "closed").length}
+                {stats.closed}
               </p>
             </div>
           </div>
@@ -300,7 +329,10 @@ export default function TicketsPage() {
           {["all", "active", "inactive", "closed"].map((status) => (
             <Button
               key={status}
-              onClick={() => setFilter(status)}
+              onClick={() => {
+                setFilter(status);
+                setPage(1);
+              }}
               variant={filter === status ? "default" : "outline"}
               className={`px-4 py-2 rounded-lg text-sm font-medium capitalize transition-all duration-200 ${
                 filter === status
@@ -322,7 +354,11 @@ export default function TicketsPage() {
           No tickets found.
         </div>
       ) : (
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
+        <div
+          className={`grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6 transition-opacity ${
+            loading ? "opacity-50 pointer-events-none" : ""
+          }`}
+        >
           {filteredTickets.map((ticket) => (
             <TicketCard
               key={ticket.id}
@@ -330,6 +366,34 @@ export default function TicketsPage() {
               onClick={() => handleOpenTicket(ticket)}
             />
           ))}
+        </div>
+      )}
+
+      {/* Pagination */}
+      {total > PAGE_SIZE && (
+        <div className="mt-6 flex items-center justify-between gap-4 rounded-xl border border-gray-200 bg-white p-4">
+          <span className="text-sm text-gray-600">
+            Showing {(page - 1) * PAGE_SIZE + 1}–{Math.min(page * PAGE_SIZE, total)} of {total}
+          </span>
+          <div className="flex items-center gap-2">
+            <Button
+              variant="outline"
+              disabled={page <= 1 || loading}
+              onClick={() => setPage((p) => Math.max(1, p - 1))}
+            >
+              Previous
+            </Button>
+            <span className="text-sm text-gray-700">
+              Page {page} of {totalPages}
+            </span>
+            <Button
+              variant="outline"
+              disabled={page >= totalPages || loading}
+              onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
+            >
+              Next
+            </Button>
+          </div>
         </div>
       )}
 

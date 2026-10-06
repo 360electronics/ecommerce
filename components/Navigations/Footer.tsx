@@ -210,7 +210,7 @@ const Footer = () => {
                     href="/refund-policy"
                     className="text-gray-300 hover:text-white text-sm transition"
                   >
-                    Refund Policy
+                    Return &amp; Refund Policy
                   </Link>
                 </li>
                 <li>

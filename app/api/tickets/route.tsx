@@ -85,7 +85,8 @@ export async function GET(req: NextRequest) {
           replies: [],
         };
       }
-      if (row.address?.id) {
+      // addresses × replies join multiplies rows — skip duplicates
+      if (row.address?.id && !acc[ticketId].addresses.some((a: any) => a.id === row.address!.id)) {
         acc[ticketId].addresses.push({
           id: row.address.id,
           fullName: row.address.fullName,
@@ -100,7 +101,7 @@ export async function GET(req: NextRequest) {
           isDefault: row.address.isDefault,
         });
       }
-      if (row.replies?.id) {
+      if (row.replies?.id && !acc[ticketId].replies.some((r: any) => r.id === row.replies!.id)) {
         acc[ticketId].replies.push({
           id: row.replies.id,
           sender: row.replies.sender,
@@ -159,7 +160,7 @@ export async function PATCH(req: NextRequest) {
       return NextResponse.json({ error: 'Ticket ID is required' }, { status: 400 });
     }
 
-    if (!status || !['active', 'inactive'].includes(status)) {
+    if (!status || !['active', 'inactive', 'closed'].includes(status)) {
       return NextResponse.json({ error: 'Invalid or missing status' }, { status: 400 });
     }
 

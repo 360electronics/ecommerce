@@ -1,4 +1,4 @@
-import { pgTable, serial, varchar, timestamp, text, uuid } from "drizzle-orm/pg-core";
+import { pgTable, serial, varchar, timestamp, text, uuid, integer } from "drizzle-orm/pg-core";
 import { users } from "../user/users.schema";
 import { sql } from "drizzle-orm";
 
@@ -8,6 +8,8 @@ export const otpTokens = pgTable("otp_tokens", {
   token: varchar("token", { length: 6 }).notNull(),
   type: varchar("type", { enum: ["email", "phone"] }).notNull(),
   expiresAt: timestamp("expires_at").notNull(),
+  // Failed + successful verification attempts; capped to stop brute force
+  attempts: integer("attempts").notNull().default(0),
   createdAt: timestamp("created_at").defaultNow().notNull(),
 });
 

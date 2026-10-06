@@ -47,7 +47,7 @@ export async function GET(req: Request) {
     return NextResponse.json<ErrorResponse>(
       {
         message: "Failed to fetch banners",
-        error: error instanceof Error ? error.message : String(error),
+        error: "Internal server error",
       },
       { status: 500 }
     );
@@ -187,7 +187,7 @@ export async function POST(req: Request) {
     return NextResponse.json<ErrorResponse>(
       {
         message: 'Failed to create banner',
-        error: error instanceof Error ? error.message : String(error),
+        error: "Internal server error",
       },
       { status: 500 }
     );

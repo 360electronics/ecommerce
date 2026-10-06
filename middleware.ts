@@ -13,6 +13,7 @@ export async function middleware(request: NextRequest) {
   let isAuthenticated = false
   let isAdmin = false
   let userRole: string | null = null
+  let clearAuthCookie = false
 
   if (token) {
     try {
@@ -22,11 +23,17 @@ export async function middleware(request: NextRequest) {
       userRole = (payload.role as string) ?? null
       isAdmin = userRole === "admin"
     } catch {
-      // Token invalid or expired — treat as unauthenticated
-      const response = NextResponse.next()
-      response.cookies.set("authToken", "", { expires: new Date(0), path: "/" })
-      // Still fall through to route protection below with isAuthenticated = false
+      // Token invalid or expired — treat as unauthenticated and clear the
+      // cookie on whichever response we return below
+      clearAuthCookie = true
     }
+  }
+
+  const finalize = (response: NextResponse) => {
+    if (clearAuthCookie) {
+      response.cookies.set("authToken", "", { expires: new Date(0), path: "/" })
+    }
+    return response
   }
 
   // Auth-protected routes require login
@@ -34,22 +41,22 @@ export async function middleware(request: NextRequest) {
     authProtectedRoutes.some((route) => pathname.startsWith(route)) &&
     !isAuthenticated
   ) {
-    return redirectToSignIn(request)
+    return finalize(redirectToSignIn(request))
   }
 
   // Admin routes require admin role
   if (adminRoutes.some((route) => pathname.startsWith(route))) {
     if (!isAuthenticated) {
-      return redirectToSignIn(request)
+      return finalize(redirectToSignIn(request))
     }
     if (!isAdmin) {
-      return redirectToHome(request)
+      return finalize(redirectToHome(request))
     }
   }
 
   // Authenticated users shouldn't access signin/signup
   if (nonAuthRoutes.some((route) => pathname === route) && isAuthenticated) {
-    return redirectToHome(request)
+    return finalize(redirectToHome(request))
   }
 
   const response = NextResponse.next()
@@ -60,7 +67,7 @@ export async function middleware(request: NextRequest) {
     response.headers.set("x-authenticated", "false")
   }
 
-  return response
+  return finalize(response)
 }
 
 function redirectToSignIn(request: NextRequest) {

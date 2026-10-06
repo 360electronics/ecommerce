@@ -53,6 +53,14 @@ export async function POST(req: Request) {
     const auth = await requireUser(req, userId);
     if (auth.error) return auth.error;
 
+    // Only one default address per user
+    if (isDefault) {
+      await db
+        .update(savedAddresses)
+        .set({ isDefault: false })
+        .where(eq(savedAddresses.userId, auth.user.userId));
+    }
+
     const [inserted] = await db.insert(savedAddresses).values({
       userId,
       fullName,
@@ -98,6 +106,14 @@ export async function PUT(req: Request) {
 
     const auth = await requireUser(req);
     if (auth.error) return auth.error;
+
+    // Only one default address per user
+    if (isDefault === true) {
+      await db
+        .update(savedAddresses)
+        .set({ isDefault: false })
+        .where(eq(savedAddresses.userId, auth.user.userId));
+    }
 
     const updatedAddress = await db.update(savedAddresses)
       .set({

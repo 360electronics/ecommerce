@@ -99,10 +99,10 @@ export async function GET(request: Request) {
             LIMIT 1
           )`,
           variantCount: sql<number>`(
-            SELECT count(*)::int FROM ${variants} v2 WHERE v2.product_id = ${products.id}
+            SELECT count(*)::int FROM ${variants} v2 WHERE v2.product_id = ${sql.raw('"products"."id"')}
           )`,
           isInOfferZone: sql<boolean>`EXISTS (
-            SELECT 1 FROM ${offerZone} oz WHERE oz.variant_id = ${variants.id}
+            SELECT 1 FROM ${offerZone} oz WHERE oz.variant_id = ${sql.raw('"variants"."id"')}
           )`,
         })
         .from(variants)

@@ -1,7 +1,13 @@
 import { requireAdmin, requireOwnerOrAdmin } from "@/lib/server-auth";
+import { cancelOrder, loadOrderForCancel } from "@/lib/orders/cancel.server";
+import {
+  DELETABLE_PAYMENT_STATUSES,
+  DELETABLE_STATUSES,
+  getOrderDeleteBlocker,
+} from "@/lib/orders/deletion";
 import { db } from "@/db/drizzle";
 import { orders, orderItems, variants, savedAddresses } from "@/db/schema";
-import { eq } from "drizzle-orm";
+import { eq, and, inArray, isNull } from "drizzle-orm";
 import { NextRequest, NextResponse } from "next/server";
 import { sendOrderStatusUpdateEmail } from "@/lib/nodemailer";
 import { getOrderEmailData } from "@/lib/order-email-helper";
@@ -49,7 +55,7 @@ export async function GET(request: Request, { params }: { params: Params }) {
     return NextResponse.json(
       {
         message: "Failed to fetch order",
-        error: error instanceof Error ? error.message : String(error),
+        error: "Internal server error",
       },
       { status: 500 }
     );
@@ -114,6 +120,29 @@ export async function PATCH(
       );
     }
 
+    // Cancelling records the charge/refund — always go through cancelOrder
+    if (status === "cancelled") {
+      const { cancelledBy, reason } = body;
+      if (cancelledBy !== "customer" && cancelledBy !== "store") {
+        return NextResponse.json(
+          {
+            success: false,
+            message: "cancelledBy is required: 'customer' (charge applies) or 'store' (full refund)",
+          },
+          { status: 400 }
+        );
+      }
+      const fullOrder = await loadOrderForCancel(orderId);
+      if (!fullOrder) {
+        return NextResponse.json({ success: false, message: "Order not found" }, { status: 404 });
+      }
+      const result = await cancelOrder(fullOrder, cancelledBy, typeof reason === "string" ? reason : null);
+      if (!result.ok) {
+        return NextResponse.json({ success: false, message: result.error }, { status: result.status });
+      }
+      return NextResponse.json({ success: true, data: result.order, cancellation: result.quote });
+    }
+
     // Update order status
     const [updatedOrder] = await db
       .update(orders)
@@ -150,7 +179,7 @@ export async function PATCH(
       {
         success: false,
         message: "Failed to update order status",
-        error: error instanceof Error ? error.message : String(error),
+        error: "Internal server error",
       },
       { status: 500 }
     );
@@ -167,21 +196,50 @@ export async function DELETE(
   try {
     const { id: orderId } = await params; // ✅ Await the promise
 
-    // Delete order and related orderItems
+    // Only abandoned online-payment orders can be deleted. The conditions are
+    // part of the DELETE itself, so an order that gets paid concurrently can't
+    // be removed. order_items are removed by ON DELETE CASCADE.
     const [deletedOrder] = await db
       .delete(orders)
-      .where(eq(orders.id, orderId))
-      .returning();
+      .where(
+        and(
+          eq(orders.id, orderId),
+          eq(orders.paymentMethod, "razorpay"),
+          isNull(orders.paymentId),
+          inArray(orders.paymentStatus, [...DELETABLE_PAYMENT_STATUSES]),
+          inArray(orders.status, [...DELETABLE_STATUSES]),
+        )
+      )
+      .returning({ id: orders.id });
 
     if (!deletedOrder) {
+      const [existing] = await db
+        .select({
+          status: orders.status,
+          paymentMethod: orders.paymentMethod,
+          paymentStatus: orders.paymentStatus,
+          paymentId: orders.paymentId,
+        })
+        .from(orders)
+        .where(eq(orders.id, orderId))
+        .limit(1);
+
+      if (!existing) {
+        return NextResponse.json(
+          { success: false, message: "Order not found" },
+          { status: 404 }
+        );
+      }
       return NextResponse.json(
-        { success: false, message: "Order not found" },
-        { status: 404 }
+        {
+          success: false,
+          message: getOrderDeleteBlocker(existing) ?? "This order can't be deleted",
+        },
+        { status: 409 }
       );
     }
 
-    // Delete related orderItems
-    await db.delete(orderItems).where(eq(orderItems.orderId, orderId));
+    console.info("[ORDER_DELETED]", { orderId, by: admin.user.userId });
 
     return NextResponse.json({
       success: true,
@@ -193,7 +251,7 @@ export async function DELETE(
       {
         success: false,
         message: "Failed to delete order",
-        error: error instanceof Error ? error.message : String(error),
+        error: "Internal server error",
       },
       { status: 500 }
     );

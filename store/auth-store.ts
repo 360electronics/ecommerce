@@ -54,7 +54,7 @@ export const useAuthStore = create<AuthState>()(
       logout: async () => {
         try {
           await fetchWithRetry(() =>
-            fetch('/api/auth/logout', {
+            fetch('/api/auth/signout', {
               method: 'POST',
               credentials: 'include',
             })

@@ -3,7 +3,7 @@ import { db } from "@/db/drizzle";
 import { users } from "@/db/schema";
 import { sendEmailOTP } from "@/lib/nodemailer";
 import { sendSmsOTP } from "@/lib/twofactor_sms";
-import { generateOTP, storeOTP } from "@/utils/otp";
+import { generateOTP, getOtpCooldownSeconds, storeOTP } from "@/utils/otp";
 import { eq } from "drizzle-orm";
 
 export async function POST(request: Request) {
@@ -31,6 +31,14 @@ export async function POST(request: Request) {
     }
 
     // Generate and store new OTP
+    const cooldown = await getOtpCooldownSeconds(userId);
+    if (cooldown > 0) {
+      return NextResponse.json(
+        { error: `Please wait ${cooldown}s before requesting another OTP`, retryAfter: cooldown },
+        { status: 429, headers: { "Retry-After": String(cooldown) } },
+      );
+    }
+
     const otp = generateOTP();
     await storeOTP({ userId, otp, type });
 

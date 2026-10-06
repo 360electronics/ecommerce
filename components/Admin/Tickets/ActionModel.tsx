@@ -3,7 +3,7 @@
 import type React from 'react';
 import { useEffect, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
-import { ChevronRight, Send, X } from 'lucide-react';
+import { Send, X } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
 import { useProfileStore } from '@/store/profile-store';
@@ -107,18 +107,9 @@ export function TicketModal({ isOpen, ticket, onClose, onSave }: TicketModalProp
     };
   }, [isOpen, onClose]);
 
-  // Cycle through statuses
-  const handleStatusChange = () => {
-    const statusMap: Record<string, 'active' | 'inactive' | 'closed'> = {
-      active: 'inactive',
-      inactive: 'closed',
-      closed: 'active',
-    };
-
-    setEditedTicket({
-      ...editedTicket,
-      status: statusMap[editedTicket.status],
-    });
+  // Pick a status explicitly (saved with "Save")
+  const handleStatusChange = (status: 'active' | 'inactive' | 'closed') => {
+    setEditedTicket({ ...editedTicket, status });
   };
 
   // Handle reply submission
@@ -394,19 +385,19 @@ export function TicketModal({ isOpen, ticket, onClose, onSave }: TicketModalProp
 
         {/* Footer */}
         <div className="flex justify-between items-center p-6 border-t border-gray-200 bg-gray-50">
-          <Button
-            variant="outline"
-            onClick={handleStatusChange}
-            className={`flex items-center gap-2 font-medium border ${getStatusColor(editedTicket.status)}`}
-            aria-label={`Change status to ${
-              editedTicket.status === 'active' ? 'inactive' : editedTicket.status === 'inactive' ? 'closed' : 'active'
-            }`}
-          >
-            <span>
-              Status: {editedTicket.status.charAt(0).toUpperCase() + editedTicket.status.slice(1)}
-            </span>
-            <ChevronRight className="h-5 w-5" />
-          </Button>
+          <label className="flex items-center gap-2 text-sm font-medium text-gray-700">
+            Status
+            <select
+              value={editedTicket.status}
+              onChange={(e) => handleStatusChange(e.target.value as 'active' | 'inactive' | 'closed')}
+              className={`rounded-md border px-3 py-2 text-sm font-medium focus:outline-none focus:ring-2 focus:ring-primary/30 ${getStatusColor(editedTicket.status)}`}
+              aria-label="Ticket status"
+            >
+              <option value="active">Active</option>
+              <option value="inactive">Inactive</option>
+              <option value="closed">Closed</option>
+            </select>
+          </label>
           <div className="flex gap-3">
             <Button
               variant="outline"

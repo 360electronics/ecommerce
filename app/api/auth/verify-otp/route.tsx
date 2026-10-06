@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server"
 import { db } from "@/db/drizzle"
-import { otpTokens, users, authTokens, referrals, coupons } from "@/db/schema"
+import { users, authTokens, referrals, coupons } from "@/db/schema"
+import { verifyOTP } from "@/utils/otp"
 import { generateToken } from "@/utils/jwt"
 import { generateCouponCode } from "@/utils/refferal.utils"
 import { eq, and } from "drizzle-orm"
@@ -17,23 +18,18 @@ export async function POST(request: Request): Promise<NextResponse> {
       )
     }
 
-    // Verify OTP
-    const [otpRecord] = await db
-      .select({
-        id: otpTokens.id,
-        userId: otpTokens.userId,
-        expiresAt: otpTokens.expiresAt,
-      })
-      .from(otpTokens)
-      .where(and(eq(otpTokens.userId, userId), eq(otpTokens.token, otp), eq(otpTokens.type, type)))
-      .limit(1)
+    // Verify OTP — attempt-limited (max 5 guesses per code) to stop brute force
+    const otpResult = await verifyOTP(userId, type, String(otp))
 
-    if (!otpRecord) {
-      return NextResponse.json({ error: "Invalid OTP" }, { status: 400 })
+    if (otpResult === "expired_or_locked") {
+      return NextResponse.json(
+        { error: "OTP expired or too many attempts. Please request a new OTP." },
+        { status: 400 },
+      )
     }
 
-    if (!otpRecord.expiresAt || otpRecord.expiresAt < new Date()) {
-      return NextResponse.json({ error: "OTP expired" }, { status: 400 })
+    if (otpResult === "invalid") {
+      return NextResponse.json({ error: "Invalid OTP" }, { status: 400 })
     }
 
     const now = new Date()
@@ -89,7 +85,7 @@ export async function POST(request: Request): Promise<NextResponse> {
     }
 
     // Delete used OTP
-    await db.delete(otpTokens).where(eq(otpTokens.id, otpRecord.id))
+    // (OTP token already deleted by verifyOTP on success)
 
     // Generate JWT
     const token = generateToken(userId, updatedUser.role)
@@ -173,7 +169,7 @@ export async function POST(request: Request): Promise<NextResponse> {
       error: error instanceof Error ? error.message : "Unknown error",
     })
     return NextResponse.json(
-      { error: error instanceof Error ? error.message : "Internal server error" },
+      { error: "Internal server error" },
       { status: 500 },
     )
   }

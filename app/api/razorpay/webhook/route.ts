@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import crypto from "crypto";
-import { eq } from "drizzle-orm";
+import { and, eq, ne, or } from "drizzle-orm";
 import { db } from "@/db/drizzle";
 import { orders } from "@/db/schema";
 import {
@@ -17,7 +17,8 @@ import {
  * Razorpay Dashboard → Settings → Webhooks:
  *   URL:    https://<your-domain>/api/razorpay/webhook
  *   Secret: same value as RAZORPAY_WEBHOOK_SECRET
- *   Events: payment.captured, order.paid, payment.failed
+ *   Events: payment.captured, order.paid, payment.failed,
+ *           refund.processed, refund.failed
  */
 
 interface RazorpayPaymentEntity {
@@ -28,11 +29,61 @@ interface RazorpayPaymentEntity {
   status: string;
 }
 
+interface RazorpayRefundEntity {
+  id: string;
+  payment_id: string;
+  amount: number;
+  status: "pending" | "processed" | "failed";
+  notes?: Record<string, string> | [];
+}
+
 interface RazorpayWebhookBody {
   event: string;
   payload: {
     payment?: { entity: RazorpayPaymentEntity };
+    refund?: { entity: RazorpayRefundEntity };
   };
+}
+
+// Sync refunds sent from Admin → Order → "Refund via Razorpay"
+async function handleRefundEvent(event: string, refund: RazorpayRefundEntity) {
+  const notes = Array.isArray(refund.notes) ? {} : refund.notes ?? {};
+  const orderId = notes.order_id;
+
+  // Match by refund id, or by order id we put in the refund notes
+  const [order] = await db
+    .select({ id: orders.id })
+    .from(orders)
+    .where(
+      orderId
+        ? or(eq(orders.refundId, refund.id), and(eq(orders.id, orderId), eq(orders.paymentId, refund.payment_id)))
+        : eq(orders.refundId, refund.id),
+    )
+    .limit(1);
+
+  if (!order) {
+    console.warn("[RAZORPAY_WEBHOOK] No order for refund", { refundId: refund.id, event });
+    return;
+  }
+
+  if (event === "refund.processed") {
+    await db
+      .update(orders)
+      .set({
+        refundId: refund.id,
+        refundStatus: "processed",
+        paymentStatus: "refunded",
+        refundedAt: new Date(),
+        updatedAt: new Date(),
+      })
+      .where(eq(orders.id, order.id));
+  } else if (event === "refund.failed") {
+    await db
+      .update(orders)
+      .set({ refundId: refund.id, refundStatus: "failed", updatedAt: new Date() })
+      .where(and(eq(orders.id, order.id), ne(orders.refundStatus, "processed")));
+  }
+  console.log("[RAZORPAY_WEBHOOK]", event, { orderId: order.id, refundId: refund.id });
 }
 
 function isValidWebhookSignature(rawBody: string, signature: string | null) {
@@ -63,6 +114,17 @@ export async function POST(request: Request) {
     body = JSON.parse(rawBody);
   } catch {
     return NextResponse.json({ error: "Invalid payload" }, { status: 400 });
+  }
+
+  const refundEntity = body.payload?.refund?.entity;
+  if (refundEntity && body.event.startsWith("refund.")) {
+    try {
+      await handleRefundEvent(body.event, refundEntity);
+      return NextResponse.json({ received: true });
+    } catch (error) {
+      console.error("[RAZORPAY_WEBHOOK] Refund processing failed", error);
+      return NextResponse.json({ error: "Processing failed" }, { status: 500 });
+    }
   }
 
   const payment = body.payload?.payment?.entity;

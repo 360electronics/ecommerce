@@ -299,7 +299,7 @@ export interface Ticket {
   id: string;
   type: string;
   issueDesc: string;
-  status: 'active' | 'inactive' | 'resolved';
+  status: 'active' | 'inactive' | 'closed';
   createdAt: string;
   replies: Reply[];
 }

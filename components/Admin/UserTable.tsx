@@ -1,98 +1,88 @@
 "use client"
 
-import { useEffect, useState } from "react"
-import { useRouter } from "next/navigation"
+import { useState } from "react"
+import { ShieldCheck, BadgeCheck, Clock } from "lucide-react"
 import { EnhancedTable, type ColumnDefinition } from "@/components/Layouts/TableLayout"
-import { fetchUsers } from "@/utils/users"
+import { useAdminList } from "@/hooks/useAdminList"
+import { UserDetailsModal } from "@/components/Admin/Users/UserDetailsModal"
+import { AddAdminModal } from "@/components/Admin/Users/AddAdminModal"
 
-// Define User type
-interface User {
-  id: string;
-  image: string;
-  fullName: string;
-  firstName: string;
-  lastName: string;
-  email: string;
-  phoneNumber: string;
-  role: string;
-  status: string;
-  emailVerified: boolean;
-  phoneVerified: boolean;
-  orders: number;
-  lastLogin: string;
-  createdAt: string;
+// Admin accounts (customers live under Admin → Customers)
+interface AdminRow {
+  id: string
+  fullName: string
+  email: string | null
+  phoneNumber: string | null
+  emailVerified: boolean
+  phoneVerified: boolean
+  lastLogin: string | null
+  createdAt: string
 }
 
-// Available user roles
-const userRoles = ["User", "Admin", "Guest"]
+interface AdminStats {
+  total: number
+  verified: number
+}
+
+const formatDate = (value: string | null, withTime = false) =>
+  value
+    ? new Date(value).toLocaleString("en-IN", {
+        day: "numeric",
+        month: "short",
+        year: "numeric",
+        ...(withTime ? { hour: "2-digit", minute: "2-digit" } : {}),
+        timeZone: "Asia/Kolkata",
+      })
+    : "—"
+
+const toRow = (u: any): AdminRow => ({
+  ...u,
+  fullName: [u.firstName, u.lastName].filter(Boolean).join(" "),
+  emailVerified: Boolean(u.emailVerified),
+  phoneVerified: Boolean(u.phoneVerified),
+})
 
 export function UsersTable() {
-  const router = useRouter()
-  const [users, setUsers] = useState<User[]>([])
-  const [selectedUsers, setSelectedUsers] = useState<User[]>([])
-  const [loading, setLoading] = useState(true)
+  const [selectedId, setSelectedId] = useState<string | null>(null)
+  const [isAddOpen, setIsAddOpen] = useState(false)
+  const { rows, stats, isLoading, isFetching, error, query, reload, tableProps } = useAdminList<
+    AdminRow,
+    AdminStats
+  >("/api/users", { pageSize: 10, sort: "fullName", dir: "asc" }, { scope: "admins" }, toRow)
 
-  // Column definitions for User Table
-  const userColumns: ColumnDefinition<User>[] = [
+  const columns: ColumnDefinition<AdminRow>[] = [
     {
       key: "fullName",
-      header: "Full Name",
+      header: "Name",
       sortable: true,
-      width: "20%",
-      renderCell: (value, item) => `${item.firstName} ${item.lastName}`,
+      width: "24%",
+      renderCell: (_, row) => (
+        <span className="font-medium text-gray-900">
+          {row.fullName || <span className="text-gray-400">No name</span>}
+        </span>
+      ),
     },
+    { key: "email", header: "Email", sortable: true, width: "26%", renderCell: (v) => v ?? "—" },
+    { key: "phoneNumber", header: "Mobile", width: "14%", renderCell: (v) => v ?? "—" },
     {
-      key: "email",
-      header: "Email",
-      sortable: true,
-      width: "20%",
-    },
-    {
-      key: "role",
-      header: "Role",
-      sortable: true,
-      width: "15%",
-      align: 'left',
-      filterOptions: userRoles,
-      renderCell: (value) => {
-        const roleStyles: Record<string, string> = {
-          User: "bg-blue-100 text-blue-800 border-blue-200",
-          Admin: "bg-green-100 text-green-800 border-green-200",
-          Guest: "bg-gray-100 text-gray-800 border-gray-200",
-        }
-        return (
-          <span
-            className={`inline-block capitalize rounded-full px-2 py-1 text-xs font-medium border ${roleStyles[value] || "bg-gray-100 text-gray-800 border-gray-200"}`}
-          >
-            {value}
-          </span>
-        )
-      },
-    },
-    {
-      key: "status",
-      header: "Status",
-      sortable: false,
-      width: "20%",
-      align: "left",
-      renderCell: (value, item) => (
-        <div className="flex flex-col items-start justify-center gap-2">
-          <span
-            className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${item.emailVerified ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'}`}
-          >
+      key: "emailVerified",
+      header: "Verified",
+      width: "14%",
+      renderCell: (_, row) => (
+        <div className="flex flex-wrap gap-1">
+          {[
+            ["Email", row.emailVerified],
+            ["Phone", row.phoneVerified],
+          ].map(([label, ok]) => (
             <span
-              className={`w-2 h-2 rounded-full mr-1.5 ${item.emailVerified ? 'bg-green-400' : 'bg-red-400'}`}
-            ></span>
-            Email 
-          </span>
-          <span
-            className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${item.phoneVerified ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'}`}
-          >
-            <span
-              className={`w-2 h-2 rounded-full mr-1.5 ${item.phoneVerified ? 'bg-green-400' : 'bg-red-400'}`}
-            ></span>
-            Phone
-          </span>
+              key={String(label)}
+              className={`rounded-full px-2 py-0.5 text-xs font-medium ${
+                ok ? "bg-green-100 text-green-800" : "bg-gray-100 text-gray-500"
+              }`}
+            >
+              {label}
+            </span>
+          ))}
         </div>
       ),
     },
@@ -100,192 +90,105 @@ export function UsersTable() {
       key: "lastLogin",
       header: "Last Login",
       sortable: true,
-      width: "5%",
+      width: "12%",
+      renderCell: (value) =>
+        value ? formatDate(value, true) : <span className="text-amber-700">Never</span>,
     },
     {
       key: "createdAt",
-      header: "Joined At",
+      header: "Added",
       sortable: true,
-      width: "5%",
+      width: "10%",
+      renderCell: (value) => formatDate(value),
     },
   ]
 
-  // Handle user actions
-  const handleEditUser = (users: User[]) => {
-    if (users.length === 1) {
-      router.push(`/admin/users/edit/${users[0].id}`)
-    } else {
-      router.push(`/admin/users/bulk-edit?ids=${users.map((u) => u.id).join(",")}`)
-    }
+  if (isLoading) {
+    return (
+      <div className="p-4 flex items-center justify-center">
+        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-gray-900"></div>
+        <span className="ml-2">Loading admin users...</span>
+      </div>
+    )
   }
-
-  const handleViewUser = (user: User) => {
-    router.push(`/admin/users/${user.id}`)
-  }
-
-  const handleDeleteUser = (user: User) => {
-    if (window.confirm(`Are you sure you want to delete ${user.firstName}?`)) {
-      console.log("Delete user:", user)
-      // Implement delete logic here
-    }
-  }
-
-  const handleBulkDelete = (users: User[]) => {
-    if (window.confirm(`Are you sure you want to delete ${users.length} users?`)) {
-      console.log("Delete users:", users)
-      // Implement bulk delete logic here
-    }
-  }
-
-  const handleExportUsers = (users: User[]) => {
-    console.log("Export users:", users)
-    // Implement export logic here
-  }
-
-  useEffect(() => {
-    async function loadUsers() {
-      try {
-        const data = await fetchUsers()
-        if (data) {
-          // Normalize user data
-          const normalizedData = data.map((user: any) => ({
-            ...user,
-            emailVerified: Boolean(user.emailVerified),
-            phoneVerified: Boolean(user.phoneVerified),
-            productImages: Array.isArray(user.productImages)
-              ? user.productImages
-              : user.productImages
-                ? [user.productImages]
-                : [],
-          }))
-          setUsers(normalizedData)
-        }
-        console.log("Fetched users:", data)
-      } catch (error) {
-        console.error("Error loading users:", error)
-      } finally {
-        setLoading(false)
-      }
-    }
-
-    loadUsers()
-  }, [])
-
-  if (loading) return (
-    <div className="p-4 flex items-center justify-center">
-      <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-gray-900"></div>
-      <span className="ml-2">Loading users...</span>
-    </div>
-  )
 
   return (
-    <div className=" mx-auto">
-      {/* Header */}
+    <div className="mx-auto">
       <div className="mb-8">
-        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between">
-          <div className="mb-4 sm:mb-0">
-            <h1 className="text-3xl font-bold text-gray-900">User Management</h1>
-            <p className="mt-2 text-gray-600">Manage your user accounts and settings</p>
-          </div>
-        </div>
+        <h1 className="text-3xl font-bold text-gray-900">User Management</h1>
+        <p className="mt-2 text-gray-600">
+          Admin accounts with access to this dashboard. Click an admin for details.
+        </p>
       </div>
 
-      {/* Stats Cards */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
-        <div className="bg-white p-6 rounded-xl border border-gray-200   transition-shadow duration-300">
-          <div className="flex items-center">
-            <div className="p-3 bg-primary-light rounded-lg">
-              <svg className="w-6 h-6 text-primary" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 20h5v-2a2 2 0 00-2-2h-3m-2 4h-5v-2a2 2 0 012-2h3m-6-4a3 3 0 11-6 0 3 3 0 016 0zm6 2a3 3 0 11-6 0 3 3 0 016 0z" />
-              </svg>
-            </div>
-            <div className="ml-4">
-              <p className="text-sm font-medium text-gray-600">Total Users</p>
-              <p className="text-2xl font-bold text-gray-900">{users.length}</p>
-            </div>
-          </div>
-        </div>
-       
-        <div className="bg-white p-6 rounded-xl border border-gray-200   transition-shadow duration-300">
-          <div className="flex items-center">
-            <div className="p-3 bg-purple-100 rounded-lg">
-              <svg className="w-6 h-6 text-purple-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
-              </svg>
-            </div>
-            <div className="ml-4">
-              <p className="text-sm font-medium text-gray-600">Admin Users</p>
-              <p className="text-2xl font-bold text-gray-900">{users.filter(u => u.role === 'Admin').length}</p>
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6 mb-8">
+        {[
+          { icon: ShieldCheck, label: "Admin Users", value: stats?.total ?? 0, tone: "bg-purple-100 text-purple-600" },
+          { icon: BadgeCheck, label: "Verified", value: stats?.verified ?? 0, tone: "bg-green-100 text-green-600" },
+          {
+            icon: Clock,
+            label: "Pending first sign-in",
+            value: Math.max(0, (stats?.total ?? 0) - (stats?.verified ?? 0)),
+            tone: "bg-amber-100 text-amber-600",
+          },
+        ].map(({ icon: Icon, label, value, tone }) => (
+          <div key={label} className="bg-white p-6 rounded-xl border border-gray-200">
+            <div className="flex items-center">
+              <div className={`p-3 rounded-lg ${tone}`}>
+                <Icon className="w-6 h-6" />
+              </div>
+              <div className="ml-4">
+                <p className="text-sm font-medium text-gray-600">{label}</p>
+                <p className="text-2xl font-bold text-gray-900">{value}</p>
+              </div>
             </div>
           </div>
-        </div>
-        <div className="bg-white p-6 rounded-xl border border-gray-200   transition-shadow duration-300">
-          <div className="flex items-center">
-            <div className="p-3 bg-yellow-100 rounded-lg">
-              <svg className="w-6 h-6 text-yellow-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-3 7h3m-3 4h3m-6-4h.01M9 16h.01" />
-              </svg>
-            </div>
-            <div className="ml-4">
-              <p className="text-sm font-medium text-gray-600">Verified Users</p>
-              <p className="text-2xl font-bold text-gray-900">{users.filter(u => u.emailVerified || u.phoneVerified).length}</p>
-            </div>
-          </div>
-        </div>
+        ))}
       </div>
 
-      {/* Table */}
+      {error && rows.length === 0 && (
+        <div className="mb-4 rounded-md bg-red-50 p-4 text-red-700">{error}</div>
+      )}
+
       <EnhancedTable
-        id="users-table"
-        data={users}
-        columns={userColumns}
-        selection={{
-          enabled: true,
-          onSelectionChange: setSelectedUsers,
-          selectionKey: "id",
-        }}
+        id="admin-users-table"
+        data={rows}
+        columns={columns}
+        selection={{ enabled: false }}
         search={{
           enabled: true,
-          keys: ["fullName", "email", "role"],
-          placeholder: "Search users...",
-        }}
-        filters={{
-          enabled: false, // Disable filters
+          placeholder: "Search name, email or phone...",
+          ...tableProps.search,
         }}
         pagination={{
           enabled: true,
-          pageSizeOptions: [5, 10, 25, 50],
-          defaultPageSize: 10,
+          pageSizeOptions: [10, 25, 50],
+          defaultPageSize: query.pageSize,
+          ...tableProps.pagination,
         }}
         sorting={{
           enabled: true,
-          defaultSortColumn: "fullName",
-          defaultSortDirection: "asc",
+          defaultSortColumn: query.sort as keyof AdminRow,
+          defaultSortDirection: query.dir,
+          ...tableProps.sorting,
         }}
         actions={{
-          bulkActions: {
-            delete: handleBulkDelete,
-            export: handleExportUsers,
-            edit: handleEditUser,
-          },
-          rowActions: {
-            view: handleViewUser,
-            edit: (user) => handleEditUser([user]),
-            delete: handleDeleteUser,
-          },
+          onAdd: () => setIsAddOpen(true),
+          addButtonText: "Add Admin",
+          rowActions: { view: (row) => setSelectedId(row.id) },
         }}
         customization={{
-          statusColorMap: {
-            active: "bg-green-100 text-green-800 border-green-200",
-            inactive: "bg-gray-100 text-gray-800 border-gray-200",
-            blocked: "bg-red-100 text-red-800 border-red-200",
-          },
           rowHoverEffect: true,
-          zebraStriping: false,
           stickyHeader: true,
+          isLoading: isFetching,
         }}
-        onRowClick={(user) => router.push(`/admin/users/${user.id}`)}
+        onRowClick={(row) => setSelectedId(row.id)}
       />
+
+      {selectedId && (
+        <UserDetailsModal userId={selectedId} variant="admin" onClose={() => setSelectedId(null)} />
+      )}
+      {isAddOpen && <AddAdminModal onClose={() => setIsAddOpen(false)} onCreated={reload} />}
     </div>
   )
 }

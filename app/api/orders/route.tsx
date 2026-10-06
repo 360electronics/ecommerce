@@ -14,7 +14,7 @@ import { NextResponse } from "next/server";
 import { randomUUID } from "crypto";
 import { sendOrderConfirmationEmail, sendAdminOrderNotification } from "@/lib/nodemailer";
 import { getOrderEmailData } from "@/lib/order-email-helper";
-import { requireUser, requireAdmin } from "@/lib/server-auth";
+import { requireUser } from "@/lib/server-auth";
 import { consumeCoupon, normalizeCouponCode, validateCoupon } from "@/lib/coupon-service";
 import {
   calculateCheckoutTotals,
@@ -306,58 +306,4 @@ export async function POST(req: Request) {
   }
 }
 
-
-export async function GET(request: Request) {
-  const admin = await requireAdmin(request);
-  if (admin.error) return admin.error;
-
-  try {
-    const rows = await db
-      .select({
-        order: orders,
-        item: orderItems,
-        variant: variants,
-        address: savedAddresses,
-      })
-      .from(orders)
-      .leftJoin(orderItems, eq(orders.id, orderItems.orderId))
-      .leftJoin(variants, eq(variants.id, orderItems.variantId))
-      .leftJoin(savedAddresses, eq(savedAddresses.id, orders.addressId));
-
-    const orderMap = new Map<string, any>();
-
-    for (const row of rows) {
-      const orderId = row.order.id;
-
-      if (!orderMap.has(orderId)) {
-        orderMap.set(orderId, {
-          ...row.order,
-          customer: row.address?.fullName ?? "Guest",
-          address: row.address,
-          items: [],
-          totalItems: 0,
-        });
-      }
-
-      if (row.item) {
-        orderMap.get(orderId).items.push({
-          ...row.item,
-          variant: row.variant,
-        });
-
-        orderMap.get(orderId).totalItems += row.item.quantity;
-      }
-    }
-
-    return NextResponse.json({
-      success: true,
-      data: Array.from(orderMap.values()),
-    });
-  } catch (err) {
-    console.error("[ORDER_GET_ERROR]", err);
-    return NextResponse.json(
-      { success: false, message: "Failed to fetch orders" },
-      { status: 500 }
-    );
-  }
-}
+// Admin order listing lives at GET /api/admin/orders (paginated).

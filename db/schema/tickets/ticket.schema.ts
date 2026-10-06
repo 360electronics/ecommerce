@@ -15,7 +15,7 @@ export const tickets = pgTable(
       type: varchar('type', { length: 255 }).notNull(),
       issue_desc: varchar('issue_desc').notNull(),
       status: varchar('status', {
-        enum: ['active', 'inactive'],
+        enum: ['active', 'inactive', 'closed'],
       }).notNull().default('active'),
       createdAt: timestamp('created_at', { withTimezone: true }).defaultNow().notNull(),
       updatedAt: timestamp('updated_at', { withTimezone: true }).defaultNow().notNull(),

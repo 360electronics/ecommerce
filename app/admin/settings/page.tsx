@@ -55,6 +55,12 @@ const fromForm = (f: FormState): CheckoutSettings => ({
   checkout: {
     sessionTimeoutMinutes: Number(f.checkout.sessionTimeoutMinutes),
   },
+  cancellation: {
+    customerCanCancel: f.cancellation.customerCanCancel,
+    customerCanCancelAfterShipping: f.cancellation.customerCanCancelAfterShipping,
+    beforeShippingChargePercent: Number(f.cancellation.beforeShippingChargePercent),
+    afterShippingChargePercent: Number(f.cancellation.afterShippingChargePercent),
+  },
 });
 
 function Section({
@@ -395,6 +401,61 @@ export default function AdminSettingsPage() {
             onChange={(e) => update("express", { cities: e.target.value })}
           />
         </Field>
+      </Section>
+
+      <Section
+        title="Cancellation & Refunds"
+        description="Charge kept when a customer cancels a prepaid (Razorpay) order. COD orders and cancellations made by the store are never charged — the full amount is refunded."
+      >
+        <Toggle
+          label="Customers can cancel orders from their account"
+          checked={form.cancellation.customerCanCancel}
+          onChange={(customerCanCancel) => update("cancellation", { customerCanCancel })}
+        />
+        <Toggle
+          label="Allow customer cancellation after the order has shipped"
+          checked={form.cancellation.customerCanCancelAfterShipping}
+          onChange={(customerCanCancelAfterShipping) =>
+            update("cancellation", { customerCanCancelAfterShipping })
+          }
+        />
+        <Field
+          label="Charge before shipping (%)"
+          hint="Kept from the refund when the customer cancels a paid order before it ships. Policy: 2%."
+        >
+          <input
+            type="number"
+            min={0}
+            max={100}
+            step="0.5"
+            className={inputClass}
+            value={form.cancellation.beforeShippingChargePercent}
+            onChange={(e) =>
+              update("cancellation", { beforeShippingChargePercent: e.target.value as any })
+            }
+          />
+        </Field>
+        <Field
+          label="Charge after shipping (%)"
+          hint="Kept from the refund when the customer cancels a paid order after it has shipped. Policy: 5%."
+        >
+          <input
+            type="number"
+            min={0}
+            max={100}
+            step="0.5"
+            className={inputClass}
+            value={form.cancellation.afterShippingChargePercent}
+            onChange={(e) =>
+              update("cancellation", { afterShippingChargePercent: e.target.value as any })
+            }
+          />
+        </Field>
+        <p className="md:col-span-2 rounded-md bg-amber-50 p-3 text-xs text-amber-800">
+          Refunds are not sent automatically. After a paid order is cancelled, open it in
+          Admin → Orders and click <strong>Refund via Razorpay</strong>. The Cancellation Policy
+          and Terms pages show these values automatically (updated within 5 minutes).
+        </p>
       </Section>
 
       <Section

@@ -39,6 +39,16 @@ export const checkoutSettingsSchema = z.object({
   checkout: z.object({
     sessionTimeoutMinutes: z.coerce.number().int().min(5).max(120),
   }),
+  cancellation: z.object({
+    // Customers can cancel from their order page
+    customerCanCancel: z.boolean(),
+    // ...also once the order has shipped (otherwise only before shipping)
+    customerCanCancelAfterShipping: z.boolean(),
+    // % of the paid amount kept when the BUYER cancels a prepaid order.
+    // Store-initiated cancellations and COD orders are never charged.
+    beforeShippingChargePercent: z.coerce.number().min(0).max(100),
+    afterShippingChargePercent: z.coerce.number().min(0).max(100),
+  }),
 });
 
 export type CheckoutSettings = z.infer<typeof checkoutSettingsSchema>;
@@ -64,6 +74,13 @@ export const DEFAULT_CHECKOUT_SETTINGS: CheckoutSettings = {
   },
   checkout: {
     sessionTimeoutMinutes: 15,
+  },
+  // Matches the published Cancellation & Refund Policy (2% / 5%)
+  cancellation: {
+    customerCanCancel: true,
+    customerCanCancelAfterShipping: true,
+    beforeShippingChargePercent: 2,
+    afterShippingChargePercent: 5,
   },
 };
 

@@ -121,11 +121,14 @@ export async function GET(
 ) {
   try {
     const { searchParams } = new URL(request.url);
-    const { variantId, limit = 10, offset = 0 } = getReviewsSchema.parse({
-      variantId: searchParams.get('variantId'),
-      limit: searchParams.get('limit'),
-      offset: searchParams.get('offset'),
+    // searchParams.get() returns null for missing params; zod .optional() wants undefined
+    const parsed = getReviewsSchema.parse({
+      variantId: searchParams.get('variantId') ?? undefined,
+      limit: searchParams.get('limit') ?? undefined,
+      offset: searchParams.get('offset') ?? undefined,
     });
+    const { variantId, offset = 0 } = parsed;
+    const limit = Math.min(parsed.limit ?? 10, 50);
 
     const { isAuthenticated, user } = await checkAuth(request);
     const { id: productId } = await params;

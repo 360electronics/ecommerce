@@ -74,6 +74,21 @@ export const orders = pgTable(
       .defaultNow()
       .notNull(),
     deliveredAt: timestamp("delivered_at", { withTimezone: true }),
+
+    // Cancellation (charge applies to buyer-initiated cancels of paid orders)
+    cancelledBy: varchar("cancelled_by", { enum: ["customer", "store"] }),
+    cancellationReason: varchar("cancellation_reason", { length: 500 }),
+    cancelledAt: timestamp("cancelled_at", { withTimezone: true }),
+    cancellationChargePercent: numeric("cancellation_charge_percent", { precision: 5, scale: 2 }),
+    cancellationCharge: numeric("cancellation_charge", { precision: 10, scale: 2 }),
+
+    // Refund of a cancelled paid order (sent by an admin via Razorpay)
+    refundAmount: numeric("refund_amount", { precision: 10, scale: 2 }),
+    refundStatus: varchar("refund_status", {
+      enum: ["not_applicable", "pending", "processing", "processed", "failed"],
+    }),
+    refundId: varchar("refund_id", { length: 255 }),
+    refundedAt: timestamp("refunded_at", { withTimezone: true }),
   },
   (table) => [
     index("idx_orders_user_id").on(table.userId),

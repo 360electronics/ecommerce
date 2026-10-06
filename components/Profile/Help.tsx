@@ -20,7 +20,7 @@ interface Ticket {
   id: string;
   type: string;
   issueDesc: string;
-  status: "active" | "inactive" | "resolved";
+  status: "active" | "inactive" | "closed";
   createdAt: string;
   replies: Reply[];
 }
@@ -214,11 +214,11 @@ export default function Help() {
             Inactive
           </span>
         );
-      case "resolved":
+      case "closed":
         return (
           <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-800">
             <FaCheckCircle className="mr-1" />
-            Resolved
+            Closed
           </span>
         );
       default:
@@ -272,7 +272,7 @@ export default function Help() {
                 <option value="all">All Tickets</option>
                 <option value="active">Active</option>
                 <option value="inactive">Inactive</option>
-                <option value="resolved">Resolved</option>
+                <option value="closed">Closed</option>
               </select>
             </div>
 
@@ -476,8 +476,9 @@ export default function Help() {
                   </form>
                 ) : (
                   <div className="p-4 border-t border-gray-200 bg-gray-50 text-center text-gray-500">
-                    This ticket is {selectedTicket.status}. Replies are
-                    disabled.
+                    {selectedTicket.status === "closed"
+                      ? "This ticket has been closed. If you still need help, please raise a new ticket."
+                      : `This ticket is ${selectedTicket.status}. Replies are disabled.`}
                   </div>
                 )}
               </div>

@@ -2,7 +2,14 @@
 
 import type React from "react"
 
-import { useEffect, useMemo, useState } from "react"
+import { useCallback, useEffect, useMemo, useState } from "react"
+import { CancelOrderModal } from "@/components/Orders/CancelOrderModal"
+import {
+  CancellationSummary,
+  toOrderCancellation,
+  type OrderCancellation,
+} from "@/components/Orders/CancellationSummary"
+import { useCheckoutSettings } from "@/hooks/useCheckoutSettings"
 import { useRouter, useParams } from "next/navigation"
 import Link from "next/link"
 import jsPDF from "jspdf"
@@ -21,6 +28,8 @@ type Order = {
   date: string
   status: string
   payment: string
+  paymentMethod: string
+  cancellation: OrderCancellation | null
   total: number
   items: number
   discountAmount: number
@@ -66,6 +75,8 @@ export default function OrderDetailsPage() {
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
   const [generatingPDF, setGeneratingPDF] = useState(false)
+  const [isCancelOpen, setIsCancelOpen] = useState(false)
+  const { settings } = useCheckoutSettings()
 
   const statusSteps = [
     { id: "confirmed", label: "Order Confirmed", icon: PackageCheck, description: "We've received your order" },
@@ -73,8 +84,7 @@ export default function OrderDetailsPage() {
     { id: "delivered", label: "Delivered", icon: CheckCircle2, description: "Delivered successfully" },
   ] as const
 
-  useEffect(() => {
-    const fetchOrder = async () => {
+  const fetchOrder = useCallback(async () => {
       try {
         setLoading(true)
         const response = await fetch(`/api/orders/${orderId}`)
@@ -90,8 +100,11 @@ export default function OrderDetailsPage() {
           date: new Date(apiOrder.orders.createdAt).toISOString().split("T")[0],
           status: apiOrder.orders.status,
           payment: apiOrder.orders.paymentStatus,
+          paymentMethod: apiOrder.orders.paymentMethod,
+          cancellation: toOrderCancellation(apiOrder.orders),
           total: Number.parseFloat(apiOrder.orders.totalAmount),
-          items: Array.isArray(apiOrder.orderItems) ? apiOrder.orderItems.length : apiOrder.orderItems ? 1 : 0,
+          // One API row per order item — count all rows, not just the first
+          items: result.data.filter((row: any) => row.orderItems).length,
           discountAmount: Number.parseFloat(apiOrder.orders.discountAmount) || 0,
           shippingMethod: apiOrder.orders.deliveryMode.charAt(0).toUpperCase() + apiOrder.orders.deliveryMode.slice(1),
           address: {
@@ -105,35 +118,20 @@ export default function OrderDetailsPage() {
             country: apiOrder.savedAddresses.country,
             addressType: apiOrder.savedAddresses.addressType,
           },
-          itemsDetails: Array.isArray(apiOrder.orderItems)
-            ? apiOrder.orderItems.map((item: any) => ({
-                id: item.id,
-                productId: item.productId,
-                variantId: item.variantId,
-                quantity: item.quantity,
-                unitPrice: item.unitPrice,
-                variant: {
-                  name: apiOrder.variants.name,
-                  sku: apiOrder.variants.sku,
-                  productImages: apiOrder.variants.productImages,
-                },
-              }))
-            : apiOrder.orderItems
-              ? [
-                  {
-                    id: apiOrder.orderItems.id,
-                    productId: apiOrder.orderItems.productId,
-                    variantId: apiOrder.orderItems.variantId,
-                    quantity: apiOrder.orderItems.quantity,
-                    unitPrice: apiOrder.orderItems.unitPrice,
-                    variant: {
-                      name: apiOrder.variants.name,
-                      sku: apiOrder.variants.sku,
-                      productImages: apiOrder.variants.productImages,
-                    },
-                  },
-                ]
-              : [],
+          itemsDetails: result.data
+            .filter((row: any) => row.orderItems)
+            .map((row: any) => ({
+              id: row.orderItems.id,
+              productId: row.orderItems.productId,
+              variantId: row.orderItems.variantId,
+              quantity: row.orderItems.quantity,
+              unitPrice: row.orderItems.unitPrice,
+              variant: {
+                name: row.variants?.name ?? "Product",
+                sku: row.variants?.sku ?? "",
+                productImages: row.variants?.productImages ?? [],
+              },
+            })),
           coupon: apiOrder.orders.couponId
             ? {
                 code: apiOrder.orders.couponCode || "Unknown",
@@ -152,9 +150,11 @@ export default function OrderDetailsPage() {
       } finally {
         setLoading(false)
       }
-    }
-    if (orderId) fetchOrder()
   }, [orderId])
+
+  useEffect(() => {
+    if (orderId) fetchOrder()
+  }, [orderId, fetchOrder])
 
   const subtotal = useMemo(() => {
     if (!order) return 0
@@ -337,6 +337,12 @@ export default function OrderDetailsPage() {
   const currentIndex = statusSteps.findIndex((s) => s.id === order.status)
   const progressPct = ((currentIndex + 1) / statusSteps.length) * 100
 
+  // Mirrors the server rules (server re-checks on cancel)
+  const canCancel =
+    settings.cancellation.customerCanCancel &&
+    (order.status === "confirmed" ||
+      (order.status === "shipped" && settings.cancellation.customerCanCancelAfterShipping))
+
   return (
     <ProfileLayout>
       <main className="min-h-[100dvh] bg-muted/30">
@@ -365,6 +371,15 @@ export default function OrderDetailsPage() {
                 <Download className="h-4 w-4" />
                 {generatingPDF ? "Preparing..." : "Download invoice"}
               </Button>
+              {canCancel && (
+                <Button
+                  variant="outline"
+                  onClick={() => setIsCancelOpen(true)}
+                  className="gap-2 border-red-300 text-red-700 hover:bg-red-50"
+                >
+                  Cancel order
+                </Button>
+              )}
             </div>
           </div>
 
@@ -439,6 +454,21 @@ export default function OrderDetailsPage() {
               </div>
             </div>
           </section>
+
+          {order.cancellation && (
+            <section className="mt-8">
+              <CancellationSummary orderId={order.id} cancellation={order.cancellation} mode="customer" />
+            </section>
+          )}
+
+          {isCancelOpen && (
+            <CancelOrderModal
+              orderId={order.id}
+              mode="customer"
+              onClose={() => setIsCancelOpen(false)}
+              onCancelled={fetchOrder}
+            />
+          )}
 
           {/* Summary + Address */}
           <section className="mt-8 grid grid-cols-1 lg:grid-cols-3 gap-6">

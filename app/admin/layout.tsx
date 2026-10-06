@@ -24,6 +24,7 @@ import {
   TicketPercent,
   CreditCard,
   Settings,
+  ShieldCheck,
 } from "lucide-react";
 import Breadcrumbs from "@/components/Reusable/BreadScrumb";
 import { useAuthStore } from "@/store/auth-store";
@@ -82,7 +83,8 @@ export default function Layout({ children }: AdminLayoutProps) {
     { name: "Brands", path: "/admin/brands", icon: Tag },
     { name: "Categories", path: "/admin/categories", icon: Package },
     { name: "Products", path: "/admin/products", icon: Package },
-    { name: "Users", path: "/admin/users", icon: Users },
+    { name: "Customers", path: "/admin/customers", icon: Users },
+    { name: "Users", path: "/admin/users", icon: ShieldCheck },
     { name: "Orders", path: "/admin/orders", icon: ShoppingBag },
     { name: "EMI Enquiry", path: "/admin/emi-enquiry", icon: CreditCard },
     { name: "Tickets", path: "/admin/tickets", icon: Ticket },

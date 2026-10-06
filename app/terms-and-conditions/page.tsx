@@ -1,182 +1,172 @@
-import Header from "@/components/Navigations/Header";
+import Link from "next/link";
+import { BUSINESS, getPolicyFacts } from "@/lib/policies/policy-facts";
+import {
+  ContactBlock,
+  PolicyLayout,
+  PolicyList,
+  PolicySection,
+} from "@/components/Policies/PolicyLayout";
 
-export default function TermsAndConditions() {
-  const lastUpdated = "Dec 01, 2025";
+// Delivery charges / COD rules come from Admin → Settings (refreshed every 5 min)
+export const revalidate = 300;
+
+export const metadata = {
+  title: "Terms and Conditions | 360 Electronics",
+  description: "Terms for using 360electronics.in: accounts, orders, payments, shipping, returns and more.",
+};
+
+export default async function TermsAndConditions() {
+  const { cod, shipping, express } = await getPolicyFacts();
 
   return (
-    <>
-      <Header />
-      <div className="min-h-screen  pb-10 ">
-        <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="">
-            {/* Header */}
-            <div className="border-b border-gray-200 px-6 py-8">
-              <h1 className="text-3xl font-bold text-gray-900 mb-4">Terms and Conditions</h1>
-              <p className="text-sm text-gray-600">Last updated: {lastUpdated}</p>
-            </div>
+    <PolicyLayout
+      title="Terms and Conditions"
+      footerNote="By using our services, you acknowledge that you have read, understood, and agree to be bound by these Terms and Conditions."
+    >
+      <PolicySection number={1} title="Introduction">
+        <p>
+          These Terms and Conditions govern your use of our e-commerce platform (360electronics.in) and services. By
+          accessing or using our website, you agree to be bound by these terms.
+        </p>
+        <p>
+          &quot;We,&quot; &quot;us,&quot; or &quot;our&quot; refers to {BUSINESS.name} ({BUSINESS.aka}), operating from{" "}
+          {BUSINESS.address}. &quot;You&quot; or &quot;your&quot; refers to any individual or entity using our services.
+        </p>
+      </PolicySection>
 
-            {/* Content */}
-            <div className="px-6 py-8 space-y-8">
-              {/* Introduction */}
-              <section>
-                <h2 className="text-xl font-semibold text-gray-900 mb-4">1. Introduction</h2>
-                <p className="text-gray-700 leading-relaxed">
-                  These Terms and Conditions govern your use of our e-commerce platform and services.
-                  By accessing or using our website, you agree to be bound by these terms.
-                  &quot;We,&quot; &quot;us,&quot; or &quot;our&quot; refers to 360 Electronics <strong>(Computer Garage 360)</strong>, operating from
-                  173-178, Chinnaswamy Road, New Siddhapudur, Coimbatore, Tamil Nadu 641044, India.
-                  &quot;You&quot; or &quot;your&quot; refers to any individual or entity using our services.
-                </p>
-              </section>
+      <PolicySection number={2} title="Your Account">
+        <PolicyList
+          items={[
+            "You sign in with a one-time password (OTP) sent to your registered mobile number or email address. We do not use passwords.",
+            "Never share your OTP with anyone. 360 Electronics will never ask you for your OTP.",
+            "You must provide accurate and complete information, including delivery addresses and contact details.",
+            "You are responsible for activity on your account and must notify us immediately of any unauthorized use.",
+            "We reserve the right to suspend or terminate accounts that violate these terms.",
+          ]}
+        />
+      </PolicySection>
 
-              {/* Account Terms */}
-              <section>
-                <h2 className="text-xl font-semibold text-gray-900 mb-4">2. Account Registration</h2>
-                <div className="space-y-3 text-gray-700 leading-relaxed">
-                  <p>You must provide accurate and complete information when creating an account.</p>
-                  <p>You are responsible for maintaining the confidentiality of your account credentials.</p>
-                  <p>You must notify us immediately of any unauthorized use of your account.</p>
-                  <p>We reserve the right to suspend or terminate accounts that violate these terms.</p>
-                </div>
-              </section>
+      <PolicySection number={3} title="Products and Services">
+        <PolicyList
+          items={[
+            "All product descriptions, images, and specifications are provided for informational purposes.",
+            "We strive for accuracy but do not guarantee that all information is error-free.",
+            "Product availability is subject to change without notice.",
+            "We reserve the right to modify or discontinue products at any time.",
+          ]}
+        />
+      </PolicySection>
 
-              {/* Products and Services */}
-              <section>
-                <h2 className="text-xl font-semibold text-gray-900 mb-4">3. Products and Services</h2>
-                <div className="space-y-3 text-gray-700 leading-relaxed">
-                  <p>All product descriptions, images, and specifications are provided for informational purposes.</p>
-                  <p>We strive for accuracy but do not guarantee that all information is error-free.</p>
-                  <p>Product availability is subject to change without notice.</p>
-                  <p>We reserve the right to modify or discontinue products at any time.</p>
-                </div>
-              </section>
+      <PolicySection number={4} title="Orders, Prices and Payment">
+        <PolicyList
+          items={[
+            "All orders are subject to acceptance and availability.",
+            "Prices are displayed in Indian Rupees (INR) and include applicable taxes unless stated otherwise. The final amount payable — including any discount and delivery charges — is calculated and shown at checkout.",
+            "Discount coupons are subject to their own validity, minimum order value and usage limits, which are checked again when you place the order.",
+            <><strong>Online payment:</strong> cards, UPI, net banking and wallets, processed securely by our payment partner Razorpay. Payment must be completed for the order to be confirmed. Card transactions are subject to validation by your card issuer and limits agreed with our acquiring bank.</>,
+            cod.enabled ? (
+              <><strong>Cash on Delivery (COD):</strong> available for orders below <strong>{cod.maxAmount}</strong> to {cod.region}
+                {cod.hasExclusions ? " (some PIN codes are excluded)" : ""}. COD availability is shown at checkout for your address and order value.</>
+            ) : (
+              <><strong>Cash on Delivery</strong> is currently not available.</>
+            ),
+            "We reserve the right to cancel orders due to pricing errors, product unavailability, or suspected fraudulent activity. In such cases, any amount paid is refunded in full.",
+          ]}
+        />
+      </PolicySection>
 
-              {/* Orders and Payment */}
-              <section>
-                <h2 className="text-xl font-semibold text-gray-900 mb-4">4. Orders and Payment</h2>
-                <div className="space-y-3 text-gray-700 leading-relaxed">
-                  <p>All orders are subject to acceptance and availability.</p>
-                  <p>Prices are displayed in Indian Rupees (INR) and include applicable taxes unless stated otherwise.</p>
-                  <p>Payment must be completed at the time of order placement.</p>
-                  <p>We accept various payment methods as displayed during checkout.</p>
-                  <p>We reserve the right to cancel orders due to pricing errors, product unavailability, or suspected fraudulent activity.</p>
-                  <p>Card transactions are subject to validation by your card issuer and preset limits agreed with our acquiring bank.</p>
-                </div>
-              </section>
+      <PolicySection number={5} title="Shipping and Delivery">
+        <PolicyList
+          items={[
+            <><strong>Delivery area:</strong> we currently deliver only within India.</>,
+            <><strong>Standard delivery:</strong> {shipping.ratePerItem} per item, <strong>free</strong> when your order subtotal is above {shipping.freeAbove}. Estimated delivery within about {shipping.days} days.</>,
+            express.enabled ? (
+              <><strong>Express delivery:</strong> {express.ratePerItem} per item, estimated within {express.days} day{express.days === 1 ? "" : "s"}. Available only in {express.cities}, and only when every product in the order is eligible for express delivery. Availability is shown at checkout.</>
+            ) : (
+              <><strong>Express delivery</strong> is currently not available.</>
+            ),
+            <><strong>Processing time:</strong> orders are handed over to the courier within 0–7 days from order confirmation (and payment, for prepaid orders), or as per the delivery date agreed at the time of confirmation.</>,
+            <><strong>Couriers:</strong> orders are shipped through registered domestic courier companies and/or speed post. Delivery timelines are subject to the courier&apos;s / post office&apos;s norms; estimated dates are not guaranteed.</>,
+            <><strong>Delivery address:</strong> orders are delivered to the address selected at checkout. Please make sure it is complete and correct.</>,
+            <><strong>Liability:</strong> 360 Electronics is not liable for delays caused by the courier company or postal authorities.</>,
+            <>Order confirmations and status updates are sent to your registered email address.</>,
+          ]}
+        />
+      </PolicySection>
 
-              {/* Shipping and Delivery */}
-              <section>
-                <h2 className="text-xl font-semibold text-gray-900 mb-4">5. Shipping and Delivery</h2>
-                <div className="space-y-3 text-gray-700 leading-relaxed">
-                  <p><strong>International Orders:</strong> Orders for international buyers are shipped and delivered through registered international courier companies and/or international speed post only.</p>
-                  <p><strong>Domestic Orders:</strong> Orders for domestic buyers are shipped through registered domestic courier companies and/or speed post only.</p>
-                  <p><strong>Processing Time:</strong> Orders are shipped within 0-7 days from the date of order confirmation and payment, or as per the delivery date agreed at the time of order confirmation.</p>
-                  <p><strong>Delivery Timeline:</strong> Delivery of shipments is subject to courier company/post office norms and timelines.</p>
-                  <p><strong>Delivery Address:</strong> All orders will be delivered to the address provided by the buyer during checkout.</p>
-                  <p><strong>Service Confirmation:</strong> Delivery of our services will be confirmed via email to the address specified during registration.</p>
-                  <p><strong>Liability:</strong> 360 Electronics is not liable for any delay in delivery by the courier company or postal authorities. We guarantee to hand over the consignment to the courier company or postal authorities within 0-7 days from the date of order and payment, or as per the agreed delivery date.</p>
-                  <p><strong>Support:</strong> For any issues regarding shipping or our services, contact our helpdesk at 7558132543 or email us at 360electronicsofficial@gmail.com</p>
-                </div>
-              </section>
+      <PolicySection number={6} title="Cancellations, Returns and Refunds">
+        <p>
+          Cancellations (including cancellation charges) are governed by our{" "}
+          <Link href="/cancellation-policy" className="text-primary hover:underline">Cancellation Policy</Link>, and returns
+          and refunds by our{" "}
+          <Link href="/refund-policy" className="text-primary hover:underline">Return &amp; Refund Policy</Link>. In short:
+          returns are accepted only for damaged, wrong, dead or defective products reported within 3 days of delivery
+          (7 days for complete PC sets), and refunds usually reflect within 7–10 working days of being initiated.
+        </p>
+      </PolicySection>
 
-              {/* Returns and Refunds */}
-              <section>
-                <h2 className="text-xl font-semibold text-gray-900 mb-4">6. Returns and Refunds</h2>
-                <div className="space-y-3 text-gray-700 leading-relaxed">
-                  <p>Returns must be initiated within the specified return period for each product category.</p>
-                  <p>Products must be in original condition with all packaging and accessories.</p>
-                  <p>Certain items may be non-returnable for hygiene or safety reasons.</p>
-                  <p>Refunds will be processed to the original payment method within 7-10 business days.</p>
-                  <p>Return shipping costs may be deducted from refunds unless the return is due to our error.</p>
-                </div>
-              </section>
+      <PolicySection number={7} title="Intellectual Property">
+        <PolicyList
+          items={[
+            "All content on our website, including text, graphics, logos, and software, is our property or licensed to us.",
+            "You may not reproduce, distribute, or create derivative works without our written consent.",
+            "Trademarks and brand names belong to their respective owners.",
+          ]}
+        />
+      </PolicySection>
 
-              {/* Intellectual Property */}
-              <section>
-                <h2 className="text-xl font-semibold text-gray-900 mb-4">7. Intellectual Property</h2>
-                <div className="space-y-3 text-gray-700 leading-relaxed">
-                  <p>All content on our website, including text, graphics, logos, and software, is our property or licensed to us.</p>
-                  <p>You may not reproduce, distribute, or create derivative works without our written consent.</p>
-                  <p>Trademarks and brand names belong to their respective owners.</p>
-                </div>
-              </section>
+      <PolicySection number={8} title="User Conduct">
+        <PolicyList
+          items={[
+            "You agree not to use our platform for any unlawful or prohibited activities.",
+            "You may not interfere with the proper functioning of our website or services.",
+            "Reviews and comments must be truthful and not violate any third-party rights.",
+            "We reserve the right to remove content that violates these terms.",
+          ]}
+        />
+      </PolicySection>
 
-              {/* User Conduct */}
-              <section>
-                <h2 className="text-xl font-semibold text-gray-900 mb-4">8. User Conduct</h2>
-                <div className="space-y-3 text-gray-700 leading-relaxed">
-                  <p>You agree not to use our platform for any unlawful or prohibited activities.</p>
-                  <p>You may not interfere with the proper functioning of our website or services.</p>
-                  <p>Reviews and comments must be truthful and not violate any third-party rights.</p>
-                  <p>We reserve the right to remove content that violates these terms.</p>
-                </div>
-              </section>
+      <PolicySection number={9} title="Privacy and Data Protection">
+        <p>
+          Your privacy is important to us. Please review our{" "}
+          <Link href="/privacy" className="text-primary hover:underline">Privacy Policy</Link> for details on how we
+          collect and use your information. By using our services, you consent to the collection and use of information
+          as described there.
+        </p>
+      </PolicySection>
 
-              {/* Privacy and Data Protection */}
-              <section>
-                <h2 className="text-xl font-semibold text-gray-900 mb-4">9. Privacy and Data Protection</h2>
-                <div className="space-y-3 text-gray-700 leading-relaxed">
-                  <p>Your privacy is important to us. Please review our Privacy Policy for details on data collection and use.</p>
-                  <p>We implement appropriate security measures to protect your personal information.</p>
-                  <p>By using our services, you consent to the collection and use of information as described in our Privacy Policy.</p>
-                </div>
-              </section>
+      <PolicySection number={10} title="Limitation of Liability">
+        <PolicyList
+          items={[
+            "We provide our services \"as is\" without warranties of any kind, other than those required by law.",
+            "We are not liable for any indirect, incidental, or consequential damages.",
+            "Our total liability shall not exceed the amount paid by you for the specific product or service.",
+            "We exclude liability for inaccuracies or errors to the fullest extent permitted by law.",
+          ]}
+        />
+      </PolicySection>
 
-              {/* Limitation of Liability */}
-              <section>
-                <h2 className="text-xl font-semibold text-gray-900 mb-4">10. Limitation of Liability</h2>
-                <div className="space-y-3 text-gray-700 leading-relaxed">
-                  <p>We provide our services &quot;as is&quot; without warranties of any kind.</p>
-                  <p>We are not liable for any indirect, incidental, or consequential damages.</p>
-                  <p>Our total liability shall not exceed the amount paid by you for the specific product or service.</p>
-                  <p>We exclude liability for inaccuracies or errors to the fullest extent permitted by law.</p>
-                </div>
-              </section>
+      <PolicySection number={11} title="Governing Law and Disputes">
+        <PolicyList
+          items={[
+            "These terms are governed by the laws of India.",
+            "Any disputes arising from your use of our services shall be subject to the jurisdiction of Indian courts.",
+            "We encourage resolving disputes through direct communication before pursuing legal action.",
+          ]}
+        />
+      </PolicySection>
 
-              {/* Governing Law */}
-              <section>
-                <h2 className="text-xl font-semibold text-gray-900 mb-4">11. Governing Law and Disputes</h2>
-                <div className="space-y-3 text-gray-700 leading-relaxed">
-                  <p>These terms are governed by the laws of India.</p>
-                  <p>Any disputes arising from your use of our services shall be subject to the jurisdiction of Indian courts.</p>
-                  <p>We encourage resolving disputes through direct communication before pursuing legal action.</p>
-                </div>
-              </section>
+      <PolicySection number={12} title="Changes to Terms">
+        <PolicyList
+          items={[
+            "We reserve the right to modify these terms at any time.",
+            "Changes will be effective immediately upon posting on our website with a new \"Last updated\" date.",
+            "Continued use of our services constitutes acceptance of modified terms.",
+          ]}
+        />
+      </PolicySection>
 
-              {/* Changes to Terms */}
-              <section>
-                <h2 className="text-xl font-semibold text-gray-900 mb-4">12. Changes to Terms</h2>
-                <div className="space-y-3 text-gray-700 leading-relaxed">
-                  <p>We reserve the right to modify these terms at any time.</p>
-                  <p>Changes will be effective immediately upon posting on our website.</p>
-                  <p>Continued use of our services constitutes acceptance of modified terms.</p>
-                  <p>We recommend reviewing these terms periodically for updates.</p>
-                </div>
-              </section>
-
-              {/* Contact Information */}
-              <section className="bg-gray-50 rounded-lg p-6">
-                <h2 className="text-xl font-semibold text-gray-900 mb-4">13. Contact Information</h2>
-                <div className="space-y-2 text-gray-700">
-                  <p><strong>Business Name:</strong> 360 Electronics (a.k.a Computer Garage 360)</p>
-                  <p><strong>Address:</strong> 173-178, Chinnaswamy Road, New Siddhapudur, Coimbatore, Tamil Nadu 641044, India</p>
-                  <p><strong>Phone:</strong> 7558132543</p>
-                  <p><strong>Email:</strong> 360electronicsofficial@gmail.com</p>
-                  <p className="mt-4">For questions regarding these terms, shipping inquiries, or any service-related issues, please contact us through the above channels.</p>
-                </div>
-              </section>
-
-            </div>
-
-            {/* Footer */}
-            <div className="border-t border-gray-200 px-6 py-4">
-              <p className="text-sm text-gray-500 text-center">
-                By using our services, you acknowledge that you have read, understood, and agree to be bound by these Terms and Conditions.
-              </p>
-            </div>
-          </div>
-        </div>
-      </div>
-    </>
+      <ContactBlock purpose="For questions regarding these terms, shipping, or any service-related issue, contact us:" />
+    </PolicyLayout>
   );
 }

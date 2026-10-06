@@ -4,6 +4,8 @@ import { cart, cart_offer_products, products, variants } from '@/db/schema';
 import { and, eq } from 'drizzle-orm';
 import { NextRequest, NextResponse } from 'next/server';
 
+const MAX_CART_QUANTITY = 100;
+
 export async function GET(req: Request) {
   try {
     const url = new URL(req.url);
@@ -62,9 +64,11 @@ export async function GET(req: Request) {
 
 export async function POST(req: NextRequest) {
   try {
-    const { userId, productId, variantId, quantity } = await req.json();
+    const { userId, productId, variantId, quantity: rawQuantity } = await req.json();
+    const quantity = Number(rawQuantity);
 
-    if (!userId || !productId || !variantId || !quantity || quantity < 1) {
+    // Whole number 1..MAX_CART_QUANTITY (a string "2" used to concatenate: 1 + "2" = "12")
+    if (!userId || !productId || !variantId || !Number.isInteger(quantity) || quantity < 1 || quantity > MAX_CART_QUANTITY) {
       return NextResponse.json(
         { error: 'Missing or invalid required fields' },
         { status: 400 }
@@ -107,7 +111,10 @@ export async function POST(req: NextRequest) {
     if (existingCartItem.length > 0) {
       const updatedCartItem = await db
         .update(cart)
-        .set({ quantity: existingCartItem[0].quantity + quantity, updatedAt: new Date() })
+        .set({
+          quantity: Math.min(existingCartItem[0].quantity + quantity, MAX_CART_QUANTITY),
+          updatedAt: new Date(),
+        })
         .where(
           and(
             eq(cart.userId, userId),
@@ -154,7 +161,10 @@ export async function PUT(req: NextRequest) {
     const auth = await requireUser(req, userId);
     if (auth.error) return auth.error;
 
-    const sanitizedQuantity = Math.max(1, Math.floor(Number(quantity)));
+    const sanitizedQuantity = Math.min(
+      MAX_CART_QUANTITY,
+      Math.max(1, Math.floor(Number(quantity)) || 1),
+    );
 
     const updatedCartItem = await db
       .update(cart)

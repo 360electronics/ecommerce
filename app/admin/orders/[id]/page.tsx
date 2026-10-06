@@ -1,6 +1,14 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
+import { CancelOrderModal } from "@/components/Orders/CancelOrderModal";
+import { getOrderDeleteBlocker } from "@/lib/orders/deletion";
+import { showFancyToast } from "@/components/Reusable/ShowCustomToast";
+import {
+  CancellationSummary,
+  toOrderCancellation,
+  type OrderCancellation,
+} from "@/components/Orders/CancellationSummary";
 import { useRouter, useParams } from "next/navigation";
 import Link from "next/link";
 import jsPDF from "jspdf";
@@ -35,6 +43,10 @@ interface Order {
   date: string;
   status: string;
   payment: string;
+  paymentMethod: string;
+  cancellation: OrderCancellation | null;
+  /** Why this order can't be deleted (null = deletable) */
+  deleteBlocker: string | null;
   total: string;
   items: number;
   discountAmount: number;
@@ -82,6 +94,7 @@ export default function OrderDetailsPage() {
   const [newStatus, setNewStatus] = useState("");
   const [updateLoading, setUpdateLoading] = useState(false);
   const [updateError, setUpdateError] = useState<string | null>(null);
+  const [isCancelOpen, setIsCancelOpen] = useState(false);
 
   // Status rules (unchanged)
   const statusOrder = [
@@ -94,7 +107,8 @@ export default function OrderDetailsPage() {
   const getAvailableStatuses = (currentStatus: string) => {
     const currentIndex = statusOrder.indexOf(currentStatus);
     if (currentIndex === -1) return [];
-    return statusOrder.slice(currentIndex + 1); // Only future statuses
+    // Cancelling records charge/refund → done via the "Cancel Order" dialog
+    return statusOrder.slice(currentIndex + 1).filter((s) => s !== "cancelled");
   };
 
   // Fetch logic (unchanged) ...
@@ -141,8 +155,7 @@ export default function OrderDetailsPage() {
     }
   };
 
-  useEffect(() => {
-    const fetchOrder = async () => {
+  const fetchOrder = useCallback(async () => {
       try {
         setLoading(true);
         const response = await fetch(`/api/orders/${orderId}`);
@@ -160,12 +173,12 @@ export default function OrderDetailsPage() {
           date: new Date(apiOrder.orders.createdAt).toISOString().split("T")[0],
           status: apiOrder.orders.status,
           payment: apiOrder.orders.paymentStatus,
+          paymentMethod: apiOrder.orders.paymentMethod,
+          cancellation: toOrderCancellation(apiOrder.orders),
+          deleteBlocker: getOrderDeleteBlocker(apiOrder.orders),
           total: apiOrder.orders.totalAmount?.toString() ?? "0",
-          items: Array.isArray(apiOrder.orderItems)
-            ? apiOrder.orderItems.length
-            : apiOrder.orderItems
-            ? 1
-            : 0,
+          // One API row per order item — count all rows, not just the first
+          items: result.data.filter((row: any) => row.orderItems).length,
           discountAmount: apiOrder.orders.discountAmount?.toString() ?? "0",
           shippingMethod:
             apiOrder.orders.deliveryMode.charAt(0).toUpperCase() +
@@ -181,35 +194,20 @@ export default function OrderDetailsPage() {
             country: apiOrder.savedAddresses.country,
             addressType: apiOrder.savedAddresses.addressType,
           },
-          itemsDetails: Array.isArray(apiOrder.orderItems)
-            ? apiOrder.orderItems.map((item: any) => ({
-                id: item.id,
-                productId: item.productId,
-                variantId: item.variantId,
-                quantity: item.quantity,
-                unitPrice: item.unitPrice,
-                variant: {
-                  name: apiOrder.variants.name,
-                  sku: apiOrder.variants.sku,
-                  productImages: apiOrder.variants.productImages,
-                },
-              }))
-            : apiOrder.orderItems
-            ? [
-                {
-                  id: apiOrder.orderItems.id,
-                  productId: apiOrder.orderItems.productId,
-                  variantId: apiOrder.orderItems.variantId,
-                  quantity: apiOrder.orderItems.quantity,
-                  unitPrice: apiOrder.orderItems.unitPrice,
-                  variant: {
-                    name: apiOrder.variants.name,
-                    sku: apiOrder.variants.sku,
-                    productImages: apiOrder.variants.productImages,
-                  },
-                },
-              ]
-            : [],
+          itemsDetails: result.data
+            .filter((row: any) => row.orderItems)
+            .map((row: any) => ({
+              id: row.orderItems.id,
+              productId: row.orderItems.productId,
+              variantId: row.orderItems.variantId,
+              quantity: row.orderItems.quantity,
+              unitPrice: row.orderItems.unitPrice,
+              variant: {
+                name: row.variants?.name ?? "Product",
+                sku: row.variants?.sku ?? "",
+                productImages: row.variants?.productImages ?? [],
+              },
+            })),
           coupon: apiOrder.orders.couponId
             ? {
                 code: apiOrder.orders.couponCode || "Unknown",
@@ -238,12 +236,11 @@ export default function OrderDetailsPage() {
       } finally {
         setLoading(false);
       }
-    };
-
-    if (orderId) {
-      fetchOrder();
-    }
   }, [orderId]);
+
+  useEffect(() => {
+    if (orderId) fetchOrder();
+  }, [orderId, fetchOrder]);
 
   const handleUpdateStatus = async () => {
     if (!order || !newStatus) return;
@@ -280,7 +277,10 @@ export default function OrderDetailsPage() {
   const handleDeleteOrder = async () => {
     if (
       !order ||
-      !window.confirm(`Are you sure you want to delete order ${order.id}?`)
+      order.deleteBlocker ||
+      !window.confirm(
+        `Permanently delete abandoned order ${order.id}? This cannot be undone.`
+      )
     )
       return;
 
@@ -298,7 +298,12 @@ export default function OrderDetailsPage() {
       router.push("/admin/orders");
     } catch (err) {
       console.error("[OrderDetailsPage] Delete error:", err);
-      setError(err instanceof Error ? err.message : "Failed to delete order");
+      // Toast, not setError — setError would replace the whole order page
+      showFancyToast({
+        title: "Order not deleted",
+        message: err instanceof Error ? err.message : "Failed to delete order",
+        type: "error",
+      });
     }
   };
 
@@ -590,6 +595,17 @@ export default function OrderDetailsPage() {
           </div>
         </div>
 
+        {order.cancellation && (
+          <div className="mb-8">
+            <CancellationSummary
+              orderId={order.id}
+              cancellation={order.cancellation}
+              mode="admin"
+              onRefunded={fetchOrder}
+            />
+          </div>
+        )}
+
         <div className="grid lg:grid-cols-3 gap-8">
           {/* Left Column: Customer & Address */}
           <div className="space-y-6">
@@ -719,7 +735,10 @@ export default function OrderDetailsPage() {
 
         {/* Sticky Action Bar */}
         <div className="fixed bottom-0 left-0 right-0 bg-white border-t border-gray-200 px-4 py-4 sm:px-6 lg:px-8 shadow-lg">
-          <div className="max-w-7xl mx-auto flex justify-end gap-4">
+          <div className="max-w-7xl mx-auto flex flex-wrap items-center justify-end gap-4">
+            {order.deleteBlocker && (
+              <p className="mr-auto text-xs text-gray-500">{order.deleteBlocker}</p>
+            )}
             <button
               onClick={handleGeneratePDF}
               className="inline-flex items-center gap-2 px-6 py-3 bg-green-600 text-white rounded-lg hover:bg-green-700 transition font-medium shadow-md"
@@ -734,15 +753,35 @@ export default function OrderDetailsPage() {
               <Edit3 className="w-5 h-5" />
               Update Status
             </button>
+            {order.status !== "cancelled" && (
+              <button
+                onClick={() => setIsCancelOpen(true)}
+                className="inline-flex items-center gap-2 px-6 py-3 bg-white border border-red-300 text-red-700 rounded-lg hover:bg-red-50 transition font-medium shadow-md"
+              >
+                <XCircle className="w-5 h-5" />
+                Cancel Order
+              </button>
+            )}
             <button
               onClick={handleDeleteOrder}
-              className="inline-flex items-center gap-2 px-6 py-3 bg-red-600 text-white rounded-lg hover:bg-red-700 transition font-medium shadow-md"
+              disabled={!!order.deleteBlocker}
+              title={order.deleteBlocker ?? "Delete this abandoned (unpaid) order"}
+              className="inline-flex items-center gap-2 px-6 py-3 bg-red-600 text-white rounded-lg hover:bg-red-700 transition font-medium shadow-md disabled:cursor-not-allowed disabled:bg-gray-300 disabled:text-gray-600 disabled:shadow-none"
             >
               <Trash2 className="w-5 h-5" />
               Delete Order
             </button>
           </div>
         </div>
+
+        {isCancelOpen && (
+          <CancelOrderModal
+            orderId={order.id}
+            mode="admin"
+            onClose={() => setIsCancelOpen(false)}
+            onCancelled={fetchOrder}
+          />
+        )}
 
         {/* Status Update Modal */}
         {isModalOpen && (

@@ -1,12 +1,13 @@
 "use client";
 
-import { useState, useEffect, useMemo, useCallback } from "react";
+import { useState, useEffect, useCallback, useRef } from "react";
 import { useRouter } from "next/navigation";
 import {
   EnhancedTable,
   type ColumnDefinition,
 } from "@/components/Layouts/TableLayout";
 import { Button } from "@/components/ui/button";
+import { CancelOrderModal } from "@/components/Orders/CancelOrderModal";
 
 /* -------------------------------- TYPES -------------------------------- */
 
@@ -24,6 +25,21 @@ interface Order {
 
 type OrderTab = "confirmed" | "pending" | "cancelled" | "shipped" | "delivered" | "others" | "all";
 
+type SortKey = keyof Order;
+
+const toOrderRow = (o: any): Order => ({
+  id: o.id,
+  customer: o.customer,
+  email: o.email ?? "",
+  date: new Date(o.createdAt).toISOString().split("T")[0],
+  status: o.status,
+  payment: o.paymentStatus,
+  total: Number(o.totalAmount),
+  items: o.items,
+  shippingMethod:
+    o.deliveryMode.charAt(0).toUpperCase() + o.deliveryMode.slice(1),
+});
+
 /* --------------------------- UPDATE STATUS MODAL ------------------------- */
 
 function UpdateOrderStatusModal({
@@ -38,6 +54,18 @@ function UpdateOrderStatusModal({
   const [newStatus, setNewStatus] = useState(order.status);
   const [updateLoading, setUpdateLoading] = useState(false);
   const [updateError, setUpdateError] = useState<string | null>(null);
+
+  // Cancelling records a cancellation charge / refund — use the dedicated dialog
+  if (newStatus === "cancelled" && order.status !== "cancelled") {
+    return (
+      <CancelOrderModal
+        orderId={order.id}
+        mode="admin"
+        onClose={onClose}
+        onCancelled={() => onSuccess(order.id, "cancelled")}
+      />
+    );
+  }
 
   const handleUpdateStatus = async () => {
     if (!order || !newStatus) return;
@@ -119,82 +147,88 @@ export function OrdersTable() {
   const [orders, setOrders] = useState<Order[]>([]);
   const [selectedOrders, setSelectedOrders] = useState<Order[]>([]);
   const [activeTab, setActiveTab] = useState<OrderTab>("confirmed");
-  const [loading, setLoading] = useState(true);
+  const [loading, setLoading] = useState(true); // first load only
+  const [isFetching, setIsFetching] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [totalItems, setTotalItems] = useState(0);
+  const [counts, setCounts] = useState<Partial<Record<OrderTab, number>>>({});
+
+  // Server-side query state (search is debounced)
+  const [query, setQuery] = useState({
+    page: 1,
+    pageSize: 10,
+    q: "",
+    sort: "date" as SortKey,
+    dir: "desc" as "asc" | "desc",
+  });
+  const [searchInput, setSearchInput] = useState("");
+  const requestIdRef = useRef(0);
 
   const [editingOrder, setEditingOrder] = useState<Order | null>(null);
   const [isUpdateModalOpen, setIsUpdateModalOpen] = useState(false);
 
   /* ------------------------------ FETCH DATA ----------------------------- */
 
-  useEffect(() => {
-    const fetchOrders = async () => {
-      try {
-        setLoading(true);
-        const res = await fetch("/api/orders");
-        const result = await res.json();
+  const fetchOrders = useCallback(async () => {
+    const requestId = ++requestIdRef.current;
+    setIsFetching(true);
+    try {
+      const params = new URLSearchParams({
+        page: String(query.page),
+        pageSize: String(query.pageSize),
+        tab: activeTab,
+        sort: String(query.sort),
+        dir: query.dir,
+      });
+      if (query.q) params.set("q", query.q);
 
-        if (!result.success) {
-          throw new Error(result.message || "Failed to fetch orders");
-        }
+      const res = await fetch(`/api/admin/orders?${params}`, { cache: "no-store" });
+      const result = await res.json();
+      if (requestId !== requestIdRef.current) return; // stale response
 
-        const transformed: Order[] = result.data.map((o: any) => ({
-          id: o.id,
-          customer: o.customer,
-          email: "",
-          date: new Date(o.createdAt).toISOString().split("T")[0],
-          status: o.status,
-          payment: o.paymentStatus,
-          total: Number(o.totalAmount),
-          items: o.totalItems,
-          shippingMethod:
-            o.deliveryMode.charAt(0).toUpperCase() + o.deliveryMode.slice(1),
-        }));
+      if (!res.ok || !result.success) {
+        throw new Error(result.message || "Failed to fetch orders");
+      }
 
-        setOrders(transformed);
-        setError(null);
-      } catch (err: any) {
-        setError(err.message || "Failed to load orders");
-      } finally {
+      setOrders(result.data.map(toOrderRow));
+      setTotalItems(result.total);
+      setCounts(result.counts);
+      setError(null);
+    } catch (err: any) {
+      if (requestId !== requestIdRef.current) return;
+      setError(err.message || "Failed to load orders");
+    } finally {
+      if (requestId === requestIdRef.current) {
+        setIsFetching(false);
         setLoading(false);
       }
-    };
+    }
+  }, [query, activeTab]);
 
+  useEffect(() => {
     fetchOrders();
-  }, []);
+  }, [fetchOrders]);
 
-  /* ----------------------------- TAB FILTER ------------------------------ */
+  // Debounce search → server query
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      setQuery((prev) =>
+        prev.q === searchInput.trim()
+          ? prev
+          : { ...prev, q: searchInput.trim(), page: 1 },
+      );
+    }, 350);
+    return () => clearTimeout(timer);
+  }, [searchInput]);
 
-  const filteredOrders = useMemo(() => {
-    return orders.filter((order) => {
-      switch (activeTab) {
-        case "confirmed":
-          return order.status === "confirmed";
-        case "pending":
-          return order.status === "pending";
-        case "cancelled":
-          return order.status === "cancelled";
-        case "shipped":
-          return order.status === "shipped";
-        case "delivered":
-          return order.status === "delivered";
-        case "others":
-          return ["failed", "returned"].includes(order.status);
-        case "all":
-        default:
-          return true;
-      }
-    });
-  }, [orders, activeTab]);
-
-  const countByStatus = (status: OrderTab) => {
-    if (status === "all") return orders.length;
-    if (status === "others")
-      return orders.filter((o) => ["failed", "returned"].includes(o.status))
-        .length;
-
-    return orders.filter((o) => o.status === status).length;
+  // Table remounts per tab (key) → its search box resets, so reset ours too
+  const changeTab = (tab: OrderTab) => {
+    setActiveTab(tab);
+    setSearchInput("");
+    setQuery((prev) => ({ ...prev, q: "", page: 1 }));
   };
+
+  const countByStatus = (status: OrderTab) => counts[status] ?? 0;
 
   /* ----------------------------- TABLE COLUMNS ---------------------------- */
 
@@ -228,11 +262,10 @@ export function OrdersTable() {
     setIsUpdateModalOpen(true);
   }, []);
 
-  const handleStatusUpdated = (orderId: string, newStatus: string) => {
-    setOrders((prev) =>
-      prev.map((o) => (o.id === orderId ? { ...o, status: newStatus } : o)),
-    );
+  const handleStatusUpdated = () => {
     setSelectedOrders([]);
+    // Refetch: the order may move to another tab and counts change
+    fetchOrders();
   };
 
   /* ----------------------------- UI STATES ------------------------------- */
@@ -246,7 +279,7 @@ export function OrdersTable() {
     );
   }
 
-  if (error) {
+  if (error && orders.length === 0) {
     return <div className="p-6 bg-red-50 text-red-700 rounded-md">{error}</div>;
   }
 
@@ -274,7 +307,7 @@ export function OrdersTable() {
         ].map((tab) => (
           <button
             key={tab.key}
-            onClick={() => setActiveTab(tab.key as OrderTab)}
+            onClick={() => changeTab(tab.key as OrderTab)}
             className={`px-4 py-2 rounded-md text-sm font-medium border transition ${
               activeTab === tab.key
                 ? "bg-primary text-white border-primary"
@@ -291,8 +324,9 @@ export function OrdersTable() {
 
       {/* Table */}
       <EnhancedTable
+        key={activeTab} /* reset page/search UI when switching tabs */
         id="orders-table"
-        data={filteredOrders}
+        data={orders}
         columns={columns}
         selection={{
           enabled: true,
@@ -306,21 +340,31 @@ export function OrdersTable() {
         }}
         search={{
           enabled: true,
-          keys: ["id", "customer"],
+          placeholder: "Search order ID, customer, phone or email...",
+          onSearch: setSearchInput,
         }}
         pagination={{
           enabled: true,
+          serverSide: true,
+          totalItems,
           pageSizeOptions: [10, 25, 50],
-          defaultPageSize: 10,
+          defaultPageSize: query.pageSize, // survives the per-tab remount
+          onPageChange: (page) => setQuery((prev) => ({ ...prev, page })),
+          onPageSizeChange: (pageSize) =>
+            setQuery((prev) => ({ ...prev, pageSize, page: 1 })),
         }}
         sorting={{
           enabled: true,
-          defaultSortColumn: "date",
-          defaultSortDirection: "desc",
+          serverSide: true,
+          defaultSortColumn: query.sort,
+          defaultSortDirection: query.dir,
+          onSortChange: (sort, dir) =>
+            setQuery((prev) => ({ ...prev, sort, dir, page: 1 })),
         }}
         customization={{
           stickyHeader: true,
           rowHoverEffect: true,
+          isLoading: isFetching,
         }}
         onRowClick={(order) => router.push(`/admin/orders/${order.id}`)}
       />

@@ -1,100 +1,117 @@
-"use client";
-import Header from "@/components/Navigations/Header";
+import Link from "next/link";
+import { getPolicyFacts } from "@/lib/policies/policy-facts";
+import {
+  ContactBlock,
+  PolicyLayout,
+  PolicyList,
+  PolicySection,
+} from "@/components/Policies/PolicyLayout";
 
-export default function CancellationPolicy() {
-  const lastUpdated = "Dec 01, 2025";
+// Charges come from Admin → Settings → Cancellation & Refunds (refreshed every 5 min)
+export const revalidate = 300;
+
+export const metadata = {
+  title: "Cancellation Policy | 360 Electronics",
+  description: "How to cancel an order at 360 Electronics, cancellation charges and refunds for cancelled orders.",
+};
+
+export default async function CancellationPolicy() {
+  const { cancellation } = await getPolicyFacts();
+  const { beforeShippingChargePercent: before, afterShippingChargePercent: after } = cancellation;
+  const selfService = cancellation.customerCanCancel;
 
   return (
-    <>
-      <Header />
+    <PolicyLayout
+      title="Cancellation Policy"
+      intro={
+        <p>
+          This policy explains how you can cancel an order placed on 360electronics.in, what it costs,
+          and how refunds for cancelled orders work. For returns of delivered products, see our{" "}
+          <Link href="/refund-policy" className="text-primary hover:underline">Return &amp; Refund Policy</Link>.
+        </p>
+      }
+      footerNote="By purchasing from 360 Electronics, you acknowledge that you have read and agree to this Cancellation Policy."
+    >
+      <PolicySection number={1} title="How to Cancel an Order">
+        {selfService ? (
+          <PolicyList
+            items={[
+              <>
+                Go to <strong>My Account → My Orders</strong>, open the order and click{" "}
+                <strong>Cancel order</strong>. You will see the exact cancellation charge and refund amount before you confirm.
+              </>,
+              <>
+                You can cancel online while the order is <strong>confirmed</strong>
+                {cancellation.customerCanCancelAfterShipping
+                  ? <> or after it has <strong>shipped</strong> (before delivery).</>
+                  : <> and not yet shipped. Once an order has shipped, please contact us to cancel it.</>}
+              </>,
+              <>You can also cancel by calling or emailing us (details below).</>,
+              <>Delivered orders cannot be cancelled. If there is a problem with a delivered product, please see the Return &amp; Refund Policy.</>,
+            ]}
+          />
+        ) : (
+          <PolicyList
+            items={[
+              <>To cancel an order, please call or email us with your order number (details below).</>,
+              <>Delivered orders cannot be cancelled. If there is a problem with a delivered product, please see the Return &amp; Refund Policy.</>,
+            ]}
+          />
+        )}
+      </PolicySection>
 
-      <div className="min-h-screen bg-gray-50 pt-12 pb-12">
-        <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8">
+      <PolicySection number={2} title="Cancellation Charges">
+        <p>
+          A convenience fee is deducted from the refund only when <strong>you (the buyer)</strong> cancel an order that
+          has already been <strong>paid online</strong>:
+        </p>
+        <PolicyList
+          items={[
+            <><strong>{before}%</strong> of the amount paid if cancelled <strong>before the order is shipped</strong>.</>,
+            <><strong>{after}%</strong> of the amount paid if cancelled <strong>after the order has been shipped</strong>.</>,
+            <><strong>Cash on Delivery orders:</strong> no charge — nothing has been paid, so there is nothing to deduct or refund.</>,
+            <><strong>Cancelled by us</strong> (for example due to stock unavailability or a pricing error): <strong>no charge</strong> — the full amount paid is refunded.</>,
+          ]}
+        />
+        <p className="text-sm text-gray-600">
+          Example: on a prepaid order of ₹10,000 cancelled by the buyer before shipping, ₹
+          {((10000 * before) / 100).toLocaleString("en-IN")} is deducted and ₹
+          {(10000 - (10000 * before) / 100).toLocaleString("en-IN")} is refunded.
+        </p>
+      </PolicySection>
 
-          {/* Page Header */}
-          <div className="border-b border-gray-200 px-6 py-8">
-            <h1 className="text-3xl font-bold text-gray-900 mb-4">Cancellation & Refund Policy</h1>
-            <p className="text-sm text-gray-600">Last updated: {lastUpdated}</p>
-          </div>
+      <PolicySection number={3} title="Refunds for Cancelled Orders">
+        <PolicyList
+          items={[
+            <>Refunds for prepaid orders are sent to the <strong>original payment method</strong> (card, UPI, net banking or wallet) through our payment partner, Razorpay.</>,
+            <>We initiate the refund after the cancellation is processed. It usually takes <strong>7–10 working days</strong> to reflect in your account, depending on your bank.</>,
+            <>If a shipped order is cancelled, the refund is initiated once the product is returned to us in the same condition in which it was shipped.</>,
+            <>You can see the cancellation charge, refund amount and refund status on the order page in your account.</>,
+          ]}
+        />
+      </PolicySection>
 
-          {/* Content */}
-          <div className="px-6 py-10 space-y-10">
+      <PolicySection number={4} title="Order Modifications">
+        <PolicyList
+          items={[
+            <>No charges apply for modifications requested <strong>before</strong> the order is shipped.</>,
+            <>A <strong>3%</strong> charge applies if you want to modify the order <strong>after</strong> it has been shipped.</>,
+            <>Modification requests are handled by our support team — please call or email us with your order number.</>,
+          ]}
+        />
+      </PolicySection>
 
-            {/* Cancellation Policy */}
-            <section>
-              <h2 className="text-xl font-semibold text-gray-900 mb-4">1. Cancellation Policy</h2>
+      <PolicySection number={5} title="Other Conditions">
+        <PolicyList
+          items={[
+            <>The charges above apply only to cancellations and modifications initiated by the buyer. No charges apply when we initiate them.</>,
+            <>A <strong>5%</strong> deduction applies to orders placed using <strong>Bajaj EMI</strong> if cancelled by the buyer.</>,
+            <>We may cancel orders due to pricing errors, product unavailability or suspected fraudulent activity; in such cases the full amount paid is refunded.</>,
+          ]}
+        />
+      </PolicySection>
 
-              <div className="space-y-3 text-gray-700 leading-relaxed">
-
-                <p><strong>1.</strong> We have a hassle-free cancellation request option available in the order panel. You can place your cancellation request directly from there, or you can email or call us to cancel your order.</p>
-
-                <p><strong>2.</strong> The convenience fee charged on orders is non-refundable only if the order is cancelled by the buyer. If the order is cancelled by us, the complete order amount will be refunded. This charge applies only when the buyer cancels the order and opts for a refund.</p>
-
-                <p><strong>3.</strong> 
-                  <ul className="list-disc pl-6 mt-1">
-                    <li>2% will be deducted as a convenience fee for orders cancelled by the buyer before shipping.</li>
-                    <li>5% will be deducted if the order has already been shipped and then cancelled by the buyer.</li>
-                    <li>3% will be deducted if the buyer wants to modify the order after it has been shipped.</li>
-                    <li>No charges apply for modifications before shipping.</li>
-                  </ul>
-                  These charges will be adjusted from the refund amount. If the buyer opts for a refund, it will be initiated once we receive the product in the same condition in which it was shipped.
-                </p>
-
-                <p><strong>4.</strong> The above charges apply only when such requests are initiated by the buyer. No charges are applicable if cancellation or modification steps are initiated by us.</p>
-
-                <p><strong>5.</strong> In case of complaints regarding products that come with a manufacturer&apos;s warranty, please contact the respective brand. 360 Electronics believes in assisting customers as much as possible and follows a liberal cancellation policy, subject to the above terms.</p>
-              </div>
-            </section>
-
-            {/* Refund / Return Policy */}
-            <section>
-              <h2 className="text-xl font-semibold text-gray-900 mb-4">2. Return & Refund Policy</h2>
-
-              <div className="space-y-3 text-gray-700 leading-relaxed">
-
-                <p><strong>1.</strong> We accept return and refund requests only if the product delivered by us is in damaged condition, the wrong product was sent, the product is in dead condition, or the product is defective.</p>
-
-                <p>Buyers will have:</p>
-                <ul className="list-disc pl-6 mt-1">
-                  <li>3 days to report any issues for all products.</li>
-                  <li>7 days for complete PC set purchases.</li>
-                </ul>
-                <p>Bugs must be reported via email (preferred) or phone call.</p>
-
-                <p><strong>2.</strong> For gaming chairs, only part replacement is applicable if the delivered product is defective or damaged. No refunds will be issued for gaming chair orders.</p>
-
-                <p><strong>3.</strong> If the product seal is opened and the product is not faulty, return/refund will not be applicable.</p>
-
-                <p><strong>4.</strong> Return/refund requests will be cancelled if any part or accessory is missing from the product box.</p>
-
-                <p><strong>5.</strong> Packaging material must be retained by the buyer during the return window. Proper packaging helps avoid damage during transit.</p>
-
-                <p><strong>6.</strong> Product must be packed exactly as originally received. Do not apply tapes or glue directly on the product or its box—doing so may lead to cancellation of the return request.</p>
-
-                <p><strong>7.</strong> All accessories included with the original product must be returned in the same condition.</p>
-
-                <p><strong>8.</strong> 
-                  If payment was made through our payment gateway, refunds will be processed to the same account.  
-                  For **bank transfer or COD orders**, refunds will be made only to the buyer’s bank account.  
-                  Refunds typically take **7–10 working days** to reflect in your account.
-                </p>
-
-                <p><strong>9.</strong> A 5% deduction applies on orders placed using **Bajaj EMI**, if cancelled by the buyer.</p>
-
-              </div>
-            </section>
-
-          </div>
-
-          {/* Footer Note */}
-          <div className="border-t border-gray-200 px-6 py-6">
-            <p className="text-sm text-gray-500 text-center">
-              By purchasing from 360 Electronics, you acknowledge that you have read and agree to this Cancellation & Refund Policy.
-            </p>
-          </div>
-
-        </div>
-      </div>
-    </>
+      <ContactBlock purpose="To cancel an order or for any questions about this policy, contact us with your order number:" />
+    </PolicyLayout>
   );
 }

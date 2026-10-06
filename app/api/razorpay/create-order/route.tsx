@@ -1,14 +1,10 @@
 import { NextResponse } from 'next/server';
-import Razorpay from 'razorpay';
+import { razorpay } from '@/lib/razorpay';
 import { and, eq, isNull } from 'drizzle-orm';
 import { db } from '@/db/drizzle';
 import { orders } from '@/db/schema';
 import { requireUser } from '@/lib/server-auth';
 
-const razorpay = new Razorpay({
-  key_id: process.env.NEXT_PUBLIC_RAZORPAY_KEY_ID!,
-  key_secret: process.env.RAZORPAY_KEY_SECRET!,
-});
 
 // POST /api/razorpay/create-order  { orderId }
 // Amount always comes from the stored order, never from the client.

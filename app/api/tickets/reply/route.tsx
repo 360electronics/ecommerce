@@ -20,7 +20,7 @@ export async function POST(request: Request) {
 
     // Verify ticket exists
     const [ticket] = await db
-      .select({ id: tickets.id, userId: tickets.user_id })
+      .select({ id: tickets.id, userId: tickets.user_id, status: tickets.status })
       .from(tickets)
       .where(eq(tickets.id, ticket_id))
       .limit(1);
@@ -38,6 +38,14 @@ export async function POST(request: Request) {
         ? await requireAdmin(request)
         : await requireOwnerOrAdmin(request, ticket.userId);
     if (access.error) return access.error;
+
+    // Customers can't reply on closed tickets (support can, e.g. a final note)
+    if (sender === "user" && ticket.status === "closed") {
+      return NextResponse.json(
+        { error: "This ticket is closed. Please raise a new ticket if you need more help." },
+        { status: 409 }
+      );
+    }
 
     // Insert new reply
     const [newReply] = await db

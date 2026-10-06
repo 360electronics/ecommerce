@@ -21,7 +21,7 @@ export async function GET(request: Request) {
     const limitStr = searchParams.get("limit");
     const type = searchParams.get("type");
 
-    const limit = Math.min(parseInt(limitStr || "8", 10), 20);
+    const limit = Math.min(Math.max(1, parseInt(limitStr || "8", 10) || 8), 20);
 
     // ==================== QUICK SUGGESTIONS (type=quick) ====================
     if (type === "quick" && q && q.length >= 2) {

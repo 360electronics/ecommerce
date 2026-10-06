@@ -6,10 +6,10 @@ import { FlattenedProduct } from '@/types/product';
 async function getProductData(slug: string): Promise<FlattenedProduct | null> {
   try {
     const res = await fetch(`${process.env.NEXT_PUBLIC_API_BASE_URL}/api/products/${slug}`, {
-      cache: 'no-store', // ensures fresh fetch for SSR
-      headers: {
-        'x-super-secure-key': `${process.env.API_SECRET_KEY}`
-      }
+      // Cache for 60s: popular products render from Vercel's data cache instead
+      // of a DB round trip per view. Checkout re-prices server-side, so a
+      // briefly stale displayed price/stock can't affect what customers pay.
+      next: { revalidate: 60 },
     });
 
     if (!res.ok) {

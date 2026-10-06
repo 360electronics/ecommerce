@@ -72,7 +72,7 @@ export async function GET(req: NextRequest, { params }: { params: Params }) {
       userId: string;
       type: string;
       issueDesc: string;
-      status: 'active' | 'inactive';
+      status: 'active' | 'inactive' | 'closed';
       createdAt: Date;
       updatedAt: Date;
       replies: Array<{
