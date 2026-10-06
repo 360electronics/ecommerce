@@ -1,3 +1,4 @@
+import { requireUser } from "@/lib/server-auth";
 import { NextRequest, NextResponse } from "next/server";
 import { db } from "@/db/drizzle";
 import { orders, orderItems, products, variants } from "@/db/schema";
@@ -59,6 +60,9 @@ export async function GET(req: NextRequest) {
         { status: 400 }
       );
     }
+
+    const auth = await requireUser(req, userId);
+    if (auth.error) return auth.error;
 
     const rows = await db
       .select({

@@ -1,6 +1,7 @@
+import { requireUser } from "@/lib/server-auth";
 import { db } from "@/db/drizzle";
 import { savedAddresses } from "@/db/schema";
-import { eq } from "drizzle-orm";
+import { and, eq } from "drizzle-orm";
 import { NextResponse } from "next/server";
 
 
@@ -12,6 +13,9 @@ export async function GET(req: Request) {
     if (!userId) {
       return NextResponse.json({ error: "Missing userId" }, { status: 400 });
     }
+
+    const auth = await requireUser(req, userId);
+    if (auth.error) return auth.error;
 
     const addresses = await db
       .select()
@@ -45,6 +49,9 @@ export async function POST(req: Request) {
     if (!userId || !fullName || !phoneNumber || !addressLine1 || !city || !state || !postalCode || !country) {
       return NextResponse.json({ error: "Missing required fields" }, { status: 400 });
     }
+
+    const auth = await requireUser(req, userId);
+    if (auth.error) return auth.error;
 
     const [inserted] = await db.insert(savedAddresses).values({
       userId,
@@ -89,6 +96,9 @@ export async function PUT(req: Request) {
       return NextResponse.json({ error: "Address ID is required" }, { status: 400 });
     }
 
+    const auth = await requireUser(req);
+    if (auth.error) return auth.error;
+
     const updatedAddress = await db.update(savedAddresses)
       .set({
         fullName,
@@ -102,7 +112,8 @@ export async function PUT(req: Request) {
         addressType,
         isDefault,
       })
-      .where(eq(savedAddresses.id, id))
+      // Only the owner's address can be updated
+      .where(and(eq(savedAddresses.id, id), eq(savedAddresses.userId, auth.user.userId)))
       .returning();
 
     if (updatedAddress.length === 0) {

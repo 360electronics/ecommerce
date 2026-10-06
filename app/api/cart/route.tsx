@@ -1,3 +1,4 @@
+import { requireUser } from "@/lib/server-auth";
 import { db } from '@/db/drizzle';
 import { cart, cart_offer_products, products, variants } from '@/db/schema';
 import { and, eq } from 'drizzle-orm';
@@ -11,6 +12,9 @@ export async function GET(req: Request) {
     if (!userId) {
       return NextResponse.json({ error: 'User ID is required' }, { status: 400 });
     }
+
+    const auth = await requireUser(req, userId);
+    if (auth.error) return auth.error;
 
     const cartItems = await db
       .select({
@@ -66,6 +70,9 @@ export async function POST(req: NextRequest) {
         { status: 400 }
       );
     }
+
+    const auth = await requireUser(req, userId);
+    if (auth.error) return auth.error;
 
     const productExists = await db
       .select({ id: products.id })
@@ -144,6 +151,9 @@ export async function PUT(req: NextRequest) {
       );
     }
 
+    const auth = await requireUser(req, userId);
+    if (auth.error) return auth.error;
+
     const sanitizedQuantity = Math.max(1, Math.floor(Number(quantity)));
 
     const updatedCartItem = await db
@@ -179,6 +189,9 @@ export async function DELETE(req: NextRequest) {
         { status: 400 }
       );
     }
+
+    const auth = await requireUser(req, userId);
+    if (auth.error) return auth.error;
 
     const deletedCartItem = await db
       .delete(cart)
@@ -221,6 +234,9 @@ export async function PATCH(req: NextRequest) {
         { status: 400 }
       );
     }
+
+    const auth = await requireUser(req, userId);
+    if (auth.error) return auth.error;
 
     const offerProductExists = await db
       .select({ id: cart_offer_products.id })

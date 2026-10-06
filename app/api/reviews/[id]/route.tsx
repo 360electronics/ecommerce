@@ -1,3 +1,4 @@
+import { getAuthUser } from "@/lib/server-auth";
 import { NextRequest, NextResponse } from 'next/server';
 import { db } from '@/db/drizzle';
 import { reviews, products, variants, users } from '@/db/schema';
@@ -50,18 +51,14 @@ const getReviewsSchema = z.object({
 });
 
 // Helper function to check authentication
+// Resolve the user directly from the session cookie (no self-fetch: building
+// the URL from request.url trusts the Host header).
 async function checkAuth(request: NextRequest) {
   try {
-    const response = await fetch(new URL('/api/auth/status', request.url), {
-      credentials: 'include',
-      headers: {
-        Cookie: request.headers.get('cookie') || '',
-      },
-    });
-    const data = await response.json();
+    const user = await getAuthUser(request);
     return {
-      isAuthenticated: data.isAuthenticated,
-      user: data.user,
+      isAuthenticated: !!user,
+      user: user ? { id: user.userId } : null,
     };
   } catch (error) {
     console.error('Error checking auth status:', error);

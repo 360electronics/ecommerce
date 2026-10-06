@@ -1,3 +1,4 @@
+import { requireUser } from "@/lib/server-auth";
 import { db } from '@/db/drizzle';
 import { cart } from '@/db/schema';
 import { eq } from 'drizzle-orm';
@@ -15,6 +16,9 @@ export async function DELETE(req: NextRequest) {
         { status: 400 }
       );
     }
+
+    const auth = await requireUser(req, userId);
+    if (auth.error) return auth.error;
 
     // Delete all cart items for the user
     await db

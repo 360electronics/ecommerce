@@ -4,10 +4,8 @@ import { useState, useRef, useEffect, useMemo, useCallback } from "react";
 import { Search, Save, Check, X, AlertCircle, Star } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
-import {
-  fetchProducts as fetchAllProducts,
-  fetchNewArrivalsProducts,
-} from "@/utils/products.util";
+import { fetchNewArrivalsProducts } from "@/utils/products.util";
+import { fetchAdminProductOptions as fetchAllProducts } from "@/utils/admin-products";
 import { cn } from "@/lib/utils";
 import { showFancyToast } from "@/components/Reusable/ShowCustomToast";
 

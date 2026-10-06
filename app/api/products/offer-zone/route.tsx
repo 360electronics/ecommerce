@@ -1,32 +1,29 @@
 import { requireAdmin } from "@/lib/server-auth";
 import { db } from "@/db/drizzle";
 import { offerZone, products, variants } from "@/db/schema";
-import { eq, inArray, sql } from "drizzle-orm";
+import { eq, inArray, sql, getTableColumns } from "drizzle-orm";
 import { NextResponse } from "next/server";
 
 
+// Product columns minus search_vector (DB-side search index only)
+const { searchVector: _searchVector, ...productColumns } = getTableColumns(products);
+
 export async function GET() {
   try {
-    const offers = await db
+    // Zone rows and all variants of their products, fetched in parallel
+    const [offers, allVariants] = await Promise.all([
+      db
       .select({
         productId: offerZone.productId,
         variantId: offerZone.variantId,
         createdAt: offerZone.createdAt,
-        product: products,
+        product: productColumns,
         variant: variants,
       })
       .from(offerZone)
       .innerJoin(variants, eq(offerZone.variantId, variants.id))
-      .innerJoin(products, eq(offerZone.productId, products.id));
-
-    // If no offers, return an empty response
-    if (offers.length === 0) {
-      return NextResponse.json([], { status: 200 });
-    }
-
-    // Fetch all variants for each product to include in the response
-    const productIds = [...new Set(offers.map((item) => item.productId))];
-    const allVariants = await db
+      .innerJoin(products, eq(offerZone.productId, products.id)),
+      db
       .select({
         id: variants.id,
         productId: variants.productId,
@@ -39,8 +36,14 @@ export async function GET() {
         productImages: variants.productImages,
       })
       .from(variants)
-      .where(inArray(variants.productId, productIds)); // Use inArray since productIds is non-empty
+      .where(inArray(variants.productId, db.select({ id: offerZone.productId }).from(offerZone))),
+    ]);
 
+    // If no offers, return an empty response
+    if (offers.length === 0) {
+      return NextResponse.json([], { status: 200 });
+    }
+    
     // Map results to VariantSelection, including all variants in product
     const response: any[] = offers.map(({ productId, variantId, product, variant }) => ({
       productId,

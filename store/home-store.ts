@@ -5,6 +5,7 @@ import { persist, createJSONStorage } from 'zustand/middleware';
 import { fetchWithRetry, logError, AppError } from './store-utils';
 import { Banner } from '@/types/banner';
 import { Product } from './types';
+import type { CompleteProduct } from '@/types/product';
 
 interface HomeState {
   banners: Banner[];
@@ -16,13 +17,15 @@ interface HomeState {
     laptops: Product[];
     'steering-chairs': Product[];
   };
-  brandProducts: Product[];
+  brandProducts: { brand: string; products: CompleteProduct[] }[];
   isLoading: boolean;
   error: AppError | null;
   lastFetched: number | null;
   fetchHomeData: (force?: boolean) => Promise<void>;
   setInitialData: (data: Partial<HomeState>) => void;
 }
+
+const HOME_BRANDS = ['asus', 'hp', 'dell', 'apple', 'acer'];
 
 export const useHomeStore = create<HomeState>()(
   persist(
@@ -87,12 +90,16 @@ export const useHomeStore = create<HomeState>()(
                 }
                 : { consoles: [], accessories: [], laptops: [], 'steering-chairs': [] }
             ),
-            fetchWithRetry<Product[]>(() => fetch('/api/products', {
-              cache: 'no-store', headers: {
-                'x-super-secure-key': `${process.env.API_SECRET_KEY}`
-              }
-            })).then((data) =>
-              Array.isArray(data) ? data : []
+            // Same per-brand laptop lists as the server-rendered homepage
+            // (app/page.tsx). Previously this downloaded the entire catalog
+            // from /api/products and discarded it ({ data } is not an array).
+            Promise.all(
+              HOME_BRANDS.map((brand) =>
+                fetch(`/api/products/brands?brand=${brand}&category=laptops`, { cache: 'no-store' })
+                  .then((res) => (res.ok ? res.json() : null))
+                  .then((json) => ({ brand, products: Array.isArray(json?.data) ? json.data : [] }))
+                  .catch(() => ({ brand, products: [] }))
+              )
             ),
           ]);
 

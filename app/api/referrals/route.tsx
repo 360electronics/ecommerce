@@ -1,3 +1,4 @@
+import { requireUser } from "@/lib/server-auth";
 import { NextResponse } from "next/server";
 import { db } from "@/db/drizzle";
 import { coupons, referrals, users } from "@/db/schema";
@@ -14,6 +15,9 @@ export async function GET(request: Request): Promise<NextResponse> {
         { status: 400 }
       );
     }
+
+    const auth = await requireUser(request, userId);
+    if (auth.error) return auth.error;
 
     // Fetch all referrals where this user is the referrer
     const referralList = await db

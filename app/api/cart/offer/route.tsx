@@ -1,3 +1,4 @@
+import { requireUser } from "@/lib/server-auth";
 import { NextRequest, NextResponse } from "next/server";
 import { db } from "@/db/drizzle";
 import { cart, cart_offer_products, products, variants } from "@/db/schema";
@@ -11,6 +12,9 @@ export async function PATCH(req: NextRequest) {
     if (!userId || !cartItemId || !cartOfferProductId) {
       return NextResponse.json({ error: "Missing required fields" }, { status: 400 });
     }
+
+    const auth = await requireUser(req, userId);
+    if (auth.error) return auth.error;
 
     // Validate offer product exists
     const [offerProduct] = await db
@@ -143,6 +147,9 @@ export async function DELETE(req: NextRequest) {
     if (!userId || !cartItemId) {
       return NextResponse.json({ error: "Missing required fields" }, { status: 400 });
     }
+
+    const auth = await requireUser(req, userId);
+    if (auth.error) return auth.error;
 
     // Remove offer product from cart item
     const [updatedItem] = await db

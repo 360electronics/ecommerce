@@ -3,29 +3,30 @@ import { requireAdmin } from "@/lib/server-auth";
 import { NextResponse } from 'next/server';
 import { db } from '@/db/drizzle';
 import { gamersZone, products, variants } from '@/db/schema/products/products.schema';
-import { eq, inArray, sql } from 'drizzle-orm';
+import { eq, inArray, sql, getTableColumns } from 'drizzle-orm';
 
+
+// Product columns minus search_vector (DB-side search index only)
+const { searchVector: _searchVector, ...productColumns } = getTableColumns(products);
 
 export async function GET() {
   try {
-    // Fetch gamers zone entries with product and variant details
-    const gamersZoneEntries = await db
+    // Zone entries and all variants of their products, fetched in parallel
+    const [gamersZoneEntries, allVariants] = await Promise.all([
+      db
       .select({
         productId: gamersZone.productId,
         variantId: gamersZone.variantId,
         category: gamersZone.category,
         createdAt: gamersZone.createdAt,
-        product: products,
+        product: productColumns,
         variant: variants
        })
       .from(gamersZone)
       .innerJoin(variants, eq(gamersZone.variantId, variants.id))
       .innerJoin(products, eq(gamersZone.productId, products.id))
-      .limit(50); // Limit to prevent large responses
-
-    // Fetch all variants for each product
-    const productIds = [...new Set(gamersZoneEntries.map((item) => item.productId))];
-    const allVariants = await db
+      .limit(50), // Limit to prevent large responses
+      db
       .select({
         id: variants.id,
         productId: variants.productId,
@@ -38,7 +39,8 @@ export async function GET() {
         productImages: variants.productImages,
       })
       .from(variants)
-      .where(inArray(variants.productId, productIds)); 
+      .where(inArray(variants.productId, db.select({ id: gamersZone.productId }).from(gamersZone))),
+    ]);
 
     // Group entries by category
     const result = gamersZoneEntries.reduce((acc, { productId, variantId, category, product, variant }) => {

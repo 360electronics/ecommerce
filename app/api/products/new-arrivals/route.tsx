@@ -1,32 +1,29 @@
 import { requireAdmin } from "@/lib/server-auth";
 import { db } from "@/db/drizzle";
 import { newArrivals, products, variants } from "@/db/schema";
-import { eq, inArray, sql } from "drizzle-orm";
+import { eq, inArray, sql, getTableColumns } from "drizzle-orm";
 import { NextResponse } from "next/server";
 
 
+// Product columns minus search_vector (DB-side search index only)
+const { searchVector: _searchVector, ...productColumns } = getTableColumns(products);
+
 export async function GET() {
   try {
-    const newArrival = await db
+    // Zone rows and all variants of their products, fetched in parallel
+    const [newArrival, allVariants] = await Promise.all([
+      db
       .select({
         productId: newArrivals.productId,
         variantId: newArrivals.variantId,
         createdAt: newArrivals.createdAt,
-        product: products,
+        product: productColumns,
         variant: variants,
       })
       .from(newArrivals)
       .innerJoin(variants, eq(newArrivals.variantId, variants.id))
-      .innerJoin(products, eq(newArrivals.productId, products.id));
-
-    // If no offers, return an empty response
-    if (newArrival.length === 0) {
-      return NextResponse.json([], { status: 200 });
-    }
-
-    // Fetch all variants for each product to include in the response
-    const productIds = [...new Set(newArrival.map((item) => item.productId))];
-    const allVariants = await db
+      .innerJoin(products, eq(newArrivals.productId, products.id)),
+      db
       .select({
         id: variants.id,
         productId: variants.productId,
@@ -39,8 +36,14 @@ export async function GET() {
         productImages: variants.productImages,
       })
       .from(variants)
-      .where(inArray(variants.productId, productIds)); // Use inArray since productIds is non-empty
+      .where(inArray(variants.productId, db.select({ id: newArrivals.productId }).from(newArrivals))),
+    ]);
 
+    // If no offers, return an empty response
+    if (newArrival.length === 0) {
+      return NextResponse.json([], { status: 200 });
+    }
+    
     // Map results to VariantSelection, including all variants in product
     const response: any[] = newArrival.map(({ productId, variantId, product, variant }) => ({
       productId,

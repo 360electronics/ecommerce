@@ -1,3 +1,4 @@
+import { requireUser } from "@/lib/server-auth";
 import { db } from '@/db/drizzle';
 import { coupons } from '@/db/schema';
 import { eq, and } from 'drizzle-orm';
@@ -15,6 +16,9 @@ export async function GET(request: NextRequest) {
         { status: 400 }
       );
     }
+
+    const auth = await requireUser(request, userId);
+    if (auth.error) return auth.error;
 
     const [coupon] = await db
       .select()

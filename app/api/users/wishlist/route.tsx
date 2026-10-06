@@ -1,3 +1,4 @@
+import { requireUser } from "@/lib/server-auth";
 // app/api/users/wishlist/route.ts
 import { db } from '@/db/drizzle';
 import { wishlists, products, variants } from '@/db/schema';
@@ -12,6 +13,9 @@ export async function GET(req: Request) {
     if (!userId) {
       return NextResponse.json({ error: 'User ID is required' }, { status: 400 });
     }
+
+    const auth = await requireUser(req, userId);
+    if (auth.error) return auth.error;
 
     const wishlist = await db
       .select({
@@ -89,6 +93,9 @@ export async function POST(req: Request) {
         { status: 400 }
       );
     }
+
+    const auth = await requireUser(req, userId);
+    if (auth.error) return auth.error;
 
     // Validate variant belongs to product
     const variantCheck = await db
@@ -194,6 +201,9 @@ export async function DELETE(req: Request) {
         { status: 400 }
       );
     }
+
+    const auth = await requireUser(req, userId);
+    if (auth.error) return auth.error;
 
     // Delete the wishlist item
     const deletedItems = await db

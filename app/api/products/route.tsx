@@ -8,7 +8,7 @@ import {
   subcategories,
   brands,
 } from "@/db/schema";
-import { eq, and, isNull, inArray, sql } from "drizzle-orm";
+import { eq, and, isNull, inArray, sql, asc, desc, ilike, getTableColumns, type SQL } from "drizzle-orm";
 import { z } from "zod";
 import {
   uploadProductImageToR2,
@@ -124,67 +124,106 @@ const bulkDeleteProductSchema = z.object({
   ids: z.array(z.string().uuid()).min(1, "At least one product ID is required"),
 });
 
-// GET: Fetch all products with related data
+const DEFAULT_PAGE_SIZE = 50;
+const MAX_PAGE_SIZE = 100;
+
+// Product columns minus search_vector (DB-side search index, never needed by clients)
+const { searchVector: _searchVector, ...productColumns } = getTableColumns(products);
+
+/*
+ * GET /api/products?page=1&limit=50&category=&subcategory=&brand=&q=
+ * Paginated by product (each product comes with all its variants).
+ * Response: { data, total, page, limit, totalPages }
+ */
 export async function GET(req: Request) {
   try {
     const { searchParams } = new URL(req.url);
     const categorySlug = searchParams.get("category");
     const subcategorySlug = searchParams.get("subcategory");
     const brandSlug = searchParams.get("brand");
-    const searchQuery = searchParams.get("q");
+    const searchQuery = searchParams.get("q")?.trim();
+    const page = Math.max(1, Math.floor(Number(searchParams.get("page"))) || 1);
+    const limit = Math.min(
+      MAX_PAGE_SIZE,
+      Math.max(1, Math.floor(Number(searchParams.get("limit"))) || DEFAULT_PAGE_SIZE),
+    );
 
-    const filters = [];
+    const filters: SQL[] = [];
     if (categorySlug) filters.push(eq(categories.slug, categorySlug));
     if (subcategorySlug) filters.push(eq(subcategories.slug, subcategorySlug));
     if (brandSlug) filters.push(eq(brands.slug, brandSlug));
     if (searchQuery) {
-      const search = `%${searchQuery.toLowerCase()}%`;
-      filters.push(sql`LOWER(${products.fullName}) LIKE ${search}`);
+      filters.push(ilike(products.fullName, `%${searchQuery.replace(/[%_\\]/g, "\\$&")}%`));
+    }
+    const where = filters.length ? and(...filters) : undefined;
+
+    // 1️⃣ One page of product ids + total count (filters applied in SQL)
+    const [pageRows, [{ total }]] = await Promise.all([
+      db
+        .select({ id: products.id })
+        .from(products)
+        .leftJoin(categories, eq(products.categoryId, categories.id))
+        .leftJoin(subcategories, eq(products.subcategoryId, subcategories.id))
+        .leftJoin(brands, eq(products.brandId, brands.id))
+        .where(where)
+        .orderBy(desc(products.createdAt), asc(products.id))
+        .limit(limit)
+        .offset((page - 1) * limit),
+      db
+        .select({ total: sql<number>`count(*)::int` })
+        .from(products)
+        .leftJoin(categories, eq(products.categoryId, categories.id))
+        .leftJoin(subcategories, eq(products.subcategoryId, subcategories.id))
+        .leftJoin(brands, eq(products.brandId, brands.id))
+        .where(where),
+    ]);
+
+    const ids = pageRows.map((r) => r.id);
+    const totalPages = Math.max(1, Math.ceil(total / limit));
+
+    if (ids.length === 0) {
+      return NextResponse.json({ data: [], total, page, limit, totalPages });
     }
 
-    const query = db
+    // 2️⃣ Full details only for this page's products
+    const rows = await db
       .select({
-        product: products,
+        product: productColumns,
         category: categories,
         subcategory: subcategories,
-        brand:brands,
+        brand: brands,
         variant: variants,
       })
       .from(products)
       .leftJoin(categories, eq(products.categoryId, categories.id))
       .leftJoin(subcategories, eq(products.subcategoryId, subcategories.id))
       .leftJoin(brands, eq(products.brandId, brands.id))
-      .leftJoin(variants, eq(products.id, variants.productId));
+      .leftJoin(variants, eq(products.id, variants.productId))
+      .where(inArray(products.id, ids));
 
-    if (filters.length > 0) {
-      query.where(and(...filters));
-    }
-
-    const rows = await query;
-
-    // Group by product ID
-    const grouped = rows.reduce((acc, row) => {
-      const id = row.product.id;
-      if (!acc[id]) {
-        acc[id] = {
+    // Group variants under their product, keeping page order
+    const grouped = new Map<string, any>(ids.map((id) => [id, null]));
+    for (const row of rows) {
+      let product = grouped.get(row.product.id);
+      if (!product) {
+        product = {
           ...row.product,
           category: row.category,
           subcategory: row.subcategory,
           brand: row.brand,
           variants: [],
         };
+        grouped.set(row.product.id, product);
       }
-      if (row.variant) {
-        acc[id].variants.push(row.variant);
-      }
-      return acc;
-    }, {} as Record<string, any>);
+      if (row.variant) product.variants.push(row.variant);
+    }
 
-    const result = Object.values(grouped);
-
-    // Send minimal payload
     return NextResponse.json({
-      data: result,
+      data: Array.from(grouped.values()).filter(Boolean),
+      total,
+      page,
+      limit,
+      totalPages,
     });
   } catch (error) {
     console.error("Error fetching products:", error);

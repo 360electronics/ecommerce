@@ -1,66 +1,10 @@
-"use server";
-
+// Called from client components: fetch the API directly from the browser
+// (relative URL). This used to be a "use server" module, which turned every
+// call into browser → server action → HTTP back to our own API.
 const API_BASE_URL =
-  process.env.NEXT_PUBLIC_API_BASE_URL || "http://localhost:3000";
-
-export async function fetchProducts() {
-  try {
-    const res = await fetch(`${API_BASE_URL}/api/products`, {
-      method: "GET",
-      headers: {
-        "Content-Type": "application/json",
-        "x-super-secure-key": `${process.env.API_SECRET_KEY}`,
-      },
-      cache: "no-cache",
-    });
-
-    if (!res.ok) {
-      throw new Error(`Error: ${res.status} ${res.statusText}`);
-    }
-
-    const data = await res.json();
-    // console.log("All Product Data:",data)
-    return data; // Expected format: Product[]
-  } catch (error) {
-    console.error("Failed to fetch products:", error);
-    return []; // Fallback to empty array
-  }
-}
-
-export async function fetchCategoryProducts({
-  category,
-  subcategory,
-  brand,
-}: {
-  category?: string;
-  subcategory?: string;
-  brand?: string;
-  page?: number;
-  limit?: number;
-} = {}) {
-  try {
-    const query = new URLSearchParams();
-    if (category) query.append("category", category);
-    if (subcategory) query.append("subcategory", subcategory);
-    if (brand) query.append("brand", brand);
-
-    const res = await fetch(`${API_BASE_URL}/api/products?${query}`, {
-      method: "GET",
-      headers: {
-        "Content-Type": "application/json",
-      },
-      cache: "no-store",
-    });
-
-    if (!res.ok) throw new Error(`Error ${res.status}: ${res.statusText}`);
-    const { data } = await res.json();
-    return data;
-  } catch (err) {
-    console.error("Failed to fetch category products:", err);
-    return [];
-  }
-}
-
+  typeof window === "undefined"
+    ? process.env.NEXT_PUBLIC_API_BASE_URL || "http://localhost:3000"
+    : "";
 
 export interface QuickSuggestion {
   id: string;
@@ -91,119 +35,14 @@ export async function fetchQuickSuggestions(query: string): Promise<QuickSuggest
   }
 }
 
-export async function fetchSearchProducts(query: string) {
-  try {
-    const params = new URLSearchParams();
-    if (query) params.append("search", query);
-
-    const res = await fetch(`${API_BASE_URL}/api/products?${params}`, {
-      method: "GET",
-      headers: { "Content-Type": "application/json" },
-    });
-
-    if (!res.ok) throw new Error(`Error: ${res.statusText}`);
-    const data = await res.json();
-
-    console.log("Search called with query");
-
-    return Array.isArray(data.data) ? data.data : data; // in case your API returns wrapped data
-  } catch (err) {
-    console.error("Failed to fetch search results:", err);
-    return [];
-  }
-}
-
-export async function fetchSearchProducts2(
-  query: string,
-  page = 1,
-  signal?: AbortSignal
-) {
-  const res = await fetch(
-    `${API_BASE_URL}/api/search/products?q=${encodeURIComponent(query)}&page=${page}`,
-    {
-      method: "GET",
-      signal,
-      cache: "no-store",
-    }
-  );
-
-  if (!res.ok) {
-    throw new Error("Search request failed");
-  }
-
-  const data = await res.json();
-  console.log("Search results:", data);
-
-  return data;
-}
-
-
-export async function fetchBrandProducts({
-  brand,
-  category = "laptops",
-}: {
-  brand: string;
-  category?: string;
-}) {
-  try {
-    const query = new URLSearchParams();
-    query.append("brand", brand);
-    if (category) query.append("category", category);
-
-    const res = await fetch(
-      `${process.env.NEXT_PUBLIC_API_URL}/api/products/brand?${query}`,
-      {
-        method: "GET",
-        headers: { "Content-Type": "application/json" },
-        cache: "force-cache", // allow caching since brand laptops rarely change
-      }
-    );
-
-    if (!res.ok) {
-      throw new Error(`API Error: ${res.statusText}`);
-    }
-
-    const json = await res.json();
-    // console.log(`Fetched ${json.data.length} products for brand: ${brand}`);
-    return json.data || [];
-  } catch (err) {
-    console.error(`Failed to fetch brand products for ${brand}:`, err);
-    return [];
-  }
-}
-
-export async function fetchSingleProduct(id: string) {
-  try {
-    const res = await fetch(`${API_BASE_URL}/api/products/single/${id}`, {
-      method: "GET",
-      headers: {
-        "Content-Type": "application/json",
-        "x-super-secure-key": `${process.env.API_SECRET_KEY}`,
-      },
-      cache: "no-cache",
-    });
-
-    if (!res.ok) {
-      throw new Error(`Error: ${res.status} ${res.statusText}`);
-    }
-
-    const data = await res.json();
-    return data; // Expected format: Product
-  } catch (error) {
-    // console.error('Failed to fetch single product:', error);
-    return null; // Keep null for single product as it may be used differently
-  }
-}
-
 export async function fetchOfferZoneProducts() {
   try {
     const res = await fetch(`${API_BASE_URL}/api/products/offer-zone`, {
       method: "GET",
       headers: {
         "Content-Type": "application/json",
-        "x-super-secure-key": `${process.env.API_SECRET_KEY}`,
       },
-      next: { revalidate: 60 },
+      cache: "no-store",
     });
 
     if (!res.ok) {
@@ -225,9 +64,8 @@ export async function fetchNewArrivalsProducts() {
       method: "GET",
       headers: {
         "Content-Type": "application/json",
-        "x-super-secure-key": `${process.env.API_SECRET_KEY}`,
       },
-      next: { revalidate: 60 },
+      cache: "no-store",
     });
 
     if (!res.ok) {
@@ -250,7 +88,6 @@ export async function fetchGamersZoneProducts() {
       method: "GET",
       headers: {
         "Content-Type": "application/json",
-        "x-super-secure-key": `${process.env.API_SECRET_KEY}`,
       },
     });
 

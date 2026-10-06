@@ -34,30 +34,47 @@ export async function GET(req: Request) {
 
     const where = sql.join(whereClauses, sql` AND `);
 
-    /* ---------------- COUNT ---------------- */
-    const countResult = await db.execute(sql`
-      SELECT COUNT(*)::int AS count
-      FROM offer_zone oz
-      JOIN products p ON p.id = oz.product_id
-      JOIN variants v ON v.id = oz.variant_id
-      LEFT JOIN brands b ON b.id = p.brand_id
-      WHERE ${where}
-    `);
+    /* ---------------- QUERIES (parallel) ----------------
+       Filter rows share the same joins/WHERE (one row per offer item), so
+       their length is the total count — no separate COUNT query. */
+    const [filterRows, rows] = await Promise.all([
+      db.execute(sql`
+        SELECT
+          b.name AS brand,
+          v.attributes,
+          v.our_price
+        FROM offer_zone oz
+        JOIN products p ON p.id = oz.product_id
+        JOIN variants v ON v.id = oz.variant_id
+        LEFT JOIN brands b ON b.id = p.brand_id
+        WHERE ${where}
+      `),
+      db.execute(sql`
+        SELECT
+          p.id AS product_id,
+          v.id AS variant_id,
+          p.slug,
+          p.short_name,
+          p.average_rating,
+          b.id AS brand_id,
+          b.name AS brand_name,
+          v.our_price,
+          v.mrp,
+          v.stock,
+          v.attributes,
+          (v.product_images->0->>'url') AS image
+        FROM offer_zone oz
+        JOIN products p ON p.id = oz.product_id
+        JOIN variants v ON v.id = oz.variant_id
+        LEFT JOIN brands b ON b.id = p.brand_id
+        WHERE ${where}
+        ORDER BY oz.created_at, oz.id
+        LIMIT ${limit}
+        OFFSET ${offset}
+      `),
+    ]);
 
-    const totalCount = countResult.rows[0]?.count ?? 0;
-
-    /* ---------------- FILTER OPTIONS ---------------- */
-    const filterRows = await db.execute(sql`
-      SELECT
-        b.name AS brand,
-        v.attributes,
-        v.our_price
-      FROM offer_zone oz
-      JOIN products p ON p.id = oz.product_id
-      JOIN variants v ON v.id = oz.variant_id
-      LEFT JOIN brands b ON b.id = p.brand_id
-      WHERE ${where}
-    `);
+    const totalCount = filterRows.rows.length;
 
     const brandSet = new Set<string>();
     const attributesMap: Record<string, Set<string>> = {};
@@ -89,30 +106,6 @@ export async function GET(req: Request) {
         max,
       },
     };
-
-    /* ---------------- DATA ---------------- */
-    const rows = await db.execute(sql`
-      SELECT
-        p.id AS product_id,
-        v.id AS variant_id,
-        p.slug,
-        p.short_name,
-        p.average_rating,
-        b.id AS brand_id,
-        b.name AS brand_name,
-        v.our_price,
-        v.mrp,
-        v.stock,
-        v.attributes,
-        (v.product_images->0->>'url') AS image
-      FROM offer_zone oz
-      JOIN products p ON p.id = oz.product_id
-      JOIN variants v ON v.id = oz.variant_id
-      LEFT JOIN brands b ON b.id = p.brand_id
-      WHERE ${where}
-      LIMIT ${limit}
-      OFFSET ${offset}
-    `);
 
     return NextResponse.json({
       data: rows.rows,

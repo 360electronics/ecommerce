@@ -1,13 +1,12 @@
 "use client";
 
-import { useEffect, useState, useMemo } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import Image from "next/image";
 import {
   EnhancedTable,
   type ColumnDefinition,
 } from "@/components/Layouts/TableLayout";
-import { fetchProducts } from "@/utils/products.util";
 import { showFancyToast } from "@/components/Reusable/ShowCustomToast";
 
 // Core Entity Types (unchanged)
@@ -208,24 +207,15 @@ export type CompleteProduct = {
   isComingSoon: boolean;
 };
 
-// Get unique categories and brands
-const getProductCategories = (products: CompleteProduct[]): string[] => {
-  return [...new Set(products.map((p) => p.category.name))].sort();
-};
-
-const getProductBrands = (products: CompleteProduct[]): string[] => {
-  return [...new Set(products.map((p) => p.brand.name))].sort();
-};
-
-// Updated TableRow interface
+// One row per variant, as returned by GET /api/admin/products
 interface TableRow {
   productId: string;
   variantId: string;
   shortName: string;
   fullName: string;
-  category: string;
-  subcategory?: string;
-  brand: string;
+  category: string | null;
+  subcategory?: string | null;
+  brand: string | null;
   status: "active" | "inactive" | "coming_soon" | "discontinued";
   isFeatured: boolean;
   isInOfferZone: boolean;
@@ -233,16 +223,23 @@ interface TableRow {
   variantName: string;
   sku: string;
   slug: string;
-  attributes: Record<string, string | number | boolean>;
+  attributes: Record<string, string | number | boolean> | null;
   stock: number;
   mrp: number;
   ourPrice: number;
   salePrice?: number | null;
-  productImages: ProductImage[];
-  activePromotions: ProductPromotion[];
-  priceRange: { min: number; max: number } | null;
+  image: { url: string; alt: string } | null;
   hasMultipleVariants: boolean;
 }
+
+interface AdminProductsResponse {
+  data: TableRow[];
+  total: number;
+  categories: string[];
+  stats: { totalProducts: number; activeProducts: number };
+}
+
+type SortKey = keyof TableRow;
 
 export const deleteProducts = async (ids: string[]) => {
   try {
@@ -268,27 +265,33 @@ export function ProductsTable() {
   const router = useRouter();
   const [selectedRows, setSelectedRows] = useState<TableRow[]>([]);
   const [tableData, setTableData] = useState<TableRow[]>([]);
-  const [products, setProducts] = useState<CompleteProduct[]>([]);
-  const [loading, setLoading] = useState(true);
+  const [totalItems, setTotalItems] = useState(0);
+  const [productCategories, setProductCategories] = useState<string[]>([]);
+  const [stats, setStats] = useState({ totalProducts: 0, activeProducts: 0 });
+  const [loading, setLoading] = useState(true); // first load only
+  const [isFetching, setIsFetching] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  // Memoized filters
-  const productCategories = useMemo(
-    () => getProductCategories(products),
-    [products]
-  );
-  const productBrands = useMemo(() => getProductBrands(products), [products]);
+  // Server-side query state (search is debounced)
+  const [query, setQuery] = useState({
+    page: 1,
+    pageSize: 25,
+    q: "",
+    category: "All",
+    sort: "fullName" as SortKey,
+    dir: "asc" as "asc" | "desc",
+  });
+  const [searchInput, setSearchInput] = useState("");
+  const requestIdRef = useRef(0);
 
   // Column definitions
   const columns: ColumnDefinition<TableRow>[] = [
     {
-      key: "productImages",
+      key: "image",
       header: "Thumbnail",
       width: "80px",
       renderCell: (_, row) => {
-        const featuredImage =
-          row.productImages.find((img) => img.isFeatured) ||
-          row.productImages[0];
+        const featuredImage = row.image;
         return featuredImage ? (
           <img
             src={featuredImage.url}
@@ -332,7 +335,7 @@ export function ProductsTable() {
       header: "Key Attributes",
       width: "15%",
       renderCell: (_, row) => {
-        const keyAttrs = Object.entries(row.attributes)
+        const keyAttrs = Object.entries(row.attributes ?? {})
           .slice(0, 2)
           .map(([key, value]) => `${key}: ${value}`);
         return keyAttrs.join(", ") || "-";
@@ -360,11 +363,6 @@ export function ProductsTable() {
               ₹{Number(row.mrp).toLocaleString()}
             </span>
           )}
-          {row.activePromotions.length > 0 && (
-            <span className="text-xs text-purple-500">
-              {row.activePromotions[0].name}
-            </span>
-          )}
         </div>
       ),
     },
@@ -388,7 +386,6 @@ export function ProductsTable() {
       header: "Brand",
       sortable: true,
       width: "10%",
-      filterOptions: productBrands,
       renderCell: (_, row) => row.brand,
     },
     {
@@ -463,45 +460,6 @@ export function ProductsTable() {
     },
   ];
 
-  // Flatten products into variant-based rows
-  const flattenProducts = (products: CompleteProduct[]): TableRow[] => {
-    return products.flatMap((product) =>
-      product.variants.map((variant) => ({
-        productId: product.id,
-        variantId: variant.id,
-        shortName: product.shortName,
-        fullName: product.fullName,
-        category: product.category.name,
-        subcategory: product.subcategory?.name,
-        brand: product.brand.name,
-        status: product.status,
-        isFeatured: product.isFeatured,
-        isInOfferZone: product.isInOfferZone,
-        averageRating: product.averageRating,
-        variantName: variant.name,
-        sku: variant.sku,
-        slug: variant.slug,
-        attributes: variant.attributes,
-        stock: variant.stock,
-        mrp: variant.mrp,
-        ourPrice: variant.ourPrice,
-        salePrice: variant.salePrice,
-        productImages: variant.productImages,
-        activePromotions: Array.isArray(product.activePromotions)
-          ? product.activePromotions
-              .filter(
-                (promo) =>
-                  promo.applicableEntityType === "product" ||
-                  promo.applicableEntityType === "variant"
-              )
-              .map((p) => p.promotion)
-          : [],
-        priceRange: product.priceRange,
-        hasMultipleVariants: product.hasMultipleVariants,
-      }))
-    );
-  };
-
   // Handle actions
   const handleAddProduct = () => router.push("/admin/products/add-product");
 
@@ -522,11 +480,9 @@ export function ProductsTable() {
   const handleDeleteProduct = async (row: TableRow) => {
     if (window.confirm(`Delete ${row.fullName} (${row.variantName})?`)) {
       try {
-        await deleteProducts([row.productId]);
-        setTableData((prev) =>
-          prev.filter((r) => r.productId !== row.productId)
-        );
-        setProducts((prev) => prev.filter((p) => p.id !== row.productId));
+        const result = await deleteProducts([row.productId]);
+        if (!result) throw new Error("Delete failed");
+        await loadProducts();
         showFancyToast({
           title: "Item Deleted Successfully",
           message: `${row.fullName} deleted successfully.`,
@@ -548,11 +504,9 @@ export function ProductsTable() {
     if (productIds.length === 0) return;
     if (window.confirm(`Delete ${productIds.length} products?`)) {
       try {
-        await deleteProducts(productIds);
-        setTableData((prev) =>
-          prev.filter((r) => !productIds.includes(r.productId))
-        );
-        setProducts((prev) => prev.filter((p) => !productIds.includes(p.id)));
+        const result = await deleteProducts(productIds);
+        if (!result) throw new Error("Delete failed");
+        await loadProducts();
         showFancyToast({
           title: "Items Deleted Successfully",
           message: `${productIds.length} products deleted successfully.`,
@@ -579,31 +533,64 @@ export function ProductsTable() {
     // Implement CSV export logic
   };
 
-  // Fetch products
-  useEffect(() => {
-    async function loadProducts() {
-      try {
-        setLoading(true);
-        setError(null);
-        const response = await fetchProducts();
-        const data: CompleteProduct[] = response.data ?? []; // ✅ fix here
-        setProducts(data);
-        setTableData(flattenProducts(data));
-      } catch (err) {
-        console.error("Error loading products:", err);
-        setError("Failed to load products. Please try again.");
-        showFancyToast({
-          title: "Sorry, Something Went Wrong",
-          message: `Failed to load products. Please try again.`,
-          type: "error",
-        });
-      } finally {
+  // Fetch one page from the server (ignores out-of-order responses)
+  const loadProducts = useCallback(async () => {
+    const requestId = ++requestIdRef.current;
+    setIsFetching(true);
+    setError(null);
+    try {
+      const params = new URLSearchParams({
+        page: String(query.page),
+        pageSize: String(query.pageSize),
+        sort: String(query.sort),
+        dir: query.dir,
+      });
+      if (query.q) params.set("q", query.q);
+      if (query.category !== "All") params.set("category", query.category);
+
+      const res = await fetch(`/api/admin/products?${params}`, {
+        cache: "no-store",
+      });
+      if (!res.ok) throw new Error(`Status ${res.status}`);
+      const data: AdminProductsResponse = await res.json();
+      if (requestId !== requestIdRef.current) return;
+
+      setTableData(data.data);
+      setTotalItems(data.total);
+      setProductCategories(data.categories);
+      setStats(data.stats);
+    } catch (err) {
+      if (requestId !== requestIdRef.current) return;
+      console.error("Error loading products:", err);
+      setError("Failed to load products. Please try again.");
+      showFancyToast({
+        title: "Sorry, Something Went Wrong",
+        message: `Failed to load products. Please try again.`,
+        type: "error",
+      });
+    } finally {
+      if (requestId === requestIdRef.current) {
+        setIsFetching(false);
         setLoading(false);
       }
     }
+  }, [query]);
 
+  useEffect(() => {
     loadProducts();
-  }, []);
+  }, [loadProducts]);
+
+  // Debounce search → server query
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      setQuery((prev) =>
+        prev.q === searchInput.trim()
+          ? prev
+          : { ...prev, q: searchInput.trim(), page: 1 },
+      );
+    }, 350);
+    return () => clearTimeout(timer);
+  }, [searchInput]);
 
   if (error)
     return (
@@ -666,7 +653,7 @@ export function ProductsTable() {
                 Total Products
               </p>
               <p className="text-2xl font-bold text-gray-900">
-                {products.length}
+                {stats.totalProducts}
               </p>
             </div>
           </div>
@@ -693,7 +680,7 @@ export function ProductsTable() {
                 Active Products
               </p>
               <p className="text-2xl font-bold text-gray-900">
-                {products.filter((p) => p.status === "active").length}
+                {stats.activeProducts}
               </p>
             </div>
           </div>
@@ -722,20 +709,31 @@ export function ProductsTable() {
             "subcategory",
             "brand",
           ],
-          placeholder: "Search products, variants, or brands...",
+          placeholder: "Search name, variant, SKU or brand...",
+          onSearch: setSearchInput,
         }}
         filters={{
           enabled: true,
+          onFilterChange: (category) =>
+            setQuery((prev) => ({ ...prev, category, page: 1 })),
         }}
         pagination={{
           enabled: true,
+          serverSide: true,
+          totalItems,
           pageSizeOptions: [10, 25, 50, 100],
           defaultPageSize: 25,
+          onPageChange: (page) => setQuery((prev) => ({ ...prev, page })),
+          onPageSizeChange: (pageSize) =>
+            setQuery((prev) => ({ ...prev, pageSize, page: 1 })),
         }}
         sorting={{
           enabled: true,
+          serverSide: true,
           defaultSortColumn: "fullName",
           defaultSortDirection: "asc",
+          onSortChange: (sort, dir) =>
+            setQuery((prev) => ({ ...prev, sort, dir, page: 1 })),
         }}
         actions={{
           onAdd: handleAddProduct,
@@ -755,6 +753,7 @@ export function ProductsTable() {
           rowHoverEffect: true,
           zebraStriping: true,
           stickyHeader: true,
+          isLoading: isFetching,
         }}
         onRowClick={(row) => {
           window.open(`/product/${row.slug}`, "_blank");

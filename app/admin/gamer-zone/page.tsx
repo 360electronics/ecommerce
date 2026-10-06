@@ -4,7 +4,8 @@ import { useState, useRef, useEffect, useMemo, useCallback } from "react";
 import { Search, Save, Check, X, AlertCircle, Gamepad2 } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
-import { fetchProducts, fetchGamersZoneProducts } from "@/utils/products.util";
+import { fetchGamersZoneProducts } from "@/utils/products.util";
+import { fetchAdminProductOptions } from "@/utils/admin-products";
 import { cn } from "@/lib/utils";
 import { showFancyToast } from "@/components/Reusable/ShowCustomToast";
 
@@ -82,7 +83,7 @@ export default function GamerZonePage() {
       try {
         // Fetch both datasets concurrently
         const [productsRes, gamersZoneRes] = await Promise.all([
-          fetchProducts(),
+          fetchAdminProductOptions(),
           fetchGamersZoneProducts(),
         ]);
 

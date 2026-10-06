@@ -18,9 +18,11 @@ export async function getAuthUser(request: Request): Promise<AuthUser | null> {
   const payload = verifyToken(token);
   if (!payload?.userId) return null;
 
+  // One round trip: live token row + current role from users
   const [record] = await db
-    .select({ id: authTokens.id })
+    .select({ role: users.role })
     .from(authTokens)
+    .innerJoin(users, eq(users.id, authTokens.userId))
     .where(
       and(
         eq(authTokens.token, token),
@@ -32,7 +34,8 @@ export async function getAuthUser(request: Request): Promise<AuthUser | null> {
 
   if (!record) return null;
 
-  return { userId: payload.userId, role: payload.role };
+  // Role comes from the DB, not the JWT, so demotions apply immediately
+  return { userId: payload.userId, role: record.role };
 }
 
 // Require a logged-in user. When `claimedUserId` is given (legacy query/body
@@ -58,27 +61,21 @@ export async function requireUser(
   return { user };
 }
 
-// Require an admin. Role is re-read from the DB so a demoted admin loses access
-// immediately rather than when their JWT expires.
+// Require an admin. getAuthUser reads the role from the DB, so a demoted admin
+// loses access immediately rather than when their JWT expires.
 export async function requireAdmin(
   request: Request,
 ): Promise<{ user: AuthUser; error?: never } | { user?: never; error: NextResponse }> {
   const auth = await requireUser(request);
   if (auth.error) return auth;
 
-  const [row] = await db
-    .select({ role: users.role })
-    .from(users)
-    .where(eq(users.id, auth.user.userId))
-    .limit(1);
-
-  if (row?.role !== "admin") {
+  if (auth.user.role !== "admin") {
     return {
       error: NextResponse.json({ error: "Forbidden" }, { status: 403 }),
     };
   }
 
-  return { user: { ...auth.user, role: "admin" } };
+  return auth;
 }
 
 // Allow the resource owner or an admin (e.g. order details, user profile).
@@ -89,5 +86,8 @@ export async function requireOwnerOrAdmin(
   const auth = await requireUser(request);
   if (auth.error) return auth;
   if (ownerId && ownerId === auth.user.userId) return auth;
-  return requireAdmin(request);
+  if (auth.user.role === "admin") return auth;
+  return {
+    error: NextResponse.json({ error: "Forbidden" }, { status: 403 }),
+  };
 }

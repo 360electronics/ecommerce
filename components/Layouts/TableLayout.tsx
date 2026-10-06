@@ -204,9 +204,14 @@ export function EnhancedTable<T extends Record<string, any>>({
     return () => {};
   }, []);
 
+  // Server-side mode: `data` is already the current page (searched, filtered,
+  // sorted and paginated by the caller via the on* callbacks).
+  const isServerSide = !!pagination.serverSide;
+
   // Filtering data
   const filteredData = useMemo(() => {
     if (data.length === 0) return [];
+    if (isServerSide) return data;
 
     let filtered = [...data];
     if (searchTerm && search.enabled) {
@@ -239,11 +244,18 @@ export function EnhancedTable<T extends Record<string, any>>({
     columns,
     search.enabled,
     filters.enabled,
+    isServerSide,
   ]);
 
   // Sorting logic
   const sortedData = useMemo(() => {
-    if (!sorting.enabled || !sortConfig.key || filteredData.length === 0)
+    if (
+      !sorting.enabled ||
+      isServerSide ||
+      sorting.serverSide ||
+      !sortConfig.key ||
+      filteredData.length === 0
+    )
       return filteredData;
 
     const sortableData = [...filteredData];
@@ -266,16 +278,20 @@ export function EnhancedTable<T extends Record<string, any>>({
       return 0;
     });
     return sortableData;
-  }, [filteredData, sortConfig, columns, sorting.enabled]);
+  }, [filteredData, sortConfig, columns, sorting.enabled, sorting.serverSide, isServerSide]);
 
   // Pagination
   const paginatedData = useMemo(() => {
-    if (!pagination.enabled || sortedData.length === 0) return sortedData;
+    if (!pagination.enabled || isServerSide || sortedData.length === 0)
+      return sortedData;
     const startIndex = (currentPage - 1) * pageSize;
     return sortedData.slice(startIndex, startIndex + pageSize);
-  }, [sortedData, currentPage, pageSize, pagination.enabled]);
+  }, [sortedData, currentPage, pageSize, pagination.enabled, isServerSide]);
 
-  const totalPages = Math.max(1, Math.ceil(filteredData.length / pageSize));
+  const totalItemCount = isServerSide
+    ? pagination.totalItems ?? data.length
+    : filteredData.length;
+  const totalPages = Math.max(1, Math.ceil(totalItemCount / pageSize));
 
   // Selection handlers
   const isItemSelected = useCallback(
@@ -323,9 +339,10 @@ export function EnhancedTable<T extends Record<string, any>>({
         direction = sortConfig.direction === "asc" ? "desc" : "asc";
       }
       setSortConfig({ key, direction });
+      if (isServerSide) setCurrentPage(1); // server re-sorts from page 1
       sorting.onSortChange?.(key, direction);
     },
-    [sortConfig, sorting]
+    [sortConfig, sorting, isServerSide]
   );
 
   // Pagination handlers
@@ -557,7 +574,8 @@ export function EnhancedTable<T extends Record<string, any>>({
   );
 
   // Loading state
-  if (customization.isLoading) {
+  // Server-side tables keep their controls mounted while a page loads
+  if (customization.isLoading && !isServerSide) {
     return (
       customization.loadingState || (
         <div className="flex items-center justify-center p-12 bg-white rounded-xl ">
@@ -725,7 +743,14 @@ export function EnhancedTable<T extends Record<string, any>>({
 
       {/* Table */}
       <div className="rounded-xl border border-gray-200 bg-white  overflow-hidden">
-        <div ref={tableContainerRef} className="scrollbar-hide overflow-x-auto">
+        <div
+          ref={tableContainerRef}
+          className={cn(
+            "scrollbar-hide overflow-x-auto transition-opacity",
+            isServerSide && customization.isLoading && "opacity-50 pointer-events-none"
+          )}
+          aria-busy={isServerSide && customization.isLoading ? true : undefined}
+        >
           <Table className={cn("w-full", customization.tableClassName)}>
             <TableHeader
               className={cn(
@@ -834,6 +859,7 @@ export function EnhancedTable<T extends Record<string, any>>({
         </div>
         {paginatedData.length === 0 &&
           filteredData.length === 0 &&
+          !(isServerSide && customization.isLoading) &&
           (customization.emptyState || (
             <div className="flex flex-col items-center justify-center py-12 bg-white">
               <svg
@@ -870,10 +896,10 @@ export function EnhancedTable<T extends Record<string, any>>({
           <div className="flex items-center gap-3 text-sm font-medium text-gray-600">
             <span>Showing</span>
             <span className="px-3 py-1 bg-primary-light text-primary rounded-full">
-              {Math.min((currentPage - 1) * pageSize + 1, filteredData.length)}{" "}
-              - {Math.min(currentPage * pageSize, filteredData.length)}
+              {Math.min((currentPage - 1) * pageSize + 1, totalItemCount)}{" "}
+              - {Math.min(currentPage * pageSize, totalItemCount)}
             </span>
-            <span>of {filteredData.length} items</span>
+            <span>of {totalItemCount} items</span>
           </div>
           <div className="flex items-center gap-2">
             {getPageNumbers().map((page) => (
