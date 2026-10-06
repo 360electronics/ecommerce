@@ -32,8 +32,14 @@ export async function GET(request: Request) {
           id: products.id,
           title: sql<string>`COALESCE(${products.shortName}, ${products.fullName})`.as("title"),
           description: products.description,
-          slug: products.slug,
-          variantSlug: variants.slug,
+          // Product pages are keyed by VARIANT slug (/product/[variantSlug]);
+          // linking with products.slug 404'd. Default variant, else the first one.
+          slug: sql<string>`COALESCE(${variants.slug}, (
+            SELECT v3.slug FROM ${variants} v3
+            WHERE v3.product_id = ${sql.raw('"products"."id"')}
+            ORDER BY v3.is_default DESC, v3.created_at ASC
+            LIMIT 1
+          ))`.as("slug"),
           price: variants.ourPrice,
           image: sql<string | null>`
             (SELECT (product_images->0->>'url')

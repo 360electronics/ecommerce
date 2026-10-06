@@ -48,7 +48,8 @@ export async function GET(
       .innerJoin(products, eq(variants.productId, products.id))
       .innerJoin(categories, eq(products.categoryId, categories.id))
       .innerJoin(brands, eq(products.brandId, brands.id))
-      .innerJoin(subcategories, eq(products.subcategoryId, subcategories.id))
+      // Subcategory is optional — an inner join made such products 404
+      .leftJoin(subcategories, eq(products.subcategoryId, subcategories.id))
       .where(eq(variants.slug, slug))
       .limit(1);
 
@@ -97,7 +98,7 @@ export async function GET(
         slug: product.slug,
         description: product.description,
         category: category.name,
-        subcategory: subcategory.name, // Adjust based on actual subcategory data
+        subcategory: subcategory?.name ?? null,
         brand: brand.name,
         status: product.status,
         isFeatured: product.isFeatured,
