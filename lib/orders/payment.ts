@@ -4,6 +4,7 @@ import { checkout, orders } from "@/db/schema";
 import { sendOrderConfirmationEmail, sendAdminOrderNotification } from "@/lib/nodemailer";
 import { getOrderEmailData } from "@/lib/order-email-helper";
 import { consumeCoupon } from "@/lib/coupon-service";
+import { flagStockIssue, releaseOrderStock, reserveOrderStock } from "./stock";
 
 type Order = typeof orders.$inferSelect;
 
@@ -26,6 +27,19 @@ export async function markOrderPaid(order: Order, paymentId: string): Promise<bo
     .returning({ id: orders.id });
 
   if (updated.length === 0) return false;
+
+  // Stock: normally still reserved from order creation. If it was released
+  // (payment failed/dismissed first, or abandoned >30 min) take it again; if it
+  // has sold out meanwhile, keep the order paid but flag it for the admin.
+  try {
+    const stock = await reserveOrderStock(order.id);
+    if (stock === "insufficient") {
+      await flagStockIssue(order.id);
+      console.warn("[ORDER_PAID_OUT_OF_STOCK]", { orderId: order.id });
+    }
+  } catch (e) {
+    console.error("[ORDER_PAID_STOCK_ERROR]", { orderId: order.id, error: e });
+  }
 
   // Clear any leftover checkout rows for this order's session
   await db
@@ -56,7 +70,7 @@ export async function markOrderPaid(order: Order, paymentId: string): Promise<bo
 
 // Mark an unpaid online order's payment as failed (never touches paid orders).
 export async function markOrderPaymentFailed(orderId: string) {
-  return db
+  const updated = await db
     .update(orders)
     .set({ status: "failed", paymentStatus: "failed", updatedAt: new Date() })
     .where(
@@ -67,6 +81,10 @@ export async function markOrderPaymentFailed(orderId: string) {
       ),
     )
     .returning({ id: orders.id });
+
+  // Free the reserved stock (re-reserved if a retry later succeeds)
+  if (updated.length > 0) await releaseOrderStock(orderId);
+  return updated;
 }
 
 // Amount in paise as charged by Razorpay for this order

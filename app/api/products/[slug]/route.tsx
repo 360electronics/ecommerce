@@ -3,6 +3,7 @@ import { NextResponse } from 'next/server';
 import { eq, and } from 'drizzle-orm';
 import { db } from '@/db/drizzle';
 import { brands, categories, products, subcategories, variants } from '@/db/schema';
+import { releaseStaleReservations } from '@/lib/orders/stock';
 
 type Params = { slug: string };
 
@@ -57,7 +58,29 @@ export async function GET(
       return NextResponse.json({ error: 'Variant not found' }, { status: 404 });
     }
 
-    const { product, variant, category, subcategory, brand } = variantData[0];
+    const { category, subcategory, brand } = variantData[0];
+    let { product, variant } = variantData[0];
+
+    // Showing "out of stock"? First release stock held by abandoned online
+    // payments (>30 min unpaid) so a 1-unit item isn't blocked by a closed tab.
+    if (Number(variant.stock) <= 0 && !variant.isBackorderable) {
+      const released = await releaseStaleReservations().catch((e) => {
+        console.error('[PRODUCT_STALE_RELEASE_ERROR]', e);
+        return 0;
+      });
+      if (released > 0) {
+        const [fresh] = await db
+          .select({ stock: variants.stock, totalStocks: products.totalStocks })
+          .from(variants)
+          .innerJoin(products, eq(products.id, variants.productId))
+          .where(eq(variants.id, variant.id))
+          .limit(1);
+        if (fresh) {
+          variant = { ...variant, stock: fresh.stock };
+          product = { ...product, totalStocks: fresh.totalStocks };
+        }
+      }
+    }
 
     // Fetch all variants for the product
     const allVariants = await db

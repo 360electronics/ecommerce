@@ -48,6 +48,8 @@ interface Order {
   cancellation: OrderCancellation | null;
   /** Why this order can't be deleted (null = deletable) */
   deleteBlocker: string | null;
+  /** Paid after its stock was released and the item sold out */
+  stockIssue: string | null;
   total: string;
   items: number;
   discountAmount: number;
@@ -177,6 +179,7 @@ export default function OrderDetailsPage() {
           paymentMethod: apiOrder.orders.paymentMethod,
           cancellation: toOrderCancellation(apiOrder.orders),
           deleteBlocker: getOrderDeleteBlocker(apiOrder.orders),
+          stockIssue: apiOrder.orders.stockIssue ?? null,
           total: apiOrder.orders.totalAmount?.toString() ?? "0",
           // One API row per order item — count all rows, not just the first
           items: result.data.filter((row: any) => row.orderItems).length,
@@ -598,6 +601,20 @@ export default function OrderDetailsPage() {
             </p>
           </div>
         </div>
+
+        {order.stockIssue === "out_of_stock_after_payment" && order.status !== "cancelled" && (
+          <div className="mb-8 flex gap-3 rounded-xl border border-red-300 bg-red-50 p-5 text-sm text-red-800">
+            <AlertTriangle className="h-5 w-5 shrink-0" />
+            <div>
+              <p className="font-semibold">Paid, but the item went out of stock</p>
+              <p className="mt-1">
+                The payment arrived after this order&apos;s stock reservation had expired, and the item
+                sold out in the meantime. Fulfil it from new stock, or use <strong>Cancel Order</strong> →
+                &ldquo;Cancelled by store&rdquo; and refund the customer in full.
+              </p>
+            </div>
+          </div>
+        )}
 
         {order.cancellation && (
           <div className="mb-8">

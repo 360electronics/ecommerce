@@ -5,6 +5,7 @@ import {
   DELETABLE_STATUSES,
   getOrderDeleteBlocker,
 } from "@/lib/orders/deletion";
+import { releaseOrderStock } from "@/lib/orders/stock";
 import { db } from "@/db/drizzle";
 import { orders, orderItems, variants, savedAddresses } from "@/db/schema";
 import { eq, and, inArray, isNull } from "drizzle-orm";
@@ -155,6 +156,11 @@ export async function PATCH(
         { success: false, message: "Order not found" },
         { status: 404 }
       );
+    }
+
+    // Returned goods are back on the shelf
+    if (status === "returned") {
+      await releaseOrderStock(orderId);
     }
 
     // Send status update email to user (non-blocking)

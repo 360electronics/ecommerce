@@ -5,6 +5,7 @@ import { orders } from "@/db/schema";
 import { sendOrderStatusUpdateEmail } from "@/lib/nodemailer";
 import { getOrderEmailData } from "@/lib/order-email-helper";
 import { requireUser } from "@/lib/server-auth";
+import { releaseOrderStock } from "@/lib/orders/stock";
 
 // Customer-facing only: lets the buyer mark their own unpaid online order as
 // cancelled (payment dismissed) or failed (payment error). Confirming / paying
@@ -52,6 +53,10 @@ export async function POST(request: Request) {
         { status: 409 }
       );
     }
+
+    // Payment dismissed / failed → free the reserved stock right away.
+    // (A later successful retry re-reserves it in markOrderPaid.)
+    await releaseOrderStock(orderId);
 
     // Send status update email to user (non-blocking)
     getOrderEmailData(orderId).then((emailData) => {

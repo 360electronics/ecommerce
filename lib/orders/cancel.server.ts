@@ -5,6 +5,7 @@ import { getCheckoutSettings } from "@/lib/settings/checkout-settings.server";
 import { sendOrderStatusUpdateEmail } from "@/lib/nodemailer";
 import { getOrderEmailData } from "@/lib/order-email-helper";
 import { quoteCancellation, type CancelInitiator, type CancellationQuote } from "./cancellation";
+import { releaseOrderStock } from "./stock";
 
 type Order = typeof orders.$inferSelect;
 
@@ -65,6 +66,9 @@ export async function cancelOrder(
       error: "The order status changed. Please refresh and try again.",
     };
   }
+
+  // Put the items back in stock (no-op if this order wasn't holding any)
+  await releaseOrderStock(order.id);
 
   // Status email (non-blocking)
   getOrderEmailData(order.id)

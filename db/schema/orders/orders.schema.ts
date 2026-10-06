@@ -6,6 +6,7 @@ import {
   numeric,
   integer,
   index,
+  boolean,
 } from "drizzle-orm/pg-core";
 import { sql } from "drizzle-orm";
 import { savedAddresses, users } from "../user/users.schema";
@@ -89,6 +90,12 @@ export const orders = pgTable(
     }),
     refundId: varchar("refund_id", { length: 255 }),
     refundedAt: timestamp("refunded_at", { withTimezone: true }),
+
+    // True while this order holds stock (reserved at creation, released on
+    // cancel / failed or abandoned payment / return). Makes reserve/release idempotent.
+    stockReserved: boolean("stock_reserved").notNull().default(false),
+    // Set when a late payment arrives after the stock was released and sold out
+    stockIssue: varchar("stock_issue", { enum: ["out_of_stock_after_payment"] }),
   },
   (table) => [
     index("idx_orders_user_id").on(table.userId),

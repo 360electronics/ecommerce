@@ -50,6 +50,13 @@
       "when": 1791266169440,
       "tag": "0006_order-cancellation",
       "breakpoints": true
+    },
+    {
+      "idx": 7,
+      "version": "7",
+      "when": 1791269482603,
+      "tag": "0007_order-stock",
+      "breakpoints": true
     }
   ]
 }

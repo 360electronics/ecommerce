@@ -9,6 +9,7 @@ import {
   index,
   unique,
   boolean,
+  check,
 } from "drizzle-orm/pg-core";
 import { sql } from "drizzle-orm";
 import { users } from "../user/users.schema";
@@ -263,6 +264,9 @@ export const variants = pgTable(
     unique("uniq_variant_sku").on(table.sku),
     index("idx_variant_slug").on(table.slug),
     unique("uniq_variant_slug").on(table.slug),
+    // Stock can't go negative unless the variant allows backorders — makes
+    // concurrent orders for the last unit fail safely instead of overselling
+    check("variants_stock_non_negative", sql`${table.stock} >= 0 OR ${table.isBackorderable}`),
   ]
 );
 

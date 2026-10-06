@@ -28,6 +28,13 @@ import {
   type PricingCoupon,
 } from "@/lib/checkout/pricing";
 import { getCheckoutSettings } from "@/lib/settings/checkout-settings.server";
+import {
+  describeShortage,
+  isStockShortageError,
+  releaseStaleReservations,
+  reserveStockStatements,
+  syncProductTotalsStatement,
+} from "@/lib/orders/stock";
 
 const DELIVERY_MODES: DeliveryMode[] = ["standard", "express"];
 const PAYMENT_METHODS: PaymentMethod[] = ["razorpay", "cod"];
@@ -201,6 +208,12 @@ export async function POST(req: Request) {
       }
     }
 
+    /* 5b Free stock held by abandoned online payments (closed tab etc.) so it
+          is available to this buyer. Best-effort; the cron job also does this. */
+    await releaseStaleReservations().catch((e) =>
+      console.error("[ORDER_STALE_RELEASE_ERROR]", e),
+    );
+
     /* 6️⃣ Atomically claim the session — guarantees one order per session */
     const claimed = await db
       .update(checkoutSessions)
@@ -221,9 +234,16 @@ export async function POST(req: Request) {
       );
     }
 
-    /* 7️⃣ Create order + items and clear checkout rows in one DB transaction */
+    /* 7️⃣ Create order + items, reserve stock and clear checkout rows in one
+          DB transaction. If any variant lacks stock the CHECK constraint fails
+          the whole batch — nothing is created and nothing is deducted. */
     const isCod = paymentMethod === "cod";
     const orderId = randomUUID();
+    const stockLines = items.map((item, i) => ({
+      variantId: item.variantId,
+      quantity: effectiveQuantity(lines[i]),
+    }));
+    const productIds = [...new Set(items.map((item) => item.productId))];
 
     let order: typeof orders.$inferSelect;
     try {
@@ -245,6 +265,7 @@ export async function POST(req: Request) {
             // COD is confirmed immediately; online orders wait for payment
             status: isCod ? "confirmed" : "pending",
             paymentStatus: isCod ? "cod" : "pending",
+            stockReserved: true,
           })
           .returning(),
         db.insert(orderItems).values(
@@ -258,6 +279,8 @@ export async function POST(req: Request) {
             unitPrice: roundCurrency(lines[i].ourPrice + lines[i].offerPrice).toFixed(2),
           })),
         ),
+        ...reserveStockStatements(stockLines),
+        syncProductTotalsStatement(productIds),
         db.delete(checkout).where(eq(checkout.checkoutSessionId, session.id)),
       ]);
       order = insertedOrders[0];
@@ -273,6 +296,10 @@ export async function POST(req: Request) {
           ),
         )
         .catch((e) => console.error("[ORDER_SESSION_RELEASE_ERROR]", e));
+
+      if (isStockShortageError(err)) {
+        return errorResponse(await describeShortage(stockLines), "OUT_OF_STOCK", 409);
+      }
       throw err;
     }
 
