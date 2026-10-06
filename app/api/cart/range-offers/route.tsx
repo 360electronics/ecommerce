@@ -1,3 +1,4 @@
+import { requireAdmin } from "@/lib/server-auth";
 import { NextRequest, NextResponse } from "next/server"
 import { db } from "@/db/drizzle"
 import { cart_offer_products } from "@/db/schema"
@@ -31,6 +32,9 @@ export async function GET(req: NextRequest) {
 
 // POST: Add a new cart offer product
 export async function POST(req: NextRequest) {
+  const admin = await requireAdmin(req);
+  if (admin.error) return admin.error;
+
   try {
     const formData = await req.formData()
     const productName = formData.get("productName") as string

@@ -1,3 +1,4 @@
+import { requireAdmin, requireOwnerOrAdmin, requireUser } from "@/lib/server-auth";
 import { NextRequest, NextResponse } from 'next/server';
 import { db } from '@/db/drizzle';
 import { ticketReplies, tickets } from '@/db/schema/tickets/ticket.schema';
@@ -8,6 +9,12 @@ export async function GET(req: NextRequest) {
   try {
     const { searchParams } = new URL(req.url);
     const userId = searchParams.get('user_id');
+
+    // Own tickets for users; listing everyone's tickets is admin-only
+    const access = userId
+      ? await requireOwnerOrAdmin(req, userId)
+      : await requireAdmin(req);
+    if (access.error) return access.error;
 
     // Build the query with joins for users and saved_addresses
     const query = db
@@ -122,6 +129,9 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: 'Missing required fields' }, { status: 400 });
     }
 
+    const auth = await requireUser(req, user_id);
+    if (auth.error) return auth.error;
+
     const result = await db.insert(tickets).values({
       user_id,
       type,
@@ -136,6 +146,9 @@ export async function POST(req: NextRequest) {
 }
 
 export async function PATCH(req: NextRequest) {
+  const admin = await requireAdmin(req);
+  if (admin.error) return admin.error;
+
   try {
     const { searchParams } = new URL(req.url);
     const id = searchParams.get('id');

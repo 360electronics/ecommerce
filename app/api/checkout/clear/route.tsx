@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { requireUser } from "@/lib/server-auth";
 import { db } from "@/db/drizzle";
 import { checkout } from "@/db/schema";
 import { eq } from "drizzle-orm";
@@ -15,6 +16,9 @@ export async function DELETE(request: NextRequest) {
         { status: 400 }
       );
     }
+
+    const auth = await requireUser(request, userId);
+    if (auth.error) return auth.error;
 
     // 🔍 Check if checkout exists
     const existing = await db

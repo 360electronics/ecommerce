@@ -2,6 +2,7 @@ import { db } from "@/db/drizzle";
 import { checkout, checkoutSessions } from "@/db/schema";
 import { and, eq } from "drizzle-orm";
 import { NextRequest, NextResponse } from "next/server";
+import { requireUser } from "@/lib/server-auth";
 
 
 // DELETE /api/checkout/cancel?userId=...
@@ -16,6 +17,9 @@ export async function DELETE(req: NextRequest) {
         { status: 400 }
       );
     }
+
+    const auth = await requireUser(req, userId);
+    if (auth.error) return auth.error;
 
     /* Find active checkout session */
     const [session] = await db

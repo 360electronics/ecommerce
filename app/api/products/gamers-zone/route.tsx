@@ -1,3 +1,4 @@
+import { requireAdmin } from "@/lib/server-auth";
 // app/api/gamers-zone/route.ts
 import { NextResponse } from 'next/server';
 import { db } from '@/db/drizzle';
@@ -76,6 +77,9 @@ export async function GET() {
 }
 
 export async function POST(req: Request) {
+  const admin = await requireAdmin(req);
+  if (admin.error) return admin.error;
+
   try {
     // Parse the request body
     const body = await req.json();
@@ -158,6 +162,9 @@ export async function POST(req: Request) {
 }
 
 export async function DELETE(req: Request) {
+  const admin = await requireAdmin(req);
+  if (admin.error) return admin.error;
+
   try {
     const body = await req.json();
     const { variantId, category } = body;

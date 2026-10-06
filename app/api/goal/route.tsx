@@ -1,9 +1,13 @@
+import { requireAdmin } from "@/lib/server-auth";
 import { NextResponse } from 'next/server';
 import { db } from '@/db/drizzle';
 import { goals } from '@/db/schema';
 import { desc, eq } from 'drizzle-orm';
 
-export async function GET() {
+export async function GET(request: Request) {
+  const admin = await requireAdmin(request);
+  if (admin.error) return admin.error;
+
   try {
     const [goal] = await db.select().from(goals).limit(1).orderBy(desc(goals.updatedAt));
     return NextResponse.json({ goal: goal?.amount || null });
@@ -14,6 +18,9 @@ export async function GET() {
 }
 
 export async function POST(request: Request) {
+  const admin = await requireAdmin(request);
+  if (admin.error) return admin.error;
+
   try {
     const { amount } = await request.json();
     if (typeof amount !== 'number' || amount <= 0) {

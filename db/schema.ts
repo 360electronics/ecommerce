@@ -12,3 +12,5 @@ export * from "./schema/coupons/coupons.schema";
 export * from "./schema/goals/goals.schema";
 export * from "./schema/stores/store.schema";
 export * from "./schema/emi/emi-assist.schema";
+export * from "./schema/settings/settings.schema";
+

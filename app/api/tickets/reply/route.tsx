@@ -1,3 +1,4 @@
+import { requireAdmin, requireOwnerOrAdmin } from "@/lib/server-auth";
 import { NextResponse } from "next/server";
 import { db } from "@/db/drizzle";
 import { tickets, ticketReplies } from "@/db/schema";
@@ -19,7 +20,7 @@ export async function POST(request: Request) {
 
     // Verify ticket exists
     const [ticket] = await db
-      .select({ id: tickets.id })
+      .select({ id: tickets.id, userId: tickets.user_id })
       .from(tickets)
       .where(eq(tickets.id, ticket_id))
       .limit(1);
@@ -30,6 +31,13 @@ export async function POST(request: Request) {
         { status: 404 }
       );
     }
+
+    // Support replies are admin-only; user replies only on own tickets
+    const access =
+      sender === "support"
+        ? await requireAdmin(request)
+        : await requireOwnerOrAdmin(request, ticket.userId);
+    if (access.error) return access.error;
 
     // Insert new reply
     const [newReply] = await db

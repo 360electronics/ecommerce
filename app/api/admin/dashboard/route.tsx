@@ -1,3 +1,4 @@
+import { requireAdmin } from "@/lib/server-auth";
 import { db } from "@/db/drizzle";
 import {
   orders,
@@ -41,6 +42,9 @@ function getStartDate(range: string | null) {
 }
 
 export async function GET(req: Request) {
+  const admin = await requireAdmin(req);
+  if (admin.error) return admin.error;
+
   try {
     const { searchParams } = new URL(req.url);
     const range = searchParams.get("range");

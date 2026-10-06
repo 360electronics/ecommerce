@@ -2,6 +2,8 @@ import { db } from "@/db/drizzle";
 import { checkout, checkoutSessions } from "@/db/schema";
 import { and, eq, lt } from "drizzle-orm";
 import { NextRequest, NextResponse } from "next/server";
+import { requireUser } from "@/lib/server-auth";
+import { getCheckoutSettings } from "@/lib/settings/checkout-settings.server";
 
 /* -----------------------------------------
    GET → FETCH ONLY 
@@ -12,6 +14,9 @@ export async function GET(req: NextRequest) {
   if (!userId) {
     return NextResponse.json({ error: "userId required" }, { status: 400 });
   }
+
+  const auth = await requireUser(req, userId);
+  if (auth.error) return auth.error;
 
   const [session] = await db
     .select()
@@ -36,6 +41,9 @@ export async function POST(req: NextRequest) {
   if (!userId) {
     return NextResponse.json({ error: "userId required" }, { status: 400 });
   }
+
+  const auth = await requireUser(req, userId);
+  if (auth.error) return auth.error;
 
   // Clean expired first
   await db
@@ -67,7 +75,10 @@ export async function POST(req: NextRequest) {
   }
 
   // 🔥 Create ONLY when explicitly requested
-  const expiresAt = new Date(Date.now() + 15 * 60 * 1000);
+  const { checkout: checkoutConfig } = await getCheckoutSettings();
+  const expiresAt = new Date(
+    Date.now() + checkoutConfig.sessionTimeoutMinutes * 60 * 1000,
+  );
 
   const [created] = await db
     .insert(checkoutSessions)
@@ -86,6 +97,9 @@ export async function DELETE(req: NextRequest) {
   if (!userId) {
     return NextResponse.json({ error: "userId required" }, { status: 400 });
   }
+
+  const auth = await requireUser(req, userId);
+  if (auth.error) return auth.error;
 
   const [session] = await db
     .select()

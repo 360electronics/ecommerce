@@ -8,6 +8,7 @@ import {
 } from "@/db/schema";
 import { eq, and } from "drizzle-orm";
 import { NextRequest, NextResponse } from "next/server";
+import { requireUser } from "@/lib/server-auth";
 
 /* ----------------------------------------------------
    GET /api/checkout?userId=...
@@ -23,6 +24,9 @@ export async function GET(request: NextRequest) {
         { status: 400 },
       );
     }
+
+    const auth = await requireUser(request, userId);
+    if (auth.error) return auth.error;
 
     const items = await db
       .select({
@@ -92,6 +96,9 @@ export async function POST(request: NextRequest) {
       );
     }
 
+    const auth = await requireUser(request, userId);
+    if (auth.error) return auth.error;
+
     // 1️⃣ Get active checkout session
     const [session] = await db
       .select()
@@ -151,6 +158,9 @@ export async function DELETE(request: NextRequest) {
         { status: 400 },
       );
     }
+
+    const auth = await requireUser(request, userId);
+    if (auth.error) return auth.error;
 
     await db
       .delete(checkout)

@@ -10,6 +10,7 @@ import { useAuthStore } from "@/store/auth-store";
 import { useCheckoutStore } from "@/store/checkout-store";
 import { useCartStore } from "@/store/cart-store";
 import { showFancyToast } from "@/components/Reusable/ShowCustomToast";
+import { useCheckoutSettings } from "@/hooks/useCheckoutSettings";
 
 const CartPage: React.FC = ({ initialCartItems }: any) => {
   const {
@@ -24,6 +25,7 @@ const CartPage: React.FC = ({ initialCartItems }: any) => {
   } = useCartStore();
   const { isLoggedIn, user } = useAuthStore();
   const router = useRouter();
+  const { settings: checkoutSettings } = useCheckoutSettings();
   const [isUpdating, setIsUpdating] = useState<string | null>(null);
   const [couponCode, setCouponCode] = useState("");
   const { syncCheckout } = useCheckoutStore.getState();
@@ -70,11 +72,13 @@ const CartPage: React.FC = ({ initialCartItems }: any) => {
         : 0;
 
     const shippingAmount =
-      subtotal > 500
+      subtotal > checkoutSettings.shipping.freeShippingThreshold
         ? 0
         : cartItems.reduce(
             (sum, item) =>
-              sum + 50 * (item.cartOfferProductId ? 1 : item.quantity),
+              sum +
+              checkoutSettings.shipping.standardRatePerItem *
+                (item.cartOfferProductId ? 1 : item.quantity),
             0
           );
     const grandTotal = subtotal - discountAmount;

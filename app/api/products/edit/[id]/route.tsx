@@ -1,3 +1,4 @@
+import { requireAdmin } from "@/lib/server-auth";
 import { NextRequest, NextResponse } from 'next/server';
 import { and, eq, inArray } from 'drizzle-orm';
 import { db } from '@/db/drizzle';
@@ -108,6 +109,9 @@ export async function GET(
     request: Request,
     context: { params: Promise<Params> }
 ) {
+  const admin = await requireAdmin(request);
+  if (admin.error) return admin.error;
+
     try {
         const { id } = await context.params;
 
@@ -153,6 +157,9 @@ export async function GET(
 }
 
 export async function PUT(req: NextRequest) {
+  const admin = await requireAdmin(req);
+  if (admin.error) return admin.error;
+
   try {
     // Parse FormData
     const formData = await req.formData();

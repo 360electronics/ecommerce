@@ -1,3 +1,4 @@
+import { requireAdmin } from "@/lib/server-auth";
 import { NextRequest, NextResponse } from 'next/server';
 import { brands } from '@/db/schema';
 import { eq } from 'drizzle-orm';
@@ -9,6 +10,9 @@ export async function PATCH(
   request: NextRequest,
   context: { params: Promise<Params> } 
 ) {
+  const admin = await requireAdmin(request);
+  if (admin.error) return admin.error;
+
   try {
     const { id } = await context.params;
     const body = await request.json();
@@ -35,6 +39,9 @@ export async function DELETE(
   request: NextRequest,
   context: { params: Promise<Params> } // Adjust type to expect a Promise
 ) {
+  const admin = await requireAdmin(request);
+  if (admin.error) return admin.error;
+
   try {
     const { id } = await context.params; // Await the params
     const deletedBrand = await db

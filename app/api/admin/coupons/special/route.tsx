@@ -1,8 +1,12 @@
+import { requireAdmin } from "@/lib/server-auth";
 import { NextResponse } from "next/server";
 import { db } from "@/db/drizzle";
 import { specialCoupons } from "@/db/schema";
 
 export async function POST(req: Request) {
+  const admin = await requireAdmin(req);
+  if (admin.error) return admin.error;
+
   const body = await req.json();
   const {
     code,
@@ -32,7 +36,10 @@ export async function POST(req: Request) {
   return NextResponse.json({ coupon }, { status: 201 });
 }
 
-export async function GET() {
+export async function GET(request: Request) {
+  const admin = await requireAdmin(request);
+  if (admin.error) return admin.error;
+
   const coupons = await db.select().from(specialCoupons);
   return NextResponse.json({ coupons });
 }

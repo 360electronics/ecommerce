@@ -1,3 +1,4 @@
+import { requireAdmin } from "@/lib/server-auth";
 import { NextResponse } from "next/server";
 import { db } from "@/db/drizzle";
 import { emiAssistRequests, variants } from "@/db/schema";
@@ -14,6 +15,9 @@ const EMI_STATUSES = [
 type EmiStatus = (typeof EMI_STATUSES)[number];
 
 export async function GET(req: Request) {
+  const admin = await requireAdmin(req);
+  if (admin.error) return admin.error;
+
   try {
     const { searchParams } = new URL(req.url);
 

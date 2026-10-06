@@ -1,3 +1,4 @@
+import { requireAdmin } from "@/lib/server-auth";
 import { NextResponse } from 'next/server';
 import { eq } from 'drizzle-orm';
 import { db } from '@/db/drizzle';
@@ -7,6 +8,9 @@ type Params = Promise<{ id: string; }>;
 
 // DELETE: Remove a cart offer product by ID
 export async function DELETE(request: Request, { params }: {params :Params}) {
+  const admin = await requireAdmin(request);
+  if (admin.error) return admin.error;
+
   try {
     const { id } = await params;
     const [deletedProduct] = await db

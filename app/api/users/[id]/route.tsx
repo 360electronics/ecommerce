@@ -1,3 +1,4 @@
+import { requireOwnerOrAdmin } from "@/lib/server-auth";
 import { NextRequest, NextResponse } from "next/server";
 import { eq } from "drizzle-orm";
 import { db } from "@/db/drizzle";
@@ -18,6 +19,9 @@ export async function GET(
   if (!userId) {
     return NextResponse.json({ error: "User ID is required" }, { status: 400 });
   }
+
+  const access = await requireOwnerOrAdmin(req, userId);
+  if (access.error) return access.error;
 
   try {
     // Get user by ID

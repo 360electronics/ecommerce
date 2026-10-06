@@ -217,8 +217,8 @@ export interface Order {
   addressId: string;
   razorpayOrderId?: string;
   razorpayPaymentId?: string | null;
-  status: 'pending' | 'confirmed' | 'shipped' | 'delivered' | 'cancelled';
-  paymentStatus: 'pending' | 'paid' | 'failed' | 'refunded';
+  status: 'pending' | 'confirmed' | 'shipped' | 'delivered' | 'cancelled' | 'returned' | 'failed';
+  paymentStatus: 'pending' | 'paid' | 'failed' | 'refunded' | 'cancelled' | 'cod';
   paymentMethod: 'cod' | 'razorpay';
   totalAmount: string;
   createdAt: string;

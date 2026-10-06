@@ -1,10 +1,21 @@
 import { NextResponse } from "next/server";
 import crypto from "crypto";
-import { eq } from "drizzle-orm";
+import { and, eq, ne } from "drizzle-orm";
 import { db } from "@/db/drizzle";
-import { checkout, orders } from "@/db/schema";
-import { sendOrderConfirmationEmail, sendAdminOrderNotification } from "@/lib/nodemailer";
-import { getOrderEmailData } from "@/lib/order-email-helper";
+import { orders } from "@/db/schema";
+import { requireUser } from "@/lib/server-auth";
+import { markOrderPaid } from "@/lib/orders/payment";
+
+function isValidSignature(gatewayOrderId: string, paymentId: string, signature: string) {
+  const expected = crypto
+    .createHmac("sha256", process.env.RAZORPAY_KEY_SECRET!)
+    .update(`${gatewayOrderId}|${paymentId}`)
+    .digest("hex");
+
+  const a = Buffer.from(expected);
+  const b = Buffer.from(String(signature));
+  return a.length === b.length && crypto.timingSafeEqual(a, b);
+}
 
 export async function POST(request: Request) {
   try {
@@ -16,52 +27,47 @@ export async function POST(request: Request) {
       userId,
     } = await request.json();
 
-    // Verify the payment signature
-    const hmac = crypto.createHmac("sha256", process.env.RAZORPAY_KEY_SECRET!);
-    hmac.update(`${gateway_order_id}|${payment_id}`);
-    const generatedSignature = hmac.digest("hex");
+    const auth = await requireUser(request, userId);
+    if (auth.error) return auth.error;
 
-    console.log("Verify request:", {
-      payment_id,
-      gateway_order_id,
-      razorpay_signature,
-      orderId,
-      userId,
-    });
-    console.log("Generated Signature:", generatedSignature);
+    if (!payment_id || !gateway_order_id || !razorpay_signature || !orderId) {
+      return NextResponse.json({ error: "Missing payment details" }, { status: 400 });
+    }
 
-    if (generatedSignature !== razorpay_signature) {
+    const [order] = await db
+      .select()
+      .from(orders)
+      .where(and(eq(orders.id, orderId), eq(orders.userId, auth.user.userId)))
+      .limit(1);
+
+    if (!order) {
+      return NextResponse.json({ error: "Order not found" }, { status: 404 });
+    }
+
+    // The gateway order must be the one we created for THIS order (binds the amount)
+    if (!order.gatewayOrderId || order.gatewayOrderId !== gateway_order_id) {
+      return NextResponse.json({ error: "Payment does not match order" }, { status: 400 });
+    }
+
+    if (!isValidSignature(gateway_order_id, payment_id, razorpay_signature)) {
       await db
         .update(orders)
         .set({ paymentStatus: "failed", updatedAt: new Date() })
-        .where(eq(orders.id, orderId));
+        .where(and(eq(orders.id, order.id), ne(orders.paymentStatus, "paid")));
       return NextResponse.json(
         { error: "Invalid payment signature" },
         { status: 400 }
       );
     }
 
-    // Update order with payment details
-    await db
-      .update(orders)
-      .set({
-        paymentStatus: "paid",
-        paymentId: payment_id,
-        status: "confirmed",
-        updatedAt: new Date(),
-      })
-      .where(eq(orders.id, orderId));
-
-    // Clear checkout items
-    await db.delete(checkout).where(eq(checkout.userId, userId));
-
-    // Send confirmation emails (non-blocking)
-    getOrderEmailData(orderId).then((emailData) => {
-      if (emailData) {
-        sendOrderConfirmationEmail(emailData);
-        sendAdminOrderNotification(emailData);
-      }
-    }).catch((err) => console.error("[ORDER_EMAIL_FETCH_ERROR]", err));
+    // Idempotent — the webhook may have already confirmed it
+    const transitioned = await markOrderPaid(order, payment_id);
+    if (!transitioned) {
+      return NextResponse.json(
+        { message: "Payment already verified" },
+        { status: 200 }
+      );
+    }
 
     return NextResponse.json(
       { message: "Payment verified successfully" },

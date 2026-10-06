@@ -1,3 +1,4 @@
+import { requireAdmin } from "@/lib/server-auth";
 import { NextResponse } from "next/server";
 import { db } from "@/db/drizzle";
 import { emiAssistRequests, variants } from "@/db/schema";
@@ -5,7 +6,10 @@ import { eq } from "drizzle-orm";
 
 type params = Promise<{ id: string }>;
 
-export async function GET(_req: Request, { params }: { params: params }) {
+export async function GET(req: Request, { params }: { params: params }) {
+  const admin = await requireAdmin(req);
+  if (admin.error) return admin.error;
+
   const { id } = await params;
   try {
     const [lead] = await db
@@ -44,6 +48,9 @@ export async function GET(_req: Request, { params }: { params: params }) {
 }
 
 export async function PATCH(req: Request, { params }: { params: params }) {
+  const admin = await requireAdmin(req);
+  if (admin.error) return admin.error;
+
   const { id } = await params;
   try {
     const body = await req.json();
@@ -72,7 +79,10 @@ export async function PATCH(req: Request, { params }: { params: params }) {
   }
 }
 
-export async function DELETE(_req: Request, { params }: { params: params }) {
+export async function DELETE(req: Request, { params }: { params: params }) {
+  const admin = await requireAdmin(req);
+  if (admin.error) return admin.error;
+
   const { id } = await params;
   try {
     await db.delete(emiAssistRequests).where(eq(emiAssistRequests.id, id));

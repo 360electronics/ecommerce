@@ -1,3 +1,4 @@
+import { requireUser } from "@/lib/server-auth";
 import { db } from "@/db/drizzle";
 import { checkout, checkoutSessions } from "@/db/schema";
 import { eq } from "drizzle-orm";
@@ -8,6 +9,20 @@ export async function POST(req: NextRequest) {
 
   if (!sessionId) {
     return NextResponse.json({ error: "sessionId required" }, { status: 400 });
+  }
+
+  const auth = await requireUser(req);
+  if (auth.error) return auth.error;
+
+  // Only the session owner may complete it
+  const [session] = await db
+    .select({ userId: checkoutSessions.userId })
+    .from(checkoutSessions)
+    .where(eq(checkoutSessions.id, sessionId))
+    .limit(1);
+
+  if (!session || session.userId !== auth.user.userId) {
+    return NextResponse.json({ error: "Session not found" }, { status: 404 });
   }
 
   // 1️⃣ Mark session completed

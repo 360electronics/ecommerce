@@ -1,3 +1,4 @@
+import { requireAdmin } from "@/lib/server-auth";
 import { db } from "@/db/drizzle";
 import {
   checkout,
@@ -16,7 +17,10 @@ interface ErrorResponse {
   error: string;
 }
 
-export async function GET() {
+export async function GET(request: Request) {
+  const admin = await requireAdmin(request);
+  if (admin.error) return admin.error;
+
   try {
     const rows = await db
       .select({

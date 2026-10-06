@@ -1,3 +1,4 @@
+import { requireAdmin } from "@/lib/server-auth";
 // api/brands/route.tsx
 import { NextRequest, NextResponse } from 'next/server';
 import { brands } from '@/db/schema';
@@ -17,6 +18,9 @@ export async function GET() {
 }
 
 export async function POST(request: NextRequest) {
+  const admin = await requireAdmin(request);
+  if (admin.error) return admin.error;
+
   try {
     const formData = await request.formData();
     const name = formData.get('name') as string;

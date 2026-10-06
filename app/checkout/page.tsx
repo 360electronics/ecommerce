@@ -11,6 +11,13 @@ import { useCartStore } from "@/store/cart-store";
 import { startTransition } from "react";
 import GlobalLoader from "@/components/Reusable/GlobalLoader";
 import { showFancyToast } from "@/components/Reusable/ShowCustomToast";
+import {
+  calculateCheckoutTotals,
+  codIneligibleMessage,
+  getCodEligibility,
+  isExpressDeliveryAvailable,
+} from "@/lib/checkout/pricing";
+import { useCheckoutSettings } from "@/hooks/useCheckoutSettings";
 
 interface Address {
   id: string;
@@ -51,10 +58,11 @@ const CheckoutPage: React.FC = () => {
     couponStatus,
     applyCoupon,
     removeCoupon,
-    markCouponUsed,
     clearCoupon,
   } = useCartStore();
   const router = useRouter();
+  const { settings: checkoutSettings, isLoaded: isSettingsLoaded } =
+    useCheckoutSettings();
   const [addresses, setAddresses] = useState<Address[]>([]);
   const [selectedAddressId, setSelectedAddressId] = useState<string | null>(
     null,
@@ -72,10 +80,10 @@ const CheckoutPage: React.FC = () => {
   const [isCancelling, setIsCancelling] = useState(false);
   const [couponCode, setCouponCode] = useState("");
   const [selectedCity, setSelectedCity] = useState<string | null>(null);
-  const [remainingTime, setRemainingTime] = useState(15 * 60); // 15 minutes in seconds
+  const [remainingTime, setRemainingTime] = useState(
+    checkoutSettings.checkout.sessionTimeoutMinutes * 60,
+  ); // seconds
   const [currentOrderId, setCurrentOrderId] = useState<string | null>(null);
-
-  const COD_LIMIT = 100000;
 
   // New address form state
   const [newAddress, setNewAddress] = useState({
@@ -120,6 +128,7 @@ const CheckoutPage: React.FC = () => {
 
   // Timer effect
   useEffect(() => {
+    if (currentOrderId || isProcessingPayment) return;
     if (remainingTime > 0 && checkoutItems.length > 0) {
       const interval = setInterval(() => {
         setRemainingTime((prev) => {
@@ -134,7 +143,7 @@ const CheckoutPage: React.FC = () => {
 
       return () => clearInterval(interval);
     }
-  }, [remainingTime, checkoutItems.length]);
+  }, [remainingTime, checkoutItems.length, currentOrderId, isProcessingPayment]);
 
   const handleTimeout = async () => {
     try {
@@ -151,8 +160,15 @@ const CheckoutPage: React.FC = () => {
   };
 
   const resetTimer = () => {
-    setRemainingTime(15 * 60);
+    setRemainingTime(checkoutSettings.checkout.sessionTimeoutMinutes * 60);
   };
+
+  // Apply the admin-configured session timeout once settings arrive
+  useEffect(() => {
+    if (isSettingsLoaded) {
+      setRemainingTime(checkoutSettings.checkout.sessionTimeoutMinutes * 60);
+    }
+  }, [isSettingsLoaded]);
 
   // Fetch addresses
   useEffect(() => {
@@ -232,11 +248,11 @@ const CheckoutPage: React.FC = () => {
   }, [selectedAddressId, addresses]);
 
   // Check if express delivery is available
-  const isExpressAvailable =
-    checkoutItems.length > 0 &&
-    checkoutItems.every((item) => item.product.deliveryMode === "express") &&
-    selectedCity &&
-    ["coimbatore", "chennai", "erode", "madurai"].includes(selectedCity);
+  const isExpressAvailable = isExpressDeliveryAvailable(
+    checkoutItems.map((item) => item.product?.deliveryMode),
+    selectedCity,
+    checkoutSettings.express,
+  );
 
   // Reset deliveryMode to standard if express is not available
   useEffect(() => {
@@ -313,9 +329,15 @@ const CheckoutPage: React.FC = () => {
   // Handle cancel checkout
   const handleCancelCheckout = async () => {
     try {
-      await fetch(`/api/checkout/cancel?userId=${user!.id}`, {
-        method: "DELETE",
-      });
+      // An unpaid online order may already exist for this checkout
+      if (currentOrderId) {
+        await fetch("/api/orders/update-status", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ orderId: currentOrderId, status: "cancelled" }),
+        });
+        setCurrentOrderId(null);
+      }
 
       clearCoupon();
       await clearCheckout(user!.id);
@@ -410,7 +432,10 @@ const CheckoutPage: React.FC = () => {
   // Calculate estimated delivery dates
   const getEstimatedDeliveryDate = (mode: "standard" | "express") => {
     const today = new Date();
-    const daysToAdd = mode === "standard" ? 7 : 1;
+    const daysToAdd =
+      mode === "standard"
+        ? checkoutSettings.shipping.standardDeliveryDays
+        : checkoutSettings.express.deliveryDays;
     const estimatedDate = new Date(today);
     estimatedDate.setDate(today.getDate() + daysToAdd);
     return estimatedDate.toLocaleDateString("en-IN", {
@@ -420,66 +445,7 @@ const CheckoutPage: React.FC = () => {
     });
   };
 
-  // Calculate totals
-  const calculateTotals = () => {
-    // Calculate subtotal for regular products
-    const regularProductsSubtotal = checkoutItems.reduce((sum, item) => {
-      const itemPrice = Number(item.variant.ourPrice) || 0;
-      return sum + itemPrice * item.quantity;
-    }, 0);
-
-    // Calculate offer products total (only one offer product allowed, quantity is always 1)
-    const offerProductsTotal = checkoutItems.reduce((sum, item) => {
-      if (!item.cartOfferProductId) return sum;
-      const offerPrice = Number(item.offerProduct.ourPrice) || 0;
-      return sum + offerPrice; // Quantity is always 1 for offer products
-    }, 0);
-
-    // Total subtotal including both regular and offer products
-    const subtotal = regularProductsSubtotal + offerProductsTotal;
-
-    // Calculate savings for regular products
-    const savings = checkoutItems.reduce((total, item) => {
-      if (item.cartOfferProductId) return total; // No savings on offer products
-      const mrp =
-        Number(item.variant.mrp) || Number(item.variant.ourPrice) || 0;
-      const ourPrice = Number(item.variant.ourPrice) || 0;
-      return total + (mrp - ourPrice) * item.quantity;
-    }, 0);
-
-    // Calculate coupon discount
-    const discountAmount =
-      coupon && couponStatus === "applied"
-        ? coupon.type === "amount"
-          ? coupon.value || 0
-          : (subtotal * (coupon.value || 0)) / 100
-        : 0;
-
-    // Calculate shipping amount
-    const shippingAmount =
-      subtotal > 500 && deliveryMode === "standard"
-        ? 0
-        : checkoutItems.reduce(
-            (sum, item) =>
-              sum +
-              (deliveryMode === "standard" ? 50 : 79) *
-                (item.cartOfferProductId ? 1 : item.quantity), // Offer product counts as 1 item
-            0,
-          );
-
-    const grandTotal = Math.max(0, subtotal - discountAmount) + shippingAmount;
-
-    return {
-      subtotal,
-      regularProductsSubtotal,
-      offerProductsTotal,
-      savings,
-      discountAmount,
-      shippingAmount,
-      grandTotal,
-    };
-  };
-
+  // Calculate totals (same function the order API uses)
   const {
     subtotal,
     regularProductsSubtotal,
@@ -488,9 +454,41 @@ const CheckoutPage: React.FC = () => {
     discountAmount,
     shippingAmount,
     grandTotal,
-  } = calculateTotals();
+  } = calculateCheckoutTotals(
+    checkoutItems.map((item) => {
+      const ourPrice = Number(item.variant.ourPrice) || 0;
+      return {
+        ourPrice,
+        mrp: Number(item.variant.mrp) || ourPrice,
+        quantity: item.quantity,
+        hasOffer: !!item.cartOfferProductId,
+        offerPrice: item.cartOfferProductId
+          ? Number(item.offerProduct?.ourPrice) || 0
+          : 0,
+      };
+    }),
+    deliveryMode,
+    coupon && couponStatus === "applied"
+      ? { type: coupon.type, value: coupon.value }
+      : null,
+    checkoutSettings,
+  );
 
-  const isCODAvailable = grandTotal <= COD_LIMIT;
+  // COD rules from admin settings (enabled, amount limit, pincode prefixes)
+  const selectedAddress = addresses.find((addr) => addr.id === selectedAddressId);
+  const codEligibility = getCodEligibility(
+    grandTotal,
+    selectedAddress?.postalCode,
+    checkoutSettings.cod,
+  );
+  const isCODAvailable = codEligibility.eligible;
+
+  // Fall back to online payment if COD becomes unavailable (address/total change)
+  useEffect(() => {
+    if (!isCODAvailable && paymentMethod === "cod") {
+      setPaymentMethod("razorpay");
+    }
+  }, [isCODAvailable, paymentMethod]);
 
   // Format currency
   const formatCurrency = (value: number): string => {
@@ -508,32 +506,32 @@ const CheckoutPage: React.FC = () => {
     return `${mins}:${secs.toString().padStart(2, "0")}`;
   };
 
-  // Handle Razorpay payment
-  const initiateRazorpayPayment = async (order: {
-    id: string;
-    totalAmount: number;
-    gatewayOrderId?: string;
-  }) => {
-    try {
-      const shortOrderId = order.id.slice(0, 36);
-      const receipt = `ord_${shortOrderId}`;
+  // Mark an unpaid online order as cancelled / failed (server enforces ownership)
+  const markOnlineOrderStatus = (
+    orderId: string,
+    status: "cancelled" | "failed",
+  ) =>
+    fetch("/api/orders/update-status", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ orderId, status }),
+    }).catch((err) => console.error("Failed to update order status", err));
 
+  // Handle Razorpay payment — amount is taken from the stored order server-side
+  const initiateRazorpayPayment = async (orderId: string) => {
+    try {
       const response = await fetch("/api/razorpay/create-order", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          amount: Math.round(grandTotal * 100),
-          currency: "INR",
-          receipt: receipt,
-        }),
+        body: JSON.stringify({ orderId }),
       });
 
       if (!response.ok) {
-        const errorData = await response.json();
+        const errorData = await response.json().catch(() => ({}));
         throw new Error(errorData.error || "Failed to create Razorpay order");
       }
 
-      const { gatewayOrderId } = await response.json();
+      const { gatewayOrderId, amount, currency } = await response.json();
 
       if (!process.env.NEXT_PUBLIC_RAZORPAY_KEY_ID) {
         throw new Error("Razorpay key is not configured");
@@ -541,8 +539,8 @@ const CheckoutPage: React.FC = () => {
 
       const options = {
         key: process.env.NEXT_PUBLIC_RAZORPAY_KEY_ID,
-        amount: Math.round(grandTotal * 100),
-        currency: "INR",
+        amount,
+        currency,
         name: "360 Electronics",
         description: "Order Payment",
         order_id: gatewayOrderId,
@@ -553,6 +551,7 @@ const CheckoutPage: React.FC = () => {
         }) => {
           try {
             setIsProcessingPayment(true);
+            // Verifies signature, confirms order, consumes coupon, clears checkout
             const verifyResponse = await fetch("/api/razorpay/verify-payment", {
               method: "POST",
               headers: { "Content-Type": "application/json" },
@@ -560,7 +559,7 @@ const CheckoutPage: React.FC = () => {
                 payment_id: response.razorpay_payment_id,
                 gateway_order_id: response.razorpay_order_id,
                 razorpay_signature: response.razorpay_signature,
-                orderId: order.id,
+                orderId,
                 userId: user!.id,
               }),
             });
@@ -569,32 +568,8 @@ const CheckoutPage: React.FC = () => {
               throw new Error("Payment verification failed");
             }
 
-            const updateResponse = await fetch("/api/orders/update-status", {
-              method: "POST",
-              headers: { "Content-Type": "application/json" },
-              body: JSON.stringify({
-                orderId: order.id,
-                status: "confirmed",
-                paymentStatus: "paid",
-              }),
-            });
-
-            if (!updateResponse.ok) {
-              throw new Error("Failed to update order status");
-            }
-
-            if (coupon && coupon.code && couponStatus === "applied") {
-              await markCouponUsed(coupon.code);
-            }
             clearCoupon();
             setCurrentOrderId(null);
-            await fetch("/api/checkout/session/complete", {
-              method: "POST",
-              headers: { "Content-Type": "application/json" },
-              body: JSON.stringify({ sessionId: checkoutSessionId }),
-            });
-
-            clearCoupon();
             router.push("/profile?tab=orders");
 
             showFancyToast({
@@ -616,15 +591,8 @@ const CheckoutPage: React.FC = () => {
         modal: {
           ondismiss: async () => {
             try {
-              await fetch("/api/orders/update-status", {
-                method: "POST",
-                headers: { "Content-Type": "application/json" },
-                body: JSON.stringify({
-                  orderId: order.id,
-                  status: "cancelled",
-                  paymentStatus: "failed",
-                }),
-              });
+              await markOnlineOrderStatus(orderId, "cancelled");
+              setCurrentOrderId(null);
 
               setIsCancelling(true);
 
@@ -648,14 +616,12 @@ const CheckoutPage: React.FC = () => {
         },
 
         prefill: {
-          name: user?.firstName + " " + user?.lastName || "",
+          name: [user?.firstName, user?.lastName].filter(Boolean).join(" "),
           email: user?.email || "",
-          contact:
-            addresses.find((addr) => addr.id === selectedAddressId)
-              ?.phoneNumber || "",
+          contact: selectedAddress?.phoneNumber || "",
         },
         notes: {
-          order_id: order.id,
+          order_id: orderId,
         },
         theme: {
           color: "#2563eb",
@@ -663,8 +629,9 @@ const CheckoutPage: React.FC = () => {
       };
 
       const razorpay = new (window as any).Razorpay(options);
-      razorpay.open();
 
+      // Razorpay keeps the modal open so the user can retry; a later success
+      // still verifies (server allows failed -> paid).
       razorpay.on("payment.failed", async (response: any) => {
         console.error("Payment failed:", response.error);
         showFancyToast({
@@ -672,37 +639,11 @@ const CheckoutPage: React.FC = () => {
           message: "Payment failed. Please try again.",
           type: "error",
         });
-        await fetch("/api/orders/update-status", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            orderId: order.id,
-            status: "failed",
-            paymentStatus: "failed",
-          }),
-        });
+        await markOnlineOrderStatus(orderId, "failed");
         setIsProcessingPayment(false);
       });
 
-      razorpay.on("modal.closed", async () => {
-        // Mark order as cancelled
-        await fetch("/api/orders/update-status", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            orderId: order.id,
-            status: "cancelled",
-            paymentStatus: "failed",
-          }),
-        });
-
-        showFancyToast({
-          title: "Sorry, there was an error",
-          message: "Payment cancelled by user",
-          type: "error",
-        });
-        setIsProcessingPayment(false);
-      });
+      razorpay.open();
 
       return gatewayOrderId;
     } catch (error: any) {
@@ -746,20 +687,40 @@ const CheckoutPage: React.FC = () => {
       return;
     }
 
-    // 🔒 Prevent duplicate order creation
+    // 🔒 Order already created for this checkout → resume its payment
     if (currentOrderId) {
+      if (paymentMethod === "razorpay") {
+        setIsSubmitting(true);
+        try {
+          await initiateRazorpayPayment(currentOrderId);
+        } finally {
+          setIsSubmitting(false);
+        }
+        return;
+      }
       showFancyToast({
         title: "Order Already Created",
-        message: "Please complete payment.",
+        message: "An order is already in progress for this checkout.",
         type: "error",
       });
+      return;
+    }
+
+    if (paymentMethod === "cod" && !isCODAvailable) {
+      showFancyToast({
+        title: "COD Not Available",
+        message: codIneligibleMessage(codEligibility.reason, checkoutSettings.cod),
+        type: "error",
+      });
+      setPaymentMethod("razorpay");
       return;
     }
 
     setIsSubmitting(true);
 
     try {
-      /* ---------------- CREATE ORDER ---------------- */
+      /* ---------------- CREATE ORDER ----------------
+         Server recomputes prices, discount, shipping, total and COD eligibility. */
       const response = await fetch("/api/orders", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -767,51 +728,44 @@ const CheckoutPage: React.FC = () => {
           userId: user!.id,
           addressId: selectedAddressId,
           checkoutSessionId,
-          totalAmount: grandTotal,
-          discountAmount,
           couponCode: coupon && couponStatus === "applied" ? coupon.code : null,
-          shippingAmount,
           deliveryMode,
           paymentMethod, // razorpay | cod
-          status: "pending",
-          paymentStatus: "pending",
-          orderItems: checkoutItems.map((item) => ({
-            productId: item.productId,
-            variantId: item.variantId,
-            quantity: item.cartOfferProductId ? 1 : item.quantity,
-            unitPrice: Number(item.variant.ourPrice),
-            cartOfferProductId: item.cartOfferProductId,
-          })),
         }),
       });
 
-      if (!response.ok) throw new Error("Failed to create order");
+      const createdOrder = await response.json().catch(() => ({}));
 
-      const createdOrder = await response.json();
+      if (!response.ok) {
+        if (createdOrder.code === "COD_NOT_AVAILABLE") {
+          setPaymentMethod("razorpay");
+        } else if (
+          typeof createdOrder.code === "string" &&
+          createdOrder.code.startsWith("COUPON_")
+        ) {
+          removeCoupon();
+        }
 
-      // ✅ Save order ID to prevent duplicates
-      setCurrentOrderId(createdOrder.id);
-
-      /* ---------------- PAYMENT HANDLING ---------------- */
-      if (paymentMethod === "razorpay") {
-        // 🔹 ONLINE PAYMENT
-        await initiateRazorpayPayment({
-          id: createdOrder.id,
-          totalAmount: grandTotal,
+        showFancyToast({
+          title: "Unable to place order",
+          message: createdOrder.error || "Failed to place order. Please try again.",
+          type: "error",
         });
         return;
       }
 
-      /* ---------------- CASH ON DELIVERY ---------------- */
-      await fetch("/api/orders/update-status", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          orderId: createdOrder.id,
-          status: "confirmed",
-          paymentStatus: "cod",
-        }),
-      });
+      /* ---------------- ONLINE PAYMENT ---------------- */
+      if (paymentMethod === "razorpay") {
+        // ✅ Save order ID so retries reuse it
+        setCurrentOrderId(createdOrder.id);
+        await initiateRazorpayPayment(createdOrder.id);
+        return;
+      }
+
+      /* ---------------- CASH ON DELIVERY ----------------
+         Order is already confirmed server-side (coupon consumed, emails sent). */
+      setCurrentOrderId(createdOrder.id);
+      clearCoupon();
 
       showFancyToast({
         title: "Order placed successfully",
@@ -819,20 +773,6 @@ const CheckoutPage: React.FC = () => {
         type: "success",
       });
 
-      // Mark coupon as used
-      if (coupon && coupon.code && couponStatus === "applied") {
-        await markCouponUsed(coupon.code);
-      }
-
-      clearCoupon();
-
-      await fetch("/api/checkout/session/complete", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ sessionId: checkoutSessionId }),
-      });
-
-      clearCoupon();
       router.push("/profile?tab=orders");
     } catch (error: any) {
       console.error("Order creation error:", error);
@@ -1245,7 +1185,11 @@ const CheckoutPage: React.FC = () => {
                           <div>
                             <p className="text-gray-900 font-medium">
                               Standard Delivery (
-                              {subtotal > 500 ? "Free" : "₹50/item"})
+                              {subtotal >
+                              checkoutSettings.shipping.freeShippingThreshold
+                                ? "Free"
+                                : `${formatCurrency(checkoutSettings.shipping.standardRatePerItem)}/item`}
+                              )
                             </p>
                             <p className="text-sm text-gray-600">
                               Estimated delivery by{" "}
@@ -1273,7 +1217,9 @@ const CheckoutPage: React.FC = () => {
                             <Truck className="h-6 w-6 text-gray-600" />
                             <div>
                               <p className="text-gray-900 font-medium">
-                                Express Delivery (₹79/item)
+                                Express Delivery (
+                                {formatCurrency(checkoutSettings.express.ratePerItem)}
+                                /item)
                               </p>
                               <p className="text-sm text-gray-600">
                                 Estimated delivery by{" "}
@@ -1348,10 +1294,9 @@ const CheckoutPage: React.FC = () => {
                             <p className="text-sm text-gray-500">
                               Pay when product is delivered
                             </p>
-                            {!isCODAvailable && (
+                            {!isCODAvailable && selectedAddress && (
                               <p className="text-xs text-red-600 mt-1">
-                                COD not available above ₹
-                                {COD_LIMIT.toLocaleString()}
+                                {codIneligibleMessage(codEligibility.reason, checkoutSettings.cod)}
                               </p>
                             )}
                           </div>

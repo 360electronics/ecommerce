@@ -1,3 +1,4 @@
+import { requireAdmin } from "@/lib/server-auth";
 // /api/banner.ts
 import { banners } from "@/db/schema";
 import { deleteFromR2, extractKeyFromR2Url, uploadBannerImageToR2 } from "@/lib/r2";
@@ -54,6 +55,9 @@ export async function GET(req: Request) {
 }
 
 export async function POST(req: Request) {
+  const admin = await requireAdmin(req);
+  if (admin.error) return admin.error;
+
   
   try {
     const formData = await req.formData();
@@ -191,6 +195,9 @@ export async function POST(req: Request) {
 }
 
 export async function DELETE(req: Request) {
+  const admin = await requireAdmin(req);
+  if (admin.error) return admin.error;
+
   try {
     const { ids }: { ids: string[] } = await req.json();
     if (!Array.isArray(ids) || ids.length === 0) {

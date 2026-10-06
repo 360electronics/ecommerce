@@ -1,3 +1,4 @@
+import { requireAdmin } from "@/lib/server-auth";
 import { NextResponse } from 'next/server';
 import { db } from '@/db/drizzle';
 import { checkout } from '@/db/schema';
@@ -6,7 +7,10 @@ import cron from 'node-cron';
 
 let isCronScheduled = false;
 
-export async function GET() {
+export async function GET(request: Request) {
+  const admin = await requireAdmin(request);
+  if (admin.error) return admin.error;
+
   if (!isCronScheduled) {
     // Runs every 12 minutes
     cron.schedule('*/12 * * * *', async () => {

@@ -1,3 +1,4 @@
+import { requireAdmin } from "@/lib/server-auth";
 import { NextResponse } from "next/server";
 import { db } from "@/db/drizzle";
 import { specialCoupons } from "@/db/schema";
@@ -9,6 +10,9 @@ export async function PATCH(
   req: Request,
   { params }: { params: params }
 ) {
+  const admin = await requireAdmin(req);
+  if (admin.error) return admin.error;
+
   const updates = await req.json();
 
   const {id} = await params;
@@ -23,9 +27,12 @@ export async function PATCH(
 }
 
 export async function DELETE(
-  _: Request,
+  request: Request,
   { params }: { params: params }
 ) {
+  const admin = await requireAdmin(request);
+  if (admin.error) return admin.error;
+
 
   const {id} = await params;
   await db

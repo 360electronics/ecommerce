@@ -1,3 +1,4 @@
+import { requireAdmin } from "@/lib/server-auth";
 import { NextResponse } from "next/server";
 import { stores } from "@/db/schema";
 import { db } from "@/db/drizzle";
@@ -10,6 +11,9 @@ export async function GET() {
 
 // POST new store
 export async function POST(req: Request) {
+  const admin = await requireAdmin(req);
+  if (admin.error) return admin.error;
+
   const body = await req.json();
 
   const inserted = await db

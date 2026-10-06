@@ -2,6 +2,7 @@ import { db } from "@/db/drizzle";
 import { coupons } from "@/db/schema";
 import { eq, and } from "drizzle-orm";
 import { NextRequest, NextResponse } from "next/server";
+import { requireUser } from "@/lib/server-auth";
 
 export async function POST(request: NextRequest) {
   try {
@@ -14,10 +15,13 @@ export async function POST(request: NextRequest) {
       );
     }
 
+    const auth = await requireUser(request, userId);
+    if (auth.error) return auth.error;
+
     const [coupon] = await db
       .select()
       .from(coupons)
-      .where(and(eq(coupons.code, code), eq(coupons.userId, userId)));
+      .where(and(eq(coupons.code, code), eq(coupons.userId, auth.user.userId)));
 
     if (!coupon) {
       return NextResponse.json(
@@ -33,10 +37,18 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    await db
+    const updated = await db
       .update(coupons)
       .set({ isUsed: true })
-      .where(eq(coupons.id, coupon.id));
+      .where(and(eq(coupons.id, coupon.id), eq(coupons.isUsed, false)))
+      .returning({ id: coupons.id });
+
+    if (updated.length === 0) {
+      return NextResponse.json(
+        { error: "Coupon already used", code: "USED" },
+        { status: 400 }
+      );
+    }
 
     return NextResponse.json(
       { message: "Coupon marked as used" },

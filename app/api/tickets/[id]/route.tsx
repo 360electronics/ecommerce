@@ -1,3 +1,4 @@
+import { requireOwnerOrAdmin } from "@/lib/server-auth";
 import { NextRequest, NextResponse } from 'next/server';
 import { eq } from 'drizzle-orm';
 import { db } from '@/db/drizzle';
@@ -8,6 +9,9 @@ type Params = Promise<{ id: string }>;
 export async function GET(req: NextRequest, { params }: { params: Params }) {
   const { id } = await params;
   const userId = id;
+
+  const access = await requireOwnerOrAdmin(req, userId);
+  if (access.error) return access.error;
 
   try {
     const userTickets = await db

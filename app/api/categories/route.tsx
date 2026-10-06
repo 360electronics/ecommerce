@@ -1,3 +1,4 @@
+import { requireAdmin } from "@/lib/server-auth";
 // app/api/categories/route.ts
 import { NextRequest, NextResponse } from 'next/server';
 import { db } from '@/db/drizzle';
@@ -113,6 +114,9 @@ export async function GET() {
 
 
 export async function PATCH(req: NextRequest) {
+  const admin = await requireAdmin(req);
+  if (admin.error) return admin.error;
+
     try {
       const body = await req.json();
       console.log('PATCH request body:', body);
@@ -263,6 +267,9 @@ export async function PATCH(req: NextRequest) {
   }
 
 export async function POST(req: NextRequest) {
+  const admin = await requireAdmin(req);
+  if (admin.error) return admin.error;
+
     try {
         const body = await req.json();
         const validatedData = createCategorySchema.parse(body);

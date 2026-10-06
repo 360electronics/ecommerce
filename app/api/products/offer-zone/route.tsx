@@ -1,3 +1,4 @@
+import { requireAdmin } from "@/lib/server-auth";
 import { db } from "@/db/drizzle";
 import { offerZone, products, variants } from "@/db/schema";
 import { eq, inArray, sql } from "drizzle-orm";
@@ -70,6 +71,9 @@ export async function GET() {
 }
 
 export async function POST(req: Request) {
+  const admin = await requireAdmin(req);
+  if (admin.error) return admin.error;
+
   try {
     // Parse the request body
     const body = await req.json();
@@ -141,6 +145,9 @@ export async function POST(req: Request) {
 
 
 export async function DELETE(req: Request) {
+  const admin = await requireAdmin(req);
+  if (admin.error) return admin.error;
+
   try {
     const body = await req.json();
     const { variantId } = body;

@@ -1,3 +1,4 @@
+import { requireAdmin } from "@/lib/server-auth";
 import { NextResponse } from "next/server";
 import { stores } from "@/db/schema";
 import { eq } from "drizzle-orm";
@@ -6,6 +7,9 @@ import { db } from "@/db/drizzle";
 type Params = Promise<{ id: string }>;
 
 export async function PUT(req: Request, { params }: { params: Params }) {
+  const admin = await requireAdmin(req);
+  if (admin.error) return admin.error;
+
   const { id } = await params;
   const body = await req.json();
   const updated = await db
@@ -29,6 +33,9 @@ export async function PUT(req: Request, { params }: { params: Params }) {
 }
 
 export async function DELETE(req: Request, { params }: { params: Params }) {
+  const admin = await requireAdmin(req);
+  if (admin.error) return admin.error;
+
   const { id } = await params;
   await db.delete(stores).where(eq(stores.id, id));
   return NextResponse.json({ success: true });

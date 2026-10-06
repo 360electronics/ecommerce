@@ -1,3 +1,4 @@
+import { requireAdmin, requireOwnerOrAdmin } from "@/lib/server-auth";
 import { db } from "@/db/drizzle";
 import { orders, orderItems, variants, savedAddresses } from "@/db/schema";
 import { eq } from "drizzle-orm";
@@ -14,6 +15,15 @@ interface ErrorResponse {
 
 export async function GET(request: Request, { params }: { params: Params }) {
   const { id: orderId } = await params; // Access orderId correctly
+
+  // Owner (profile order page) or admin
+  const [owner] = await db
+    .select({ userId: orders.userId })
+    .from(orders)
+    .where(eq(orders.id, orderId))
+    .limit(1);
+  const access = await requireOwnerOrAdmin(request, owner?.userId);
+  if (access.error) return access.error;
 
 
   try {
@@ -58,6 +68,9 @@ export async function PATCH(
   request: NextRequest,
   { params }: { params: Params }
 ) {
+  const admin = await requireAdmin(request);
+  if (admin.error) return admin.error;
+
   try {
     const { id: orderId } = await params; // ✅ Await the promise
     const body = await request.json();
@@ -148,6 +161,9 @@ export async function DELETE(
   request: NextRequest,
   { params }: { params: Params }
 ) {
+  const admin = await requireAdmin(request);
+  if (admin.error) return admin.error;
+
   try {
     const { id: orderId } = await params; // ✅ Await the promise
 

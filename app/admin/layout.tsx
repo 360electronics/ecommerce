@@ -23,6 +23,7 @@ import {
   StoreIcon,
   TicketPercent,
   CreditCard,
+  Settings,
 } from "lucide-react";
 import Breadcrumbs from "@/components/Reusable/BreadScrumb";
 import { useAuthStore } from "@/store/auth-store";
@@ -100,6 +101,7 @@ export default function Layout({ children }: AdminLayoutProps) {
       icon: ImageIcon,
     },
     { name: "Stores", path: "/admin/stores", icon: StoreIcon },
+    { name: "Settings", path: "/admin/settings", icon: Settings },
   ];
 
   const handleLogout = async () => {

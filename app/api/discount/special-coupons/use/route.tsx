@@ -1,90 +1,47 @@
-import { db } from "@/db/drizzle";
-import { specialCoupons, specialCouponUsage } from "@/db/schema";
-import { and, eq, sql } from "drizzle-orm";
 import { NextRequest, NextResponse } from "next/server";
+import { consumeCoupon, validateCoupon } from "@/lib/coupon-service";
+import { requireUser } from "@/lib/server-auth";
 
 export async function POST(request: NextRequest) {
   try {
     const { code, userId } = await request.json();
 
-    if (!code || !userId) {
+    if (!code) {
       return NextResponse.json(
-        { error: "Coupon code and user ID are required", code: "INVALID" },
+        { error: "Coupon code is required", code: "INVALID" },
         { status: 400 }
       );
     }
 
-    await db.transaction(async (tx) => {
-      // 🔒 Lock coupon row
-      const [coupon] = await tx
-        .select()
-        .from(specialCoupons)
-        .where(eq(specialCoupons.code, code))
-        .for("update");
+    const auth = await requireUser(request, userId);
+    if (auth.error) return auth.error;
 
-      if (!coupon) {
-        throw { code: "NOT_FOUND", status: 404 };
-      }
+    // Atomic: records usage + decrements limit in a single statement
+    const consumed = await consumeCoupon(code, auth.user.userId);
 
-      if (new Date(coupon.expiryDate) < new Date()) {
-        throw { code: "EXPIRED", status: 400 };
-      }
-
-      if (Number(coupon.limit) <= 0) {
-        throw { code: "LIMIT_REACHED", status: 400 };
-      }
-
-      // 🧠 Idempotency check
-      const [existingUsage] = await tx
-        .select()
-        .from(specialCouponUsage)
-        .where(
-          and(
-            eq(specialCouponUsage.userId, userId),
-            eq(specialCouponUsage.couponId, coupon.id)
-          )
-        );
-
-      if (existingUsage) {
-        throw { code: "USED", status: 400 };
-      }
-
-      // ✅ Record usage
-      await tx.insert(specialCouponUsage).values({
-        userId,
-        couponId: coupon.id,
-      });
-
-      // ✅ Atomic decrement
-      await tx
-        .update(specialCoupons)
-        .set({
-          limit: sql`${specialCoupons.limit} - 1`,
-        })
-        .where(eq(specialCoupons.id, coupon.id));
-    });
-
-    return NextResponse.json(
-      { message: "Special coupon marked as used" },
-      { status: 200 }
-    );
-  } catch (err: any) {
-    console.error("Special coupon usage error:", err);
-
-    if (err?.code) {
+    if (!consumed) {
+      // Work out why, for a meaningful error code
+      const check = await validateCoupon(code, auth.user.userId, Number.MAX_SAFE_INTEGER);
+      const errorCode = check.ok ? "LIMIT_REACHED" : check.code;
       const map: Record<string, string> = {
-        NOT_FOUND: "Coupon not found",
+        INVALID: "Coupon not found",
         EXPIRED: "Coupon expired",
         LIMIT_REACHED: "Coupon usage limit reached",
         USED: "Coupon already used",
       };
 
       return NextResponse.json(
-        { error: map[err.code], code: err.code },
-        { status: err.status || 400 }
+        { error: map[errorCode] ?? "Coupon cannot be used", code: errorCode },
+        { status: check.ok ? 400 : check.status }
       );
     }
 
+    return NextResponse.json(
+      { message: "Special coupon marked as used" },
+      { status: 200 }
+    );
+  } catch (err) {
+    console.error("Special coupon usage error:", err);
     return NextResponse.json(
       { error: "Internal server error", code: "SERVER_ERROR" },
       { status: 500 }

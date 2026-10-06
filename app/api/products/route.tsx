@@ -1,3 +1,4 @@
+import { requireAdmin } from "@/lib/server-auth";
 import { NextRequest, NextResponse } from "next/server";
 import { db } from "@/db/drizzle";
 import {
@@ -196,6 +197,9 @@ export async function GET(req: Request) {
 
 // POST: Add a new product with its variant and upload images to R2
 export async function POST(req: NextRequest) {
+  const admin = await requireAdmin(req);
+  if (admin.error) return admin.error;
+
   try {
     // Parse FormData
     const formData = await req.formData();
@@ -469,7 +473,10 @@ export async function POST(req: NextRequest) {
 }
 
 // DELETE: Delete all products and their images from R2
-export async function DELETE() {
+export async function DELETE(request: Request) {
+  const admin = await requireAdmin(request);
+  if (admin.error) return admin.error;
+
   try {
     // Fetch all variants to get image URLs
     const allVariants = await db
@@ -516,6 +523,9 @@ export async function DELETE() {
 
 // PATCH: Delete selected products
 export async function PATCH(req: NextRequest) {
+  const admin = await requireAdmin(req);
+  if (admin.error) return admin.error;
+
   try {
     const body = await req.json();
     const validatedData = bulkDeleteProductSchema.parse(body);
