@@ -4,6 +4,7 @@ import { useState, useEffect, useCallback } from "react";
 import { CancelOrderModal } from "@/components/Orders/CancelOrderModal";
 import { getOrderDeleteBlocker } from "@/lib/orders/deletion";
 import { showFancyToast } from "@/components/Reusable/ShowCustomToast";
+import { paymentMethodLabel, paymentStatusLabel, paymentSummary } from "@/lib/orders/payment-labels";
 import {
   CancellationSummary,
   toOrderCancellation,
@@ -384,7 +385,7 @@ export default function OrderDetailsPage() {
       align: "right",
     });
     doc.text(
-      `Payment: ${capitalize(order.payment)}`,
+      `Payment: ${paymentSummary(order.paymentMethod, order.payment)}`,
       rightMargin,
       summaryY + 6,
       { align: "right" }
@@ -573,7 +574,10 @@ export default function OrderDetailsPage() {
                   order.payment === "paid" ? "text-green-600" : "text-gray-700"
                 }`}
               >
-                {capitalize(order.payment)}
+                {paymentStatusLabel(order.payment)}
+              </span>
+              <span className="text-xs text-gray-500">
+                · {paymentMethodLabel(order.paymentMethod)}
               </span>
             </div>
           </div>

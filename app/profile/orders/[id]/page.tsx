@@ -10,6 +10,7 @@ import {
   type OrderCancellation,
 } from "@/components/Orders/CancellationSummary"
 import { useCheckoutSettings } from "@/hooks/useCheckoutSettings"
+import { paymentMethodLabel, paymentStatusLabel, paymentSummary } from "@/lib/orders/payment-labels"
 import { useRouter, useParams } from "next/navigation"
 import Link from "next/link"
 import jsPDF from "jspdf"
@@ -218,7 +219,7 @@ export default function OrderDetailsPage() {
       doc.setFontSize(10)
       const sy = 56
       doc.text(`Status: ${capitalize(order.status)}`, right, sy, { align: "right" })
-      doc.text(`Payment: ${capitalize(order.payment)}`, right, sy + 5, { align: "right" })
+      doc.text(`Payment: ${paymentSummary(order.paymentMethod, order.payment)}`, right, sy + 5, { align: "right" })
       doc.text(`Shipping: ${order.shippingMethod}`, right, sy + 10, { align: "right" })
       if (order.coupon) {
         const discountText =
@@ -365,7 +366,7 @@ export default function OrderDetailsPage() {
             <div className="flex flex-wrap items-center gap-3">
               <Badge variant="secondary" className="gap-2">
                 <CreditCard className="h-3.5 w-3.5" />
-                Payment: {capitalize(order.payment)}
+                {paymentSummary(order.paymentMethod, order.payment)}
               </Badge>
               <Button onClick={handleGeneratePDF} disabled={generatingPDF} className="gap-2">
                 <Download className="h-4 w-4" />
@@ -500,15 +501,16 @@ export default function OrderDetailsPage() {
                   />
                 </div>
                 <div className="space-y-3">
+                  <Row label="Payment method" value={paymentMethodLabel(order.paymentMethod)} />
                   <Row
-                    label="Payment"
+                    label="Payment status"
                     value={
                       <span
                         className={`inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium ${
                           order.payment === "paid" ? "bg-emerald-100 text-emerald-800" : "bg-slate-100 text-slate-800"
                         }`}
                       >
-                        {capitalize(order.payment)}
+                        {paymentStatusLabel(order.payment)}
                       </span>
                     }
                   />
@@ -655,7 +657,7 @@ export default function OrderDetailsPage() {
             <div className="flex items-center gap-2 text-sm text-muted-foreground">
               <Badge variant="outline" className="gap-1">
                 <CreditCard className="h-3.5 w-3.5" />
-                Paid via {capitalize(order.payment)}
+                {paymentSummary(order.paymentMethod, order.payment)}
               </Badge>
               <span>&middot;</span>
               <span>

@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import Link from "next/link";
+import { paymentMethodLabel, paymentStatusLabel } from "@/lib/orders/payment-labels";
 import {
   X,
   Mail,
@@ -398,7 +399,7 @@ export function UserDetailsModal({
                                 {o.status}
                               </span>
                               <span className="text-xs text-gray-500">
-                                {o.paymentMethod.toUpperCase()} · {o.paymentStatus} · {o.deliveryMode}
+                                {paymentMethodLabel(o.paymentMethod)} · {paymentStatusLabel(o.paymentStatus)} · {o.deliveryMode}
                               </span>
                             </div>
                             <div className="text-right">

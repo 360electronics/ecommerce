@@ -19,7 +19,10 @@ function resolveInitiator(
   isAdmin: boolean,
 ): CancelInitiator | null {
   if (!isAdmin) return isOwner ? "customer" : null;
-  return requestedBy === "customer" || requestedBy === "store" ? requestedBy : null;
+  if (requestedBy === "customer" || requestedBy === "store") return requestedBy;
+  // An admin cancelling their OWN order from the customer page sends no choice —
+  // treat it like any customer cancellation
+  return isOwner && requestedBy == null ? "customer" : null;
 }
 
 async function authorize(request: Request, id: string) {

@@ -6,6 +6,7 @@ import { AlertCircle, ShoppingBag, Loader2 } from 'lucide-react';
 import Link from 'next/link';
 import Image from 'next/image';
 import SkeletonLoader from '../Reusable/SkeletonLoader';
+import { paymentMethodLabel, paymentStatusLabel } from "@/lib/orders/payment-labels";
 
 export default function Orders() {
   const { user, isLoading: authLoading } = useAuthStore();
@@ -119,7 +120,7 @@ export default function Orders() {
                         String(order.paymentStatus)
                       )}`}
                     >
-                      {String(order.paymentStatus)}
+                      {paymentStatusLabel(String(order.paymentStatus))}
                     </span>
                   </div>
                 </div>
@@ -179,10 +180,10 @@ export default function Orders() {
                         Order Status: <span className="font-medium capitalize">{order.status}</span>
                       </p>
                       <p className="text-sm text-gray-600">
-                        Payment Status: <span className="font-medium capitalize">{String(order.paymentStatus)}</span>
+                        Payment Status: <span className="font-medium">{paymentStatusLabel(String(order.paymentStatus))}</span>
                       </p>
                       <p className="text-sm text-gray-600">
-                        Payment Method: <span className="font-medium capitalize">{String(order.paymentMethod)}</span>
+                        Payment Method: <span className="font-medium">{paymentMethodLabel(String(order.paymentMethod))}</span>
                       </p>
                     </div>
                     <div className="text-right">

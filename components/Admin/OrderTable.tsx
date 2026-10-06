@@ -8,6 +8,7 @@ import {
 } from "@/components/Layouts/TableLayout";
 import { Button } from "@/components/ui/button";
 import { CancelOrderModal } from "@/components/Orders/CancelOrderModal";
+import { paymentStatusLabel } from "@/lib/orders/payment-labels";
 
 /* -------------------------------- TYPES -------------------------------- */
 
@@ -237,7 +238,13 @@ export function OrdersTable() {
     { key: "customer", header: "Customer", sortable: true },
     { key: "date", header: "Date", sortable: true },
     { key: "status", header: "Status", sortable: true, align: "center" },
-    { key: "payment", header: "Payment", sortable: true, align: "center" },
+    {
+      key: "payment",
+      header: "Payment",
+      sortable: true,
+      align: "center",
+      renderCell: (v) => paymentStatusLabel(String(v)),
+    },
     {
       key: "total",
       header: "Total",
